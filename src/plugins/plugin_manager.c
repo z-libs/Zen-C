@@ -1,6 +1,10 @@
-
 #include "plugin_manager.h"
+#ifndef _WIN32
 #include <dlfcn.h>
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +45,11 @@ void zptr_register_plugin(ZPlugin *plugin)
 
 ZPlugin *zptr_load_plugin(const char *path)
 {
+#ifndef _WIN32
     void *handle = dlopen(path, RTLD_LAZY);
+#else
+    void *handle = LoadLibraryA(path);
+#endif
     if (!handle)
     {
         return NULL;

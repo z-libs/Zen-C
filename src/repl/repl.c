@@ -6,9 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#else
 #include <termios.h>
 #include <unistd.h>
 #include <ctype.h>
+#endif
 
 ASTNode *parse_program(ParserContext *ctx, Lexer *l);
 

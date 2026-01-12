@@ -3,8 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#ifndef _WIN32
 #include <unistd.h>
-
+#else
+#define STDERR_FILENO 2
+#endif
 // We keep it low by default.
 #define ZEN_PROBABILITY 10
 
@@ -362,7 +365,7 @@ static int has_triggered = 0;
 void zen_init(void)
 {
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    timespec_get(&ts, TIME_UTC);
     srand(ts.tv_nsec ^ getpid());
 }
 

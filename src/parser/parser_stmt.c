@@ -4,8 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <unistd.h>
-
+#else
+#ifdef _MSC_VER
+#define access _access
+#endif
+#define	R_OK 0x04
+#endif
 #include "../ast/ast.h"
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"

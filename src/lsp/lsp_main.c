@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 // Simple Main Loop for LSP.
 int lsp_main(int argc, char **argv)
