@@ -54,6 +54,8 @@ void zc_seed_random(void);
 #include <dlfcn.h>
 #include <unistd.h>
 
+typedef void *zc_dl_handle;
+
 #define zc_dlopen dlopen
 #define zc_dlsym dlsym
 #define zc_dlclose dlclose
