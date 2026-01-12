@@ -1,12 +1,14 @@
 #ifdef _WIN32
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include "compat.h"
-#include <io.h>
 #include <stdlib.h>
+#include <string.h>
 
 static char s_dlerror[512] = "";
 
-zc_dl_handle dlopen(const char *path, int flags)
+zc_dl_handle zc_dlopen(const char *path, int flags)
 {
     (void)flags;
     HMODULE handle = LoadLibraryA(path);
@@ -18,12 +20,12 @@ zc_dl_handle dlopen(const char *path, int flags)
             NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
             s_dlerror, sizeof(s_dlerror), NULL);
     }
-    return handle;
+    return (zc_dl_handle)handle;
 }
 
-void *dlsym(zc_dl_handle handle, const char *name)
+void *zc_dlsym(zc_dl_handle handle, const char *name)
 {
-    void *sym = (void *)GetProcAddress(handle, name);
+    void *sym = (void *)GetProcAddress((HMODULE)handle, name);
     if (!sym)
     {
         DWORD err = GetLastError();
@@ -35,17 +37,17 @@ void *dlsym(zc_dl_handle handle, const char *name)
     return sym;
 }
 
-int dlclose(zc_dl_handle handle)
+int zc_dlclose(zc_dl_handle handle)
 {
-    return FreeLibrary(handle) ? 0 : -1;
+    return FreeLibrary((HMODULE)handle) ? 0 : -1;
 }
 
-const char *dlerror(void)
+const char *zc_dlerror(void)
 {
     return s_dlerror;
 }
 
-ssize_t getline(char **lineptr, size_t *n, FILE *stream)
+ssize_t zc_getline(char **lineptr, size_t *n, FILE *stream)
 {
     if (!lineptr || !n || !stream)
         return -1;
@@ -83,14 +85,11 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream)
     return (ssize_t)pos;
 }
 
-int dup(int fd)
+void zc_seed_random(void)
 {
-    return _dup(fd);
-}
-
-int dup2(int oldfd, int newfd)
-{
-    return _dup2(oldfd, newfd);
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
+    srand((unsigned int)(counter.QuadPart ^ GetCurrentProcessId()));
 }
 
 static char s_temp_dir[MAX_PATH] = "";
@@ -133,7 +132,7 @@ char *extract_main_body(const char *c_file_path)
     int brace_depth = 0;
     int skip_lines = 2;
 
-    while (getline(&line, &line_cap, f) != -1)
+    while (zc_getline(&line, &line_cap, f) != -1)
     {
         if (!in_main)
         {

@@ -47,8 +47,9 @@ void regex_transpile(const char *input_body, const ZApi *api)
     free(pattern);
 }
 
-static void emit_match_logic(const char *pattern, FILE *out, int * /*label_counter*/)
+static void emit_match_logic(const char *pattern, FILE *out, int *label_counter)
 {
+    (void)label_counter;
     const char *c = pattern;
 
     while (*c)

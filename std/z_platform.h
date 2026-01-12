@@ -17,6 +17,16 @@
 #include <io.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <basetsd.h>
+
+/* ssize_t for Windows */
+typedef SSIZE_T ssize_t;
+
+/* MSVC does not support __attribute__((cleanup)), provide no-op */
+#ifdef _MSC_VER
+#define __attribute__(x)
+#endif
 
 /* Thread types */
 typedef HANDLE z_thread_t;
@@ -64,6 +74,45 @@ static inline int z_thread_join(z_thread_t thread, void **result)
 
 /* Null device path */
 #define Z_NULL_DEVICE "NUL"
+
+/* getline implementation for Windows */
+static inline ssize_t z_getline(char **lineptr, size_t *n, FILE *stream)
+{
+    if (!lineptr || !n || !stream)
+        return -1;
+
+    size_t pos = 0;
+    int c;
+
+    if (*lineptr == NULL || *n == 0) {
+        *n = 128;
+        *lineptr = (char *)malloc(*n);
+        if (*lineptr == NULL)
+            return -1;
+    }
+
+    while ((c = fgetc(stream)) != EOF) {
+        if (pos + 1 >= *n) {
+            size_t new_size = *n * 2;
+            char *new_ptr = (char *)realloc(*lineptr, new_size);
+            if (new_ptr == NULL)
+                return -1;
+            *lineptr = new_ptr;
+            *n = new_size;
+        }
+        (*lineptr)[pos++] = (char)c;
+        if (c == '\n')
+            break;
+    }
+
+    if (pos == 0 && c == EOF)
+        return -1;
+
+    (*lineptr)[pos] = '\0';
+    return (ssize_t)pos;
+}
+
+#define getline z_getline
 
 /* Suppress stdout */
 static inline int z_suppress_stdout(void)

@@ -26,7 +26,7 @@
 // ** GLOBAL STATE **
 extern char *g_current_filename;
 
-typedef enum
+typedef enum ZTokenType
 {
     TOK_EOF = 0,
     TOK_IDENT,
@@ -78,11 +78,11 @@ typedef enum
     TOK_PREPROC,
     TOK_COMMENT,
     TOK_UNKNOWN
-} TokenType;
+} ZTokenType;
 
 typedef struct
 {
-    TokenType type;
+    ZTokenType type;
     const char *start;
     int len;
     int line;

@@ -1,5 +1,6 @@
 
 #include "zprep_plugin.h"
+#include "compat/compat.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>

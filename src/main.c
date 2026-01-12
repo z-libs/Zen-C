@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #ifdef _WIN32
 #define ZC_DEFAULT_OUTPUT "a.exe"
@@ -272,9 +271,6 @@ int main(int argc, char **argv)
     char cmd[8192];
     char *outfile = g_config.output_file ? g_config.output_file : ZC_DEFAULT_OUTPUT;
 
-    // TCC-specific adjustments?
-    // Already handled by user passing --cc tcc
-
     snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s out.c -lm " ZC_PTHREAD_FLAG " -I./src -I./std %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "", "",
              outfile, g_link_flags);
@@ -304,7 +300,11 @@ int main(int argc, char **argv)
     if (g_config.mode_run)
     {
         char run_cmd[2048];
+#ifdef _WIN32
+        sprintf(run_cmd, "%s", outfile);
+#else
         sprintf(run_cmd, "./%s", outfile);
+#endif
         ret = system(run_cmd);
         // Clean up executable
         remove(outfile);

@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Compiler warnings
 if(MSVC)
     add_compile_options(/W4)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else()
     add_compile_options(-Wall -Wextra -g)
 endif()
@@ -70,9 +71,8 @@ target_include_directories(zc PRIVATE
 
 # Platform-specific libraries
 if(WIN32)
-    # Windows: no need for -ldl, pthread handled differently
-    target_link_libraries(zc PRIVATE m)
-    # For future: may need to link ws2_32 for sockets, etc.
+    # Windows: no -lm, -ldl, pthread handled via Windows API
+    # Nothing to link
 else()
     # Unix/Linux/macOS
     target_link_libraries(zc PRIVATE m pthread dl)

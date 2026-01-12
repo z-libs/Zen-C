@@ -284,7 +284,7 @@ Token lexer_next(Lexer *l)
 
     // Operators.
     int len = 1;
-    TokenType type = TOK_OP;
+    ZTokenType type = TOK_OP;
 
     if (s[0] == '?' && s[1] == '.')
     {
