@@ -1,6 +1,10 @@
 
 #include "parser.h"
 #include "zprep.h"
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
 
 char *g_current_filename = "unknown";
 ParserContext *g_parser_ctx = NULL;
