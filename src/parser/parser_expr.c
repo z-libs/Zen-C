@@ -1741,13 +1741,10 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
             else
             {
                 node->resolved_type = xstrdup("unknown");
-                if (should_suppress_undef_warning(ctx, acc))
+                if (!should_suppress_undef_warning(ctx, acc))
                 {
-                    node->var_ref.suggestion = NULL;
-                }
-                else
-                {
-                    node->var_ref.suggestion = find_similar_symbol(ctx, acc);
+                    char *suggestion = find_similar_symbol(ctx, acc);
+                    error_undefined_variable(t, acc, suggestion);
                 }
             }
         }

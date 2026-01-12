@@ -266,6 +266,23 @@ void error_undefined_function(Token t, const char *func_name, const char *sugges
     }
 }
 
+void error_undefined_variable(Token t, const char *var_name, const char *suggestion)
+{
+    char msg[256];
+    sprintf(msg, "Undefined variable '%s'", var_name);
+
+    if (suggestion)
+    {
+        char help[512];
+        sprintf(help, "Did you mean '%s'?", suggestion);
+        zpanic_with_suggestion(t, msg, help);
+    }
+    else
+    {
+        zpanic_with_suggestion(t, msg, "Check if the variable is defined or in scope");
+    }
+}
+
 void error_wrong_arg_count(Token t, const char *func_name, int expected, int got)
 {
     char msg[256];

@@ -427,15 +427,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (node->resolved_type && strcmp(node->resolved_type, "unknown") == 0)
         {
-            if (node->var_ref.suggestion)
-            {
-                char msg[256];
-                sprintf(msg, "Undefined variable '%s'", node->var_ref.name);
-                char help[256];
-                sprintf(help, "Did you mean '%s'?", node->var_ref.suggestion);
-
-                zwarn_at(node->token, "%s\n   = help: %s", msg, help);
-            }
+            // Already handled by parser errors
         }
         fprintf(out, "%s", node->var_ref.name);
         break;

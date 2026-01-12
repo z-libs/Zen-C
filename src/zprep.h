@@ -134,6 +134,7 @@ void zpanic_with_suggestion(Token t, const char *msg, const char *suggestion);
 
 // Specific error types.
 void error_undefined_function(Token t, const char *func_name, const char *suggestion);
+void error_undefined_variable(Token t, const char *var_name, const char *suggestion);
 void error_wrong_arg_count(Token t, const char *func_name, int expected, int got);
 void error_undefined_field(Token t, const char *struct_name, const char *field_name,
                            const char *suggestion);
