@@ -1,15 +1,20 @@
 
 #include "plugin_manager.h"
-#include <dlfcn.h>
+#include "compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Linked list node for plugins.
+#ifdef _WIN32
+typedef HMODULE PluginHandle;
+#else
+typedef void *PluginHandle;
+#endif
+
 typedef struct PluginNode
 {
     ZPlugin *plugin;
-    void *handle; // dlopen handle (NULL for built-ins).
+    PluginHandle handle;
     struct PluginNode *next;
 } PluginNode;
 
@@ -23,14 +28,10 @@ void zptr_plugin_mgr_init(void)
 void zptr_register_plugin(ZPlugin *plugin)
 {
     if (!plugin)
-    {
         return;
-    }
 
     if (zptr_find_plugin(plugin->name))
-    {
         return;
-    }
 
     PluginNode *node = malloc(sizeof(PluginNode));
     node->plugin = plugin;
@@ -41,7 +42,7 @@ void zptr_register_plugin(ZPlugin *plugin)
 
 int zptr_load_plugin(const char *path)
 {
-    void *handle = dlopen(path, RTLD_LAZY);
+    PluginHandle handle = dlopen(path, RTLD_LAZY);
     if (!handle)
     {
         fprintf(stderr, "Failed to load plugin '%s': %s\n", path, dlerror());
@@ -64,7 +65,6 @@ int zptr_load_plugin(const char *path)
         return 0;
     }
 
-    // Register
     PluginNode *node = malloc(sizeof(PluginNode));
     node->plugin = plugin;
     node->handle = handle;
@@ -80,9 +80,7 @@ ZPlugin *zptr_find_plugin(const char *name)
     while (curr)
     {
         if (strcmp(curr->plugin->name, name) == 0)
-        {
             return curr->plugin;
-        }
         curr = curr->next;
     }
     return NULL;
@@ -95,9 +93,7 @@ void zptr_plugin_mgr_cleanup(void)
     {
         PluginNode *next = curr->next;
         if (curr->handle)
-        {
             dlclose(curr->handle);
-        }
         free(curr);
         curr = next;
     }

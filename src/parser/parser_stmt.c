@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "../ast/ast.h"
+#include "../compat/compat.h"
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
@@ -3819,7 +3820,7 @@ ASTNode *parse_comptime(ParserContext *ctx, Lexer *l)
     char bin[1024];
     sprintf(bin, "%s.bin", filename);
     // Suppress GCC output
-    sprintf(cmd, "gcc %s -o %s > /dev/null 2>&1", filename, bin);
+    sprintf(cmd, "gcc %s -o %s > " ZC_NULL_DEVICE " 2>&1", filename, bin);
     int res = system(cmd);
     if (res != 0)
     {

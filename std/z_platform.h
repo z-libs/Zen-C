@@ -1,0 +1,143 @@
+/*
+ * z_platform.h - Zen-C Runtime Platform Abstraction Layer
+ *
+ * This header provides cross-platform compatibility for generated C code.
+ * It abstracts threading, file descriptors, and other platform-specific APIs.
+ */
+
+#ifndef Z_PLATFORM_H
+#define Z_PLATFORM_H
+
+#ifdef _WIN32
+/* ============ Windows Implementation ============ */
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+/* Thread types */
+typedef HANDLE z_thread_t;
+
+/* Thread function wrapper type */
+typedef DWORD(WINAPI *z_thread_func_t)(LPVOID);
+
+/* Async structure for Windows */
+typedef struct {
+    z_thread_t thread;
+    void *result;
+} Async;
+
+/* Create a thread
+ * Note: Windows CreateThread expects DWORD WINAPI func(LPVOID),
+ * but we accept void* (*)(void*) for compatibility.
+ * The caller must ensure the function signature is compatible.
+ */
+static inline int z_thread_create(z_thread_t *thread, void *(*func)(void *), void *arg)
+{
+    *thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, 0, NULL);
+    return (*thread == NULL) ? -1 : 0;
+}
+
+/* Wait for thread completion and get result */
+static inline int z_thread_join(z_thread_t thread, void **result)
+{
+    WaitForSingleObject(thread, INFINITE);
+    if (result)
+    {
+        DWORD exit_code;
+        GetExitCodeThread(thread, &exit_code);
+        *result = (void *)(uintptr_t)exit_code;
+    }
+    CloseHandle(thread);
+    return 0;
+}
+
+/* File descriptor operations */
+#define z_dup _dup
+#define z_dup2 _dup2
+#define z_fileno _fileno
+#define z_open _open
+#define z_close _close
+
+/* Null device path */
+#define Z_NULL_DEVICE "NUL"
+
+/* Suppress stdout */
+static inline int z_suppress_stdout(void)
+{
+    int saved = _dup(_fileno(stdout));
+    int null_fd = _open("NUL", _O_WRONLY);
+    _dup2(null_fd, _fileno(stdout));
+    _close(null_fd);
+    return saved;
+}
+
+/* Restore stdout */
+static inline void z_restore_stdout(int saved_fd)
+{
+    fflush(stdout);
+    _dup2(saved_fd, _fileno(stdout));
+    _close(saved_fd);
+}
+
+#else
+/* ============ POSIX Implementation (Linux/macOS) ============ */
+#include <pthread.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+/* Thread types */
+typedef pthread_t z_thread_t;
+
+/* Async structure for POSIX */
+typedef struct {
+    z_thread_t thread;
+    void *result;
+} Async;
+
+/* Create a thread */
+static inline int z_thread_create(z_thread_t *thread, void *(*func)(void *), void *arg)
+{
+    return pthread_create(thread, NULL, func, arg);
+}
+
+/* Wait for thread completion and get result */
+static inline int z_thread_join(z_thread_t thread, void **result)
+{
+    return pthread_join(thread, result);
+}
+
+/* File descriptor operations */
+#define z_dup dup
+#define z_dup2 dup2
+#define z_fileno fileno
+#define z_open open
+#define z_close close
+
+/* Null device path */
+#define Z_NULL_DEVICE "/dev/null"
+
+/* Suppress stdout */
+static inline int z_suppress_stdout(void)
+{
+    int saved = dup(fileno(stdout));
+    int null_fd = open("/dev/null", O_WRONLY);
+    dup2(null_fd, fileno(stdout));
+    close(null_fd);
+    return saved;
+}
+
+/* Restore stdout */
+static inline void z_restore_stdout(int saved_fd)
+{
+    fflush(stdout);
+    dup2(saved_fd, fileno(stdout));
+    close(saved_fd);
+}
+
+#endif /* _WIN32 */
+
+#endif /* Z_PLATFORM_H */

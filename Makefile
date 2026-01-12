@@ -1,6 +1,6 @@
 
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp
+CFLAGS = -Wall -Wextra -g -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/compat
 TARGET = zc
 LIBS = -lm -lpthread -ldl
 
@@ -25,6 +25,7 @@ SRCS = src/main.c \
        src/zen/zen_facts.c \
        src/repl/repl.c \
        src/plugins/plugin_manager.c \
+       src/compat/compat_posix.c \
        plugins/befunge.c \
        plugins/brainfuck.c \
        plugins/forth.c \

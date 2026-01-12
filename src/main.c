@@ -1,4 +1,5 @@
 #include "codegen/codegen.h"
+#include "compat/compat.h"
 #include "parser/parser.h"
 #include "plugins/plugin_manager.h"
 #include "repl/repl.h"
@@ -7,6 +8,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#ifdef _WIN32
+#define ZC_DEFAULT_OUTPUT "a.exe"
+#define ZC_PTHREAD_FLAG ""
+#else
+#define ZC_DEFAULT_OUTPUT "a.out"
+#define ZC_PTHREAD_FLAG "-lpthread"
+#endif
 
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
@@ -261,12 +270,12 @@ int main(int argc, char **argv)
 
     // Compile C
     char cmd[8192];
-    char *outfile = g_config.output_file ? g_config.output_file : "a.out";
+    char *outfile = g_config.output_file ? g_config.output_file : ZC_DEFAULT_OUTPUT;
 
     // TCC-specific adjustments?
     // Already handled by user passing --cc tcc
 
-    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s out.c -lm -lpthread -I./src %s", g_config.cc,
+    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s out.c -lm " ZC_PTHREAD_FLAG " -I./src -I./std %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "", "",
              outfile, g_link_flags);
 

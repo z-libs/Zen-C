@@ -51,11 +51,9 @@ void emit_preamble(FILE *out)
               "<stddef.h>\n#include <string.h>\n",
               out);
         fputs("#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n", out);
-        fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
+        fputs("#include \"z_platform.h\"\n", out); // Cross-platform abstraction
         fputs("#ifdef __TINYC__\n#define __auto_type __typeof__\n#endif\n", out);
         fputs("typedef size_t usize;\ntypedef char* string;\n", out);
-        fputs("#include <pthread.h>\n", out);
-        fputs("typedef struct { pthread_t thread; void *result; } Async;\n", out);
         fputs("typedef struct { void *func; void *ctx; } z_closure_T;\n", out);
         fputs("#define U0 void\n#define I8 int8_t\n#define U8 uint8_t\n#define I16 "
               "int16_t\n#define U16 uint16_t\n",
@@ -103,20 +101,14 @@ void emit_preamble(FILE *out)
               "z_free(l); return r; }\n",
               out);
 
-        // REPL helpers: suppress/restore stdout.
+        // REPL helpers: suppress/restore stdout (using z_platform.h functions).
         fputs("int _z_orig_stdout = -1;\n", out);
         fputs("void _z_suppress_stdout() {\n", out);
-        fputs("    fflush(stdout);\n", out);
-        fputs("    if (_z_orig_stdout == -1) _z_orig_stdout = dup(STDOUT_FILENO);\n", out);
-        fputs("    int nullfd = open(\"/dev/null\", O_WRONLY);\n", out);
-        fputs("    dup2(nullfd, STDOUT_FILENO);\n", out);
-        fputs("    close(nullfd);\n", out);
+        fputs("    if (_z_orig_stdout == -1) _z_orig_stdout = z_suppress_stdout();\n", out);
         fputs("}\n", out);
         fputs("void _z_restore_stdout() {\n", out);
-        fputs("    fflush(stdout);\n", out);
         fputs("    if (_z_orig_stdout != -1) {\n", out);
-        fputs("        dup2(_z_orig_stdout, STDOUT_FILENO);\n", out);
-        fputs("        close(_z_orig_stdout);\n", out);
+        fputs("        z_restore_stdout(_z_orig_stdout);\n", out);
         fputs("        _z_orig_stdout = -1;\n", out);
         fputs("    }\n", out);
         fputs("}\n", out);

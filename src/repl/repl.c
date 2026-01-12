@@ -1,6 +1,7 @@
 
 #include "repl.h"
 #include "ast.h"
+#include "compat/compat.h"
 #include "parser/parser.h"
 #include "zprep.h"
 #include <stdio.h>
@@ -262,7 +263,7 @@ void run_repl(const char *self_path)
                     }
 
                     char edit_path[256];
-                    sprintf(edit_path, "/tmp/zprep_edit_%d.zc", rand());
+                    sprintf(edit_path, "%szprep_edit_%d.zc", zc_get_temp_dir(), rand());
                     FILE *f = fopen(edit_path, "w");
                     if (f)
                     {
@@ -638,7 +639,7 @@ void run_repl(const char *self_path)
                     strcat(probe_code, "); }");
 
                     char tmp_path[256];
-                    sprintf(tmp_path, "/tmp/zprep_repl_type_%d.zc", rand());
+                    sprintf(tmp_path, "%szprep_repl_type_%d.zc", zc_get_temp_dir(), rand());
                     FILE *f = fopen(tmp_path, "w");
                     if (f)
                     {
@@ -722,7 +723,7 @@ void run_repl(const char *self_path)
                     strcat(code, "}");
 
                     char tmp_path[256];
-                    sprintf(tmp_path, "/tmp/zprep_repl_time_%d.zc", rand());
+                    sprintf(tmp_path, "%szprep_repl_time_%d.zc", zc_get_temp_dir(), rand());
                     FILE *f = fopen(tmp_path, "w");
                     if (f)
                     {
@@ -811,21 +812,39 @@ void run_repl(const char *self_path)
                     free(expr_buf);
 
                     char tmp_path[256];
-                    sprintf(tmp_path, "/tmp/zprep_repl_c_%d.zc", rand());
+                    sprintf(tmp_path, "%szprep_repl_c_%d.zc", zc_get_temp_dir(), rand());
                     FILE *f = fopen(tmp_path, "w");
                     if (f)
                     {
                         fprintf(f, "%s", code);
                         fclose(f);
+
+                        char out_path[256];
+                        sprintf(out_path, "%szprep_repl_out", zc_get_temp_dir());
                         char cmd[2048];
-                        sprintf(cmd,
-                                "%s build -q --emit-c -o /tmp/zprep_repl_out %s "
-                                "2>/dev/null; sed "
-                                "-n '/^int main() {$/,/^}$/p' /tmp/zprep_repl_out.c "
-                                "2>/dev/null | "
-                                "tail -n +3 | head -n -2 | sed 's/^    //'",
-                                self_path, tmp_path);
+#ifdef _WIN32
+                        sprintf(cmd, "%s build -q --emit-c -o %s %s 2>" ZC_NULL_DEVICE,
+                                self_path, out_path, tmp_path);
                         system(cmd);
+
+                        char c_path[270];
+                        sprintf(c_path, "%s.c", out_path);
+                        char *body = extract_main_body(c_path);
+                        if (body)
+                        {
+                            printf("%s", body);
+                            free(body);
+                        }
+#else
+                        sprintf(cmd,
+                                "%s build -q --emit-c -o %s %s "
+                                "2>" ZC_NULL_DEVICE "; sed "
+                                "-n '/^int main() {$/,/^}$/p' %s.c "
+                                "2>" ZC_NULL_DEVICE " | "
+                                "tail -n +3 | head -n -2 | sed 's/^    //'",
+                                self_path, out_path, tmp_path, out_path);
+                        system(cmd);
+#endif
                     }
                     free(code);
                     continue;
@@ -861,7 +880,7 @@ void run_repl(const char *self_path)
                     strcat(code, "}\n");
 
                     char tmp_path[256];
-                    sprintf(tmp_path, "/tmp/zprep_repl_run_%d.zc", rand());
+                    sprintf(tmp_path, "%szprep_repl_run_%d.zc", zc_get_temp_dir(), rand());
                     FILE *f = fopen(tmp_path, "w");
                     if (f)
                     {
@@ -1037,6 +1056,7 @@ void run_repl(const char *self_path)
                     }
                     if (!found)
                     {
+#ifndef _WIN32
                         // Fallback: try man pages, show only SYNOPSIS.
                         char man_cmd[256];
                         sprintf(man_cmd,
@@ -1060,6 +1080,7 @@ void run_repl(const char *self_path)
                                 printf("\033[90m(man 3 %s)\033[0m\n", sym);
                             }
                         }
+#endif
                         if (!found)
                         {
                             printf("No documentation for '%s'.\n", sym);
