@@ -61,11 +61,9 @@ var explicit: float = 1.0;  // Explicit type
 ```
 
 #### Mutability
-By default, variables are mutable. You can enable **Immutable by Default** mode using a directive.
+By default, variables are immutable. You can enable **Mutable by Default** mode using a directive.
 
 ```zc
-//> immutable-by-default
-
 var x = 10;
 // x = 20; // Error: x is immutable
 

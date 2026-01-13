@@ -864,7 +864,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
     else
     {
         // Default mutability depends on directive
-        is_mutable = !ctx->immutable_by_default;
+        is_mutable = ctx->mutable_by_default;
     }
 
     // Destructuring: var {x, y} = ...

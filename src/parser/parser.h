@@ -241,7 +241,7 @@ struct ParserContext
     ImportedPlugin *imported_plugins; // Plugin imports
 
     // Config/State
-    int immutable_by_default;
+    int mutable_by_default;
     char *current_impl_struct;
 
     // Internal tracking
