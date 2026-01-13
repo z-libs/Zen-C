@@ -4,20 +4,22 @@ A modern systems programming language that transpiles to human-readable GNU C/C1
 
 ## Tech Stack
 
-- **Language**: C (GCC/Clang compatible)
-- **Build System**: Make
+- **Language**: C (GCC/Clang/MSVC compatible)
+- **Build System**: Make / CMake
 - **Target Output**: GNU C / C11
+- **Platforms**: Linux, macOS, Windows
 
 ## Directory Structure
 
 ```
-Zen-C-fork/
+Zen-C/
 ├── src/               # Compiler source code
 │   ├── parser/        # Recursive descent parser
 │   ├── codegen/       # Code generation (Zen C → C)
 │   ├── lexer/         # Tokenizer
 │   ├── ast/           # Abstract Syntax Tree definitions
 │   ├── analysis/      # Type checking
+│   ├── compat/        # Platform compatibility layer (Windows/POSIX)
 │   ├── lsp/           # Language Server Protocol support
 │   ├── repl/          # Interactive REPL
 │   ├── plugins/       # Plugin manager
