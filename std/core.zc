@@ -6,3 +6,12 @@ include <stdbool.h>
 include <stdarg.h>
 
 var __zen_hash_seed: usize = 14695981039346656037;
+
+raw {
+void _zen_panic(const char* file, int line, const char* func, const char* msg) {
+    fprintf(stderr, "%s:%d (%s): Panic: %s\n", file, line, func, msg);
+    exit(1);
+}
+}
+
+#define panic(msg) _zen_panic(__FILE__, __LINE__, __func__, msg)
