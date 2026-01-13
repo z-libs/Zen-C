@@ -33,6 +33,16 @@ make
 sudo make install
 ```
 
+#### CMake (cross-platform, including Windows)
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+cmake --install build
+```
+
+Note: On Windows, you can build the compiler with MSVC, but you still need GCC/MinGW to compile generated C code from `zc` programs at the moment.
+
 ### Usage
 
 ```bash
