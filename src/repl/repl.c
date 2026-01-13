@@ -29,6 +29,18 @@ void run_repl(const char *self_path)
 
     char history_path[512];
     const char *home = getenv("HOME");
+#ifdef _WIN32
+    if (!home || !home[0])
+    {
+        home = getenv("USERPROFILE");
+    }
+    if ((!home || !home[0]) && getenv("HOMEDRIVE") && getenv("HOMEPATH"))
+    {
+        static char home_path[512];
+        snprintf(home_path, sizeof(home_path), "%s%s", getenv("HOMEDRIVE"), getenv("HOMEPATH"));
+        home = home_path;
+    }
+#endif
     if (home)
     {
         snprintf(history_path, sizeof(history_path), "%s/.zprep_history", home);
@@ -1291,6 +1303,7 @@ void run_repl(const char *self_path)
                     fclose(pf);
 
                     char p_cmd[2048];
+                    // TODO: Quote paths to handle spaces on Windows.
                     sprintf(p_cmd, "%s run -q %s 2>&1", self_path, p_path);
 
                     FILE *pp = popen(p_cmd, "r");
@@ -1363,6 +1376,7 @@ void run_repl(const char *self_path)
         free(full_code);
 
         char cmd[2048];
+        // TODO: Quote paths to handle spaces on Windows.
         sprintf(cmd, "%s run -q %s", self_path, tmp_path);
 
         int ret = system(cmd);

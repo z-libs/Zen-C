@@ -41,7 +41,7 @@ ssize_t zc_getline(char **lineptr, size_t *n, FILE *stream);
 #define STDIN_FILENO 0
 #define R_OK 4
 #define W_OK 2
-#define X_OK 1
+#define X_OK 1 // TODO: _access() on Windows ignores execute checks.
 #define F_OK 0
 
 #include <process.h>
@@ -73,6 +73,7 @@ void zc_seed_random(void);
 #endif
 
 #ifdef _WIN32
+// TODO: extract_main_body is Windows-only; avoid non-Windows references.
 char *extract_main_body(const char *c_file_path);
 #endif
 

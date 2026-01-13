@@ -27,6 +27,7 @@ void print_search_paths()
     printf("Search paths:\n");
     printf("  ./\n");
     printf("  ./std/\n");
+    // TODO: Windows uses a different default install prefix.
     printf("  /usr/local/lib/zen/\n");
 }
 
@@ -312,6 +313,7 @@ int main(int argc, char **argv)
     char cmd[8192];
     char *outfile = g_config.output_file ? g_config.output_file : ZC_DEFAULT_OUTPUT;
 
+    // TODO: Quote paths to handle spaces on Windows.
     snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s out.c " ZC_MATH_FLAG " " ZC_PTHREAD_FLAG " -I./src -I./std %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "", "",
              outfile, g_link_flags);
@@ -342,6 +344,7 @@ int main(int argc, char **argv)
     {
         char run_cmd[2048];
 #ifdef _WIN32
+        // TODO: Quote paths to handle spaces on Windows.
         sprintf(run_cmd, "%s", outfile);
 #else
         sprintf(run_cmd, "./%s", outfile);

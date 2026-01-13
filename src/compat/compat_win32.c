@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// TODO: Not thread-safe; concurrent dlopen/dlsym will race.
 static char s_dlerror[512] = "";
 
 zc_dl_handle zc_dlopen(const char *path, int flags)
