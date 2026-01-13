@@ -12,9 +12,11 @@
 #ifdef _WIN32
 #define ZC_DEFAULT_OUTPUT "a.exe"
 #define ZC_PTHREAD_FLAG ""
+#define ZC_MATH_FLAG ""
 #else
 #define ZC_DEFAULT_OUTPUT "a.out"
 #define ZC_PTHREAD_FLAG "-lpthread"
+#define ZC_MATH_FLAG "-lm"
 #endif
 
 // Forward decl for LSP
@@ -310,7 +312,7 @@ int main(int argc, char **argv)
     char cmd[8192];
     char *outfile = g_config.output_file ? g_config.output_file : ZC_DEFAULT_OUTPUT;
 
-    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s out.c -lm " ZC_PTHREAD_FLAG " -I./src -I./std %s", g_config.cc,
+    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s out.c " ZC_MATH_FLAG " " ZC_PTHREAD_FLAG " -I./src -I./std %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "", "",
              outfile, g_link_flags);
 

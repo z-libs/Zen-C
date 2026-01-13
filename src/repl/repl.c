@@ -1281,8 +1281,9 @@ void run_repl(const char *self_path)
                 strcat(probe_code, last_line);
                 strcat(probe_code, "); }");
 
+                const char *temp_dir = zc_get_temp_dir();
                 char p_path[256];
-                sprintf(p_path, "/tmp/zprep_repl_probe_%d.zc", rand());
+                snprintf(p_path, sizeof(p_path), "%szprep_repl_probe_%d.zc", temp_dir, rand());
                 FILE *pf = fopen(p_path, "w");
                 if (pf)
                 {
@@ -1347,8 +1348,9 @@ void run_repl(const char *self_path)
 
         strcat(full_code, " }");
 
+        const char *temp_dir = zc_get_temp_dir();
         char tmp_path[256];
-        sprintf(tmp_path, "/tmp/zprep_repl_%d.zc", rand());
+        snprintf(tmp_path, sizeof(tmp_path), "%szprep_repl_%d.zc", temp_dir, rand());
         FILE *f = fopen(tmp_path, "w");
         if (!f)
         {

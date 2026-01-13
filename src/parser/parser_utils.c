@@ -787,7 +787,13 @@ SelectiveImport *find_selective_import(ParserContext *ctx, const char *name)
 char *extract_module_name(const char *path)
 {
     const char *slash = strrchr(path, '/');
-    const char *base = slash ? slash + 1 : path;
+    const char *bslash = strrchr(path, '\\');
+    const char *sep = slash;
+    if (bslash && (!sep || bslash > sep))
+    {
+        sep = bslash;
+    }
+    const char *base = sep ? sep + 1 : path;
     const char *dot = strrchr(base, '.');
     int len = dot ? (int)(dot - base) : (int)strlen(base);
     char *name = xmalloc(len + 1);

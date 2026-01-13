@@ -24,10 +24,32 @@
 typedef SSIZE_T ssize_t;
 
 /* Thread types */
-typedef HANDLE z_thread_t;
+typedef struct {
+    HANDLE handle;
+    void **result_slot;
+} z_thread_t;
 
-/* Thread function wrapper type */
-typedef DWORD(WINAPI *z_thread_func_t)(LPVOID);
+typedef struct {
+    void *(*func)(void *);
+    void *arg;
+    void **result_slot;
+} z_thread_start_ctx;
+
+static DWORD WINAPI z_thread_start(LPVOID param)
+{
+    z_thread_start_ctx *ctx = (z_thread_start_ctx *)param;
+    void *ret = NULL;
+    if (ctx->func)
+    {
+        ret = ctx->func(ctx->arg);
+    }
+    if (ctx->result_slot)
+    {
+        *ctx->result_slot = ret;
+    }
+    free(ctx);
+    return 0;
+}
 
 /* Async structure for Windows */
 typedef struct {
@@ -42,21 +64,53 @@ typedef struct {
  */
 static inline int z_thread_create(z_thread_t *thread, void *(*func)(void *), void *arg)
 {
-    *thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, 0, NULL);
-    return (*thread == NULL) ? -1 : 0;
+    z_thread_start_ctx *ctx = malloc(sizeof(z_thread_start_ctx));
+    void **result_slot = malloc(sizeof(void *));
+    if (!ctx || !result_slot)
+    {
+        free(ctx);
+        free(result_slot);
+        return -1;
+    }
+    *result_slot = NULL;
+    ctx->func = func;
+    ctx->arg = arg;
+    ctx->result_slot = result_slot;
+
+    HANDLE handle = CreateThread(NULL, 0, z_thread_start, ctx, 0, NULL);
+    if (!handle)
+    {
+        free(ctx);
+        free(result_slot);
+        return -1;
+    }
+    thread->handle = handle;
+    thread->result_slot = result_slot;
+    return 0;
 }
 
 /* Wait for thread completion and get result */
 static inline int z_thread_join(z_thread_t thread, void **result)
 {
-    WaitForSingleObject(thread, INFINITE);
+    DWORD wait = WaitForSingleObject(thread.handle, INFINITE);
+    if (wait != WAIT_OBJECT_0)
+    {
+        if (thread.result_slot)
+        {
+            free(thread.result_slot);
+        }
+        CloseHandle(thread.handle);
+        return -1;
+    }
     if (result)
     {
-        DWORD exit_code;
-        GetExitCodeThread(thread, &exit_code);
-        *result = (void *)(uintptr_t)exit_code;
+        *result = thread.result_slot ? *thread.result_slot : NULL;
     }
-    CloseHandle(thread);
+    if (thread.result_slot)
+    {
+        free(thread.result_slot);
+    }
+    CloseHandle(thread.handle);
     return 0;
 }
 
