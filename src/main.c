@@ -7,6 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#define DEFAULT_OUTPUT_FILE "a.exe"
+#define PATH_SEPARATOR "\\"
+#else
+#define DEFAULT_OUTPUT_FILE "a.out"
+#define PATH_SEPARATOR "/"
+#endif
 
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
