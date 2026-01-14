@@ -1,0 +1,287 @@
+.TH ZC 1 "January 2026" "Zen-C 0.1.0" "User Commands"
+.SH NAME
+zc \- Zen\-C transpiler and compiler
+.SH SYNOPSIS
+.B zc
+[\fB\-h\fR|\fB\-\-help\fR]
+[\fB\-v\fR|\fB\-\-version\fR]
+[\fICOMMAND\fR]
+[\fIOPTIONS\fR]
+[\fIFILE\fR]
+.SH DESCRIPTION
+.B zc
+is a transpiler that converts Zen\-C code to standard C code and optionally compiles it. 
+Zen\-C allows you to write code with modern high\-level language features while maintaining 
+C's performance and low\-level control. The transpiler outputs clean, readable C code that 
+can be compiled with any standard C compiler (GCC, Clang, Zig, TCC).
+.PP
+Zen\-C provides:
+.IP \(bu 2
+Type inference and generic programming
+.IP \(bu 2
+Pattern matching with \fBmatch\fR expressions
+.IP \(bu 2
+Growable vectors (zvec.h) with automatic memory management
+.IP \(bu 2
+UTF\-8 strings (zstr.h) with 22\-byte short string optimization
+.IP \(bu 2
+Doubly\-linked lists (zlist.h) with O(1) operations
+.IP \(bu 2
+Hash maps (zmap.h) with open addressing and linear probing
+.IP \(bu 2
+Traits and interfaces
+.IP \(bu 2
+Async/await support
+.IP \(bu 2
+Manual memory management with RAII patterns
+.IP \(bu 2
+Single\-header library architecture
+.SH COMMANDS
+.TP
+.B build
+Transpile Zen\-C source to C code and compile to executable
+.TP
+.B run
+Transpile, compile and immediately execute the program
+.TP
+.B transpile
+Convert Zen\-C source to C code without compiling
+.TP
+.B test
+Run the test suite
+.TP
+.B clean
+Remove generated files and build artifacts
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Display help information and exit
+.TP
+.BR \-v ", " \-\-version
+Display version information and exit
+.TP
+.BR \-\-cc " " \fICOMPILER\fR
+Specify C compiler to use: \fBgcc\fR (default), \fBclang\fR, \fBzig\fR, or \fBtcc\fR
+.TP
+.BR \-\-std " " \fISTANDARD\fR
+Specify C standard version (e.g., c99, c11, c17, c23)
+.TP
+.BR \-O [ 0 | 1 | 2 | 3 | s ]
+Set optimization level for compilation
+.TP
+.BR \-g
+Generate debug information
+.TP
+.BR \-o " " \fIFILE\fR
+Specify output file name
+.SH EXAMPLES
+.PP
+Transpile and run a Zen\-C program:
+.PP
+.RS
+.nf
+zc run hello.zc
+.fi
+.RE
+.PP
+Build an executable with GCC:
+.PP
+.RS
+.nf
+zc build \-\-cc gcc \-O2 program.zc
+.fi
+.RE
+.PP
+Transpile to C code only:
+.PP
+.RS
+.nf
+zc transpile source.zc \-o output.c
+.fi
+.RE
+.PP
+Build with Clang and optimization:
+.PP
+.RS
+.nf
+zc build \-\-cc clang \-O3 \-o myapp app.zc
+.fi
+.RE
+.PP
+Run tests with specific compiler:
+.PP
+.RS
+.nf
+zc test \-\-cc zig
+.fi
+.RE
+.SH LANGUAGE FEATURES
+.SS Type Inference
+Variables can be declared without explicit types using type inference:
+.PP
+.RS
+.nf
+let x = 42;          // inferred as int
+let msg = "Hello";   // inferred as string
+let items = Vec.new();  // generic vector
+.fi
+.RE
+.SS Pattern Matching
+Zen\-C supports powerful pattern matching with the \fBmatch\fR expression:
+.PP
+.RS
+.nf
+match value {
+    0 => print("zero"),
+    1..=10 => print("one to ten"),
+    _ => print("other")
+}
+.fi
+.RE
+.SS Vectors
+Dynamic arrays with automatic memory management:
+.PP
+.RS
+.nf
+Vec<int> numbers = Vec.new();
+Vec.push(&numbers, 42);
+Vec.push(&numbers, 100);
+int value = Vec.pop(&numbers);
+.fi
+.RE
+.SS Strings
+UTF\-8 string support with views and formatting:
+.PP
+.RS
+.nf
+String s = Str.new("Hello");
+Str.append(&s, " World");
+StrView view = Str.view(&s);
+.fi
+.RE
+.SS Lists
+Non\-intrusive doubly\-linked lists:
+.PP
+.RS
+.nf
+List<int> list = List.new();
+List.push_back(&list, 10);
+List.push_front(&list, 5);
+.fi
+.RE
+.SS Hash Maps
+Open\-addressing hash tables with type safety:
+.PP
+.RS
+.nf
+Map<String, int> ages = Map.new();
+Map.insert(&ages, "Alice", 30);
+int* age = Map.get(&ages, "Alice");
+.fi
+.RE
+.SH FILES
+.TP
+.I *.zc
+Zen\-C source files
+.TP
+.I *.c
+Generated C source files
+.TP
+.I zc
+Zen\-C compiler executable
+.TP
+.I include/
+Directory containing Zen\-C standard library headers (zvec.h, zstr.h, zlist.h, zmap.h)
+.TP
+.I tests/
+Directory containing test files
+.SH ENVIRONMENT
+.TP
+.B CC
+Default C compiler to use if \-\-cc option is not specified
+.TP
+.B CFLAGS
+Additional flags to pass to the C compiler
+.SH BUILDING ZEN-C
+.PP
+To build the Zen\-C compiler itself:
+.PP
+.RS
+.nf
+# Build with GCC (default)
+make
+
+# Build with Clang
+make clang
+
+# Build with Zig
+make zig
+
+# Build with TCC
+make tcc
+
+# Run tests
+make test
+
+# Clean build artifacts
+make clean
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+.B 0
+Successful program execution
+.TP
+.B 1
+Compilation or runtime error
+.TP
+.B 2
+Invalid command line arguments or options
+.SH DIAGNOSTICS
+The compiler provides detailed error messages including:
+.IP \(bu 2
+Line and column numbers for syntax errors
+.IP \(bu 2
+Type mismatch information
+.IP \(bu 2
+Undefined symbol references
+.IP \(bu 2
+Memory management warnings
+.SH COMPATIBILITY
+Zen\-C generated code is compatible with:
+.IP \(bu 2
+GCC 4.8 and later
+.IP \(bu 2
+Clang 3.5 and later
+.IP \(bu 2
+Zig cc (latest stable)
+.IP \(bu 2
+TCC (Tiny C Compiler)
+.IP \(bu 2
+MSVC (Microsoft Visual C++)
+.PP
+Generated C code conforms to C99, C11, or C17 standards.
+.SH NOTES
+.PP
+Zen\-C is designed to be a zero\-cost abstraction layer over C. The transpiler generates 
+clean, readable C code that can be inspected, debugged, and optimized using standard C tools.
+.PP
+All libraries are allocator\-aware, allowing custom memory allocators to be specified.
+.PP
+The project is under active development with weekly updates planned.
+.SH BUGS
+Report bugs at: https://github.com/z\-libs/Zen\-C/issues
+.SH AUTHOR
+Written by the z\-libs team.
+.SH COPYRIGHT
+Copyright \(co 2024\-2026 z\-libs contributors.
+.br
+License: MIT
+.br
+This is free software: you are free to change and redistribute it.
+.SH SEE ALSO
+.BR gcc (1),
+.BR clang (1),
+.BR make (1)
+.PP
+Full documentation and examples: <https://github.com/z\-libs/Zen\-C>
