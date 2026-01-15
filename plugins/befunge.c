@@ -198,7 +198,7 @@ void befunge_transpile(const char *input_body, const ZApi *api)
 
 ZPlugin befunge_plugin = {.name = "befunge", .fn = befunge_transpile};
 
-ZPlugin *z_plugin_init(void)
+PLUGINAPI ZPlugin *z_plugin_init(void)
 {
     return &befunge_plugin;
 }

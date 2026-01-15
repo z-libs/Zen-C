@@ -43,7 +43,7 @@ void bf_transpile(const char *input_body, const ZApi *api)
 
 ZPlugin brainfuck_plugin = {.name = "brainfuck", .fn = bf_transpile};
 
-ZPlugin *z_plugin_init(void)
+PLUGINAPI ZPlugin *z_plugin_init(void)
 {
     return &brainfuck_plugin;
 }

@@ -8,7 +8,8 @@ add_executable(zc ${SRCS})
 
 set(PLUGINS befunge brainfuck forth lisp regex sql)
 foreach(plugin ${PLUGINS})
-add_library(${plugin} MODULE plugins/${plugin}.c)    
+add_library(${plugin} MODULE plugins/${plugin}.c)
+target_compile_definitions(${plugin} PRIVATE -DBUILDING_PLUGIN)
 endforeach()
 
 target_include_directories(zc PRIVATE src plugins src/analysis src/ast src/codegen src/lexer src/lsp src/parser src/repl src/utils src/plugins src/zen)
