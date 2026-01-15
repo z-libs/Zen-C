@@ -22,7 +22,15 @@ jobs:
       if: matrix.os != 'windows-2025'
     - name: make test
       run: make test
-
+      if: matrix.os != 'windows-2025'
+    - uses: ilammy/msvc-dev-cmd@v1
+      if: matrix.os == 'windows-2025'
+    - name: build on windows
+      run: cmake . -G "NMake Makefiles" && cmake --build .
+      if: matrix.os == 'windows-2025'
+    - name: test on windows
+      run: tests\run_tests.cmd --cc cl
+      if: matrix.os == 'windows-2025'
   build-ape:
     runs-on: ubuntu-latest
     permissions:
