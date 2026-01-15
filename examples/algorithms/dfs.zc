@@ -1,0 +1,136 @@
+import "std.zc"
+
+struct Graph {
+    num_vertices: int;
+    adj_list: Vec<Vec<int>>;
+}
+
+impl Graph {
+    fn new(vertices: int) -> Graph {
+        var g = Graph {
+            num_vertices: vertices,
+            adj_list: Vec<Vec<int>>::new()
+        };
+
+        for i in 0..vertices {
+            g.adj_list.push(Vec<int>::new());
+        }
+
+        return g;
+    }
+
+    fn add_edge(self, src: int, dest: int) {
+        if src < 0 || dest < 0 || src >= self.num_vertices || dest >= self.num_vertices {
+            return;
+        }
+
+        self.adj_list.data[src].push(dest);
+        self.adj_list.data[dest].push(src);
+    }
+
+    fn _dfs_recursive(self, vertex: int, visited: bool*, order: Vec<int>*) {
+        visited[vertex] = true;
+        order.push(vertex);
+
+        var neighbors = self.adj_list.data[vertex];
+        var neighbor_count = (int)neighbors.len;
+        for i in 0..neighbor_count {
+            var neighbor = neighbors.data[i];
+            if !visited[neighbor] {
+                self._dfs_recursive(neighbor, visited, order);
+            }
+        }
+    }
+
+    fn dfs_recursive(self, start: int) -> Vec<int> {
+        var order = Vec<int>::new();
+        if start < 0 || start >= self.num_vertices {
+            return order;
+        }
+
+        var visited = Vec<bool>::new();
+        defer visited.free();
+        for i in 0..self.num_vertices {
+            visited.push(false);
+        }
+
+        self._dfs_recursive(start, visited.data, &order);
+        return order;
+    }
+
+    fn dfs(self, start: int) -> Vec<int> {
+        var order = Vec<int>::new();
+        if start < 0 || start >= self.num_vertices {
+            return order;
+        }
+
+        var visited = Vec<bool>::new();
+        defer visited.free();
+        for i in 0..self.num_vertices {
+            visited.push(false);
+        }
+
+        var stack = Vec<int>::new();
+        defer stack.free();
+        stack.push(start);
+
+        while !stack.is_empty() {
+            var vertex = stack.pop();
+            if visited.data[vertex] {
+                continue;
+            }
+
+            visited.data[vertex] = true;
+            order.push(vertex);
+
+            var neighbors = self.adj_list.data[vertex];
+            var i = (int)neighbors.len - 1;
+            while i >= 0 {
+                var neighbor = neighbors.data[i];
+                if !visited.data[neighbor] {
+                    stack.push(neighbor);
+                }
+                i--;
+            }
+        }
+
+        return order;
+    }
+
+    fn free(self) {
+        for i in 0..self.num_vertices {
+            self.adj_list.data[i].free();
+        }
+        self.adj_list.free();
+    }
+}
+
+fn main() {
+    var g = Graph::new(6);
+    defer g.free();
+
+    g.add_edge(0, 1);
+    g.add_edge(0, 2);
+    g.add_edge(0, 3);
+    g.add_edge(1, 4);
+    g.add_edge(3, 5);
+
+    var order_rec = g.dfs_recursive(0);
+    defer order_rec.free();
+    var order_it = g.dfs(0);
+    defer order_it.free();
+
+    "DFS recursive order: "..;
+    for i in 0..(int)order_rec.len {
+        "{order_rec.data[i]} "..;
+    }
+    "";
+
+    "DFS iterative order: "..;
+    for i in 0..(int)order_it.len {
+        "{order_it.data[i]} "..;
+    }
+    "";
+
+    "Expected: 0 1 4 2 3 5";
+}
