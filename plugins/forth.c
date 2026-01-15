@@ -631,7 +631,7 @@ void zprep_forth_plugin_fn(const char *input_body, const ZApi *api)
 
 ZPlugin forth_plugin = {.name = "forth", .fn = zprep_forth_plugin_fn};
 
-ZPlugin *z_plugin_init()
+PLUGINAPI ZPlugin *z_plugin_init()
 {
     return &forth_plugin;
 }

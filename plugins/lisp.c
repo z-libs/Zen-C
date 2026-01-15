@@ -489,7 +489,7 @@ void lisp_transpile(const char *input_body, const ZApi *api)
 
 ZPlugin lisp_plugin = {.name = "lisp", .fn = lisp_transpile};
 
-ZPlugin *z_plugin_init(void)
+PLUGINAPI ZPlugin *z_plugin_init(void)
 {
     return &lisp_plugin;
 }
