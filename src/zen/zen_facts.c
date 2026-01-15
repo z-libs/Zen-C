@@ -6,6 +6,8 @@
 #ifndef _WIN32
 #include <unistd.h>
 #else
+#include <io.h>
+#include <process.h>
 #define STDERR_FILENO 2
 #endif
 // We keep it low by default.
