@@ -7,14 +7,15 @@
 #ifndef _WIN32
 #include <unistd.h>
 #else
-#ifdef _MSC_VER
+#include <io.h>
 #define access _access
-#endif
 #ifndef PATH_MAX
 #define PATH_MAX _MAX_PATH
 #endif
 #define realpath(N,R) _fullpath((R),(N), PATH_MAX)
+#ifndef R_OK
 #define	R_OK 0x04
+#endif
 #endif
 #include "../ast/ast.h"
 #include "../plugins/plugin_manager.h"
