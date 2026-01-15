@@ -10,6 +10,10 @@
 #ifdef _MSC_VER
 #define access _access
 #endif
+#ifndef PATH_MAX
+#define PATH_MAX _MAX_PATH
+#endif
+#define realpath(N,R) _fullpath((R),(N), PATH_MAX)
 #define	R_OK 0x04
 #endif
 #include "../ast/ast.h"
