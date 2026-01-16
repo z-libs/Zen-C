@@ -3716,6 +3716,20 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
             snprintf(path, sizeof(path), "./%s.so", name);
             plugin = zptr_load_plugin(path);
         }
+
+        if (!plugin)
+        {
+            char path[1024];
+            snprintf(path, sizeof(path), "lib%s.so", name);
+            plugin = zptr_load_plugin(path);
+        }
+
+        if (!plugin && !strchr(name, '/'))
+        {
+            char path[1024];
+            snprintf(path, sizeof(path), "./lib%s.so", name);
+            plugin = zptr_load_plugin(path);
+        }
     }
 
     if (!plugin)
