@@ -55,11 +55,19 @@ ZPlugin *zptr_load_plugin(const char *path)
         return NULL;
     }
 
+#ifndef _WIN32
     ZPluginInitFn init_fn = (ZPluginInitFn)dlsym(handle, "z_plugin_init");
+#else
+    ZPluginInitFn init_fn = (ZPluginInitFn)GetProcAddress((HMODULE)handle, "z_plugin_init");
+#endif
     if (!init_fn)
     {
         fprintf(stderr, "Plugin '%s' missing 'z_plugin_init' symbol\n", path);
+#ifndef _WIN32
         dlclose(handle);
+#else
+        FreeLibrary((HMODULE)handle);
+#endif
         return NULL;
     }
 
@@ -67,7 +75,11 @@ ZPlugin *zptr_load_plugin(const char *path)
     if (!plugin)
     {
         fprintf(stderr, "Plugin '%s' init returned NULL\n", path);
+#ifndef _WIN32
         dlclose(handle);
+#else
+        FreeLibrary((HMODULE)handle);
+#endif
         return NULL;
     }
 
@@ -103,7 +115,11 @@ void zptr_plugin_mgr_cleanup(void)
         PluginNode *next = curr->next;
         if (curr->handle)
         {
+#ifndef _WIN32
             dlclose(curr->handle);
+#else
+            FreeLibrary((HMODULE)curr->handle);
+#endif
         }
         free(curr);
         curr = next;

@@ -1713,7 +1713,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
                            char ***used_syms, int *count)
 {
     char *gen = xmalloc(8192);
-    strcpy(gen, "({ ");
+    strcpy(gen, "");
 
     char *s = xstrdup(content);
     char *cur = s;
@@ -2029,7 +2029,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
         strcat(gen, "fflush(stdout); ");
     }
 
-    strcat(gen, "0; })");
+    strcat(gen, "");
 
     free(s);
     return gen;
