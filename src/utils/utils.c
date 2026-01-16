@@ -2,9 +2,10 @@
 #include "parser.h"
 #include "zprep.h"
 #ifdef _WIN32
+#include <io.h>
+#include <malloc.h>
 #define popen _popen
 #define pclose _pclose
-#define alloca _alloca
 #endif
 
 char *g_current_filename = "unknown";
