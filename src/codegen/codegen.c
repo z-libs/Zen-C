@@ -1245,7 +1245,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
         fprintf(out, "({ Async _a = ");
         codegen_expression(ctx, node->unary.operand, out);
-        fprintf(out, "; void* _r; pthread_join(_a.thread, &_r); ");
+        fprintf(out, "; void* _r; z_thread_join(_a.thread, &_r); ");
         if (strcmp(ret_type, "void") == 0)
         {
             fprintf(out, "})");
@@ -1405,8 +1405,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                 fprintf(out, "    args->%s = %s;\n", arg_names[i], arg_names[i]);
             }
 
-            fprintf(out, "    pthread_t th;\n");
-            fprintf(out, "    pthread_create(&th, NULL, _runner_%s, args);\n", node->func.name);
+            fprintf(out, "    z_thread_t th;\n");
+            fprintf(out, "    z_thread_create(&th, _runner_%s, args);\n", node->func.name);
             fprintf(out, "    return (Async){.thread=th, .result=NULL};\n");
             fprintf(out, "}\n");
 
@@ -2124,7 +2124,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
 
         fprintf(out, "({ Async _a = ");
         codegen_expression(ctx, node->unary.operand, out);
-        fprintf(out, "; void* _r; pthread_join(_a.thread, &_r); ");
+        fprintf(out, "; void* _r; z_thread_join(_a.thread, &_r); ");
         if (strcmp(ret_type, "void") == 0)
         {
             fprintf(out, "})"); // result unused

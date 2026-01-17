@@ -19,11 +19,36 @@ raw {
         return 0;
     }
     
+    // Thread-local storage for current directory path (for stat-based d_type fallback)
+    static __thread char _z_fs_current_dir[1024] = {0};
+    
+    void _z_fs_set_dir_context(char* path) {
+        strncpy(_z_fs_current_dir, path, sizeof(_z_fs_current_dir) - 1);
+        _z_fs_current_dir[sizeof(_z_fs_current_dir) - 1] = '\0';
+    }
+    
     int _z_fs_read_entry(void* dir, char* out_name, int* is_dir) {
         struct dirent* ent = readdir((DIR*)dir);
         if (!ent) return 0;
         strcpy(out_name, ent->d_name);
-        *is_dir = (ent->d_type == DT_DIR);
+        
+        // Use d_type if available (most Unix systems), otherwise fallback to stat
+        #if defined(_DIRENT_HAVE_D_TYPE) && defined(DT_DIR)
+            if (ent->d_type != DT_UNKNOWN) {
+                *is_dir = (ent->d_type == DT_DIR);
+            } else
+        #endif
+        {
+            // Fallback: use stat to determine if entry is a directory
+            char fullpath[2048];
+            snprintf(fullpath, sizeof(fullpath), "%s/%s", _z_fs_current_dir, ent->d_name);
+            struct stat st;
+            if (stat(fullpath, &st) == 0) {
+                *is_dir = S_ISDIR(st.st_mode);
+            } else {
+                *is_dir = 0;
+            }
+        }
         return 1;
     }
 
@@ -39,6 +64,7 @@ raw {
 extern fn _z_fs_mkdir(path: char*) -> int;
 extern fn _z_fs_get_metadata(path: char*, size: U64*, is_dir: int*, is_file: int*) -> int;
 extern fn _z_fs_read_entry(dir: void*, out_name: char*, is_dir: int*) -> int;
+extern fn _z_fs_set_dir_context(path: char*) -> void;
 
 struct File {
     handle: void*; // FILE*
@@ -140,6 +166,9 @@ impl File {
     fn read_dir(path: char*) -> Result< Vec<DirEntry> > {
         var dir = opendir(path);
         if (dir == NULL) return Result< Vec<DirEntry> >::Err("Failed to open directory");
+        
+        // Set directory context for stat-based d_type fallback (Windows compatibility)
+        _z_fs_set_dir_context(path);
         
         var entries = Vec<DirEntry>::new();
         var name_buf = malloc(256);

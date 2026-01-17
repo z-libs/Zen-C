@@ -270,7 +270,7 @@ struct ParserContext
 // Token helpers
 char *token_strdup(Token t);
 int is_token(Token t, const char *s);
-Token expect(Lexer *l, TokenType type, const char *msg);
+Token expect(Lexer *l, ZTokenType type, const char *msg);
 void skip_comments(Lexer *l);
 char *consume_until_semicolon(Lexer *l);
 char *consume_and_rewrite(ParserContext *ctx, Lexer *l);

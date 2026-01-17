@@ -1,18 +1,35 @@
+# Build outputs
+build/
 obj/
 zc
 result
 out.c
 a.out
 *.o
+*.exe
 *.so
 *.dll
 *.dylib
 *.a
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile.cmake
+
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
+*.swo
 *~
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Misc
 compile_commands.json
 vgcore.*
 tests/**/*.o

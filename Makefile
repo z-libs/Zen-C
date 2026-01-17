@@ -1,9 +1,17 @@
+# Installation paths (must be before CFLAGS)
+PREFIX = /usr/local
+BINDIR = $(PREFIX)/bin
+LIBDIR = $(PREFIX)/lib
+DATADIR = $(PREFIX)/share/zc
+MANDIR = $(PREFIX)/share/man
+PLUGINDIR = $(LIBDIR)/zc/plugins
+
 # Compiler configuration
 # Default: gcc
 # To build with clang: make CC=clang
 # To build with zig:   make CC="zig cc"
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp
+CFLAGS = -Wall -Wextra -g -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/compat -DZC_STD_INSTALL_PATH='"$(DATADIR)"' -DZC_PLUGIN_INSTALL_PATH='"$(PLUGINDIR)"'
 TARGET = zc
 LIBS = -lm -lpthread -ldl
 
@@ -27,17 +35,11 @@ SRCS = src/main.c \
        src/lsp/lsp_index.c \
        src/zen/zen_facts.c \
        src/repl/repl.c \
-       src/plugins/plugin_manager.c
+       src/plugins/plugin_manager.c \
+       src/compat/compat_posix.c
 
 OBJ_DIR = obj
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRCS))
-
-# Installation paths
-PREFIX ?= /usr/local
-BINDIR = $(PREFIX)/bin
-MANDIR = $(PREFIX)/share/man
-SHAREDIR = $(PREFIX)/share/zenc
-INCLUDEDIR = $(PREFIX)/include/zenc
 
 PLUGINS = plugins/befunge.so plugins/brainfuck.so plugins/forth.so plugins/lisp.so plugins/regex.so plugins/sql.so
 
@@ -71,15 +73,22 @@ install: $(TARGET)
 	test -f man/zc.7 && install -m 644 man/zc.7 $(MANDIR)/man7/zc.7 || true
 	
 	# Install standard library
-	install -d $(SHAREDIR)
-	cp -r std $(SHAREDIR)/
+	install -d $(DATADIR)/std
+	install -m 644 std.zc $(DATADIR)/
+	install -m 644 std/*.zc $(DATADIR)/std/ 2>/dev/null || true
+	install -m 644 std/*.h $(DATADIR)/std/ 2>/dev/null || true
 	
 	# Install plugin headers
-	install -d $(INCLUDEDIR)
-	install -m 644 plugins/zprep_plugin.h $(INCLUDEDIR)/zprep_plugin.h
+	install -d $(DATADIR)/include
+	install -m 644 plugins/zprep_plugin.h $(DATADIR)/include/zprep_plugin.h
+	
+	# Install plugins
+	install -d $(PLUGINDIR)
+	install -m 755 plugins/*.so $(PLUGINDIR)/ 2>/dev/null || true
 	@echo "=> Installed to $(BINDIR)/$(TARGET)"
 	@echo "=> Man pages installed to $(MANDIR)"
-	@echo "=> Standard library installed to $(SHAREDIR)/std"
+	@echo "=> Standard library installed to $(DATADIR)/"
+	@echo "=> Plugins installed to $(PLUGINDIR)/"
 
 # Uninstall
 uninstall:
@@ -87,10 +96,9 @@ uninstall:
 	rm -f $(MANDIR)/man1/zc.1
 	rm -f $(MANDIR)/man5/zc.5
 	rm -f $(MANDIR)/man7/zc.7
-	rm -rf $(SHAREDIR)
-	@echo "=> Uninstalled from $(BINDIR)/$(TARGET)"
-	@echo "=> Removed man pages from $(MANDIR)"
-	@echo "=> Removed $(SHAREDIR)"
+	rm -rf $(DATADIR)
+	rm -rf $(PLUGINDIR)
+	@echo "=> Uninstalled $(TARGET)"
 
 # Clean
 clean:

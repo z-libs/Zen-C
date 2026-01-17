@@ -59,6 +59,9 @@ Type *type_new(TypeKind kind)
     t->arg_count = 0;
     t->is_const = 0;
     t->array_size = 0;
+    t->is_varargs = 0;
+    t->is_restrict = 0;
+    t->has_drop = 0;
     return t;
 }
 

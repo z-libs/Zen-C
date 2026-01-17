@@ -1,4 +1,5 @@
 #include "codegen/codegen.h"
+#include "compat/compat.h"
 #include "parser/parser.h"
 #include "plugins/plugin_manager.h"
 #include "repl/repl.h"
@@ -7,18 +8,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+#define ZC_DEFAULT_OUTPUT "a.exe"
+#define ZC_PTHREAD_FLAG ""
+#define ZC_MATH_FLAG ""
+#else
+#define ZC_DEFAULT_OUTPUT "a.out"
+#define ZC_PTHREAD_FLAG "-lpthread"
+#define ZC_MATH_FLAG "-lm"
+#endif
 
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
+
+
 
 void print_search_paths()
 {
     printf("Search paths:\n");
     printf("  ./\n");
     printf("  ./std/\n");
-    printf("  /usr/local/share/zenc\n");
-    printf("  /usr/share/zenc\n");
+    printf("  %s/\n", zc_get_std_path());
+    printf("  %s/std/\n", zc_get_std_path());
+    printf("Environment: ZC_STD_PATH=%s\n", getenv("ZC_STD_PATH") ? getenv("ZC_STD_PATH") : "(not set)");
 }
 
 void print_version()
@@ -220,6 +233,9 @@ int main(int argc, char **argv)
     // Initialize Plugin Manager
     zptr_plugin_mgr_init();
 
+    // Auto-load plugins from plugins directory
+    zptr_load_plugins_from_dir();
+
     // Parse context init
     ParserContext ctx;
     memset(&ctx, 0, sizeof(ctx));
@@ -296,13 +312,11 @@ int main(int argc, char **argv)
 
     // Compile C
     char cmd[8192];
-    char *outfile = g_config.output_file ? g_config.output_file : "a.out";
+    char *outfile = g_config.output_file ? g_config.output_file : ZC_DEFAULT_OUTPUT;
 
-    // TCC-specific adjustments?
-    // Already handled by user passing --cc tcc
-
-    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s out.c -lm %s -I./src %s", g_config.cc,
-             g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "", "",
+    // TODO: Quote paths to handle spaces on Windows.
+    snprintf(cmd, sizeof(cmd), "%s %s %s %s -o %s out.c " ZC_MATH_FLAG " " ZC_PTHREAD_FLAG " -I./src -I./std %s %s", g_config.cc,
+             g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "",
              outfile, g_parser_ctx->has_async ? "-lpthread" : "", g_link_flags);
 
     if (g_config.verbose)
@@ -330,7 +344,12 @@ int main(int argc, char **argv)
     if (g_config.mode_run)
     {
         char run_cmd[2048];
+#ifdef _WIN32
+        // TODO: Quote paths to handle spaces on Windows.
+        sprintf(run_cmd, "%s", outfile);
+#else
         sprintf(run_cmd, "./%s", outfile);
+#endif
         ret = system(run_cmd);
         remove(outfile);
         zptr_plugin_mgr_cleanup();
