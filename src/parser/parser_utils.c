@@ -2298,7 +2298,63 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                     }
                 }
 
-                dest += sprintf(dest, "%s__%s(%s%s", ptr_check, method, is_ptr ? "" : "&", acc);
+                // Mixin Lookup Logic
+                char target_func[128];
+                sprintf(target_func, "%s__%s", ptr_check, method);
+
+                char *final_cast = NULL;
+                char *final_method = xstrdup(method);
+                char *final_struct = xstrdup(ptr_check);
+
+                // Check if method exists on primary struct
+                if (!find_func(ctx, target_func))
+                {
+                    // Not found, check mixins
+                    ASTNode *def = find_struct_def(ctx, ptr_check);
+                    if (def && def->type == NODE_STRUCT && def->strct.used_structs)
+                    {
+                        for (int k = 0; k < def->strct.used_struct_count; k++)
+                        {
+                            char mixin_func[128];
+                            sprintf(mixin_func, "%s__%s", def->strct.used_structs[k], method);
+                            if (find_func(ctx, mixin_func))
+                            {
+                                // Found in mixin!
+                                free(final_struct);
+                                final_struct = xstrdup(def->strct.used_structs[k]);
+
+                                // Create cast string: (Mixin*) or (Mixin*)&
+                                char cast_buf[128];
+                                if (is_ptr)
+                                {
+                                    sprintf(cast_buf, "(%s*)", final_struct);
+                                }
+                                else
+                                {
+                                    sprintf(cast_buf, "(%s*)&", final_struct);
+                                }
+                                final_cast = xstrdup(cast_buf);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (final_cast)
+                {
+                    // Mixin call: Foo__method((Foo*)&obj
+                    dest +=
+                        sprintf(dest, "%s__%s(%s%s", final_struct, final_method, final_cast, acc);
+                    free(final_cast);
+                }
+                else
+                {
+                    // Standard call
+                    dest += sprintf(dest, "%s__%s(%s%s", final_struct, final_method,
+                                    is_ptr ? "" : "&", acc);
+                }
+                free(final_struct);
+                free(final_method);
 
                 int has_args = 0;
                 while (*src && paren_depth > 0)
@@ -2348,7 +2404,61 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                         *p = 0;
                     }
                 }
-                dest += sprintf(dest, "%s__%s(%s%s)", ptr_check, method, is_ptr ? "" : "&", acc);
+                // Mixin Lookup Logic (No Parens)
+                char target_func[128];
+                sprintf(target_func, "%s__%s", ptr_check, method);
+
+                char *final_cast = NULL;
+                char *final_method = xstrdup(method);
+                char *final_struct = xstrdup(ptr_check);
+
+                // Check if method exists on primary struct
+                if (!find_func(ctx, target_func))
+                {
+                    // Not found, check mixins
+                    ASTNode *def = find_struct_def(ctx, ptr_check);
+                    if (def && def->type == NODE_STRUCT && def->strct.used_structs)
+                    {
+                        for (int k = 0; k < def->strct.used_struct_count; k++)
+                        {
+                            char mixin_func[128];
+                            sprintf(mixin_func, "%s__%s", def->strct.used_structs[k], method);
+                            if (find_func(ctx, mixin_func))
+                            {
+                                // Found in mixin!
+                                free(final_struct);
+                                final_struct = xstrdup(def->strct.used_structs[k]);
+
+                                // Create cast string: (Mixin*) or (Mixin*)&
+                                char cast_buf[128];
+                                if (is_ptr)
+                                {
+                                    sprintf(cast_buf, "(%s*)", final_struct);
+                                }
+                                else
+                                {
+                                    sprintf(cast_buf, "(%s*)&", final_struct);
+                                }
+                                final_cast = xstrdup(cast_buf);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (final_cast)
+                {
+                    dest +=
+                        sprintf(dest, "%s__%s(%s%s)", final_struct, final_method, final_cast, acc);
+                    free(final_cast);
+                }
+                else
+                {
+                    dest += sprintf(dest, "%s__%s(%s%s)", final_struct, final_method,
+                                    is_ptr ? "" : "&", acc);
+                }
+                free(final_struct);
+                free(final_method);
                 continue;
             }
         }

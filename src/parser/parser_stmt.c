@@ -3268,6 +3268,10 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
     lexer_next(l); // eat {
     ASTNode *h = 0, *tl = 0;
 
+    // Temp storage for used structs
+    char **temp_used_structs = NULL;
+    int temp_used_count = 0;
+
     while (1)
     {
         skip_comments(l);
@@ -3308,6 +3312,12 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
 
             if (def && def->type == NODE_STRUCT)
             {
+                if (!temp_used_structs)
+                {
+                    temp_used_structs = xmalloc(sizeof(char *) * 8);
+                }
+                temp_used_structs[temp_used_count++] = xstrdup(use_name);
+
                 ASTNode *f = def->strct.fields;
                 while (f)
                 {
@@ -3410,6 +3420,8 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
     node->strct.generic_params = gps;
     node->strct.generic_param_count = gp_count;
     node->strct.is_union = is_union;
+    node->strct.used_structs = temp_used_structs;
+    node->strct.used_struct_count = temp_used_count;
 
     if (gp_count > 0)
     {

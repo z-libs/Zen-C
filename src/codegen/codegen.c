@@ -560,8 +560,38 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
                 else
                 {
-                    fprintf(out, "%s__%s(", base, method);
-                    if (!strchr(type, '*'))
+                    // Mixin Lookup Logic
+                    char *call_base = base;
+                    int need_cast = 0;
+                    char mixin_func_name[128];
+                    sprintf(mixin_func_name, "%s__%s", base, method);
+
+                    if (!find_func(ctx, mixin_func_name))
+                    {
+                        // Method not found on primary struct, check mixins
+                        ASTNode *def = find_struct_def(ctx, base);
+                        if (def && def->type == NODE_STRUCT && def->strct.used_structs)
+                        {
+                            for (int k = 0; k < def->strct.used_struct_count; k++)
+                            {
+                                char mixin_check[128];
+                                sprintf(mixin_check, "%s__%s", def->strct.used_structs[k], method);
+                                if (find_func(ctx, mixin_check))
+                                {
+                                    call_base = def->strct.used_structs[k];
+                                    need_cast = 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    fprintf(out, "%s__%s(", call_base, method);
+                    if (need_cast)
+                    {
+                        fprintf(out, "(%s*)%s", call_base, strchr(type, '*') ? "" : "&");
+                    }
+                    else if (!strchr(type, '*'))
                     {
                         fprintf(out, "&");
                     }

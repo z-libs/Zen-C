@@ -380,9 +380,11 @@ struct ASTNode
             int generic_param_count; // Number of generic parameters
             char *parent;
             int is_union;
-            int is_packed;     // @packed attribute.
-            int align;         // @align(N) attribute, 0 = default.
-            int is_incomplete; // Forward declaration (prototype)
+            int is_packed;       // @packed attribute.
+            int align;           // @align(N) attribute, 0 = default.
+            int is_incomplete;   // Forward declaration (prototype)
+            char **used_structs; // Names of structs used/mixed-in
+            int used_struct_count;
         } strct;
 
         struct
