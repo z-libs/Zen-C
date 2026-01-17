@@ -18,3 +18,26 @@ jobs:
       run: make
     - name: make test
       run: make test
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: mingw-w64-x86_64-gcc
+
+    - name: Build with CMake
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --config Release
+
+    - name: Run tests
+      shell: msys2 {0}
+      run: |
+        export PATH="$PWD/build/Release:$PATH"
+        bash ./tests/run_tests.sh
