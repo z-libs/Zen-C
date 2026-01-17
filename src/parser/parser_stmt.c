@@ -4,8 +4,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <unistd.h>
-
+#else
+#include <io.h>
+#define access _access
+#ifndef PATH_MAX
+#define PATH_MAX _MAX_PATH
+#endif
+#define realpath(N,R) _fullpath((R),(N), PATH_MAX)
+#ifndef R_OK
+#define	R_OK 0x04
+#endif
+#endif
 #include "../ast/ast.h"
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
@@ -1683,7 +1694,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
                            char ***used_syms, int *count)
 {
     char *gen = xmalloc(8192);
-    strcpy(gen, "({ ");
+    strcpy(gen, "");
 
     char *s = xstrdup(content);
     char *cur = s;
@@ -1999,7 +2010,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
         strcat(gen, "fflush(stdout); ");
     }
 
-    strcat(gen, "0; })");
+    strcat(gen, "");
 
     free(s);
     return gen;

@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _MSC_VER 
+#define strncasecmp _strnicmp
+#endif
 
 typedef struct Col
 {
@@ -414,7 +417,7 @@ void sql_transpile(const char *input_body, const ZApi *api)
 
 ZPlugin sql_plugin = {.name = "sql", .fn = sql_transpile};
 
-ZPlugin *z_plugin_init(void)
+PLUGINAPI ZPlugin *z_plugin_init(void)
 {
     return &sql_plugin;
 }
