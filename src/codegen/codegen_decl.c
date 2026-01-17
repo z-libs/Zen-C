@@ -57,7 +57,7 @@ void emit_preamble(ParserContext *ctx, FILE *out)
         if (ctx->has_async)
         {
             fputs("#include <pthread.h>\n", out);
-            fputs("typedef struct { pthread_t thread; void *result; } Async;\n", out);
+            // Async typedef is already defined in z_platform.h
         }
         fputs("typedef struct { void *func; void *ctx; } z_closure_T;\n", out);
         fputs("#define U0 void\n#define I8 int8_t\n#define U8 uint8_t\n#define I16 "

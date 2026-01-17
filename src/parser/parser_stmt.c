@@ -4060,7 +4060,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     char bin[1024];
     sprintf(bin, "%s.bin", filename);
     // Suppress GCC output
-    sprintf(cmd, "gcc %s -o %s > " ZC_NULL_DEVICE " 2>&1", filename, bin);
+    sprintf(cmd, "gcc -I./std %s -o %s > " ZC_NULL_DEVICE " 2>&1", filename, bin);
     int res = system(cmd);
     if (res != 0)
     {
