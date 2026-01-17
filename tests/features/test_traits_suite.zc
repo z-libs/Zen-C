@@ -35,17 +35,17 @@ impl Shape for Circle {
     }
 }
 
-struct Rect {
+struct Rectangle {
     width: float;
     height: float;
 }
 
-impl Shape for Rect {
+impl Shape for Rectangle {
     fn area(self) -> float {
         return self.width * self.height;
     }
     fn name(self) -> string {
-        return "Rect";
+        return "Rectangle";
     }
 }
 
@@ -70,7 +70,7 @@ test "basic_traits" {
 
 test "advanced_traits" {
     var c = Circle { radius: 5.0 };
-    var r = Rect { width: 4.0, height: 6.0 };
+    var r = Rectangle { width: 4.0, height: 6.0 };
 
     var s_c: Shape = &c;
     var s_r: Shape = &r;

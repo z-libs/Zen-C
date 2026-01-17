@@ -10,10 +10,10 @@
 
 #ifdef _WIN32
 /* ============ Windows Implementation ============ */
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
+/*
+ * Forward declarations for Windows API - avoids including windows.h
+ * This prevents namespace pollution (Rectangle, min, max, etc.)
+ */
 #include <io.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -22,6 +22,30 @@
 
 /* ssize_t for Windows */
 typedef SSIZE_T ssize_t;
+
+/* Windows type forward declarations */
+typedef void *HANDLE;
+typedef unsigned long DWORD;
+typedef void *LPVOID;
+typedef int BOOL;
+typedef DWORD *LPDWORD;
+
+#define WINAPI __stdcall
+#define INFINITE 0xFFFFFFFF
+#define WAIT_OBJECT_0 0
+
+/* Windows API forward declarations */
+__declspec(dllimport) HANDLE WINAPI CreateThread(
+    void *lpThreadAttributes,
+    size_t dwStackSize,
+    DWORD (WINAPI *lpStartAddress)(LPVOID),
+    LPVOID lpParameter,
+    DWORD dwCreationFlags,
+    LPDWORD lpThreadId
+);
+__declspec(dllimport) DWORD WINAPI WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
+__declspec(dllimport) BOOL WINAPI CloseHandle(HANDLE hObject);
+__declspec(dllimport) BOOL WINAPI FreeLibrary(HANDLE hLibModule);
 
 /* Thread types */
 typedef struct {
