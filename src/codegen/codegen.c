@@ -668,15 +668,46 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else
         {
+            FuncSig *sig = NULL;
+            if (node->call.callee->type == NODE_EXPR_VAR)
+            {
+                sig = find_func(ctx, node->call.callee->var_ref.name);
+            }
+
             ASTNode *arg = node->call.args;
+            int arg_idx = 0;
             while (arg)
             {
-                codegen_expression(ctx, arg, out);
+                int handled = 0;
+                if (sig && arg_idx < sig->total_args)
+                {
+                    Type *param_t = sig->arg_types[arg_idx];
+                    Type *arg_t = arg->type_info;
+
+                    if (param_t && param_t->kind == TYPE_ARRAY && param_t->array_size == 0 &&
+                        arg_t && arg_t->kind == TYPE_ARRAY && arg_t->array_size > 0)
+                    {
+                        char *inner = type_to_string(param_t->inner);
+                        fprintf(out, "(Slice_%s){.data = ", inner);
+                        codegen_expression(ctx, arg, out);
+                        fprintf(out, ", .len = %d, .cap = %d}", arg_t->array_size,
+                                arg_t->array_size);
+                        free(inner);
+                        handled = 1;
+                    }
+                }
+
+                if (!handled)
+                {
+                    codegen_expression(ctx, arg, out);
+                }
+
                 if (arg->next)
                 {
                     fprintf(out, ", ");
                 }
                 arg = arg->next;
+                arg_idx++;
             }
         }
         fprintf(out, ")");

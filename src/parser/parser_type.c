@@ -707,6 +707,13 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
 
         expect(l, TOK_RBRACKET, "Expected ']' in array type");
 
+        if (size == 0)
+        {
+            char *inner_str = type_to_string(t);
+            register_slice(ctx, inner_str);
+            free(inner_str);
+        }
+
         Type *arr = type_new(TYPE_ARRAY);
         arr->inner = t;
         arr->array_size = size;
