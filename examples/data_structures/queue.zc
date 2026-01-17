@@ -1,0 +1,104 @@
+import "std.zc"
+
+struct Queue<T> {
+    data: Vec<T>;
+    start: usize;
+}
+
+impl Queue<T> {
+    fn new() -> Self {
+        return Self { data: Vec<T>::new(), start: 0 };
+    }
+
+    fn enqueue(mut self, item: T) {
+        self.data.push(item);
+    }
+
+    fn dequeue(mut self) -> Option<T> {
+        if self.start >= self.data.length() {
+            return Option<T>::None();
+        }
+        var value = self.data[self.start];
+        self.start += 1;
+	
+	// We implement the queue using a Vec<T> and a start index.
+    	// When we dequeue, instead of removing the first element (which would be O(n)),
+    	// we simply increment the start index. This allows O(1) dequeue operations.
+    	//
+    	// However, this means the elements before 'start' are still in memory
+    	// and cannot be reused. To avoid wasting memory when many elements
+    	// have been dequeued, we occasionally 'compact' the Vec:
+    	// - We copy only the active elements (from start..end) into a new Vec
+    	// - Free the old Vec
+    	// - Reset start to 0
+        if self.start > 32 && self.start * 2 > self.data.length() {
+            var new_vec = Vec<T>::new();
+            for i in self.start..self.data.length() {
+                new_vec.push(self.data[i]);
+            }
+            self.data.free();
+            self.data = new_vec;
+            self.start = 0;
+        }
+
+        return Option<T>::Some(value);
+    }
+
+    fn peek(self) -> Option<T> {
+        if self.start >= self.data.length() {
+            return Option<T>::None();
+        }
+        return Option<T>::Some(self.data[self.start]);
+    }
+
+    fn is_empty(self) -> bool {
+        return self.start >= self.data.length();
+    }
+
+    fn size(self) -> usize {
+        return self.data.length() - self.start;
+    }
+
+    fn free(mut self) {
+        self.data.free();
+    }
+}
+
+fn main() {
+    "[Integer Queue]";
+    var int_queue = Queue<int>::new();
+    defer int_queue.free();
+
+    "Enqueuing: 10, 20, 30";
+    int_queue.enqueue(10);
+    int_queue.enqueue(20);
+    int_queue.enqueue(30);
+
+    "Size: {int_queue.size()}";
+    var p = int_queue.peek();
+    "Peek: {p.unwrap()}";
+
+    "Dequeuing: "..;
+    while !int_queue.is_empty() {
+        var opt = int_queue.dequeue();
+        "{opt.unwrap()} "..;
+    }
+    "";
+
+    "";
+    "[String Queue]";
+    var str_queue = Queue<String>::new();
+    defer str_queue.free();
+
+    str_queue.enqueue(String::new("First"));
+    str_queue.enqueue(String::new("Second"));
+    str_queue.enqueue(String::new("Third"));
+
+    "Dequeuing: "..;
+    while !str_queue.is_empty() {
+        var opt_s = str_queue.dequeue();
+        var s: String = opt_s.unwrap();
+        "{s.c_str()} "..;
+    }
+    "";
+}
