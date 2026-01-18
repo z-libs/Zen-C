@@ -141,6 +141,7 @@ union Data {
     i: int;
     f: float;
 }
+```
 
 #### Type Aliases
 Create a new name for an existing type.
