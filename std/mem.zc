@@ -1,14 +1,18 @@
 
 fn alloc<T>() -> T* {
-    return malloc(sizeof(T));
+    return (T*)malloc(sizeof(T));
 }
 
 fn zalloc<T>() -> T* {
-    return calloc(1, sizeof(T));
+    return (T*)calloc(1, sizeof(T));
 }
 
 fn alloc_n<T>(n: usize) -> T* {
-    return malloc(sizeof(T) * n);
+    return (T*)malloc(sizeof(T) * n);
+}
+
+trait Drop {
+    fn drop(self);
 }
 
 struct Box<T> {

@@ -37,7 +37,6 @@ typedef struct Symbol
     char *name;
     char *type_name;
     Type *type_info;
-    int is_mutable;
     int is_used;
     int is_autofree;
     Token decl_token;
@@ -102,13 +101,6 @@ typedef struct ImportedFile
     char *path;
     struct ImportedFile *next;
 } ImportedFile;
-
-typedef struct VarMutability
-{
-    char *name;
-    int is_mutable;
-    struct VarMutability *next;
-} VarMutability;
 
 // Instantiation tracking
 typedef struct Instantiation
@@ -250,11 +242,10 @@ struct ParserContext
     ImportedPlugin *imported_plugins; // Plugin imports
 
     // Config/State
-    int immutable_by_default;
     char *current_impl_struct;
+    ASTNode *current_impl_methods; // Head of method list for current impl block
 
     // Internal tracking
-    VarMutability *var_mutability_table;
     DeprecatedFunc *deprecated_funcs;
 
     // LSP / Fault Tolerance
@@ -377,10 +368,6 @@ void register_selective_import(ParserContext *ctx, const char *symbol, const cha
                                const char *source_module);
 SelectiveImport *find_selective_import(ParserContext *ctx, const char *name);
 
-// Mutability tracking
-void register_var_mutability(ParserContext *ctx, const char *name, int is_mutable);
-int is_var_mutable(ParserContext *ctx, const char *name);
-
 // External symbol tracking (C interop)
 void register_extern_symbol(ParserContext *ctx, const char *name);
 int is_extern_symbol(ParserContext *ctx, const char *name);
@@ -408,7 +395,7 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l);
 char *parse_condition_raw(ParserContext *ctx, Lexer *l);
 char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st);
 char *parse_tuple_literal(ParserContext *ctx, Lexer *l, const char *tn);
-char *parse_embed(ParserContext *ctx, Lexer *l);
+ASTNode *parse_embed(ParserContext *ctx, Lexer *l);
 
 ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *name);
 ASTNode *parse_statement(ParserContext *ctx, Lexer *l);

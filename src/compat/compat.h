@@ -24,6 +24,7 @@ ssize_t zc_getline(char **lineptr, size_t *n, FILE *stream);
 #define dup2 _dup2
 #define strdup _strdup
 #define strncasecmp _strnicmp
+#define strtok_r strtok_s
 #define fileno _fileno
 
 #define ZC_PLUGIN_EXT ".dll"

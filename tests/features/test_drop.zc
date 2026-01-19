@@ -1,0 +1,26 @@
+import "../../std/mem.zc"
+
+var DROP_CALLED = 0;
+
+struct MyResource {
+    id: int;
+}
+
+impl Drop for MyResource {
+    fn drop(self) {
+        println "Dropping MyResource {self.id}";
+        DROP_CALLED = 1;
+    }
+}
+
+test "drop_trait" {
+    {
+        var res = MyResource { id: 1 };
+        // Scope ends here, drop should be called
+    }
+    
+    if (DROP_CALLED != 1) {
+        println "Error: Drop was not called!";
+        exit(1);
+    }
+}

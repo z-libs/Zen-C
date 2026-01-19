@@ -50,7 +50,7 @@ void print_usage()
     printf("  transpile Transpile to C code only (no compilation)\n");
     printf("  lsp     Start Language Server\n");
     printf("Options:\n");
-    printf("  --version       Print version information");
+    printf("  --version       Print version information\n");
     printf("  -o <file>       Output executable name\n");
     printf("  --emit-c        Keep generated C file (out.c)\n");
     printf("  --freestanding  Freestanding mode (no stdlib)\n");
@@ -60,6 +60,8 @@ void print_usage()
     printf("  -v, --verbose   Verbose output\n");
     printf("  -q, --quiet     Quiet output\n");
     printf("  -c              Compile only (produce .o)\n");
+    printf("  --cpp           Use C++ mode.\n");
+    printf("  --cuda          Use CUDA mode (requires nvcc).\n");
 }
 
 int main(int argc, char **argv)
@@ -153,6 +155,17 @@ int main(int argc, char **argv)
         else if (strcmp(arg, "--freestanding") == 0)
         {
             g_config.is_freestanding = 1;
+        }
+        else if (strcmp(arg, "--cpp") == 0)
+        {
+            strcpy(g_config.cc, "g++");
+            g_config.use_cpp = 1;
+        }
+        else if (strcmp(arg, "--cuda") == 0)
+        {
+            strcpy(g_config.cc, "nvcc");
+            g_config.use_cuda = 1;
+            g_config.use_cpp = 1; // CUDA implies C++ mode.
         }
         else if (strcmp(arg, "--check") == 0)
         {
@@ -273,11 +286,22 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    // Codegen to C
-    FILE *out = fopen("out.c", "w");
+    // Determine temporary filename based on mode
+    const char *temp_source_file = "out.c";
+    if (g_config.use_cuda)
+    {
+        temp_source_file = "out.cu";
+    }
+    else if (g_config.use_cpp)
+    {
+        temp_source_file = "out.cpp";
+    }
+
+    // Codegen to C/C++/CUDA
+    FILE *out = fopen(temp_source_file, "w");
     if (!out)
     {
-        perror("fopen out.c");
+        perror("fopen temp output");
         return 1;
     }
 
@@ -288,10 +312,10 @@ int main(int argc, char **argv)
     {
         if (g_config.output_file)
         {
-            // If user specified -o, rename out.c to that
-            if (rename("out.c", g_config.output_file) != 0)
+            // If user specified -o, rename temp file to that
+            if (rename(temp_source_file, g_config.output_file) != 0)
             {
-                perror("rename out.c");
+                perror("rename output");
                 return 1;
             }
             if (!g_config.quiet)
@@ -303,7 +327,7 @@ int main(int argc, char **argv)
         {
             if (!g_config.quiet)
             {
-                printf("[zc] Transpiled to out.c\n");
+                printf("[zc] Transpiled to %s\n", temp_source_file);
             }
         }
         // Done, no C compilation
@@ -315,9 +339,9 @@ int main(int argc, char **argv)
     char *outfile = g_config.output_file ? g_config.output_file : ZC_DEFAULT_OUTPUT;
 
     // TODO: Quote paths to handle spaces on Windows.
-    snprintf(cmd, sizeof(cmd), "%s %s %s %s -o %s out.c " ZC_MATH_FLAG " " ZC_PTHREAD_FLAG " -I./src -I./std %s %s", g_config.cc,
+    snprintf(cmd, sizeof(cmd), "%s %s %s %s -o %s %s " ZC_MATH_FLAG " " ZC_PTHREAD_FLAG " -I./src -I./std %s %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "",
-             outfile, g_parser_ctx->has_async ? "-lpthread" : "", g_link_flags);
+             outfile, temp_source_file, g_parser_ctx->has_async ? "-lpthread" : "", g_link_flags);
 
     if (g_config.verbose)
     {
@@ -330,7 +354,7 @@ int main(int argc, char **argv)
         printf("C compilation failed.\n");
         if (!g_config.emit_c)
         {
-            remove("out.c");
+            remove(temp_source_file);
         }
         return 1;
     }
@@ -338,7 +362,7 @@ int main(int argc, char **argv)
     if (!g_config.emit_c)
     {
         // remove("out.c"); // Keep it for debugging for now or follow flag
-        remove("out.c");
+        remove(temp_source_file);
     }
 
     if (g_config.mode_run)

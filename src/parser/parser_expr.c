@@ -800,7 +800,14 @@ static ASTNode *create_fstring_block(ParserContext *ctx, const char *content)
             }
             if (depth == 1 && *p == ':' && !colon)
             {
-                colon = p;
+                if ((p + 1) < end_brace && *(p + 1) == ':')
+                {
+                    p++;
+                }
+                else
+                {
+                    colon = p;
+                }
             }
             p++;
         }
@@ -2382,7 +2389,6 @@ const char *get_operator_method(const char *op)
         return "ge";
     }
 
-    // --- NEW: Bitwise ---
     if (strcmp(op, "&") == 0)
     {
         return "bitand";
@@ -2405,6 +2411,190 @@ const char *get_operator_method(const char *op)
     }
 
     return NULL;
+}
+
+char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out,
+                                    char **allocated_out)
+{
+    if (!t)
+    {
+        return NULL;
+    }
+    char *struct_name = NULL;
+    *allocated_out = NULL;
+    *is_ptr_out = 0;
+
+    const char *alias_target = NULL;
+    if (t->kind == TYPE_STRUCT)
+    {
+        alias_target = find_type_alias(ctx, t->name);
+    }
+
+    if (alias_target)
+    {
+        char *tpl = xstrdup(alias_target);
+        char *args_ptr = strchr(tpl, '<');
+        if (args_ptr)
+        {
+            *args_ptr = 0;
+            args_ptr++;
+            char *end = strrchr(args_ptr, '>');
+            if (end)
+            {
+                *end = 0;
+            }
+
+            const char *c_type = args_ptr;
+            if (strcmp(args_ptr, "f32") == 0)
+            {
+                c_type = "float";
+            }
+            else if (strcmp(args_ptr, "f64") == 0)
+            {
+                c_type = "double";
+            }
+            else if (strcmp(args_ptr, "i32") == 0)
+            {
+                c_type = "int";
+            }
+            else if (strcmp(args_ptr, "u32") == 0)
+            {
+                c_type = "uint";
+            }
+            else if (strcmp(args_ptr, "bool") == 0)
+            {
+                c_type = "bool";
+            }
+
+            char *clean = sanitize_mangled_name(c_type);
+            char *mangled = xmalloc(strlen(tpl) + strlen(clean) + 2);
+            sprintf(mangled, "%s_%s", tpl, clean);
+            struct_name = mangled;
+            *allocated_out = mangled;
+            free(clean);
+            *is_ptr_out = 0;
+        }
+        else if (strchr(alias_target, '*'))
+        {
+            *is_ptr_out = 1;
+            char *tmp = xstrdup(alias_target);
+            char *p = strchr(tmp, '*');
+            if (p)
+            {
+                *p = 0;
+            }
+            struct_name = xstrdup(tmp);
+            *allocated_out = struct_name;
+            free(tmp);
+        }
+        else
+        {
+            struct_name = xstrdup(alias_target);
+            *allocated_out = struct_name;
+            *is_ptr_out = 0;
+        }
+        free(tpl);
+    }
+    else
+    {
+        Type *struct_type = NULL;
+        if (t->kind == TYPE_STRUCT)
+        {
+            struct_type = t;
+            struct_name = t->name;
+            *is_ptr_out = 0;
+        }
+        else if (t->kind == TYPE_POINTER && t->inner->kind == TYPE_STRUCT)
+        {
+            struct_type = t->inner;
+            *is_ptr_out = 1;
+        }
+
+        if (struct_type)
+        {
+            if (struct_type->args && struct_type->arg_count > 0 && struct_type->name)
+            {
+                // It's a generic type instance (e.g. Foo<T>).
+                // We must construct Foo_T, ensuring we measure SANITIZED length.
+                int len = strlen(struct_type->name) + 1;
+
+                // Pass 1: Calculate Length
+                for (int i = 0; i < struct_type->arg_count; i++)
+                {
+                    Type *arg = struct_type->args[i];
+                    if (arg)
+                    {
+                        char *s = type_to_string(arg);
+                        if (s)
+                        {
+                            char *clean = sanitize_mangled_name(s);
+                            if (clean)
+                            {
+                                len += strlen(clean) + 1; // +1 for '_'
+                                free(clean);
+                            }
+                            free(s);
+                        }
+                    }
+                }
+
+                char *mangled = xmalloc(len + 1);
+                strcpy(mangled, struct_type->name);
+
+                // Pass 2: Build String
+                for (int i = 0; i < struct_type->arg_count; i++)
+                {
+                    Type *arg = struct_type->args[i];
+                    if (arg)
+                    {
+                        char *arg_str = type_to_string(arg);
+                        if (arg_str)
+                        {
+                            char *clean = sanitize_mangled_name(arg_str);
+                            if (clean)
+                            {
+                                strcat(mangled, "_");
+                                strcat(mangled, clean);
+                                free(clean);
+                            }
+                            free(arg_str);
+                        }
+                    }
+                }
+                struct_name = mangled;
+                *allocated_out = mangled;
+            }
+            else if (struct_type->name && strchr(struct_type->name, '<'))
+            {
+                // Fallback: It's a generic type string. We need to mangle it.
+                char *tpl = xstrdup(struct_type->name);
+                char *args_ptr = strchr(tpl, '<');
+                if (args_ptr)
+                {
+                    *args_ptr = 0;
+                    args_ptr++;
+                    char *end = strrchr(args_ptr, '>');
+                    if (end)
+                    {
+                        *end = 0;
+                    }
+
+                    char *clean = sanitize_mangled_name(args_ptr);
+                    char *mangled = xmalloc(strlen(tpl) + strlen(clean) + 2);
+                    sprintf(mangled, "%s_%s", tpl, clean);
+                    struct_name = mangled;
+                    *allocated_out = mangled;
+                    free(clean);
+                }
+                free(tpl);
+            }
+            else
+            {
+                struct_name = struct_type->name;
+            }
+        }
+    }
+    return struct_name;
 }
 
 ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
@@ -2675,19 +2865,9 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         if (method && operand->type_info)
         {
             Type *ot = operand->type_info;
-            char *struct_name = NULL;
             int is_ptr = 0;
-            // Unwrap pointer if needed (Struct* -> Struct) to find the method
-            if (ot->kind == TYPE_STRUCT)
-            {
-                struct_name = ot->name;
-                is_ptr = 0;
-            }
-            else if (ot->kind == TYPE_POINTER && ot->inner->kind == TYPE_STRUCT)
-            {
-                struct_name = ot->inner->name;
-                is_ptr = 1;
-            }
+            char *allocated_name = NULL;
+            char *struct_name = resolve_struct_name_from_type(ctx, ot, &is_ptr, &allocated_name);
 
             if (struct_name)
             {
@@ -2732,8 +2912,16 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                     call->resolved_type = type_to_string(sig->ret_type);
                     lhs = call;
 
+                    if (allocated_name)
+                    {
+                        free(allocated_name);
+                    }
                     // Skip standard unary node creation
                     goto after_unary;
+                }
+                if (allocated_name)
+                {
+                    free(allocated_name);
                 }
             }
         }
@@ -3075,10 +3263,10 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             }
 
             // Case: [..] or [..end]
-            if (lexer_peek(l).type == TOK_DOTDOT)
+            if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_LT)
             {
                 is_slice = 1;
-                lexer_next(l); // consume ..
+                lexer_next(l); // consume .. or ..<
                 if (lexer_peek(l).type != TOK_RBRACKET)
                 {
                     end = parse_expression(ctx, l);
@@ -3088,7 +3276,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             {
                 // Case: [start] or [start..] or [start..end]
                 start = parse_expression(ctx, l);
-                if (lexer_peek(l).type == TOK_DOTDOT)
+                if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_LT)
                 {
                     is_slice = 1;
                     lexer_next(l); // consume ..
@@ -3486,16 +3674,6 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 {
                     zpanic_at(op, "Cannot assign to const variable '%s'", lhs->var_ref.name);
                 }
-
-                // Check if the variable is immutable
-                if (!is_var_mutable(ctx, lhs->var_ref.name))
-                {
-                    zpanic_at(op,
-                              "Cannot assign to immutable variable '%s' (use 'var mut' "
-                              "to make it "
-                              "mutable)",
-                              lhs->var_ref.name);
-                }
             }
         }
 
@@ -3539,22 +3717,10 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             if (inner_method)
             {
                 Type *lt = lhs->type_info;
-                char *struct_name = NULL;
                 int is_lhs_ptr = 0;
-
-                if (lt)
-                {
-                    if (lt->kind == TYPE_STRUCT)
-                    {
-                        struct_name = lt->name;
-                        is_lhs_ptr = 0;
-                    }
-                    else if (lt->kind == TYPE_POINTER && lt->inner->kind == TYPE_STRUCT)
-                    {
-                        struct_name = lt->inner->name;
-                        is_lhs_ptr = 1;
-                    }
-                }
+                char *allocated_name = NULL;
+                char *struct_name =
+                    resolve_struct_name_from_type(ctx, lt, &is_lhs_ptr, &allocated_name);
 
                 if (struct_name)
                 {
@@ -3596,6 +3762,10 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                         // Replace op_node with the call
                         op_node = call;
                     }
+                }
+                if (allocated_name)
+                {
+                    free(allocated_name);
                 }
             }
 
@@ -3682,22 +3852,10 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         if (method)
         {
             Type *lt = lhs->type_info;
-            char *struct_name = NULL;
             int is_lhs_ptr = 0;
-
-            if (lt)
-            {
-                if (lt->kind == TYPE_STRUCT)
-                {
-                    struct_name = lt->name;
-                    is_lhs_ptr = 0;
-                }
-                else if (lt->kind == TYPE_POINTER && lt->inner->kind == TYPE_STRUCT)
-                {
-                    struct_name = lt->inner->name;
-                    is_lhs_ptr = 1;
-                }
-            }
+            char *allocated_name = NULL;
+            char *struct_name =
+                resolve_struct_name_from_type(ctx, lt, &is_lhs_ptr, &allocated_name);
 
             if (struct_name)
             {
@@ -3759,7 +3917,15 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                     call->resolved_type = type_to_string(sig->ret_type);
 
                     lhs = call;
+                    if (allocated_name)
+                    {
+                        free(allocated_name);
+                    }
                     continue; // Loop again with result as new lhs
+                }
+                if (allocated_name)
+                {
+                    free(allocated_name);
                 }
             }
         }
@@ -3816,44 +3982,70 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 }
                 else
                 {
+                    // Check aliases
+                    char *al = NULL, *ar = NULL;
+                    int pl = 0, pr = 0;
+                    char *sl = resolve_struct_name_from_type(ctx, lhs->type_info, &pl, &al);
+                    char *sr = resolve_struct_name_from_type(ctx, rhs->type_info, &pr, &ar);
+
+                    int alias_match = 0;
+                    if (sl && sr && strcmp(sl, sr) == 0 && pl == pr)
+                    {
+                        alias_match = 1;
+                        bin->type_info = lhs->type_info;
+                    }
+                    if (al)
+                    {
+                        free(al);
+                    }
+                    if (ar)
+                    {
+                        free(ar);
+                    }
+
                     char *t1 = type_to_string(lhs->type_info);
                     char *t2 = type_to_string(rhs->type_info);
 
                     // Allow pointer arithmetic: ptr + int, ptr - int, int + ptr
                     int is_ptr_arith = 0;
-                    if (strcmp(bin->binary.op, "+") == 0 || strcmp(bin->binary.op, "-") == 0)
+                    if (!alias_match)
                     {
-                        int lhs_is_ptr = (lhs->type_info->kind == TYPE_POINTER ||
-                                          lhs->type_info->kind == TYPE_STRING ||
-                                          (t1 && strstr(t1, "*") != NULL));
-                        int rhs_is_ptr = (rhs->type_info->kind == TYPE_POINTER ||
-                                          rhs->type_info->kind == TYPE_STRING ||
-                                          (t2 && strstr(t2, "*") != NULL));
-                        int lhs_is_int =
-                            (lhs->type_info->kind == TYPE_INT || lhs->type_info->kind == TYPE_I32 ||
-                             lhs->type_info->kind == TYPE_I64 ||
-                             lhs->type_info->kind == TYPE_ISIZE ||
-                             lhs->type_info->kind == TYPE_USIZE ||
-                             (t1 && (strcmp(t1, "int") == 0 || strcmp(t1, "isize") == 0 ||
-                                     strcmp(t1, "usize") == 0 || strcmp(t1, "size_t") == 0 ||
-                                     strcmp(t1, "ptrdiff_t") == 0)));
-                        int rhs_is_int =
-                            (rhs->type_info->kind == TYPE_INT || rhs->type_info->kind == TYPE_I32 ||
-                             rhs->type_info->kind == TYPE_I64 ||
-                             rhs->type_info->kind == TYPE_ISIZE ||
-                             rhs->type_info->kind == TYPE_USIZE ||
-                             (t2 && (strcmp(t2, "int") == 0 || strcmp(t2, "isize") == 0 ||
-                                     strcmp(t2, "usize") == 0 || strcmp(t2, "size_t") == 0 ||
-                                     strcmp(t2, "ptrdiff_t") == 0)));
-
-                        if ((lhs_is_ptr && rhs_is_int) || (lhs_is_int && rhs_is_ptr))
+                        if (strcmp(bin->binary.op, "+") == 0 || strcmp(bin->binary.op, "-") == 0)
                         {
-                            is_ptr_arith = 1;
-                            bin->type_info = lhs_is_ptr ? lhs->type_info : rhs->type_info;
+                            int lhs_is_ptr = (lhs->type_info->kind == TYPE_POINTER ||
+                                              lhs->type_info->kind == TYPE_STRING ||
+                                              (t1 && strstr(t1, "*") != NULL));
+                            int rhs_is_ptr = (rhs->type_info->kind == TYPE_POINTER ||
+                                              rhs->type_info->kind == TYPE_STRING ||
+                                              (t2 && strstr(t2, "*") != NULL));
+                            int lhs_is_int =
+                                (lhs->type_info->kind == TYPE_INT ||
+                                 lhs->type_info->kind == TYPE_I32 ||
+                                 lhs->type_info->kind == TYPE_I64 ||
+                                 lhs->type_info->kind == TYPE_ISIZE ||
+                                 lhs->type_info->kind == TYPE_USIZE ||
+                                 (t1 && (strcmp(t1, "int") == 0 || strcmp(t1, "isize") == 0 ||
+                                         strcmp(t1, "usize") == 0 || strcmp(t1, "size_t") == 0 ||
+                                         strcmp(t1, "ptrdiff_t") == 0)));
+                            int rhs_is_int =
+                                (rhs->type_info->kind == TYPE_INT ||
+                                 rhs->type_info->kind == TYPE_I32 ||
+                                 rhs->type_info->kind == TYPE_I64 ||
+                                 rhs->type_info->kind == TYPE_ISIZE ||
+                                 rhs->type_info->kind == TYPE_USIZE ||
+                                 (t2 && (strcmp(t2, "int") == 0 || strcmp(t2, "isize") == 0 ||
+                                         strcmp(t2, "usize") == 0 || strcmp(t2, "size_t") == 0 ||
+                                         strcmp(t2, "ptrdiff_t") == 0)));
+
+                            if ((lhs_is_ptr && rhs_is_int) || (lhs_is_int && rhs_is_ptr))
+                            {
+                                is_ptr_arith = 1;
+                                bin->type_info = lhs_is_ptr ? lhs->type_info : rhs->type_info;
+                            }
                         }
                     }
 
-                    if (!is_ptr_arith)
+                    if (!is_ptr_arith && !alias_match)
                     {
                         char msg[256];
                         sprintf(msg, "Type mismatch in binary operation '%s'", bin->binary.op);

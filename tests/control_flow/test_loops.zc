@@ -131,3 +131,44 @@ test "test_range_loops_generic" {
     
     "-> Range loops work with any integer type!";
 }
+
+test "inclusive range basic" {
+    var count1 = 0
+    for i in 0..=5 {
+        count1 += 1
+    }
+    assert(count1 == 6, "Expected 6 iterations for 0..=5")
+}
+
+test "inclusive range single" {
+    var count2 = 0
+    for i in 0..=0 {
+        count2 += 1
+    }
+    assert(count2 == 1, "Expected 1 iteration for 0..=0")
+}
+
+test "inclusive range with step" {
+    var sum = 0
+    for i in 0..=10 step 2 {
+        sum += i
+    }
+    // 0, 2, 4, 6, 8, 10 -> sum = 30
+    assert(sum == 30, "Expected sum 30 for 0..=10 step 2")
+}
+
+test "exclusive range regression check" {
+    var count3 = 0
+    for i in 0..5 {
+        count3 += 1
+    }
+    assert(count3 == 5, "Expected 5 iterations for 0..5")
+}
+
+test "explicit exclusive range (..<)" {
+    var count4 = 0
+    for i in 0..<5 {
+        count4 += 1
+    }
+    assert(count4 == 5, "Expected 5 iterations for 0..<5")
+}

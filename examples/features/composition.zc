@@ -1,0 +1,38 @@
+
+struct Vector2 {
+    x: float;
+    y: float;
+}
+
+// Unnamed use (Mixin)
+// Transform "is a" Vector2 (inherits x and y)
+struct Transform {
+    use Vector2; 
+    rotation: float;
+}
+
+// Named use (Composition)
+// Rigidbody "has a" velocity and position
+struct Rigidbody {
+    use position: Vector2;
+    use velocity: Vector2;
+    mass: float;
+}
+
+fn main() {
+    // Mixin usage - flattened fields
+    var t = Transform{ x: 10.0, y: 5.0, rotation: 90.0 };
+    println "Transform pos: ({t.x}, {t.y})";
+
+    // Named usage - nested fields
+    var rb = Rigidbody{
+        position: Vector2{x: 0.0, y: 10.0},
+        velocity: Vector2{x: 1.0, y: 0.0},
+        mass: 50.0
+    };
+    
+    // Access using dot notation
+    rb.position.x += rb.velocity.x;
+    
+    println "Rigidbody pos: ({rb.position.x}, {rb.position.y})";
+}

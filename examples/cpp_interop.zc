@@ -1,0 +1,36 @@
+
+include <vector>
+include <iostream>
+include <string>
+
+// C++ helper functions in raw blocks
+raw {
+    std::vector<int> cpp_make_vector(int a, int b, int c) {
+        return {a, b, c};
+    }
+    
+    int cpp_sum_vector(std::vector<int>& vec) {
+        int sum = 0;
+        for (int x : vec) sum += x;
+        return sum;
+    }
+    
+    void cpp_print(const char* msg) {
+        std::cout << "[C++] " << msg << std::endl;
+    }
+}
+
+fn main() {
+    "=> Zen C + C++ interop.";
+    
+    cpp_print("Hello from C++!");
+    
+    var vec = cpp_make_vector(10, 20, 30);
+    var result = cpp_sum_vector(vec);
+    "Sum of C++ vector: {result}";
+    
+    raw {
+        std::string s = "C++ string: works!";
+        std::cout << s << std::endl;
+    }
+}

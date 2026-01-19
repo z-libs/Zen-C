@@ -20,6 +20,17 @@ fn get_sign(n: int) -> string {
     }
 }
 
+fn classify_extended(n: int) -> int {
+    match n {
+        1 || 2 => { return 100; },      // OR pattern with ||
+        3 or 4 => { return 200; },       // OR pattern with 'or'
+        5..<8 => { return 300; },        // Use ..< for exclusive range (originally 5..8)
+        8..8 => { return 305; },         // Single valid? (empty range)
+        10..=15 => { return 400; },      // Range inclusive (10-15)
+        _ => { return -1; }
+    }
+}
+
 test "test_match" {
     println "Testing match expressions...";
     
@@ -83,6 +94,48 @@ test "test_match" {
         println "  -> match complex (negative): Passed";
     } else {
         println "  -> match complex (negative): Failed";
+        exit(1);
+    }
+    
+    // OR pattern with ||
+    var or1 = classify_extended(1);
+    var or2 = classify_extended(2);
+    if (or1 == 100 && or2 == 100) {
+        println "  -> match OR (||): Passed";
+    } else {
+        println "  -> match OR (||): Failed";
+        exit(1);
+    }
+    
+    // OR pattern with 'or'
+    var or3 = classify_extended(3);
+    var or4 = classify_extended(4);
+    if (or3 == 200 && or4 == 200) {
+        println "  -> match OR (or): Passed";
+    } else {
+        println "  -> match OR (or): Failed";
+        exit(1);
+    }
+    
+    // Range exclusive (5..8 matches 5, 6, 7)
+    var r5 = classify_extended(5);
+    var r7 = classify_extended(7);
+    var r8 = classify_extended(8);  // Should NOT match
+    if (r5 == 300 && r7 == 300 && r8 == -1) {
+        println "  -> match range exclusive: Passed";
+    } else {
+        println "  -> match range exclusive: Failed";
+        exit(1);
+    }
+    
+    // Range inclusive (10..=15 matches 10-15)
+    var r10 = classify_extended(10);
+    var r15 = classify_extended(15);
+    var r16 = classify_extended(16);  // Should NOT match
+    if (r10 == 400 && r15 == 400 && r16 == -1) {
+        println "  -> match range inclusive: Passed";
+    } else {
+        println "  -> match range inclusive: Failed";
         exit(1);
     }
     

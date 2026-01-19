@@ -1,0 +1,33 @@
+
+struct Foo {
+    i: i32;
+}
+
+impl Foo {
+    fn get_i(self) -> i32 {
+        return self.i;
+    }
+    
+    fn set_i(self, val: i32) {
+        self.i = val;
+    }
+}
+
+struct Bar {
+    use Foo;
+    f: f32;
+}
+
+test "test_mixin_methods" {
+    var b: Bar;
+    b.i = 42;
+    b.f = 3.14;
+    
+    var val = b.get_i();
+    assert(val == 42, "Mixin method get_i() should return 42");
+    
+    b.set_i(100);
+    assert(b.i == 100, "Mixin method set_i() should update i to 100");
+    
+    "Mixin method dispatch OK";
+}

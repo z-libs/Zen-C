@@ -52,6 +52,8 @@ typedef enum ZTokenType
     TOK_OP,
     TOK_AT,
     TOK_DOTDOT,
+    TOK_DOTDOT_EQ,
+    TOK_DOTDOT_LT,
     TOK_ARROW,
     TOK_PIPE,
     TOK_TEST,
@@ -75,7 +77,6 @@ typedef enum ZTokenType
     TOK_UNION,
     TOK_ASM,
     TOK_VOLATILE,
-    TOK_MUT,
     TOK_ASYNC,
     TOK_AWAIT,
     TOK_PREPROC,
@@ -83,6 +84,9 @@ typedef enum ZTokenType
     TOK_COMMENT,
     TOK_UNKNOWN
 } ZTokenType;
+
+// Alias for upstream compatibility
+typedef ZTokenType TokenType;
 
 typedef struct
 {
@@ -187,6 +191,8 @@ typedef struct
     int repl_mode;       // 1 if --repl (internal flag for REPL usage).
     int is_freestanding; // 1 if --freestanding.
     int mode_transpile;  // 1 if 'transpile' command.
+    int use_cpp;         // 1 if --cpp (emit C++ compatible code).
+    int use_cuda;        // 1 if --cuda (emit CUDA-compatible code).
 
     // GCC Flags accumulator.
     char gcc_flags[4096];

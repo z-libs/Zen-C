@@ -17,6 +17,24 @@ fn add(a: int, b: int) -> int {
     return a + b;
 }
 
+// Generic struct for alias testing
+struct Vec2<T> {
+    x: T;
+    y: T;
+}
+
+impl Vec2<T> {
+  fn neg(self) -> Vec2<T> {
+    return Vec2<T>{x: -self.x, y: -self.y};
+  }
+  fn add(self, rhs: Vec2<T>) -> Vec2<T> {
+    return Vec2<T>{x: self.x + rhs.x, y: self.y + rhs.y};
+  }
+}
+
+alias Vec2f = Vec2<f32>;
+alias Vec2i = Vec2<int>;
+
 test "alias basic" {
     var x: MyInt = 10;
     var ptr: MyIntPtr = &x;
@@ -28,14 +46,49 @@ test "alias basic" {
     assert(res == 11, "Function with alias arg failed");
 }
 
+test "alias struct" {
+    var p: Point = Point{x: 0, y: 0};
     p.x = 100;
     p.y = 200;
     
     assert(p.x == 100, "Struct alias access failed");
 }
 
+test "alias generic struct" {
+    var v = Vec2f{x: 1.5, y: 2.5};
+    assert(v.x > 1.0, "Generic alias field access failed");
+    assert(v.y > 2.0, "Generic alias field access failed");
+    
+    var vi = Vec2i{x: 10, y: 20};
+    assert(vi.x == 10, "Generic int alias failed");
+    assert(vi.y == 20, "Generic int alias failed");
+}
+
+test "alias fstring" {
+    var v = Vec2f{x: 3.14, y: 6.28};
+    // This tests that f-string interpolation correctly resolves the alias
+    println "v.x = {v.x}, v.y = {v.y}";
+}
+
 test "alias function pointer" {
     // var op: BinOp;
-    // Assignment currently not supported for function types without casting op = add; 
+    // Assignment currently not supported for function types without casting
+    // op = add; 
     // assert(op(1, 2) == 3, "Function alias");
 }
+
+test "alias operator overloading" {
+  var v = Vec2f{x: 1.0, y: 1.0};
+  v = -v;  // Should call __neg
+  assert(v.x == -1.0, "Unary operator generic alias failed");
+  
+  v += v;  // Should call __add (-1 + -1 = -2)
+  assert(v.x == -2.0, "Compound assignment generic alias failed");
+
+  // Control
+  var v2 = Vec2<f32>{x: 1.0, y: 1.0};
+  v2 = -v2;
+  v2 += v2;
+  assert(v2.x == -2.0, "Control generic operator overloading failed");
+}
+

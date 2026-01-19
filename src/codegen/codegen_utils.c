@@ -515,7 +515,7 @@ void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t, FILE *out)
         }
         else
         {
-            fprintf(out, "__auto_type");
+            fprintf(out, "ZC_AUTO");
         }
     }
 }
@@ -533,6 +533,23 @@ void emit_func_signature(FILE *out, ASTNode *func, const char *name_override)
     if (!func || func->type != NODE_FUNCTION)
     {
         return;
+    }
+
+    // Emit CUDA qualifiers (for both forward declarations and definitions)
+    if (g_config.use_cuda)
+    {
+        if (func->func.cuda_global)
+        {
+            fprintf(out, "__global__ ");
+        }
+        if (func->func.cuda_device)
+        {
+            fprintf(out, "__device__ ");
+        }
+        if (func->func.cuda_host)
+        {
+            fprintf(out, "__host__ ");
+        }
     }
 
     // Return type

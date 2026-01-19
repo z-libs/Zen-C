@@ -1,0 +1,18 @@
+struct Vec2f {
+    x: f32;
+    y: f32;
+}
+
+struct Node {
+    val: int;
+    next: Node*;
+}
+
+fn main() {
+    var v: Vec2f;
+    v.x = 1.0;
+    v.y = 2.0;
+
+    var n: Node;
+    n.val = 1;
+}

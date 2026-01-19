@@ -536,6 +536,7 @@ CompilerConfig g_config = {0};
 
 void scan_build_directives(ParserContext *ctx, const char *src)
 {
+    (void)ctx; // Currently unused, reserved for future use
     const char *p = src;
     while (*p)
     {
@@ -728,10 +729,6 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                     }
                     strcat(g_link_flags, flags);
                 }
-            }
-            else if (strncmp(line, "immutable-by-default", 20) == 0)
-            {
-                ctx->immutable_by_default = 1;
             }
 
             p += len;

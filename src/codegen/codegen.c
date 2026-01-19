@@ -1,6 +1,7 @@
 
 #include "codegen.h"
 #include "zprep.h"
+#include "../compat/compat.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +10,104 @@
 #include "../plugins/plugin_manager.h"
 #include "ast.h"
 #include "zprep_plugin.h"
+
+// Helper: emit a single pattern condition (either a value, or a range)
+static void emit_single_pattern_cond(const char *pat, int id, FILE *out)
+{
+    // Check for range pattern: "start..end" or "start..=end"
+    char *range_incl = strstr(pat, "..=");
+    char *range_excl = strstr(pat, "..");
+
+    if (range_incl)
+    {
+        // Inclusive range: start..=end -> _m_id >= start && _m_id <= end
+        int start_len = (int)(range_incl - pat);
+        char *start = xmalloc(start_len + 1);
+        strncpy(start, pat, start_len);
+        start[start_len] = 0;
+        char *end = xstrdup(range_incl + 3);
+        fprintf(out, "(_m_%d >= %s && _m_%d <= %s)", id, start, id, end);
+        free(start);
+        free(end);
+    }
+    else if (range_excl)
+    {
+        // Exclusive range: start..end -> _m_id >= start && _m_id < end
+        int start_len = (int)(range_excl - pat);
+        char *start = xmalloc(start_len + 1);
+        strncpy(start, pat, start_len);
+        start[start_len] = 0;
+        char *end = xstrdup(range_excl + 2);
+        fprintf(out, "(_m_%d >= %s && _m_%d < %s)", id, start, id, end);
+        free(start);
+        free(end);
+    }
+    else if (pat[0] == '"')
+    {
+        // String pattern
+        fprintf(out, "strcmp(_m_%d, %s) == 0", id, pat);
+    }
+    else if (pat[0] == '\'')
+    {
+        // Char literal pattern
+        fprintf(out, "_m_%d == %s", id, pat);
+    }
+    else
+    {
+        // Numeric or simple pattern
+        fprintf(out, "_m_%d == %s", id, pat);
+    }
+}
+
+// Helper: emit condition for a pattern (may contain OR patterns with '|')
+static void emit_pattern_condition(ParserContext *ctx, const char *pattern, int id, FILE *out)
+{
+    // Check if pattern contains '|' for OR patterns
+    if (strchr(pattern, '|'))
+    {
+        // Split by '|' and emit OR conditions
+        char *pattern_copy = xstrdup(pattern);
+        char *saveptr;
+        char *part = strtok_r(pattern_copy, "|", &saveptr);
+        int first = 1;
+        fprintf(out, "(");
+        while (part)
+        {
+            if (!first)
+            {
+                fprintf(out, " || ");
+            }
+
+            // Check if part is an enum variant
+            EnumVariantReg *reg = find_enum_variant(ctx, part);
+            if (reg)
+            {
+                fprintf(out, "_m_%d.tag == %d", id, reg->tag_id);
+            }
+            else
+            {
+                emit_single_pattern_cond(part, id, out);
+            }
+            first = 0;
+            part = strtok_r(NULL, "|", &saveptr);
+        }
+        fprintf(out, ")");
+        free(pattern_copy);
+    }
+    else
+    {
+        // Single pattern (may be a range)
+        EnumVariantReg *reg = find_enum_variant(ctx, pattern);
+        if (reg)
+        {
+            fprintf(out, "_m_%d.tag == %d", id, reg->tag_id);
+        }
+        else
+        {
+            emit_single_pattern_cond(pattern, id, out);
+        }
+    }
+}
 
 // static function for internal use.
 static char *g_current_func_ret_type = NULL;
@@ -138,29 +237,8 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
         }
         else
         {
-            EnumVariantReg *reg = find_enum_variant(ctx, c->match_case.pattern);
-            if (reg)
-            {
-                fprintf(out, "_m_%d.tag == %d", id, reg->tag_id);
-            }
-            else if (c->match_case.pattern[0] == '"')
-            {
-                fprintf(out, "strcmp(_m_%d, %s) == 0", id, c->match_case.pattern);
-            }
-            else if (isdigit(c->match_case.pattern[0]) || c->match_case.pattern[0] == '-')
-            {
-                // Numeric pattern
-                fprintf(out, "_m_%d == %s", id, c->match_case.pattern);
-            }
-            else if (c->match_case.pattern[0] == '\'')
-            {
-                // Char literal pattern
-                fprintf(out, "_m_%d == %s", id, c->match_case.pattern);
-            }
-            else
-            {
-                fprintf(out, "1");
-            }
+            // Use helper for OR patterns, range patterns, and simple patterns
+            emit_pattern_condition(ctx, c->match_case.pattern, id, out);
         }
         fprintf(out, ") { ");
         if (c->match_case.binding_name)
@@ -174,7 +252,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                 }
                 else
                 {
-                    fprintf(out, "__auto_type %s = _m_%d.val; ", c->match_case.binding_name, id);
+                    fprintf(out, "ZC_AUTO %s = _m_%d.val; ", c->match_case.binding_name, id);
                 }
             }
             if (is_result)
@@ -188,8 +266,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                     }
                     else
                     {
-                        fprintf(out, "__auto_type %s = _m_%d.val; ", c->match_case.binding_name,
-                                id);
+                        fprintf(out, "ZC_AUTO %s = _m_%d.val; ", c->match_case.binding_name, id);
                     }
                 }
                 else
@@ -201,8 +278,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                     }
                     else
                     {
-                        fprintf(out, "__auto_type %s = _m_%d.err; ", c->match_case.binding_name,
-                                id);
+                        fprintf(out, "ZC_AUTO %s = _m_%d.err; ", c->match_case.binding_name, id);
                     }
                 }
             }
@@ -217,7 +293,7 @@ static void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                 {
                     f = c->match_case.pattern;
                 }
-                fprintf(out, "__auto_type %s = _m_%d.data.%s; ", c->match_case.binding_name, id, f);
+                fprintf(out, "ZC_AUTO %s = _m_%d.data.%s; ", c->match_case.binding_name, id, f);
             }
         }
 
@@ -560,8 +636,38 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
                 else
                 {
-                    fprintf(out, "%s__%s(", base, method);
-                    if (!strchr(type, '*'))
+                    // Mixin Lookup Logic
+                    char *call_base = base;
+                    int need_cast = 0;
+                    char mixin_func_name[128];
+                    sprintf(mixin_func_name, "%s__%s", base, method);
+
+                    if (!find_func(ctx, mixin_func_name))
+                    {
+                        // Method not found on primary struct, check mixins
+                        ASTNode *def = find_struct_def(ctx, base);
+                        if (def && def->type == NODE_STRUCT && def->strct.used_structs)
+                        {
+                            for (int k = 0; k < def->strct.used_struct_count; k++)
+                            {
+                                char mixin_check[128];
+                                sprintf(mixin_check, "%s__%s", def->strct.used_structs[k], method);
+                                if (find_func(ctx, mixin_check))
+                                {
+                                    call_base = def->strct.used_structs[k];
+                                    need_cast = 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    fprintf(out, "%s__%s(", call_base, method);
+                    if (need_cast)
+                    {
+                        fprintf(out, "(%s*)%s", call_base, strchr(type, '*') ? "" : "&");
+                    }
+                    else if (!strchr(type, '*'))
                     {
                         fprintf(out, "&");
                     }
@@ -668,15 +774,46 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else
         {
+            FuncSig *sig = NULL;
+            if (node->call.callee->type == NODE_EXPR_VAR)
+            {
+                sig = find_func(ctx, node->call.callee->var_ref.name);
+            }
+
             ASTNode *arg = node->call.args;
+            int arg_idx = 0;
             while (arg)
             {
-                codegen_expression(ctx, arg, out);
+                int handled = 0;
+                if (sig && arg_idx < sig->total_args)
+                {
+                    Type *param_t = sig->arg_types[arg_idx];
+                    Type *arg_t = arg->type_info;
+
+                    if (param_t && param_t->kind == TYPE_ARRAY && param_t->array_size == 0 &&
+                        arg_t && arg_t->kind == TYPE_ARRAY && arg_t->array_size > 0)
+                    {
+                        char *inner = type_to_string(param_t->inner);
+                        fprintf(out, "(Slice_%s){.data = ", inner);
+                        codegen_expression(ctx, arg, out);
+                        fprintf(out, ", .len = %d, .cap = %d}", arg_t->array_size,
+                                arg_t->array_size);
+                        free(inner);
+                        handled = 1;
+                    }
+                }
+
+                if (!handled)
+                {
+                    codegen_expression(ctx, arg, out);
+                }
+
                 if (arg->next)
                 {
                     fprintf(out, ", ");
                 }
                 arg = arg->next;
+                arg_idx++;
             }
         }
         fprintf(out, ")");
@@ -922,7 +1059,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         else
         {
             fprintf(out,
-                    "; if (!_try.is_ok) return %s_Err(_try.err); "
+                    "; if (!_try.is_ok) return %s__Err(_try.err); "
                     "_try.val; })",
                     search_name);
         }
@@ -1066,7 +1203,28 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             struct_name = g_current_impl_type;
         }
-        fprintf(out, "(struct %s){", struct_name);
+
+        int is_zen_struct = 0;
+        StructRef *sr = ctx->parsed_structs_list;
+        while (sr)
+        {
+            if (sr->node && sr->node->type == NODE_STRUCT &&
+                strcmp(sr->node->strct.name, struct_name) == 0)
+            {
+                is_zen_struct = 1;
+                break;
+            }
+            sr = sr->next;
+        }
+
+        if (is_zen_struct)
+        {
+            fprintf(out, "(struct %s){", struct_name);
+        }
+        else
+        {
+            fprintf(out, "(%s){", struct_name);
+        }
         ASTNode *f = node->struct_init.fields;
         while (f)
         {
@@ -1542,7 +1700,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             {
                 // Cleanup attribute
                 ASTNode *def = find_struct_def(ctx, tname);
-                if (def && def->type_info && def->type_info->has_drop)
+                if (def && def->type_info && def->type_info->traits.has_drop)
                 {
                     fprintf(out, "__attribute__((cleanup(%s__Drop_glue))) ", tname);
                 }
@@ -1756,10 +1914,17 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else
         {
-            fprintf(out, "__auto_type %s = ", node->for_range.var_name);
+            fprintf(out, "ZC_AUTO %s = ", node->for_range.var_name);
         }
         codegen_expression(ctx, node->for_range.start, out);
-        fprintf(out, "; %s < ", node->for_range.var_name);
+        if (node->for_range.is_inclusive)
+        {
+            fprintf(out, "; %s <= ", node->for_range.var_name);
+        }
+        else
+        {
+            fprintf(out, "; %s < ", node->for_range.var_name);
+        }
         codegen_expression(ctx, node->for_range.end, out);
         fprintf(out, "; %s", node->for_range.var_name);
         if (node->for_range.step)
@@ -2071,6 +2236,85 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             free(ret_type);
         }
         fprintf(out, ";\n"); // Statement terminator
+        break;
+    }
+    case NODE_EXPR_LITERAL:
+        // String literal statement should auto-print
+        if (node->literal.type_kind == 2 || node->literal.type_kind == TOK_STRING)
+        {
+            fprintf(out, "    printf(\"%%s\\n\", ");
+            codegen_expression(ctx, node, out);
+            fprintf(out, ");\n");
+        }
+        else
+        {
+            // Non-string literals as statements - just evaluate
+            codegen_expression(ctx, node, out);
+            fprintf(out, ";\n");
+        }
+        break;
+    case NODE_CUDA_LAUNCH:
+    {
+        // Emit CUDA kernel launch: kernel<<<grid, block, shared, stream>>>(args);
+        ASTNode *call = node->cuda_launch.call;
+
+        // Get kernel name from callee
+        if (call->call.callee->type == NODE_EXPR_VAR)
+        {
+            fprintf(out, "    %s<<<", call->call.callee->var_ref.name);
+        }
+        else
+        {
+            fprintf(out, "    ");
+            codegen_expression(ctx, call->call.callee, out);
+            fprintf(out, "<<<");
+        }
+
+        // Grid dimension
+        codegen_expression(ctx, node->cuda_launch.grid, out);
+        fprintf(out, ", ");
+
+        // Block dimension
+        codegen_expression(ctx, node->cuda_launch.block, out);
+
+        // Optional shared memory size
+        if (node->cuda_launch.shared_mem || node->cuda_launch.stream)
+        {
+            fprintf(out, ", ");
+            if (node->cuda_launch.shared_mem)
+            {
+                codegen_expression(ctx, node->cuda_launch.shared_mem, out);
+            }
+            else
+            {
+                fprintf(out, "0");
+            }
+        }
+
+        // Optional CUDA stream
+        if (node->cuda_launch.stream)
+        {
+            fprintf(out, ", ");
+            codegen_expression(ctx, node->cuda_launch.stream, out);
+        }
+
+        fprintf(out, ">>>(");
+
+        // Arguments
+        ASTNode *arg = call->call.args;
+        int first = 1;
+        while (arg)
+        {
+            if (!first)
+            {
+                fprintf(out, ", ");
+            }
+            codegen_expression(ctx, arg, out);
+            first = 0;
+            arg = arg->next;
+        }
+
+        fprintf(out, ");\n");
         break;
     }
     default:

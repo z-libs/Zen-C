@@ -54,13 +54,17 @@ typedef struct Type
     struct Type **args; // For GENERIC args.
     int arg_count;
     int is_const;
-    int is_explicit_struct; // e.g. "struct Foo" vs "Foo"
+    int is_explicit_struct; // for example, "struct Foo" vs "Foo"
     union
     {
         int array_size;  // For fixed-size arrays [T; N].
         int is_varargs;  // For function types (...).
         int is_restrict; // For restrict pointers.
-        int has_drop;    // For RAII: does this type implement Drop?
+        struct
+        {
+            int has_drop;     // For RAII: does this type implement Drop?
+            int has_iterable; // For the for iterator: does the type implement Iterable?
+        } traits;
     };
 } Type;
 
@@ -122,7 +126,8 @@ typedef enum
     NODE_TRY,
     NODE_REFLECTION,
     NODE_AWAIT,
-    NODE_REPL_PRINT
+    NODE_REPL_PRINT,
+    NODE_CUDA_LAUNCH
 } NodeType;
 
 // ** AST Node Structure **
@@ -176,6 +181,10 @@ struct ASTNode
             char *section;   // @section("name")
             int is_async;    // async function
             int is_comptime; // @comptime function
+            // CUDA qualifiers
+            int cuda_global; // @global -> __global__
+            int cuda_device; // @device -> __device__
+            int cuda_host;   // @host -> __host__
         } func;
 
         struct
@@ -195,7 +204,6 @@ struct ASTNode
             ASTNode *init_expr;
             Type *type_info;
             int is_autofree;
-            int is_mutable;
             int is_static;
         } var_decl;
 
@@ -249,6 +257,7 @@ struct ASTNode
             ASTNode *start;
             ASTNode *end;
             char *step;
+            int is_inclusive;
             ASTNode *body;
         } for_range;
 
@@ -381,9 +390,11 @@ struct ASTNode
             int generic_param_count; // Number of generic parameters
             char *parent;
             int is_union;
-            int is_packed;     // @packed attribute.
-            int align;         // @align(N) attribute, 0 = default.
-            int is_incomplete; // Forward declaration (prototype)
+            int is_packed;       // @packed attribute.
+            int align;           // @align(N) attribute, 0 = default.
+            int is_incomplete;   // Forward declaration (prototype)
+            char **used_structs; // Names of structs used/mixed-in
+            int used_struct_count;
         } strct;
 
         struct
@@ -397,6 +408,8 @@ struct ASTNode
         {
             char *name;
             ASTNode *methods;
+            char **generic_params;
+            int generic_param_count;
         } trait;
 
         struct
@@ -537,6 +550,15 @@ struct ASTNode
         {
             ASTNode *expr;
         } repl_print;
+
+        struct
+        {
+            ASTNode *call;       // The kernel call (NODE_EXPR_CALL)
+            ASTNode *grid;       // Grid dimensions expression
+            ASTNode *block;      // Block dimensions expression
+            ASTNode *shared_mem; // Optional shared memory size (NULL = default)
+            ASTNode *stream;     // Optional CUDA stream (NULL = default)
+        } cuda_launch;
     };
 };
 

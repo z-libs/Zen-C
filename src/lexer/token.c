@@ -173,10 +173,6 @@ Token lexer_next(Lexer *l)
         {
             return (Token){TOK_VOLATILE, s, 8, start_line, start_col};
         }
-        if (len == 3 && strncmp(s, "mut", 3) == 0)
-        {
-            return (Token){TOK_MUT, s, 3, start_line, start_col};
-        }
         if (len == 5 && strncmp(s, "async", 5) == 0)
         {
             return (Token){TOK_ASYNC, s, 5, start_line, start_col};
@@ -262,12 +258,30 @@ Token lexer_next(Lexer *l)
                     {
                         len++;
                     }
+                    // Consume float suffix (e.g. 1.0f)
+                    if (is_ident_start(s[len]))
+                    {
+                        while (is_ident_char(s[len]))
+                        {
+                            len++;
+                        }
+                    }
                     l->pos += len;
                     l->col += len;
                     return (Token){TOK_FLOAT, s, len, start_line, start_col};
                 }
             }
         }
+
+        // Consume integer suffix (e.g. 1u, 100u64, 1L)
+        if (is_ident_start(s[len]))
+        {
+            while (is_ident_char(s[len]))
+            {
+                len++;
+            }
+        }
+
         l->pos += len;
         l->col += len;
         return (Token){TOK_INT, s, len, start_line, start_col};
@@ -360,8 +374,21 @@ Token lexer_next(Lexer *l)
     }
     else if (s[0] == '.' && s[1] == '.')
     {
-        len = 2;
-        type = TOK_DOTDOT;
+        if (s[2] == '=')
+        {
+            len = 3;
+            type = TOK_DOTDOT_EQ;
+        }
+        else if (s[2] == '<')
+        {
+            len = 3;
+            type = TOK_DOTDOT_LT;
+        }
+        else
+        {
+            len = 2;
+            type = TOK_DOTDOT;
+        }
     }
     else if ((s[0] == '-' && s[1] == '>') || (s[0] == '=' && s[1] == '>'))
     {

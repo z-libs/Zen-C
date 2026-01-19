@@ -47,7 +47,7 @@ fi
 while read -r test_file; do
     [ -e "$test_file" ] || continue
 
-    echo -n "Testing $(basename "$test_file")... "
+    echo -n "Testing $test_file... "
     
     output=$($ZC run "$test_file" "$@" 2>&1)
     exit_code=$?
@@ -58,7 +58,7 @@ while read -r test_file; do
     else
         echo "FAIL"
         ((FAILED++))
-        FAILED_TESTS="$FAILED_TESTS\n- $(basename "$test_file")"
+        FAILED_TESTS="$FAILED_TESTS\n- $test_file"
     fi
 done < <(find "$TEST_DIR" -name "*.zc" | sort)
 

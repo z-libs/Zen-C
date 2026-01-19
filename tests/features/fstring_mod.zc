@@ -1,0 +1,4 @@
+
+fn get_val() -> int {
+    return 42;
+}

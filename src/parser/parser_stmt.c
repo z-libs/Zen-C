@@ -217,7 +217,11 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
             break;
         }
 
-        // --- 1. Parse Comma-Separated Patterns ---
+        // --- 1. Parse Patterns (with OR and range support) ---
+        // Patterns can be:
+        //   - Single value: 1
+        //   - OR patterns: 1 || 2 or 1 or 2
+        //   - Range patterns: 1..5 or 1..=5
         char patterns_buf[1024];
         patterns_buf[0] = 0;
         int pattern_count = 0;
@@ -238,20 +242,43 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                 p_str = tmp;
             }
 
+            // Check for range pattern: value..end, value..<end or value..=end
+            if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_EQ ||
+                lexer_peek(l).type == TOK_DOTDOT_LT)
+            {
+                int is_inclusive = (lexer_peek(l).type == TOK_DOTDOT_EQ);
+                lexer_next(l); // eat operator
+                Token end_tok = lexer_next(l);
+                char *end_str = token_strdup(end_tok);
+
+                // Build range pattern: "start..end" or "start..=end"
+                char *range_str = xmalloc(strlen(p_str) + strlen(end_str) + 4);
+                sprintf(range_str, "%s%s%s", p_str, is_inclusive ? "..=" : "..", end_str);
+                free(p_str);
+                free(end_str);
+                p_str = range_str;
+            }
+
             if (pattern_count > 0)
             {
-                strcat(patterns_buf, ",");
+                strcat(patterns_buf, "|");
             }
             strcat(patterns_buf, p_str);
             free(p_str);
             pattern_count++;
 
-            Lexer lookahead = *l;
-            skip_comments(&lookahead);
-            if (lexer_peek(&lookahead).type == TOK_COMMA)
+            // Check for OR continuation: ||, 'or', or comma (legacy)
+            Token next = lexer_peek(l);
+            skip_comments(l);
+            int is_or = (next.type == TOK_OR) ||
+                        (next.type == TOK_OP && next.len == 2 && next.start[0] == '|' &&
+                         next.start[1] == '|') ||
+                        (next.type == TOK_COMMA); // Legacy comma support
+            if (is_or)
             {
-                lexer_next(l); // eat comma
+                lexer_next(l); // eat ||, 'or', or comma
                 skip_comments(l);
+                continue;
             }
             else
             {
@@ -356,7 +383,8 @@ ASTNode *parse_loop(ParserContext *ctx, Lexer *l)
 
 ASTNode *parse_repeat(ParserContext *ctx, Lexer *l)
 {
-    lexer_next(l);
+    Token t = lexer_next(l);
+    zwarn_at(t, "repeat is deprecated. Use 'for _ in 0..N' instead.");
     char *c = rewrite_expr_methods(ctx, parse_condition_raw(ctx, l));
     ASTNode *b = parse_block(ctx, l);
     ASTNode *n = ast_create(NODE_REPEAT);
@@ -860,19 +888,6 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
 {
     lexer_next(l); // eat 'var'
 
-    // Check for 'mut' keyword
-    int is_mutable = 0;
-    if (lexer_peek(l).type == TOK_MUT)
-    {
-        is_mutable = 1;
-        lexer_next(l);
-    }
-    else
-    {
-        // Default mutability depends on directive
-        is_mutable = !ctx->immutable_by_default;
-    }
-
     // Destructuring: var {x, y} = ...
     if (lexer_peek(l).type == TOK_LBRACE || lexer_peek(l).type == TOK_LPAREN)
     {
@@ -887,8 +902,6 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
             // UPDATE: Pass NULL to add_symbol
             names[count++] = nm;
             add_symbol(ctx, nm, "unknown", NULL);
-            // Register mutability for each destructured variable
-            register_var_mutability(ctx, nm, is_mutable);
             Token next = lexer_next(l);
             if (next.type == (is_struct ? TOK_RBRACE : TOK_RPAREN))
             {
@@ -950,7 +963,6 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
             }
             // Register symbol for variable
             add_symbol(ctx, names[count], "unknown", NULL);
-            register_var_mutability(ctx, names[count], is_mutable);
 
             count++;
 
@@ -1036,7 +1048,6 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
         n->destruct.else_block = else_blk;
 
         add_symbol(ctx, val_name, "unknown", NULL);
-        register_var_mutability(ctx, val_name, is_mutable);
 
         return n;
     }
@@ -1061,9 +1072,12 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
         Token next = lexer_peek(l);
         if (next.type == TOK_IDENT && strncmp(next.start, "embed", 5) == 0)
         {
-            char *e = parse_embed(ctx, l);
-            init = ast_create(NODE_RAW_STMT);
-            init->raw_stmt.content = e;
+            init = parse_embed(ctx, l);
+
+            if (!type && init->type_info)
+            {
+                type = type_to_string(init->type_info);
+            }
             if (!type)
             {
                 register_slice(ctx, "char");
@@ -1179,10 +1193,9 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
 
     // Register in symbol table with actual token
     add_symbol_with_token(ctx, name, type, type_obj, name_tok);
-    register_var_mutability(ctx, name, is_mutable);
 
     // NEW: Capture Const Integer Values
-    if (!is_mutable && init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == 0)
+    if (init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == 0)
     {
         Symbol *s = find_symbol_entry(ctx, name); // Helper to find the struct
         if (s)
@@ -1201,7 +1214,6 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
     n->token = name_tok; // Save location
     n->var_decl.name = name;
     n->var_decl.type_str = type;
-    n->var_decl.is_mutable = is_mutable;
     n->type_info = type_obj;
 
     // Auto-construct Trait Object
@@ -1574,49 +1586,206 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
         if (in_tok.type == TOK_IDENT && strncmp(in_tok.start, "in", 2) == 0)
         {
             ASTNode *start_expr = parse_expression(ctx, l);
-            if (lexer_peek(l).type == TOK_DOTDOT)
+            // Check for Range Loop (.. or ..= or ..<)
+            TokenType next_tok = lexer_peek(l).type;
+            if (next_tok == TOK_DOTDOT || next_tok == TOK_DOTDOT_LT || next_tok == TOK_DOTDOT_EQ)
             {
-                lexer_next(l); // consume ..
-                ASTNode *end_expr = parse_expression(ctx, l);
-
-                ASTNode *n = ast_create(NODE_FOR_RANGE);
-                n->for_range.var_name = xmalloc(var.len + 1);
-                strncpy(n->for_range.var_name, var.start, var.len);
-                n->for_range.var_name[var.len] = 0;
-                n->for_range.start = start_expr;
-                n->for_range.end = end_expr;
-
-                if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "step", 4) == 0)
+                int is_inclusive = 0;
+                if (next_tok == TOK_DOTDOT || next_tok == TOK_DOTDOT_LT)
                 {
-                    lexer_next(l);
-                    Token s_tok = lexer_next(l);
-                    char *sval = xmalloc(s_tok.len + 1);
-                    strncpy(sval, s_tok.start, s_tok.len);
-                    sval[s_tok.len] = 0;
-                    n->for_range.step = sval;
+                    lexer_next(l); // consume .. or ..<
                 }
-                else
+                else if (next_tok == TOK_DOTDOT_EQ)
                 {
-                    n->for_range.step = NULL;
+                    is_inclusive = 1;
+                    lexer_next(l); // consume ..=
                 }
 
-                // Fix: Enter scope to register loop variable
+                if (1) // Block to keep scope for variables
+                {
+                    ASTNode *end_expr = parse_expression(ctx, l);
+
+                    ASTNode *n = ast_create(NODE_FOR_RANGE);
+                    n->for_range.var_name = xmalloc(var.len + 1);
+                    strncpy(n->for_range.var_name, var.start, var.len);
+                    n->for_range.var_name[var.len] = 0;
+                    n->for_range.start = start_expr;
+                    n->for_range.end = end_expr;
+                    n->for_range.is_inclusive = is_inclusive;
+
+                    if (lexer_peek(l).type == TOK_IDENT &&
+                        strncmp(lexer_peek(l).start, "step", 4) == 0)
+                    {
+                        lexer_next(l);
+                        Token s_tok = lexer_next(l);
+                        char *sval = xmalloc(s_tok.len + 1);
+                        strncpy(sval, s_tok.start, s_tok.len);
+                        sval[s_tok.len] = 0;
+                        n->for_range.step = sval;
+                    }
+                    else
+                    {
+                        n->for_range.step = NULL;
+                    }
+
+                    enter_scope(ctx);
+                    add_symbol(ctx, n->for_range.var_name, "int", type_new(TYPE_INT));
+
+                    if (lexer_peek(l).type == TOK_LBRACE)
+                    {
+                        n->for_range.body = parse_block(ctx, l);
+                    }
+                    else
+                    {
+                        n->for_range.body = parse_statement(ctx, l);
+                    }
+                    exit_scope(ctx);
+
+                    return n;
+                }
+            }
+            else
+            {
+                // Iterator Loop: for x in obj
+                // Desugar to:
+                /*
+                   {
+                       var __it = obj.iterator();
+                       while (true) {
+                           var __opt = __it.next();
+                           if (__opt.is_none()) break;
+                           var x = __opt.unwrap();
+                           <body...>
+                       }
+                   }
+                */
+
+                char *var_name = xmalloc(var.len + 1);
+                strncpy(var_name, var.start, var.len);
+                var_name[var.len] = 0;
+
+                ASTNode *obj_expr = start_expr;
+
+                // var __it = obj.iterator();
+                ASTNode *it_decl = ast_create(NODE_VAR_DECL);
+                it_decl->var_decl.name = xstrdup("__it");
+                it_decl->var_decl.type_str = NULL; // inferred
+
+                // obj.iterator()
+                ASTNode *call_iter = ast_create(NODE_EXPR_CALL);
+                ASTNode *memb_iter = ast_create(NODE_EXPR_MEMBER);
+                memb_iter->member.target = obj_expr;
+                memb_iter->member.field = xstrdup("iterator");
+                call_iter->call.callee = memb_iter;
+                call_iter->call.args = NULL;
+                call_iter->call.arg_count = 0;
+
+                it_decl->var_decl.init_expr = call_iter;
+
+                // while(true)
+                ASTNode *while_loop = ast_create(NODE_WHILE);
+                ASTNode *true_lit = ast_create(NODE_EXPR_LITERAL);
+                true_lit->literal.type_kind = TOK_INT; // Treated as bool in conditions
+                true_lit->literal.int_val = 1;
+                true_lit->literal.string_val = xstrdup("1");
+                while_loop->while_stmt.condition = true_lit;
+
+                ASTNode *loop_body = ast_create(NODE_BLOCK);
+                ASTNode *stmts_head = NULL;
+                ASTNode *stmts_tail = NULL;
+
+#define APPEND_STMT(node)                                                                          \
+    if (!stmts_head)                                                                               \
+    {                                                                                              \
+        stmts_head = node;                                                                         \
+        stmts_tail = node;                                                                         \
+    }                                                                                              \
+    else                                                                                           \
+    {                                                                                              \
+        stmts_tail->next = node;                                                                   \
+        stmts_tail = node;                                                                         \
+    }
+
+                // var __opt = __it.next();
+                ASTNode *opt_decl = ast_create(NODE_VAR_DECL);
+                opt_decl->var_decl.name = xstrdup("__opt");
+                opt_decl->var_decl.type_str = NULL;
+
+                // __it.next()
+                ASTNode *call_next = ast_create(NODE_EXPR_CALL);
+                ASTNode *memb_next = ast_create(NODE_EXPR_MEMBER);
+                ASTNode *it_ref = ast_create(NODE_EXPR_VAR);
+                it_ref->var_ref.name = xstrdup("__it");
+                memb_next->member.target = it_ref;
+                memb_next->member.field = xstrdup("next");
+                call_next->call.callee = memb_next;
+
+                opt_decl->var_decl.init_expr = call_next;
+                APPEND_STMT(opt_decl);
+
+                // __opt.is_none()
+                ASTNode *call_is_none = ast_create(NODE_EXPR_CALL);
+                ASTNode *memb_is_none = ast_create(NODE_EXPR_MEMBER);
+                ASTNode *opt_ref1 = ast_create(NODE_EXPR_VAR);
+                opt_ref1->var_ref.name = xstrdup("__opt");
+                memb_is_none->member.target = opt_ref1;
+                memb_is_none->member.field = xstrdup("is_none");
+                call_is_none->call.callee = memb_is_none;
+
+                ASTNode *break_stmt = ast_create(NODE_BREAK);
+
+                ASTNode *if_break = ast_create(NODE_IF);
+                if_break->if_stmt.condition = call_is_none;
+                if_break->if_stmt.then_body = break_stmt;
+                APPEND_STMT(if_break);
+
+                // var <user_var> = __opt.unwrap();
+                ASTNode *user_var_decl = ast_create(NODE_VAR_DECL);
+                user_var_decl->var_decl.name = var_name;
+                user_var_decl->var_decl.type_str = NULL;
+
+                // __opt.unwrap()
+                ASTNode *call_unwrap = ast_create(NODE_EXPR_CALL);
+                ASTNode *memb_unwrap = ast_create(NODE_EXPR_MEMBER);
+                ASTNode *opt_ref2 = ast_create(NODE_EXPR_VAR);
+                opt_ref2->var_ref.name = xstrdup("__opt");
+                memb_unwrap->member.target = opt_ref2;
+                memb_unwrap->member.field = xstrdup("unwrap");
+                call_unwrap->call.callee = memb_unwrap;
+
+                user_var_decl->var_decl.init_expr = call_unwrap;
+                APPEND_STMT(user_var_decl);
+
+                // User Body
                 enter_scope(ctx);
-                // Register loop variable so body can see it
-                add_symbol(ctx, n->for_range.var_name, "int", type_new(TYPE_INT));
+                add_symbol(ctx, var_name, NULL, NULL);
 
-                // Handle body (brace or single stmt)
+                ASTNode *user_body_node;
                 if (lexer_peek(l).type == TOK_LBRACE)
                 {
-                    n->for_range.body = parse_block(ctx, l);
+                    user_body_node = parse_block(ctx, l);
                 }
                 else
                 {
-                    n->for_range.body = parse_statement(ctx, l);
+                    ASTNode *stmt = parse_statement(ctx, l);
+                    ASTNode *blk = ast_create(NODE_BLOCK);
+                    blk->block.statements = stmt;
+                    user_body_node = blk;
                 }
                 exit_scope(ctx);
 
-                return n;
+                // Append user body statements to our loop body
+                APPEND_STMT(user_body_node);
+
+                loop_body->block.statements = stmts_head;
+                while_loop->while_stmt.body = loop_body;
+
+                // Wrap entire thing in a block to scope _it
+                ASTNode *outer_block = ast_create(NODE_BLOCK);
+                it_decl->next = while_loop;
+                outer_block->block.statements = it_decl;
+
+                return outer_block;
             }
         }
         l->pos = saved_pos; // Restore
@@ -1747,7 +1916,14 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
             }
             if (depth == 1 && *p == ':' && !colon)
             {
-                colon = p;
+                if (*(p + 1) == ':')
+                {
+                    p++;
+                }
+                else
+                {
+                    colon = p;
+                }
             }
             if (depth == 0)
             {
@@ -2479,6 +2655,117 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             return parse_guard(ctx, l);
         }
 
+        // CUDA launch: launch kernel(args) with { grid: X, block: Y };
+        if (strncmp(tk.start, "launch", 6) == 0 && tk.len == 6)
+        {
+            Token launch_tok = lexer_next(l); // eat 'launch'
+
+            // Parse the kernel call expression
+            ASTNode *call = parse_expression(ctx, l);
+            if (!call || call->type != NODE_EXPR_CALL)
+            {
+                zpanic_at(launch_tok, "Expected kernel call after 'launch'");
+            }
+
+            // Expect 'with'
+            Token with_tok = lexer_peek(l);
+            if (with_tok.type != TOK_IDENT || strncmp(with_tok.start, "with", 4) != 0 ||
+                with_tok.len != 4)
+            {
+                zpanic_at(with_tok, "Expected 'with' after kernel call in launch statement");
+            }
+            lexer_next(l); // eat 'with'
+
+            // Expect '{' for configuration block
+            if (lexer_peek(l).type != TOK_LBRACE)
+            {
+                zpanic_at(lexer_peek(l), "Expected '{' after 'with' in launch statement");
+            }
+            lexer_next(l); // eat '{'
+
+            ASTNode *grid = NULL;
+            ASTNode *block = NULL;
+            ASTNode *shared_mem = NULL;
+            ASTNode *stream = NULL;
+
+            // Parse configuration fields
+            while (lexer_peek(l).type != TOK_RBRACE && lexer_peek(l).type != TOK_EOF)
+            {
+                Token field_name = lexer_next(l);
+                if (field_name.type != TOK_IDENT)
+                {
+                    zpanic_at(field_name, "Expected field name in launch configuration");
+                }
+
+                // Expect ':'
+                if (lexer_peek(l).type != TOK_COLON)
+                {
+                    zpanic_at(lexer_peek(l), "Expected ':' after field name");
+                }
+                lexer_next(l); // eat ':'
+
+                // Parse value expression
+                ASTNode *value = parse_expression(ctx, l);
+
+                // Assign to appropriate field
+                if (strncmp(field_name.start, "grid", 4) == 0 && field_name.len == 4)
+                {
+                    grid = value;
+                }
+                else if (strncmp(field_name.start, "block", 5) == 0 && field_name.len == 5)
+                {
+                    block = value;
+                }
+                else if (strncmp(field_name.start, "shared_mem", 10) == 0 && field_name.len == 10)
+                {
+                    shared_mem = value;
+                }
+                else if (strncmp(field_name.start, "stream", 6) == 0 && field_name.len == 6)
+                {
+                    stream = value;
+                }
+                else
+                {
+                    zpanic_at(field_name, "Unknown launch configuration field (expected: grid, "
+                                          "block, shared_mem, stream)");
+                }
+
+                // Optional comma
+                if (lexer_peek(l).type == TOK_COMMA)
+                {
+                    lexer_next(l);
+                }
+            }
+
+            // Expect '}'
+            if (lexer_peek(l).type != TOK_RBRACE)
+            {
+                zpanic_at(lexer_peek(l), "Expected '}' to close launch configuration");
+            }
+            lexer_next(l); // eat '}'
+
+            // Expect ';'
+            if (lexer_peek(l).type == TOK_SEMICOLON)
+            {
+                lexer_next(l);
+            }
+
+            // Require at least grid and block
+            if (!grid || !block)
+            {
+                zpanic_at(launch_tok, "Launch configuration requires at least 'grid' and 'block'");
+            }
+
+            ASTNode *n = ast_create(NODE_CUDA_LAUNCH);
+            n->cuda_launch.call = call;
+            n->cuda_launch.grid = grid;
+            n->cuda_launch.block = block;
+            n->cuda_launch.shared_mem = shared_mem;
+            n->cuda_launch.stream = stream;
+            n->token = launch_tok;
+            return n;
+        }
+
         // Do-while loop: do { body } while condition;
         if (strncmp(tk.start, "do", 2) == 0 && tk.len == 2)
         {
@@ -2794,11 +3081,11 @@ ASTNode *parse_block(ParserContext *ctx, Lexer *l)
                 }
 
                 // RAII: Don't warn if type implements Drop (it is used implicitly)
-                int has_drop = (sym->type_info && sym->type_info->has_drop);
+                int has_drop = (sym->type_info && sym->type_info->traits.has_drop);
                 if (!has_drop && sym->type_info && sym->type_info->name)
                 {
                     ASTNode *def = find_struct_def(ctx, sym->type_info->name);
-                    if (def && def->type_info && def->type_info->has_drop)
+                    if (def && def->type_info && def->type_info->traits.has_drop)
                     {
                         has_drop = 1;
                     }
@@ -2832,6 +3119,51 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
     strncpy(name, n.start, n.len);
     name[n.len] = 0;
 
+    // Generics <T>
+    char **generic_params = NULL;
+    int generic_count = 0;
+    if (lexer_peek(l).type == TOK_LANGLE)
+    {
+        lexer_next(l);                                // eat <
+        generic_params = xmalloc(sizeof(char *) * 8); // simplified
+        while (1)
+        {
+            Token p = lexer_next(l);
+            if (p.type != TOK_IDENT)
+            {
+                zpanic_at(p, "Expected generic parameter name");
+            }
+            generic_params[generic_count] = xmalloc(p.len + 1);
+            strncpy(generic_params[generic_count], p.start, p.len);
+            generic_params[generic_count][p.len] = 0;
+            generic_count++;
+
+            Token sep = lexer_peek(l);
+            if (sep.type == TOK_COMMA)
+            {
+                lexer_next(l);
+                continue;
+            }
+            else if (sep.type == TOK_RANGLE)
+            {
+                lexer_next(l);
+                break;
+            }
+            else
+            {
+                zpanic_at(sep, "Expected , or > in generic params");
+            }
+        }
+    }
+
+    if (generic_count > 0)
+    {
+        for (int i = 0; i < generic_count; i++)
+        {
+            register_generic(ctx, generic_params[i]);
+        }
+    }
+
     lexer_next(l); // eat {
 
     ASTNode *methods = NULL, *tail = NULL;
@@ -2845,11 +3177,6 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
         }
 
         // Parse method signature: fn name(args...) -> ret;
-        // Re-use parse_function but stop at semicolon?
-        // Actually trait methods might have default impls later, but for now just
-        // signatures. Let's parse full function but body might be empty/null? Or
-        // simpler: just parse signature manually.
-
         Token ft = lexer_next(l);
         if (ft.type != TOK_IDENT || strncmp(ft.start, "fn", 2) != 0)
         {
@@ -2907,6 +3234,8 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
     ASTNode *n_node = ast_create(NODE_TRAIT);
     n_node->trait.name = name;
     n_node->trait.methods = methods;
+    n_node->trait.generic_params = generic_params;
+    n_node->trait.generic_param_count = generic_count;
     register_trait(name);
     return n_node;
 }
@@ -2955,7 +3284,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             Symbol *s = find_symbol_entry(ctx, name2);
             if (s && s->type_info)
             {
-                s->type_info->has_drop = 1;
+                s->type_info->traits.has_drop = 1;
             }
             else
             {
@@ -2963,7 +3292,26 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 ASTNode *def = find_struct_def(ctx, name2);
                 if (def && def->type_info)
                 {
-                    def->type_info->has_drop = 1;
+                    def->type_info->traits.has_drop = 1;
+                }
+            }
+        }
+
+        // Iterator: Check for "Iterable" trait implementation
+        else if (strcmp(name1, "Iterable") == 0)
+        {
+            Symbol *s = find_symbol_entry(ctx, name2);
+            if (s && s->type_info)
+            {
+                s->type_info->traits.has_iterable = 1;
+            }
+            else
+            {
+                // Try finding struct definition
+                ASTNode *def = find_struct_def(ctx, name2);
+                if (def && def->type_info)
+                {
+                    def->type_info->traits.has_iterable = 1;
                 }
             }
         }
@@ -3067,9 +3415,14 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             {
                 zpanic_at(lexer_peek(l), "Expected {");
             }
+            char *full_struct_name = xmalloc(strlen(name1) + strlen(gen_param) + 3);
+            sprintf(full_struct_name, "%s<%s>", name1, gen_param);
+
             ASTNode *h = 0, *tl = 0;
+            ctx->current_impl_methods = NULL;
             while (1)
             {
+                ctx->current_impl_methods = h;
                 skip_comments(l);
                 if (lexer_peek(l).type == TOK_RBRACE)
                 {
@@ -3085,9 +3438,27 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     free(f->func.name);
                     f->func.name = mangled;
 
-                    char *na = patch_self_args(f->func.args, name1);
+                    // Update args string
+                    char *na = patch_self_args(f->func.args, full_struct_name);
                     free(f->func.args);
                     f->func.args = na;
+
+                    // Manual Type construction for self: Foo<T>*
+                    if (f->func.arg_count > 0 && f->func.param_names &&
+                        strcmp(f->func.param_names[0], "self") == 0)
+                    {
+                        Type *t_struct = type_new(TYPE_STRUCT);
+                        t_struct->name = xstrdup(name1);
+                        t_struct->arg_count = 1;
+                        t_struct->args = xmalloc(sizeof(Type *));
+                        t_struct->args[0] = type_new(TYPE_GENERIC);
+                        t_struct->args[0]->name = xstrdup(gen_param);
+
+                        Type *t_ptr = type_new(TYPE_POINTER);
+                        t_ptr->inner = t_struct;
+
+                        f->func.arg_types[0] = t_ptr;
+                    }
 
                     if (!h)
                     {
@@ -3111,9 +3482,27 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                         sprintf(mangled, "%s__%s", name1, f->func.name);
                         free(f->func.name);
                         f->func.name = mangled;
-                        char *na = patch_self_args(f->func.args, name1);
+
+                        char *na = patch_self_args(f->func.args, full_struct_name);
                         free(f->func.args);
                         f->func.args = na;
+
+                        if (f->func.arg_count > 0 && f->func.param_names &&
+                            strcmp(f->func.param_names[0], "self") == 0)
+                        {
+                            Type *t_struct = type_new(TYPE_STRUCT);
+                            t_struct->name = xstrdup(name1);
+                            t_struct->arg_count = 1;
+                            t_struct->args = xmalloc(sizeof(Type *));
+                            t_struct->args[0] = type_new(TYPE_GENERIC);
+                            t_struct->args[0]->name = xstrdup(gen_param);
+
+                            Type *t_ptr = type_new(TYPE_POINTER);
+                            t_ptr->inner = t_struct;
+
+                            f->func.arg_types[0] = t_ptr;
+                        }
+
                         if (!h)
                         {
                             h = f;
@@ -3134,6 +3523,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     lexer_next(l);
                 }
             }
+            free(full_struct_name);
             // Register Template
             ASTNode *n = ast_create(NODE_IMPL);
             n->impl.struct_name = name1;
@@ -3287,6 +3677,10 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
     lexer_next(l); // eat {
     ASTNode *h = 0, *tl = 0;
 
+    // Temp storage for used structs
+    char **temp_used_structs = NULL;
+    int temp_used_count = 0;
+
     while (1)
     {
         skip_comments(l);
@@ -3303,10 +3697,40 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
             continue;
         }
 
-        // --- HANDLE 'use' (Struct Embedding) ---
+        // Handle 'use' (Struct Embedding)
         if (t.type == TOK_USE)
         {
             lexer_next(l); // eat use
+
+            // Check for named use: use name: Type;
+            Token t1 = lexer_peek(l);
+            Token t2 = lexer_peek2(l);
+
+            if (t1.type == TOK_IDENT && t2.type == TOK_COLON)
+            {
+                // Named use -> Composition (Add field, don't flatten)
+                Token field_name = lexer_next(l);
+                lexer_next(l); // eat :
+                char *field_type_str = parse_type(ctx, l);
+                expect(l, TOK_SEMICOLON, "Expected ;");
+
+                ASTNode *nf = ast_create(NODE_FIELD);
+                nf->field.name = token_strdup(field_name);
+                nf->field.type = field_type_str;
+
+                if (!h)
+                {
+                    h = nf;
+                }
+                else
+                {
+                    tl->next = nf;
+                }
+                tl = nf;
+                continue;
+            }
+
+            // Normal use -> Mixin (Flatten)
             // Parse the type (e.g. Header<I32>)
             Type *use_type = parse_type_formal(ctx, l);
             char *use_name = type_to_string(use_type);
@@ -3327,6 +3751,12 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
 
             if (def && def->type == NODE_STRUCT)
             {
+                if (!temp_used_structs)
+                {
+                    temp_used_structs = xmalloc(sizeof(char *) * 8);
+                }
+                temp_used_structs[temp_used_count++] = xstrdup(use_name);
+
                 ASTNode *f = def->strct.fields;
                 while (f)
                 {
@@ -3429,6 +3859,8 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
     node->strct.generic_params = gps;
     node->strct.generic_param_count = gp_count;
     node->strct.is_union = is_union;
+    node->strct.used_structs = temp_used_structs;
+    node->strct.used_struct_count = temp_used_count;
 
     if (gp_count > 0)
     {

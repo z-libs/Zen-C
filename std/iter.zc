@@ -1,0 +1,9 @@
+import "./option.zc"
+
+trait Iterator<T> {
+    fn next(self) -> Option<T>;
+}
+
+trait Iterable<T> {
+    fn iterator(self) -> Iterator<T>;
+}

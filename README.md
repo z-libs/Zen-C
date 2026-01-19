@@ -28,6 +28,71 @@ Join the discussion, share demos, ask questions, or report bugs in the official 
 
 ---
 
+## Index
+
+- [Overview](#overview)
+- [Community](#community)
+- [Quick Start](#quick-start)
+    - [Installation](#installation)
+    - [Usage](#usage)
+    - [Environment Variables](#environment-variables)
+- [Language Reference](#language-reference)
+    - [1. Variables and Constants](#1-variables-and-constants)
+    - [2. Primitive Types](#2-primitive-types)
+    - [3. Aggregate Types](#3-aggregate-types)
+        - [Arrays](#arrays)
+        - [Tuples](#tuples)
+        - [Structs](#structs)
+        - [Enums](#enums)
+        - [Unions](#unions)
+        - [Type Aliases](#type-aliases)
+    - [4. Functions & Lambdas](#4-functions--lambdas)
+        - [Functions](#functions)
+        - [Lambdas (Closures)](#lambdas-closures)
+    - [5. Control Flow](#5-control-flow)
+        - [Conditionals](#conditionals)
+        - [Pattern Matching](#pattern-matching)
+        - [Loops](#loops)
+        - [Advanced Control](#advanced-control)
+    - [6. Operators](#6-operators)
+        - [Overloadable Operators](#overloadable-operators)
+        - [Syntactic Sugar](#syntactic-sugar)
+    - [7. Printing and String Interpolation](#7-printing-and-string-interpolation)
+        - [Keywords](#keywords)
+        - [Shorthands](#shorthands)
+        - [String Interpolation (F-strings)](#string-interpolation-f-strings)
+        - [Input Prompts (`?`)](#input-prompts-)
+    - [8. Memory Management](#8-memory-management)
+        - [Defer](#defer)
+        - [Autofree](#autofree)
+        - [RAII / Drop Trait](#raii--drop-trait)
+    - [9. Object Oriented Programming](#9-object-oriented-programming)
+        - [Methods](#methods)
+        - [Traits](#traits)
+        - [Standard Traits](#standard-traits)
+        - [Composition](#composition)
+    - [10. Generics](#10-generics)
+    - [11. Concurrency (Async/Await)](#11-concurrency-asyncawait)
+    - [12. Metaprogramming](#12-metaprogramming)
+        - [Comptime](#comptime)
+        - [Embed](#embed)
+        - [Plugins](#plugins)
+        - [Generic C Macros](#generic-c-macros)
+    - [13. Attributes](#13-attributes)
+    - [14. Inline Assembly](#14-inline-assembly)
+        - [Basic Usage](#basic-usage)
+        - [Volatile](#volatile)
+        - [Named Constraints](#named-constraints)
+    - [15. Build Directives](#15-build-directives)
+- [Compiler Support & Compatibility](#compiler-support--compatibility)
+    - [Test Suite Status](#test-suite-status)
+    - [Building with Zig](#building-with-zig)
+    - [C++ Interop](#c-interop)
+    - [CUDA Interop](#cuda-interop)
+- [Contributing](#contributing)
+
+---
+
 ## Quick Start
 
 ### Installation
@@ -82,19 +147,6 @@ Zen C uses type inference by default.
 var x = 42;                 // Inferred as int
 const PI = 3.14159;         // Compile-time constant
 var explicit: float = 1.0;  // Explicit type
-```
-
-#### Mutability
-By default, variables are mutable. You can enable **Immutable by Default** mode using a directive.
-
-```zc
-//> immutable-by-default
-
-var x = 10;
-// x = 20; // Error: x is immutable
-
-var mut y = 10;
-y = 20;    // OK
 ```
 
 ### 2. Primitive Types
@@ -164,13 +216,13 @@ union Data {
     i: int;
     f: float;
 }
+```
 
 #### Type Aliases
 Create a new name for an existing type.
 ```zc
 alias ID = int;
 alias PointMap = Map<string, Point>;
-```
 ```
 
 ### 4. Functions & Lambdas
@@ -214,8 +266,12 @@ Powerful alternative to `switch`.
 ```zc
 match val {
     1 => print("One"),
-    2 | 3 => print("Two or Three"),
-    4..10 => print("Range"),
+    2 || 3 => print("Two or Three"),   // OR with ||
+    4 or 5 => print("Four or Five"),   // OR with 'or'
+    6, 7, 8 => print("Six to Eight"),  // OR with comma
+    10..15 => print("10 to 14"),       // Exclusive range (Legacy)
+    10..<15 => print("10 to 14"),      // Exclusive range (Explicit)
+    20..=25 => print("20 to 25"),      // Inclusive range
     _ => print("Other")
 }
 
@@ -230,11 +286,13 @@ match shape {
 #### Loops
 ```zc
 // Range
-for i in 0..10 { ... }
+for i in 0..10 { ... }      // Exclusive (0 to 9)
+for i in 0..<10 { ... }     // Exclusive (Explicit)
+for i in 0..=10 { ... }     // Inclusive (0 to 10)
 for i in 0..10 step 2 { ... }
 
-// Iterator/Collection
-for item in vec { ... }
+// Iterator (Vec, Array, or custom Iterable)
+for item in collection { ... }
 
 // While
 while x < 10 { ... }
@@ -244,8 +302,8 @@ outer: loop {
     if done { break outer; }
 }
 
-// Repeat
-repeat 5 { ... }
+// Repeat N times
+for _ in 0..5 { ... }
 ```
 
 #### Advanced Control
@@ -259,16 +317,45 @@ unless is_valid { return; }
 
 ### 6. Operators
 
-| Operator | Description | Function Mapping |
+Zen C supports operator overloading for user-defined structs by implementing specific method names.
+
+#### Overloadable Operators
+
+| Category | Operator | Method Name |
 |:---|:---|:---|
-| `+`, `-`, `*`, `/`, `%` | Arithmetic | `add`, `sub`, `mul`, `div`, `rem` |
-| `==`, `!=`, `<`, `>` | Comparison | `eq`, `neq`, `lt`, `gt` |
-| `[]` | Indexing | `get`, `set` |
-| `\|>` | Pipeline (`x \|> f(y)` -> `f(x, y)`) | - |
-| `??` | Null Coalescing (`val ?? default`) | - |
-| `??=` | Null Assignment (`val ??= init`) | - |
-| `?.` | Safe Navigation (`ptr?.field`) | - |
-| `?` | Try Operator (`res?` returns error if present) | - |
+| **Arithmetic** | `+`, `-`, `*`, `/`, `%` | `add`, `sub`, `mul`, `div`, `rem` |
+| **Comparison** | `==`, `!=` | `eq`, `neq` |
+| | `<`, `>`, `<=`, `>=` | `lt`, `gt`, `le`, `ge` |
+| **Bitwise** | `&`, `\|`, `^` | `bitand`, `bitor`, `bitxor` |
+| | `<<`, `>>` | `shl`, `shr` |
+| **Unary** | `-` | `neg` |
+| | `!` | `not` |
+| | `~` | `bitnot` |
+| **Index** | `a[i]` | `get(a, i)` |
+| | `a[i] = v` | `set(a, i, v)` |
+
+**Example:**
+```zc
+impl Point {
+    fn add(self, other: Point) -> Point {
+        return Point{x: self.x + other.x, y: self.y + other.y};
+    }
+}
+
+var p3 = p1 + p2; // Calls p1.add(p2)
+```
+
+#### Syntactic Sugar
+
+These operators are built-in language features and cannot be overloaded directly.
+
+| Operator | Name | Description |
+|:---|:---|:---|
+| `\|>` | Pipeline | `x \|> f(y)` desugars to `f(x, y)` |
+| `??` | Null Coalescing | `val ?? default` returns `default` if `val` is NULL (pointers) |
+| `??=` | Null Assignment | `val ??= init` assigns if `val` is NULL |
+| `?.` | Safe Navigation | `ptr?.field` accesses field only if `ptr` is not NULL |
+| `?` | Try Operator | `res?` returns error if present (Result/Option types) |
 
 ### 7. Printing and String Interpolation
 
@@ -310,7 +397,8 @@ Zen C supports a shorthand for prompting user input using the `?` prefix.
     - Format specifiers are automatically inferred based on variable type.
 
 ```c
-var age = "How old are you? ";
+var age: int;
+? "How old are you? " (age);
 println "You are {age} years old.";
 ```
 
@@ -348,7 +436,7 @@ Define methods on types using `impl`.
 ```zc
 impl Point {
     // Static method (constructor convention)
-    fn new(x: int, y: int) -> Point {
+    fn new(x: int, y: int) -> Self {
         return Point{x: x, y: y};
     }
 
@@ -362,6 +450,8 @@ impl Point {
 #### Traits
 Define shared behavior.
 ```zc
+struct Circle { radius: f32; }
+
 trait Drawable {
     fn draw(self);
 }
@@ -369,15 +459,86 @@ trait Drawable {
 impl Drawable for Circle {
     fn draw(self) { ... }
 }
+
+var circle = Circle{};
+var drawable: Drawable = &circle;
+```
+
+#### Standard Traits
+Zen C includes standard traits that integrate with language syntax.
+
+**Iterable**
+
+Implement `Iterable<T>` to enable `for-in` loops for your custom types.
+
+```zc
+import "std/iter.zc"
+
+// Define an Iterator
+struct MyIter {
+    curr: int;
+    stop: int;
+}
+
+impl MyIter {
+    fn next(self) -> Option<int> {
+        if self.curr < self.stop {
+            self.curr += 1;
+            return Option<int>::Some(self.curr - 1);
+        }
+        return Option<int>::None();
+    }
+}
+
+// Implement Iterable
+impl MyRange {
+    fn iterator(self) -> MyIter {
+        return MyIter{curr: self.start, stop: self.end};
+    }
+}
+
+// Use in Loop
+for i in my_range {
+    println "{i}";
+}
+```
+
+**Drop**
+
+Implement `Drop` to define a destructor that runs when the object goes out of scope (RAII).
+
+```zc
+import "std/mem.zc"
+
+struct Resource {
+    ptr: void*;
+}
+
+impl Drop for Resource {
+    fn drop(self) {
+        if self.ptr != NULL {
+            free(self.ptr);
+        }
+    }
+}
 ```
 
 #### Composition
-Use `use` to mixin fields from another struct.
+Use `use` to embed other structs. You can either mix them in (flatten fields) or name them (nest fields).
+
 ```zc
 struct Entity { id: int; }
+
 struct Player {
-    use Entity; // Adds 'id' field
+    // Mixin (Unnamed): Flattens fields
+    use Entity;  // Adds 'id' to Player directly
     name: string;
+}
+
+struct Match {
+    // Composition (Named): Nests fields
+    use p1: Player; // Accessed via match.p1
+    use p2: Player; // Accessed via match.p2
 }
 ```
 
@@ -433,9 +594,15 @@ println "Build Date: {build_date}";
 ```
 
 #### Embed
-Embed files as byte arrays.
+Embed files as specified types.
 ```zc
-var png = embed "assets/logo.png";
+// Default (Slice_char)
+var data = embed "assets/logo.png";
+
+// Typed Embed
+var text = embed "shader.glsl" as string;    // Embbed as C-string
+var rom  = embed "bios.bin" as u8[1024];     // Embed as fixed array
+var wav  = embed "sound.wav" as u8[];        // Embed as Slice_u8
 ```
 
 #### Plugins
@@ -534,7 +701,6 @@ Zen C supports special comments at the top of your source file to configure the 
 | `//> pkg-config:` | `gtk+-3.0` | Run `pkg-config` and append `--cflags` and `--libs`. |
 | `//> shell:` | `command` | Execute a shell command during the build. |
 | `//> get:` | `http://url/file` | Download a file if specific file does not exist. |
-| `//> immutable-by-default` | None | Make variables immutable unless declared `mut`. |
 
 #### Examples
 
@@ -583,6 +749,135 @@ zc run app.zc --cc zig
 # Build the Zen C compiler itself with Zig
 make zig
 ```
+
+### C++ Interop
+
+Zen C can generate C++-compatible code with the `--cpp` flag, allowing seamless integration with C++ libraries.
+
+```bash
+# Direct compilation with g++
+zc app.zc --cpp
+
+# Or transpile for manual build
+zc transpile app.zc --cpp
+g++ out.c my_cpp_lib.o -o app
+```
+
+#### Using C++ in Zen C
+
+Include C++ headers and use raw blocks for C++ code:
+
+```zc
+include <vector>
+include <iostream>
+
+raw {
+    std::vector<int> make_vec(int a, int b) {
+        return {a, b};
+    }
+}
+
+fn main() {
+    var v = make_vec(1, 2);
+    raw { std::cout << "Size: " << v.size() << std::endl; }
+}
+```
+
+> **Note:** The `--cpp` flag switches the backend to `g++` and emits C++-compatible code (uses `auto` instead of `__auto_type`, function overloads instead of `_Generic`, and explicit casts for `void*`).
+
+#### CUDA Interop
+
+Zen C supports GPU programming by transpiling to **CUDA C++**. This allows you to leverage powerful C++ features (templates, constexpr) within your kernels while maintaining Zen C's ergonomic syntax.
+
+```bash
+# Direct compilation with nvcc
+zc run app.zc --cuda
+
+# Or transpile for manual build
+zc transpile app.zc --cuda -o app.cu
+nvcc app.cu -o app
+```
+
+#### CUDA-Specific Attributes
+
+| Attribute | CUDA Equivalent | Description |
+|:---|:---|:---|
+| `@global` | `__global__` | Kernel function (runs on GPU, called from host) |
+| `@device` | `__device__` | Device function (runs on GPU, called from GPU) |
+| `@host` | `__host__` | Host function (explicit CPU-only) |
+
+#### Kernel Launch Syntax
+
+Zen C provides a clean `launch` statement for invoking CUDA kernels:
+
+```zc
+launch kernel_name(args) with {
+    grid: num_blocks,
+    block: threads_per_block,
+    shared_mem: 1024,  // Optional
+    stream: my_stream   // Optional
+};
+```
+
+This transpiles to: `kernel_name<<<grid, block, shared, stream>>>(args);`
+
+#### Writing CUDA Kernels
+
+Use Zen C function syntax with `@global` and the `launch` statement:
+
+```zc
+import "std/cuda.zc"
+
+@global
+fn add_kernel(a: float*, b: float*, c: float*, n: int) {
+    var i = thread_id();
+    if i < n {
+        c[i] = a[i] + b[i];
+    }
+}
+
+fn main() {
+    const N = 1024;
+    var d_a = cuda_alloc<float>(N);
+    var d_b = cuda_alloc<float>(N); 
+    var d_c = cuda_alloc<float>(N);
+    defer cuda_free(d_a);
+    defer cuda_free(d_b);
+    defer cuda_free(d_c);
+
+    // ... init data ...
+    
+    launch add_kernel(d_a, d_b, d_c, N) with {
+        grid: (N + 255) / 256,
+        block: 256
+    };
+    
+    cuda_sync();
+}
+```
+
+#### Standard Library (`std/cuda.zc`)
+Zen C provides a standard library for common CUDA operations to reduce `raw` blocks:
+
+```zc
+import "std/cuda.zc"
+
+// Memory management
+var d_ptr = cuda_alloc<float>(1024);
+cuda_copy_to_device(d_ptr, h_ptr, 1024 * sizeof(float));
+defer cuda_free(d_ptr);
+
+// Synchronization
+cuda_sync();
+
+// Thread Indexing (use inside kernels)
+var i = thread_id(); // Global index
+var bid = block_id();
+var tid = local_id();
+```
+
+
+> **Note:** The `--cuda` flag sets `nvcc` as the compiler and implies `--cpp` mode. Requires the NVIDIA CUDA Toolkit.
 
 ---
 

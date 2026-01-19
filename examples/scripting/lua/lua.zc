@@ -1,0 +1,48 @@
+//> include: ./lua
+//> lib: ./lua
+//> link: -Wl,-Bstatic -llua54 -Wl,-Bdynamic -lm -ldl
+//> cflags: -Ofast
+
+import "lua.h";
+import "lauxlib.h";
+import "lualib.h";
+
+fn l_zenc_hello(L: lua_State*) -> int {
+    const name: string = (string)luaL_optstring(L, 1, "world");
+    println "hello from Zen-C, {name}"
+    return 0;
+}
+
+fn main() {
+    var L: lua_State* = luaL_newstate();
+
+    if (!L) return !"Could not initialize LUA.";
+
+    // Opens standard libs
+    luaL_openlibs(L);
+    defer lua_close(L);
+
+    // Expose a Zen-C function to Lua as global "zenc_hello"
+    lua_pushcfunction(L, l_zenc_hello);
+    lua_setglobal(L, "zenc_hello");
+
+    // Run some Lua from a Zen-C variable
+    const script = "print('hello from lua')\nzenc_hello('test')\n";
+
+    if (luaL_dostring(L, script) != LUA_OK) {
+        const err: string = (string)lua_tostring(L, -1);
+        !"lua error: {err}"
+        lua_pop(L, 1);
+    }
+
+    // Run some Lua from a script file
+    if (luaL_loadfile(L, "script.lua") != LUA_OK) {
+        const err: string = (string)lua_tostring(L, -1);
+        !"lua load-error: {err}"
+        lua_pop(L, 1);
+    } else if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+         const err: string = (string)lua_tostring(L, -1);
+        !"lua error: {err}"
+        lua_pop(L, 1);
+    }
+}

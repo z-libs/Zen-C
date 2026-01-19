@@ -1,0 +1,45 @@
+import "../../std/iter.zc"
+import "../../std/option.zc"
+
+struct RangeIter {
+    current: int;
+    stop: int;
+}
+
+impl RangeIter {
+    fn next(self) -> Option<int> {
+        if (self.current < self.stop) {
+            var v = self.current;
+            self.current += 1;
+            return Option<int>::Some(v);
+        }
+        return Option<int>::None();
+    }
+}
+
+struct MyRange {
+    start: int;
+    end: int;
+}
+
+impl MyRange {
+    fn iterator(self) -> RangeIter {
+        return RangeIter {
+            current: self.start,
+            stop: self.end
+        };
+    }
+}
+
+test "iterator_desugaring" {
+    var range = MyRange { start: 0, end: 5 };
+    var sum = 0;
+
+    // This loop should be desugared by the compiler
+    for i in range {
+        println "Got: {i}"; // Verification print
+        sum += i;
+    }
+
+    assert(sum == 10); // 0+1+2+3+4 = 10
+}

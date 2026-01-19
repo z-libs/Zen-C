@@ -25,8 +25,10 @@ struct JsonValue {
     object_val: Map<JsonValue*>*;
 }
 
+
+alias JsonValuePtr = JsonValue*;
+
 raw {
-    typedef struct JsonValue* JsonValuePtr;
     Vec_JsonValuePtr Vec_JsonValuePtr__new();
     void Vec_JsonValuePtr__push(Vec_JsonValuePtr* self, JsonValue* item);
     Map_JsonValuePtr Map_JsonValuePtr__new();

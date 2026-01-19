@@ -1,0 +1,23 @@
+
+struct Foo<T> {
+  value: T;
+}
+
+impl Foo<T> {
+  fn eq(self, other: Foo<T>) -> bool {
+    return self.value == other.value;
+  }
+  fn neq(self, other: Foo<T>) -> bool {
+    return !(self == other);
+  }
+}
+
+test "generic neq" {
+  var f1 = Foo<i32>{value: 10};
+  var f2 = Foo<i32>{value: 20};
+  var f3 = Foo<i32>{value: 10};
+  
+  assert(f1 != f2, "f1 should not equal f2");
+  assert(f1 == f3, "f1 should equal f3");
+  assert(!(f1 != f3), "f1 != f3 should be false");
+}

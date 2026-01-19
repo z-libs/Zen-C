@@ -63,6 +63,9 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
         int attr_weak = 0;
         int attr_export = 0;
         int attr_comptime = 0;
+        int attr_cuda_global = 0; // @global -> __global__
+        int attr_cuda_device = 0; // @device -> __device__
+        int attr_cuda_host = 0;   // @host -> __host__
         char *deprecated_msg = NULL;
         char *attr_section = NULL;
 
@@ -232,7 +235,23 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             }
             else
             {
-                zwarn_at(attr, "Unknown attribute: %.*s", attr.len, attr.start);
+                // Checking for CUDA attributes...
+                if (0 == strncmp(attr.start, "global", 6) && 6 == attr.len)
+                {
+                    attr_cuda_global = 1;
+                }
+                else if (0 == strncmp(attr.start, "device", 6) && 6 == attr.len)
+                {
+                    attr_cuda_device = 1;
+                }
+                else if (0 == strncmp(attr.start, "host", 4) && 4 == attr.len)
+                {
+                    attr_cuda_host = 1;
+                }
+                else
+                {
+                    zwarn_at(attr, "Unknown attribute: %.*s", attr.len, attr.start);
+                }
             }
 
             t = lexer_peek(l);
@@ -469,6 +488,9 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             s->func.pure = attr_pure;
             s->func.section = attr_section;
             s->func.is_comptime = attr_comptime;
+            s->func.cuda_global = attr_cuda_global;
+            s->func.cuda_device = attr_cuda_device;
+            s->func.cuda_host = attr_cuda_host;
 
             if (attr_deprecated && s->func.name)
             {

@@ -1,5 +1,6 @@
 
 import "./core.zc"
+import "./iter.zc"
 
 struct Vec<T> {
     data: T*;
@@ -7,9 +8,34 @@ struct Vec<T> {
     cap: usize;
 }
 
+struct VecIter<T> {
+    data: T*;
+    count: usize;
+    idx: usize;
+}
+
+impl VecIter<T> {
+    fn next(self) -> Option<T> {
+        if (self.idx < self.count) {
+            var item = self.data[self.idx];
+            self.idx = self.idx + 1;
+            return Option<T>::Some(item);
+        }
+        return Option<T>::None();
+    }
+}
+
 impl Vec<T> {
     fn new() -> Vec<T> {
         return Vec<T> { data: 0, len: 0, cap: 0 };
+    }
+
+    fn iterator(self) -> VecIter<T> {
+        return VecIter<T> {
+            data: self.data,
+            count: self.len,
+            idx: 0
+        };
     }
     
     fn push(self, item: T) {
@@ -90,7 +116,7 @@ impl Vec<T> {
     fn contains(self, item: T) -> bool {
         var i: usize = 0;
         while i < self.len {
-            if self.data[i] == item { return true; }
+            if memcmp(&self.data[i], &item, sizeof(T)) == 0 { return true; }
             i++;
         }
         return false;
@@ -143,7 +169,7 @@ impl Vec<T> {
         if self.len != other.len { return false; }
         var i: usize = 0;
         while i < self.len {
-            if self.data[i] != other.data[i] { return false; }
+            if memcmp(&self.data[i], &other.data[i], sizeof(T)) != 0 { return false; }
             i = i + 1;
         }
         return true;

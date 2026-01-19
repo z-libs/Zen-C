@@ -1,0 +1,39 @@
+import "std.zc"
+
+test "test_std_expansion" {
+    "Testing Standard Library Expansion...";
+    
+    "Testing Map...";
+    var m = Map<int>::new();
+    m.put("one", 1);
+    m.put("two", 2);
+    
+    assert(m.get("one").unwrap() == 1, "Map get one failed");
+    assert(m.get("two").unwrap() == 2, "Map get two failed");
+    assert(m.contains("two"), "Map contains failed");
+    assert(!m.contains("three"), "Map contains non-existent failed");
+    
+    m.remove("one");
+    assert(!m.contains("one"), "Map remove failed");
+    
+    "Testing Time...";
+    var t1 = Time::now();
+    Time::sleep_ms(10);
+    var t2 = Time::now();
+    assert(t2 >= t1, "Time went backwards!");
+    "Time passed: {t2 - t1} ms";
+    
+    "Testing FS...";
+    var content_res = File::read_all("tests/test_0.zc");
+    if (content_res.is_ok()) {
+        "Read file successfully.";
+    } else {
+        "FS Error: {content_res.err}";
+    }
+    
+    "Testing JSON...";
+    var j = JsonValue::string("hello");
+    assert(j.kind == JsonType::JSON_STRING, "Json string kind failed");
+    
+    "All expansion tests passed!";
+}

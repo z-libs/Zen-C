@@ -1,0 +1,32 @@
+// This example demonstrates a minimal raylib example that is compilable with Emscripten.
+
+// Pre-requisites:
+// Setup emscripten from here: https://emscripten.org/docs/getting_started/downloads.html
+// Compile raylib for web following this guide: https://github.com/raysan5/raylib/wiki/Working-for-Web-(HTML5)
+
+// Build instructions:
+// zc build raylib_emscripten.zc --cc emcc -o game.html
+
+// NOTE: Modify these lines as you see fit, pointing to where your web build of raylib is installed
+//> include: ./raylib/include
+//> libs: ./raylib
+//> link: ./raylib/libraylib.a
+
+// DO NOT modify this line
+//> link: -s ASYNCIFY -s ASSERTIONS -s USE_GLFW=3 -s WASM=1 -s GL_ENABLE_GET_PROC_ADDRESS=1
+
+import "raylib.h"
+
+fn main() {
+    InitWindow(1280, 720, "Hello Zen-C");
+    defer CloseWindow();
+
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        defer EndDrawing();
+
+        ClearBackground(BLACK);
+
+        DrawText("Hello Zen-C", 10, 10, 20, WHITE);
+    }
+}

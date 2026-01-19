@@ -1,0 +1,51 @@
+import "../../std/iter.zc"
+import "../../std/mem.zc"
+
+var DROP_CALLED = 0;
+
+struct DropIter {
+    count: int;
+}
+
+impl DropIter {
+    fn next(self) -> Option<int> {
+        if self.count > 0 {
+            self.count -= 1;
+            return Option<int>::Some(self.count);
+        }
+        return Option<int>::None();
+    }
+}
+
+impl Drop for DropIter {
+    fn drop(self) {
+        DROP_CALLED = 1;
+        println "Iterator dropped";
+    }
+}
+
+struct DropRange {
+    len: int;
+}
+
+impl DropRange {
+    fn iterator(self) -> DropIter {
+        return DropIter { count: self.len };
+    }
+}
+
+test "iterator_drop" {
+    {
+        var range = DropRange { len: 3 };
+        for i in range {
+            // Loop runs 3 times
+            var _ignore = i;
+        }
+        // Iterator should be dropped here
+    }
+
+    if (DROP_CALLED != 1) {
+        println "Error: Iterator was not dropped! (DROP_CALLED={DROP_CALLED})";
+        exit(1);
+    }
+}

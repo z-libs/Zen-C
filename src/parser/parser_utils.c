@@ -177,7 +177,6 @@ void add_symbol_with_token(ParserContext *ctx, const char *n, const char *t, Typ
     s->name = xstrdup(n);
     s->type_name = t ? xstrdup(t) : NULL;
     s->type_info = type_info;
-    s->is_mutable = 1;
     s->is_used = 0;
     s->decl_token = tok;
     s->is_const_value = 0;
@@ -538,27 +537,6 @@ void register_lambda(ParserContext *ctx, ASTNode *node)
     ctx->global_lambdas = ref;
 }
 
-void register_var_mutability(ParserContext *ctx, const char *name, int is_mutable)
-{
-    VarMutability *v = xmalloc(sizeof(VarMutability));
-    v->name = xstrdup(name);
-    v->is_mutable = is_mutable;
-    v->next = ctx->var_mutability_table;
-    ctx->var_mutability_table = v;
-}
-
-int is_var_mutable(ParserContext *ctx, const char *name)
-{
-    for (VarMutability *v = ctx->var_mutability_table; v; v = v->next)
-    {
-        if (strcmp(v->name, name) == 0)
-        {
-            return v->is_mutable;
-        }
-    }
-    return 1;
-}
-
 void register_extern_symbol(ParserContext *ctx, const char *name)
 {
     // Check for duplicates
@@ -796,7 +774,7 @@ Module *find_module(ParserContext *ctx, const char *alias)
     Module *m = ctx->modules;
     while (m)
     {
-        if (strcmp(m->alias, alias) == 0)
+        if (m->alias && strcmp(m->alias, alias) == 0)
         {
             return m;
         }
@@ -808,7 +786,7 @@ Module *find_module(ParserContext *ctx, const char *alias)
 void register_module(ParserContext *ctx, const char *alias, const char *path)
 {
     Module *m = xmalloc(sizeof(Module));
-    m->alias = xstrdup(alias);
+    m->alias = alias ? xstrdup(alias) : NULL;
     m->path = xstrdup(path);
     m->base_name = extract_module_name(path);
     m->next = ctx->modules;
@@ -1443,6 +1421,18 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             free(n1);
             n1 = n2;
         }
+        if (os && ns)
+        {
+            int os_len = strlen(os);
+            if (strncmp(n1, os, os_len) == 0 && n1[os_len] == '_' && n1[os_len + 1] == '_')
+            {
+                char *suffix = n1 + os_len;
+                char *n3 = xmalloc(strlen(ns) + strlen(suffix) + 1);
+                sprintf(n3, "%s%s", ns, suffix);
+                free(n1);
+                n1 = n3;
+            }
+        }
         new_node->var_ref.name = n1;
     }
     break;
@@ -1582,6 +1572,33 @@ FuncSig *find_func(ParserContext *ctx, const char *name)
         }
         c = c->next;
     }
+
+    // Fallback: Check current_impl_methods (siblings in the same impl block)
+    if (ctx && ctx->current_impl_methods)
+    {
+        ASTNode *n = ctx->current_impl_methods;
+        while (n)
+        {
+            if (n->type == NODE_FUNCTION && strcmp(n->func.name, name) == 0)
+            {
+                // Found sibling method. Construct a temporary FuncSig.
+                FuncSig *sig = xmalloc(sizeof(FuncSig));
+                sig->name = n->func.name;
+                sig->decl_token = n->token;
+                sig->total_args = n->func.arg_count;
+                sig->defaults = n->func.defaults;
+                sig->arg_types = n->func.arg_types;
+                sig->ret_type = n->func.ret_type_info;
+                sig->is_varargs = n->func.is_varargs;
+                sig->is_async = n->func.is_async;
+                sig->must_use = 0;
+                sig->next = NULL;
+                return sig;
+            }
+            n = n->next;
+        }
+    }
+
     return NULL;
 }
 
@@ -1885,30 +1902,38 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
         }
 
         // Handle generic return types in methods (e.g., Option<T> -> Option_int)
-        if (meth->func.ret_type && strchr(meth->func.ret_type, '_'))
+        if (meth->func.ret_type &&
+            (strchr(meth->func.ret_type, '_') || strchr(meth->func.ret_type, '<')))
         {
-            char *ret_copy = xstrdup(meth->func.ret_type);
-            char *underscore = strrchr(ret_copy, '_');
-            if (underscore && underscore > ret_copy)
-            {
-                *underscore = '\0';
-                char *template_name = ret_copy;
+            GenericTemplate *gt = ctx->templates;
 
-                // Check if this looks like a generic (e.g., "Option_V" or "Result_V")
-                GenericTemplate *gt = ctx->templates;
-                while (gt)
+            while (gt)
+            {
+                size_t tlen = strlen(gt->name);
+                char delim = meth->func.ret_type[tlen];
+                if (strncmp(meth->func.ret_type, gt->name, tlen) == 0 &&
+                    (delim == '_' || delim == '<'))
                 {
-                    if (strcmp(gt->name, template_name) == 0)
+                    // Found matching template prefix
+                    const char *arg = meth->func.ret_type + tlen + 1;
+
+                    // Simple approach: instantiate 'Template' with 'Arg'.
+                    // If delimited by <, we need to extract the inside.
+                    char *clean_arg = xstrdup(arg);
+                    if (delim == '<')
                     {
-                        // Found matching template, instantiate it
-                        const char *subst_arg = unmangled_arg ? unmangled_arg : arg;
-                        instantiate_generic(ctx, template_name, arg, subst_arg, meth->token);
-                        break;
+                        char *closer = strrchr(clean_arg, '>');
+                        if (closer)
+                        {
+                            *closer = 0;
+                        }
                     }
-                    gt = gt->next;
+
+                    instantiate_generic(ctx, gt->name, clean_arg, clean_arg, meth->token);
+                    free(clean_arg);
                 }
+                gt = gt->next;
             }
-            free(ret_copy);
         }
 
         meth = meth->next;
@@ -2276,6 +2301,14 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                 *pc = 0;
             }
 
+            // Resolve type alias if exists (for example: Vec2f -> Vec2_float)
+            const char *resolved_type = find_type_alias(ctx, base_t);
+            if (resolved_type)
+            {
+                free(base_t);
+                base_t = xstrdup(resolved_type);
+            }
+
             ASTNode *def = find_struct_def(ctx, base_t);
             int is_field = 0;
             if (def && (def->type == NODE_STRUCT))
@@ -2326,7 +2359,63 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                     }
                 }
 
-                dest += sprintf(dest, "%s__%s(%s%s", ptr_check, method, is_ptr ? "" : "&", acc);
+                // Mixin Lookup Logic
+                char target_func[256];
+                sprintf(target_func, "%s__%s", ptr_check, method);
+
+                char *final_cast = NULL;
+                char *final_method = xstrdup(method);
+                char *final_struct = xstrdup(ptr_check);
+
+                // Check if method exists on primary struct
+                if (!find_func(ctx, target_func))
+                {
+                    // Not found, check mixins
+                    ASTNode *def = find_struct_def(ctx, ptr_check);
+                    if (def && def->type == NODE_STRUCT && def->strct.used_structs)
+                    {
+                        for (int k = 0; k < def->strct.used_struct_count; k++)
+                        {
+                            char mixin_func[128];
+                            sprintf(mixin_func, "%s__%s", def->strct.used_structs[k], method);
+                            if (find_func(ctx, mixin_func))
+                            {
+                                // Found in mixin!
+                                free(final_struct);
+                                final_struct = xstrdup(def->strct.used_structs[k]);
+
+                                // Create cast string: (Mixin*) or (Mixin*)&
+                                char cast_buf[128];
+                                if (is_ptr)
+                                {
+                                    sprintf(cast_buf, "(%s*)", final_struct);
+                                }
+                                else
+                                {
+                                    sprintf(cast_buf, "(%s*)&", final_struct);
+                                }
+                                final_cast = xstrdup(cast_buf);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (final_cast)
+                {
+                    // Mixin call: Foo__method((Foo*)&obj
+                    dest +=
+                        sprintf(dest, "%s__%s(%s%s", final_struct, final_method, final_cast, acc);
+                    free(final_cast);
+                }
+                else
+                {
+                    // Standard call
+                    dest += sprintf(dest, "%s__%s(%s%s", final_struct, final_method,
+                                    is_ptr ? "" : "&", acc);
+                }
+                free(final_struct);
+                free(final_method);
 
                 int has_args = 0;
                 while (*src && paren_depth > 0)
@@ -2376,7 +2465,61 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                         *p = 0;
                     }
                 }
-                dest += sprintf(dest, "%s__%s(%s%s)", ptr_check, method, is_ptr ? "" : "&", acc);
+                // Mixin Lookup Logic (No Parens)
+                char target_func[256];
+                sprintf(target_func, "%s__%s", ptr_check, method);
+
+                char *final_cast = NULL;
+                char *final_method = xstrdup(method);
+                char *final_struct = xstrdup(ptr_check);
+
+                // Check if method exists on primary struct
+                if (!find_func(ctx, target_func))
+                {
+                    // Not found, check mixins
+                    ASTNode *def = find_struct_def(ctx, ptr_check);
+                    if (def && def->type == NODE_STRUCT && def->strct.used_structs)
+                    {
+                        for (int k = 0; k < def->strct.used_struct_count; k++)
+                        {
+                            char mixin_func[128];
+                            sprintf(mixin_func, "%s__%s", def->strct.used_structs[k], method);
+                            if (find_func(ctx, mixin_func))
+                            {
+                                // Found in mixin!
+                                free(final_struct);
+                                final_struct = xstrdup(def->strct.used_structs[k]);
+
+                                // Create cast string: (Mixin*) or (Mixin*)&
+                                char cast_buf[128];
+                                if (is_ptr)
+                                {
+                                    sprintf(cast_buf, "(%s*)", final_struct);
+                                }
+                                else
+                                {
+                                    sprintf(cast_buf, "(%s*)&", final_struct);
+                                }
+                                final_cast = xstrdup(cast_buf);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (final_cast)
+                {
+                    dest +=
+                        sprintf(dest, "%s__%s(%s%s)", final_struct, final_method, final_cast, acc);
+                    free(final_cast);
+                }
+                else
+                {
+                    dest += sprintf(dest, "%s__%s(%s%s)", final_struct, final_method,
+                                    is_ptr ? "" : "&", acc);
+                }
+                free(final_struct);
+                free(final_method);
                 continue;
             }
         }
@@ -2492,7 +2635,32 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                     src++;
 
                     char mangled[256];
-                    snprintf(mangled, sizeof(mangled), "%s_%s", func_name, method);
+
+                    // Resolve alias
+                    Module *mod = find_module(ctx, func_name);
+                    if (mod)
+                    {
+                        if (mod->is_c_header)
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s", method);
+                        }
+                        else
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s_%s", mod->base_name, method);
+                        }
+                    }
+                    else
+                    {
+                        ASTNode *sdef = find_struct_def(ctx, func_name);
+                        if (sdef)
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s__%s", func_name, method);
+                        }
+                        else
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s_%s", func_name, method);
+                        }
+                    }
 
                     if (*src == ')')
                     {

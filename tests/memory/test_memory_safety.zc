@@ -1,14 +1,12 @@
 
 import "std/mem.zc"
 
-// --- Globals ---
+// ** Globals **
 var DROP_COUNT = 0;
 
-// --- Structs & Helpers ---
+// ** Structs & Helpers **
 
-trait Drop {
-    fn drop(self);
-}
+// trait Drop defined in std/mem.zc
 
 struct Resource {
     id: int;
@@ -38,8 +36,8 @@ fn distance(p1: Point, p2: Point) -> int {
 }
 
 fn accumulate(start: int, count: int) -> int {
-    var mut sum = start;
-    var mut i = 0;
+    var sum = start;
+    var i = 0;
     while (i < count) {
         sum += i;
         i++;
@@ -53,9 +51,9 @@ fn process_point(p: Point) -> Point {
 }
 
 fn counter_immut() {
-    var mut count = 0;
+    var count = 0;
     {
-        var mut inner = 10;
+        var inner = 10;
         inner = inner + 5;
         count = count + inner;
     }

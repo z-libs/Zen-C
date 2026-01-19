@@ -1,0 +1,19 @@
+import "../../std/vec.zc"
+
+test "vec_int_iteration" {
+    var v = Vec<int>::new();
+    v.push(10);
+    v.push(20);
+    v.push(30);
+
+    var sum = 0;
+    for x in v {
+        sum = sum + x;
+    }
+    
+    if (sum != 60) {
+        println "Expected 60, got {sum}";
+        exit(1);
+    }
+    v.free();
+}

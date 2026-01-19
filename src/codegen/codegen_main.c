@@ -52,12 +52,12 @@ static ASTNode *topo_sort_structs(ASTNode *head)
         return NULL;
     }
 
-    // Count all nodes (structs + enums).
+    // Count all nodes (structs + enums + traits).
     int count = 0;
     ASTNode *n = head;
     while (n)
     {
-        if (n->type == NODE_STRUCT || n->type == NODE_ENUM)
+        if (n->type == NODE_STRUCT || n->type == NODE_ENUM || n->type == NODE_TRAIT)
         {
             count++;
         }
@@ -75,7 +75,7 @@ static ASTNode *topo_sort_structs(ASTNode *head)
     int idx = 0;
     while (n)
     {
-        if (n->type == NODE_STRUCT || n->type == NODE_ENUM)
+        if (n->type == NODE_STRUCT || n->type == NODE_ENUM || n->type == NODE_TRAIT)
         {
             nodes[idx++] = n;
         }
@@ -102,8 +102,8 @@ static ASTNode *topo_sort_structs(ASTNode *head)
                 continue;
             }
 
-            // Enums have no dependencies, emit first.
-            if (nodes[i]->type == NODE_ENUM)
+            // Enums and traits have no dependencies, emit first.
+            if (nodes[i]->type == NODE_ENUM || nodes[i]->type == NODE_TRAIT)
             {
                 order[order_idx++] = i;
                 emitted[i] = 1;
@@ -334,22 +334,57 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
 
         print_type_defs(ctx, out, sorted);
         emit_enum_protos(sorted, out);
+        emit_global_aliases(ctx, out); // Emit ALL aliases (including imports)
+        emit_type_aliases(kids, out);  // Emit local aliases (redundant but safe)
+        emit_trait_defs(kids, out);
+
+        // First pass: emit ONLY preprocessor directives before struct defs
+        // so that macros like `panic` are available in function bodies
+        ASTNode *raw_iter = kids;
+        while (raw_iter)
+        {
+            if (raw_iter->type == NODE_RAW_STMT && raw_iter->raw_stmt.content)
+            {
+                const char *content = raw_iter->raw_stmt.content;
+                // Skip leading whitespace
+                while (*content == ' ' || *content == '\t' || *content == '\n')
+                {
+                    content++;
+                }
+                // Emit only if it's a preprocessor directive
+                if (*content == '#')
+                {
+                    fprintf(out, "%s\n", raw_iter->raw_stmt.content);
+                }
+            }
+            raw_iter = raw_iter->next;
+        }
 
         if (sorted)
         {
             emit_struct_defs(ctx, sorted, out);
         }
-        emit_trait_defs(kids, out);
 
-        ASTNode *raw_iter = kids;
+        // Second pass: emit non-preprocessor raw statements after struct defs
+        raw_iter = kids;
         while (raw_iter)
         {
-            if (raw_iter->type == NODE_RAW_STMT)
+            if (raw_iter->type == NODE_RAW_STMT && raw_iter->raw_stmt.content)
             {
-                fprintf(out, "%s\n", raw_iter->raw_stmt.content);
+                const char *content = raw_iter->raw_stmt.content;
+                while (*content == ' ' || *content == '\t' || *content == '\n')
+                {
+                    content++;
+                }
+                if (*content != '#')
+                {
+                    fprintf(out, "%s\n", raw_iter->raw_stmt.content);
+                }
             }
             raw_iter = raw_iter->next;
         }
+
+        // Emit type aliases was here (moved up)
 
         ASTNode *merged_globals = NULL; // Head
 
