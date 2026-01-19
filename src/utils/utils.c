@@ -6,6 +6,8 @@
 #include <malloc.h>
 #define popen _popen
 #define pclose _pclose
+#else
+#include <alloca.h>
 #endif
 
 char *g_current_filename = "unknown";
