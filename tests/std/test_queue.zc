@@ -1,0 +1,48 @@
+import "std/queue.zc"
+
+test "Queue Push/Pop" {
+  print "Testing Queue Push/Pop";
+  var queue = Queue<i32>::new();
+  defer queue.free();
+
+  print "Popping on an empty queue without pushing anything prior"
+  var v = queue.pop();
+  assert(v.is_none(), "v should not have a valid value");
+
+  print "Pushing in three values..."
+  queue.push(123);
+  queue.push(456);
+  queue.push(789);
+  
+  v = queue.pop();
+  assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
+
+  v = queue.pop();
+  assert(v.is_some() && v.unwrap() == 456, "v's value should be 456");
+
+  v = queue.pop();
+  assert(v.is_some() && v.unwrap() == 789, "v's value should be 789");
+
+  print "Popping on an empty queue after pushing and popping three values"
+  v = queue.pop();
+  assert(v.is_none(), "v should not have a valid value");
+}
+
+test "Queue Clone" {
+  print "Testing Queue Cloning";
+  var queue = Queue<i32>::new();
+  defer queue.free();
+  queue.push(123);
+  var queue2 = queue.clone();
+  defer queue2.free();
+
+  var v = queue2.pop();
+  assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
+  v = queue2.pop();
+  assert(v.is_none(), "v should not have a valid value");
+
+  v = queue.pop();
+  assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
+  v = queue.pop();
+  assert(v.is_none(), "v should not have a valid value");
+}

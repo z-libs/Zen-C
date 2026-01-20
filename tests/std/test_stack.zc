@@ -1,0 +1,48 @@
+import "std/stack.zc"
+
+test "Stack Push/Pop" {
+  print "Testing Stack Push/Pop";
+  var stack = Stack<i32>::new();
+  defer stack.free();
+
+  print "Popping on an empty stack without pushing anything prior"
+  var v = stack.pop();
+  assert(v.is_none(), "v should not have a valid value");
+
+  print "Pushing in three values..."
+  stack.push(123);
+  stack.push(456);
+  stack.push(789);
+  
+  v = stack.pop();
+  assert(v.is_some() && v.unwrap() == 789, "v's value should be 789");
+
+  v = stack.pop();
+  assert(v.is_some() && v.unwrap() == 456, "v's value should be 456");
+
+  v = stack.pop();
+  assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
+
+  print "Popping on an empty stack after pushing and popping three values"
+  v = stack.pop();
+  assert(v.is_none(), "v should not have a valid value");
+}
+
+test "Stack Clone" {
+  print "Testing Stack Cloning";
+  var stack = Stack<i32>::new();
+  defer stack.free();
+  stack.push(123);
+  var stack2 = stack.clone();
+  defer stack2.free();
+
+  var v = stack2.pop();
+  assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
+  v = stack2.pop();
+  assert(v.is_none(), "v should not have a valid value");
+
+  v = stack.pop();
+  assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
+  v = stack.pop();
+  assert(v.is_none(), "v should not have a valid value");
+}

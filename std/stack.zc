@@ -1,0 +1,59 @@
+import "./option.zc"
+import "./mem.zc"
+
+struct Stack<T> {
+  data: T*;
+  len: usize;
+  cap: usize;
+}
+
+impl Stack<T> {
+  fn new() -> Stack<T> {
+    return Stack<T>{data: NULL, len: 0, cap: 0};
+  }
+
+  fn free(self) {
+    if (self.data) {
+      free(self.data);
+      self.data = NULL;
+    }
+    self.len = 0;
+  }
+
+  fn clone(self) -> Stack<T> {
+    var new_stack = Stack<T>::new();
+    new_stack.len = self.len;
+    new_stack.cap = self.cap;
+    new_stack.data = malloc(sizeof(T) * new_stack.cap);
+    memcpy(new_stack.data, self.data, sizeof(T) * new_stack.cap);
+    return new_stack;
+  }
+
+  fn push(self, value: T) {
+    if (!self.data) {
+      self.cap = 8;
+      self.data = malloc(sizeof(T) * self.cap);
+    }
+    if (self.len == self.cap) {
+      self.cap = self.cap * 2;
+      self.data = realloc(self.data, sizeof(T) * self.cap);
+    }
+    self.data[self.len] = value;
+    self.len = self.len + 1;
+  }
+
+  fn pop(self) -> Option<T> {
+    if (self.len > 0) {
+      var value = self.data[self.len - 1];
+      self.len = self.len - 1;
+      return Option<T>::Some(value);
+    }
+    return Option<T>::None();
+  }
+}
+
+impl Drop for Stack<T> {
+  fn drop(self) {
+    self.free();
+  }
+}

@@ -1,0 +1,65 @@
+import "./option.zc"
+import "./mem.zc"
+
+struct Queue<T> {
+  data: T*;
+  len: usize;
+  cap: usize;
+}
+
+impl Queue<T> {
+  fn new() -> Queue<T> {
+    return Queue<T>{data: NULL, len: 0, cap: 0};
+  }
+
+  fn free(self) {
+    if (self.data) {
+      free(self.data);
+      self.data = NULL;
+    }
+    self.len = 0;
+  }
+
+  fn clone(self) -> Queue<T> {
+    var new_queue = Queue<T>::new();
+    new_queue.len = self.len;
+    new_queue.cap = self.cap;
+    new_queue.data = malloc(sizeof(T) * new_queue.cap);
+    memcpy(new_queue.data, self.data, sizeof(T) * new_queue.cap);
+    return new_queue;
+  }
+
+  fn push(self, value: T) {
+    if (!self.data) {
+      self.cap = 8;
+      self.data = malloc(sizeof(T) * self.cap);
+    }
+    if (self.len == self.cap) {
+      self.cap = self.cap * 2;
+      self.data = realloc(self.data, sizeof(T) * self.cap);
+    }
+
+    // Assigns it at the back of 
+    self.data[self.len] = value;
+    self.len = self.len + 1;
+  }
+
+  fn pop(self) -> Option<T> {
+    if (self.len > 0) {
+      var value = self.data[0];
+      self.len = self.len - 1;
+
+      // Shifts the data in the queue "forward"
+      memcpy(self.data, self.data + 1, sizeof(T) * self.len);
+
+      return Option<T>::Some(value);
+    }
+    return Option<T>::None();
+  }
+}
+
+impl Drop for Queue<T> {
+  fn drop(self) {
+    self.free();
+  }
+}
