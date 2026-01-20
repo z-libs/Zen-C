@@ -1,9 +1,4 @@
-
-include <sys/socket.h>
-include <netinet/in.h>
-include <arpa/inet.h>
-include <unistd.h>
-include <errno.h>
+//> link: -lws2_32
 
 import "./core.zc"
 import "./result.zc"
@@ -13,55 +8,149 @@ const Z_AF_INET = 2;
 const Z_SOCK_STREAM = 1;
 
 raw {
-    static int _z_net_bind(int fd, char *host, int port) {
+#ifdef _WIN32
+    #ifndef _WIN32_WINNT
+        #define _WIN32_WINNT 0x0600
+    #endif
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+    #include <errno.h>
+#endif
+    #include <stddef.h>
+    #include <string.h>
+#ifdef _WIN32
+    static int _z_net_init(void) {
+        static int initialized = 0;
+        if (initialized) return 0;
+
+        WSADATA wsa;
+        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return -1;
+        initialized = 1;
+        return 0;
+    }
+
+    static ptrdiff_t _z_net_socket(int domain, int type, int proto) {
+        if (_z_net_init() != 0) return -1;
+        SOCKET s = socket(domain, type, proto);
+        if (s == INVALID_SOCKET) return -1;
+        return (ptrdiff_t)s;
+    }
+
+    static int _z_net_bind(ptrdiff_t fd, char *host, int port) {
+        if (_z_net_init() != 0) return -4;
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons((u_short)port);
+        if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) return -1; // Invalid addr
+        
+        int opt = 1;
+        setsockopt((SOCKET)fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
+        
+        if (bind((SOCKET)fd, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) return -2; // Bind fail
+        if (listen((SOCKET)fd, 10) == SOCKET_ERROR) return -3; // Listen fail
+        return 0;
+    }
+
+    static int _z_net_connect(ptrdiff_t fd, char *host, int port) {
+        if (_z_net_init() != 0) return -3;
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons((u_short)port);
+        if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) return -1; 
+        
+        if (connect((SOCKET)fd, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) return -2;
+        return 0;
+    }
+    
+    static ptrdiff_t _z_net_accept(ptrdiff_t fd) {
+        SOCKET client = accept((SOCKET)fd, NULL, NULL);
+        if (client == INVALID_SOCKET) return -1;
+        return (ptrdiff_t)client;
+    }
+
+    static ptrdiff_t _z_net_read(ptrdiff_t fd, char* buf, size_t n) {
+        int res = recv((SOCKET)fd, buf, (int)n, 0);
+        if (res == SOCKET_ERROR) return -1;
+        return (ptrdiff_t)res;
+    }
+
+    static ptrdiff_t _z_net_write(ptrdiff_t fd, char* buf, size_t n) {
+        int res = send((SOCKET)fd, buf, (int)n, 0);
+        if (res == SOCKET_ERROR) return -1;
+        return (ptrdiff_t)res;
+    }
+
+    static int _z_net_close(ptrdiff_t fd) {
+        return closesocket((SOCKET)fd);
+    }
+
+#else
+    static ptrdiff_t _z_net_socket(int domain, int type, int proto) {
+        return (ptrdiff_t)socket(domain, type, proto);
+    }
+
+    static int _z_net_bind(ptrdiff_t fd, char *host, int port) {
         struct sockaddr_in addr;
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
         if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) return -1; // Invalid addr
         
         int opt = 1;
-        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        setsockopt((int)fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
         
-        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) return -2; // Bind fail
-        if (listen(fd, 10) < 0) return -3; // Listen fail
+        if (bind((int)fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) return -2; // Bind fail
+        if (listen((int)fd, 10) < 0) return -3; // Listen fail
         return 0;
     }
 
-    static int _z_net_connect(int fd, char *host, int port) {
+    static int _z_net_connect(ptrdiff_t fd, char *host, int port) {
         struct sockaddr_in addr;
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
         if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) return -1; 
         
-        if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) return -2;
+        if (connect((int)fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) return -2;
         return 0;
     }
     
-    static int _z_net_accept(int fd) {
-        return accept(fd, NULL, NULL);
+    static ptrdiff_t _z_net_accept(ptrdiff_t fd) {
+        return (ptrdiff_t)accept((int)fd, NULL, NULL);
     }
 
-    static ssize_t _z_net_read(int fd, char* buf, size_t n) {
-        return read(fd, (void*)buf, n);
+    static ptrdiff_t _z_net_read(ptrdiff_t fd, char* buf, size_t n) {
+        return (ptrdiff_t)read((int)fd, (void*)buf, n);
     }
 
-    static ssize_t _z_net_write(int fd, char* buf, size_t n) {
-        return write(fd, (const void*)buf, n);
+    static ptrdiff_t _z_net_write(ptrdiff_t fd, char* buf, size_t n) {
+        return (ptrdiff_t)write((int)fd, (const void*)buf, n);
     }
+
+    static int _z_net_close(ptrdiff_t fd) {
+        return close((int)fd);
+    }
+
+#endif
 }
 
-extern fn socket(domain: int, type: int, proto: int) -> int;
-extern fn close(fd: int) -> int;
+extern fn _z_net_socket(domain: int, type: int, proto: int) -> isize;
+extern fn _z_net_close(fd: isize) -> int;
 
-extern fn _z_net_bind(fd: int, host: char*, port: int) -> int;
-extern fn _z_net_connect(fd: int, host: char*, port: int) -> int;
-extern fn _z_net_accept(fd: int) -> int;
-extern fn _z_net_read(fd: int, buf: char*, n: usize) -> isize;
-extern fn _z_net_write(fd: int, buf: char*, n: usize) -> isize;
+extern fn _z_net_bind(fd: isize, host: char*, port: int) -> int;
+extern fn _z_net_connect(fd: isize, host: char*, port: int) -> int;
+extern fn _z_net_accept(fd: isize) -> isize;
+extern fn _z_net_read(fd: isize, buf: char*, n: usize) -> isize;
+extern fn _z_net_write(fd: isize, buf: char*, n: usize) -> isize;
 
 
 struct TcpStream {
-    fd: int;
+    fd: isize;
 }
 
 impl TcpStream {
@@ -79,36 +168,36 @@ impl TcpStream {
     
     fn close(self) {
         if (self.fd >= 0) {
-            close(self.fd);
+            _z_net_close(self.fd);
             self.fd = -1;
         }
     }
 
     fn connect(host: char*, port: int) -> Result<TcpStream> {
-        var fd = socket(Z_AF_INET, Z_SOCK_STREAM, 0);
+        var fd = _z_net_socket(Z_AF_INET, Z_SOCK_STREAM, 0);
         if (fd < 0) return Result<TcpStream>::Err("Failed to create socket");
         
         var res = _z_net_connect(fd, host, port);
-        if (res == -1) { close(fd); return Result<TcpStream>::Err("Invalid address"); }
-        if (res == -2) { close(fd); return Result<TcpStream>::Err("Connection failed"); }
+        if (res == -1) { _z_net_close(fd); return Result<TcpStream>::Err("Invalid address"); }
+        if (res == -2) { _z_net_close(fd); return Result<TcpStream>::Err("Connection failed"); }
         
         return Result<TcpStream>::Ok(TcpStream { fd: fd });
     }
 }
 
 struct TcpListener {
-    fd: int;
+    fd: isize;
 }
 
 impl TcpListener {
     fn bind(host: char*, port: int) -> Result<TcpListener> {
-        var fd = socket(Z_AF_INET, Z_SOCK_STREAM, 0);
+        var fd = _z_net_socket(Z_AF_INET, Z_SOCK_STREAM, 0);
         if (fd < 0) return Result<TcpListener>::Err("Failed to create socket");
         
         var res = _z_net_bind(fd, host, port);
-        if (res == -1) { close(fd); return Result<TcpListener>::Err("Invalid address"); }
-        if (res == -2) { close(fd); return Result<TcpListener>::Err("Bind failed"); }
-        if (res == -3) { close(fd); return Result<TcpListener>::Err("Listen failed"); }
+        if (res == -1) { _z_net_close(fd); return Result<TcpListener>::Err("Invalid address"); }
+        if (res == -2) { _z_net_close(fd); return Result<TcpListener>::Err("Bind failed"); }
+        if (res == -3) { _z_net_close(fd); return Result<TcpListener>::Err("Listen failed"); }
         
         return Result<TcpListener>::Ok(TcpListener { fd: fd });
     }
@@ -118,10 +207,10 @@ impl TcpListener {
         if (client_fd < 0) return Result<TcpStream>::Err("Accept failed");
         return Result<TcpStream>::Ok(TcpStream { fd: client_fd });
     }
-    
+
     fn close(self) {
         if (self.fd >= 0) {
-            close(self.fd);
+            _z_net_close(self.fd);
             self.fd = -1;
         }
     }

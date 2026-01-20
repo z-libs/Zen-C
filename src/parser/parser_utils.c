@@ -1,5 +1,6 @@
 
 #include "../codegen/codegen.h"
+#include "../compat/compat.h"
 #include "../plugins/plugin_manager.h"
 #include "parser.h"
 #include <ctype.h>
@@ -11,7 +12,7 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
                          const char *mangled_struct_name, const char *arg,
                          const char *unmangled_arg);
 
-Token expect(Lexer *l, TokenType type, const char *msg)
+Token expect(Lexer *l, ZTokenType type, const char *msg)
 {
     Token t = lexer_next(l);
     if (t.type != type)
@@ -825,7 +826,13 @@ SelectiveImport *find_selective_import(ParserContext *ctx, const char *name)
 char *extract_module_name(const char *path)
 {
     const char *slash = strrchr(path, '/');
-    const char *base = slash ? slash + 1 : path;
+    const char *bslash = strrchr(path, '\\');
+    const char *sep = slash;
+    if (bslash && (!sep || bslash > sep))
+    {
+        sep = bslash;
+    }
+    const char *base = sep ? sep + 1 : path;
     const char *dot = strrchr(base, '.');
     int len = dot ? (int)(dot - base) : (int)strlen(base);
     char *name = xmalloc(len + 1);
@@ -2971,14 +2978,14 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
         if (!plugin)
         {
             char path[1024];
-            snprintf(path, sizeof(path), "%s.so", name);
+            snprintf(path, sizeof(path), "%s%s", name, ZC_PLUGIN_EXT);
             plugin = zptr_load_plugin(path);
         }
 
         if (!plugin && !strchr(name, '/'))
         {
             char path[1024];
-            snprintf(path, sizeof(path), "./%s.so", name);
+            snprintf(path, sizeof(path), "./%s%s", name, ZC_PLUGIN_EXT);
             plugin = zptr_load_plugin(path);
         }
     }
@@ -2987,8 +2994,8 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
     {
         fprintf(stderr,
                 COLOR_RED "Error:" COLOR_RESET " Could not load plugin '%s'\n"
-                          "       Tried built-ins and dynamic loading (.so)\n",
-                name);
+                          "       Tried built-ins and dynamic loading (%s)\n",
+                name, ZC_PLUGIN_EXT);
         exit(1);
     }
 

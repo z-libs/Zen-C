@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "../ast/ast.h"
+#include "../compat/compat.h"
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
@@ -2408,7 +2408,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
     {
         Lexer lookahead = *l;
         lexer_next(&lookahead);
-        TokenType next_type = lexer_peek(&lookahead).type;
+        ZTokenType next_type = lexer_peek(&lookahead).type;
 
         if (next_type == TOK_SEMICOLON || next_type == TOK_DOTDOT)
         {
@@ -4269,60 +4269,27 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     strncpy(fn, t.start + 1, ln);
     fn[ln] = 0;
 
-    // Resolve relative paths (if starts with ./ or ../
-    char resolved_path[1024];
-    if (fn[0] == '.' && (fn[1] == '/' || (fn[1] == '.' && fn[2] == '/')))
+    // Resolve import path using unified search logic
+    char *current_dir = NULL;
+    char *last_slash = strrchr(g_current_filename, '/');
+    if (last_slash)
     {
-        // Relative import - resolve relative to current file
-        char *current_dir = xstrdup(g_current_filename);
-        char *last_slash = strrchr(current_dir, '/');
-        if (last_slash)
-        {
-            *last_slash = 0; // Truncate to directory
-            const char *leaf = fn;
-            if (leaf[0] == '.' && leaf[1] == '/')
-            {
-                leaf += 2;
-            }
-            snprintf(resolved_path, sizeof(resolved_path), "%s/%s", current_dir, leaf);
-        }
-        else
-        {
-            snprintf(resolved_path, sizeof(resolved_path), "%s", fn);
-        }
-        free(current_dir);
+        size_t dir_len = last_slash - g_current_filename;
+        current_dir = xmalloc(dir_len + 1);
+        strncpy(current_dir, g_current_filename, dir_len);
+        current_dir[dir_len] = 0;
+    }
+
+    char *resolved = zc_resolve_import_path(fn, current_dir);
+    if (resolved)
+    {
         free(fn);
-        fn = xstrdup(resolved_path);
+        fn = resolved;
     }
-
-    // Check if file exists, if not try system-wide paths
-    if (access(fn, R_OK) != 0)
-    {
-        // Try system-wide standard library location
-        static const char *system_paths[] = {"/usr/local/share/zenc", "/usr/share/zenc", NULL};
-
-        char system_path[1024];
-        int found = 0;
-
-        for (int i = 0; system_paths[i] && !found; i++)
-        {
-            snprintf(system_path, sizeof(system_path), "%s/%s", system_paths[i], fn);
-            if (access(system_path, R_OK) == 0)
-            {
-                free(fn);
-                fn = xstrdup(system_path);
-                found = 1;
-            }
-        }
-
-        if (!found)
-        {
-            // File not found anywhere - will error later when trying to open
-        }
-    }
+    // If not resolved, keep original fn - will error later when trying to open
 
     // Canonicalize path to avoid duplicates (for example: "./std/io.zc" vs "std/io.zc")
-    char *real_fn = realpath(fn, NULL);
+    char *real_fn = zc_realpath(fn, NULL);
     if (real_fn)
     {
         free(fn);
@@ -4598,7 +4565,8 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     char cmd[4096];
     char bin[1024];
     sprintf(bin, "%s.bin", filename);
-    sprintf(cmd, "gcc %s -o %s > /dev/null 2>&1", filename, bin);
+    // Suppress GCC output
+    sprintf(cmd, "gcc -I./std %s -o %s > " ZC_NULL_DEVICE " 2>&1", filename, bin);
     int res = system(cmd);
     if (res != 0)
     {
@@ -4607,7 +4575,11 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
 
     char out_file[1024];
     sprintf(out_file, "%s.out", filename);
+#ifdef _WIN32
+    sprintf(cmd, "%s > %s", bin, out_file);
+#else
     sprintf(cmd, "./%s > %s", bin, out_file);
+#endif
     if (system(cmd) != 0)
     {
         zpanic_at(lexer_peek(l), "Comptime execution failed");

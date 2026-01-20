@@ -1,6 +1,7 @@
 
 #include "parser.h"
 #include "zprep.h"
+#include "compat/compat.h"
 
 char *g_current_filename = "unknown";
 ParserContext *g_parser_ctx = NULL;
@@ -533,6 +534,18 @@ char g_cflags[MAX_FLAGS_SIZE] = "";
 int g_warning_count = 0;
 CompilerConfig g_config = {0};
 
+static int should_skip_link_flag(const char *flag)
+{
+#ifdef _WIN32
+    if (strcmp(flag, "-lpthread") == 0)
+        return 1;
+#else
+    if (strcmp(flag, "-lws2_32") == 0)
+        return 1;
+#endif
+    return 0;
+}
+
 void scan_build_directives(ParserContext *ctx, const char *src)
 {
     (void)ctx; // Currently unused, reserved for future use
@@ -569,11 +582,22 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 {
                     val++;
                 }
-                if (strlen(g_link_flags) > 0)
+                char filtered[2048] = "";
+                char *saveptr = NULL;
+                for (char *tok = strtok_r(val, " \t", &saveptr); tok; tok = strtok_r(NULL, " \t", &saveptr))
                 {
-                    strcat(g_link_flags, " ");
+                    if (should_skip_link_flag(tok))
+                        continue;
+                    if (strlen(filtered) > 0)
+                        strcat(filtered, " ");
+                    strcat(filtered, tok);
                 }
-                strcat(g_link_flags, val);
+                if (strlen(filtered) > 0)
+                {
+                    if (strlen(g_link_flags) > 0)
+                        strcat(g_link_flags, " ");
+                    strcat(g_link_flags, filtered);
+                }
             }
             else if (0 == strncmp(line, "cflags:", 7))
             {
@@ -747,42 +771,129 @@ void scan_build_directives(ParserContext *ctx, const char *src)
 // Levenshtein distance for "did you mean?" suggestions.
 int levenshtein(const char *s1, const char *s2)
 {
-    int len1 = strlen(s1);
-    int len2 = strlen(s2);
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
 
     // Quick optimization.
-    if (abs(len1 - len2) > 3)
+    if (len1 > len2 ? (len1 - len2 > 3) : (len2 - len1 > 3))
     {
         return 999;
     }
 
-    int matrix[len1 + 1][len2 + 1];
+    size_t rows = len1 + 1;
+    size_t cols = len2 + 1;
+    int *matrix = xmalloc(rows * cols * sizeof(int));
 
-    for (int i = 0; i <= len1; i++)
+    for (size_t i = 0; i <= len1; i++)
     {
-        matrix[i][0] = i;
+        matrix[i * cols + 0] = (int)i;
     }
-    for (int j = 0; j <= len2; j++)
+    for (size_t j = 0; j <= len2; j++)
     {
-        matrix[0][j] = j;
+        matrix[0 * cols + j] = (int)j;
     }
 
-    for (int i = 1; i <= len1; i++)
+    for (size_t i = 1; i <= len1; i++)
     {
-        for (int j = 1; j <= len2; j++)
+        for (size_t j = 1; j <= len2; j++)
         {
             int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
-            int del = matrix[i - 1][j] + 1;
-            int ins = matrix[i][j - 1] + 1;
-            int sub = matrix[i - 1][j - 1] + cost;
+            int del = matrix[(i - 1) * cols + j] + 1;
+            int ins = matrix[i * cols + (j - 1)] + 1;
+            int sub = matrix[(i - 1) * cols + (j - 1)] + cost;
 
-            matrix[i][j] = (del < ins) ? del : ins;
-            if (sub < matrix[i][j])
+            int val = (del < ins) ? del : ins;
+            if (sub < val)
             {
-                matrix[i][j] = sub;
+                val = sub;
             }
+            matrix[i * cols + j] = val;
         }
     }
 
-    return matrix[len1][len2];
+    int result = matrix[len1 * cols + len2];
+    return result;
+}
+
+// ** Standard Library Path Resolution **
+
+// Default install path (can be overridden at compile time via -DZC_STD_INSTALL_PATH=...)
+#ifndef ZC_STD_INSTALL_PATH
+#define ZC_STD_INSTALL_PATH "/usr/local/share/zc"
+#endif
+
+const char *zc_get_std_path(void)
+{
+    static char path[MAX_PATH_SIZE] = {0};
+    if (path[0]) return path;
+
+    // 1. Check environment variable (highest priority)
+    const char *env_path = getenv("ZC_STD_PATH");
+    if (env_path && env_path[0]) {
+        snprintf(path, sizeof(path), "%s", env_path);
+        return path;
+    }
+
+    // 2. Use compile-time install path
+    if (ZC_STD_INSTALL_PATH[0]) {
+        snprintf(path, sizeof(path), "%s", ZC_STD_INSTALL_PATH);
+        return path;
+    }
+
+    // 3. Fallback: current directory
+    snprintf(path, sizeof(path), ".");
+    return path;
+}
+
+// Check if file exists and is readable
+static int file_exists(const char *path)
+{
+#ifdef _WIN32
+    return _access(path, 4) == 0;  // 4 = read permission
+#else
+    return access(path, R_OK) == 0;
+#endif
+}
+
+char *zc_resolve_import_path(const char *filename, const char *current_file_dir)
+{
+    char try_path[MAX_PATH_SIZE];
+
+    // 1. Try relative to current file's directory
+    if (current_file_dir && current_file_dir[0]) {
+        snprintf(try_path, sizeof(try_path), "%s/%s", current_file_dir, filename);
+        if (file_exists(try_path)) {
+            return xstrdup(try_path);
+        }
+    }
+
+    // 2. Try current working directory
+    if (file_exists(filename)) {
+        return xstrdup(filename);
+    }
+
+    // 3. Try ./std/ subdirectory
+    snprintf(try_path, sizeof(try_path), "./std/%s", filename);
+    if (file_exists(try_path)) {
+        return xstrdup(try_path);
+    }
+
+    // 4. Try installed standard library path
+    const char *std_path = zc_get_std_path();
+    if (std_path && std_path[0]) {
+        // Try directly under std path
+        snprintf(try_path, sizeof(try_path), "%s/%s", std_path, filename);
+        if (file_exists(try_path)) {
+            return xstrdup(try_path);
+        }
+
+        // Try under std/ subdirectory
+        snprintf(try_path, sizeof(try_path), "%s/std/%s", std_path, filename);
+        if (file_exists(try_path)) {
+            return xstrdup(try_path);
+        }
+    }
+
+    // Not found
+    return NULL;
 }

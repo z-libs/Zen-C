@@ -19,4 +19,7 @@ ZPlugin *zptr_find_plugin(const char *name);
 // Cleanup.
 void zptr_plugin_mgr_cleanup(void);
 
+// Auto-load plugins from exe_dir/plugins directory.
+void zptr_load_plugins_from_dir(void);
+
 #endif

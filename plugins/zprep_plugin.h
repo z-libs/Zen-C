@@ -27,4 +27,10 @@ typedef struct
 
 typedef ZPlugin *(*ZPluginInitFn)(void);
 
+#ifdef _WIN32
+#define ZC_PLUGIN_API __declspec(dllexport)
+#else
+#define ZC_PLUGIN_API
+#endif
+
 #endif

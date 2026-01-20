@@ -1,9 +1,9 @@
 
 #include "zen_facts.h"
+#include "compat/compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>
 
 // We keep it low by default.
 #define ZEN_PROBABILITY 10
@@ -361,9 +361,7 @@ static int has_triggered = 0;
 
 void zen_init(void)
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    srand(ts.tv_nsec ^ getpid());
+    zc_seed_random();
 }
 
 // Global helper to print.

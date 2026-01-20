@@ -1,5 +1,6 @@
 
 //> link: -lpthread
+//> link: -lws2_32
 
 import "std/net.zc"
 import "std/fs.zc"

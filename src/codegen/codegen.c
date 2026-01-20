@@ -1,6 +1,7 @@
 
 #include "codegen.h"
 #include "zprep.h"
+#include "../compat/compat.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1382,7 +1383,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
         fprintf(out, "({ Async _a = ");
         codegen_expression(ctx, node->unary.operand, out);
-        fprintf(out, "; void* _r; pthread_join(_a.thread, &_r); ");
+        fprintf(out, "; void* _r; z_thread_join(_a.thread, &_r); ");
         if (strcmp(ret_type, "void") == 0)
         {
             fprintf(out, "})");
@@ -1542,8 +1543,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                 fprintf(out, "    args->%s = %s;\n", arg_names[i], arg_names[i]);
             }
 
-            fprintf(out, "    pthread_t th;\n");
-            fprintf(out, "    pthread_create(&th, NULL, _runner_%s, args);\n", node->func.name);
+            fprintf(out, "    z_thread_t th;\n");
+            fprintf(out, "    z_thread_create(&th, _runner_%s, args);\n", node->func.name);
             fprintf(out, "    return (Async){.thread=th, .result=NULL};\n");
             fprintf(out, "}\n");
 
@@ -1793,6 +1794,11 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 if (inferred && strcmp(inferred, "__auto_type") != 0)
                 {
+                    ASTNode *def = find_struct_def(ctx, inferred);
+                    if (def && def->type_info && def->type_info->traits.has_drop)
+                    {
+                        fprintf(out, "__attribute__((cleanup(%s__Drop_glue))) ", inferred);
+                    }
                     emit_var_decl_type(ctx, out, inferred, node->var_decl.name);
                     add_symbol(ctx, node->var_decl.name, inferred, NULL);
                     fprintf(out, " = ");
@@ -2268,7 +2274,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
 
         fprintf(out, "({ Async _a = ");
         codegen_expression(ctx, node->unary.operand, out);
-        fprintf(out, "; void* _r; pthread_join(_a.thread, &_r); ");
+        fprintf(out, "; void* _r; z_thread_join(_a.thread, &_r); ");
         if (strcmp(ret_type, "void") == 0)
         {
             fprintf(out, "})"); // result unused

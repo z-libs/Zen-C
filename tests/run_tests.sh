@@ -10,7 +10,18 @@
 #   ./tests/run_tests.sh --cc tcc           # Test with tcc
 
 # Configuration
-ZC="./zc"
+# Find zc binary
+if [ -f "./zc" ]; then
+    ZC="./zc"
+elif [ -f "./zc.exe" ]; then
+    ZC="./zc.exe"
+elif [ -f "./build/Release/zc.exe" ]; then
+    ZC="./build/Release/zc.exe"
+elif [ -f "./build/zc" ]; then
+    ZC="./build/zc"
+else
+    ZC="./zc"  # fallback, will error below
+fi
 TEST_DIR="tests"
 PASSED=0
 FAILED=0

@@ -1,5 +1,6 @@
 
 #include "zprep_plugin.h"
+#include "compat/compat.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -414,7 +415,7 @@ void sql_transpile(const char *input_body, const ZApi *api)
 
 ZPlugin sql_plugin = {.name = "sql", .fn = sql_transpile};
 
-ZPlugin *z_plugin_init(void)
+ZC_PLUGIN_API ZPlugin *z_plugin_init(void)
 {
     return &sql_plugin;
 }
