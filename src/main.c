@@ -14,9 +14,10 @@
 #define DEFAULT_OUTPUT_FILE "a.out"
 #define PATH_SEPARATOR "/"
 #endif
-
+#ifndef _WIN32
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
+#endif
 
 void print_search_paths()
 {
@@ -80,12 +81,14 @@ int main(int argc, char **argv)
     // Parse command
     char *command = argv[1];
     int arg_start = 2;
-
+#ifndef _WIN32
     if (strcmp(command, "lsp") == 0)
     {
         return lsp_main(argc, argv);
     }
-    else if (strcmp(command, "repl") == 0)
+    else 
+#endif    
+    if (strcmp(command, "repl") == 0)
     {
         run_repl(argv[0]); // Pass self path for recursive calls
         return 0;
