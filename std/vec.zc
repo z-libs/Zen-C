@@ -90,6 +90,19 @@ impl Vec<T> {
         self.data = (T*)realloc(self.data, self.cap * sizeof(T));
     }
 
+    fn grow_to_fit(self, new_len: usize) {
+        if self.cap >= new_len {
+            return;
+        }
+
+        if (self.cap == 0) { self.cap = 8; }
+        while self.cap < new_len {
+            self.cap = self.cap * 2;
+        }
+
+        self.data = (T*)realloc(self.data, self.cap * sizeof(T));
+    }
+
     fn iterator(self) -> VecIter<T> {
         return VecIter<T> {
             data: self.data,
@@ -159,6 +172,14 @@ impl Vec<T> {
         }
         self.len = self.len - 1;
         return item;
+    }
+
+    fn append(self, other: Vec<T>) {
+        var new_len = self.len + other.len;
+        self.grow_to_fit(new_len);
+
+        memcpy(self.data + self.len, other.data, other.len * sizeof(T));
+        self.len = new_len;
     }
 
     fn get(self, idx: usize) -> T {

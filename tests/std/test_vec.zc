@@ -72,7 +72,7 @@ test "Vec Capacity and Allocation" {
     assert_eq(v2.cap, 16, "Growth strategy check (8->16)");
 }
 
-test "Vec Modification (Insert, Remove, Clear)" {
+test "Vec Modification (Insert, Append, Remove, Clear)" {
     print "Testing Vec modification...\n";
     var v = Vec<int>::new();
     v.push(1);
@@ -82,10 +82,19 @@ test "Vec Modification (Insert, Remove, Clear)" {
     assert_eq(v.get(1), 2, "insert middle");
     assert_eq(v.len, 3, "insert len");
 
-    var val = v.remove(0); // [2, 3]
+    var v2 = Vec<int>::new();
+    v2.push(4);
+    v2.push(5);
+    v.append(v2);
+    assert_eq(v.len, 5, "append len");
+    for i in 0..5 {
+        assert_eq(v.get(i), i + 1, "append value");
+    }
+
+    var val = v.remove(0); // [2, 3, 4, 5]
     assert_eq(val, 1, "remove return");
     assert_eq(v.get(0), 2, "remove shift");
-    assert_eq(v.len, 2, "remove len");
+    assert_eq(v.len, 4, "remove len");
 
     v.clear();
     assert_eq(v.len, 0, "clear len");
