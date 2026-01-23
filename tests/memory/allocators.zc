@@ -1,0 +1,12 @@
+import "std/mem.zc"
+
+test "test_general_allocator" {
+    "Testing GeneralAllocator...";
+    var allocator: GeneralAllocator;
+
+    var i = allocator.alloc(10);
+
+    allocator.free(i);
+
+    "  ✓ GeneralAllocator works!";
+}

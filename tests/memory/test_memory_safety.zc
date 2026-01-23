@@ -114,13 +114,31 @@ test "test_alloc" {
 test "test_box" {
     "Testing Box<T>...";
     var b = Box<int>::new();
-    *b.get() = 100;
-    var val = *b.get();
+    *b.ptr() = 100;
+    var val = *b.ptr();
     f"  Box value: {val}";
     assert(val == 100, "Box failed");
     b.free();
     "  ✓ Box works!";
 }
+
+
+fn create_boxed_int(val: int) -> Box<int> {
+    var b = Box<int>::new();
+    b.set(val);
+    return b;
+}
+
+test "test_box_call" {
+    "Testing Box<T> call...";
+    var b = create_boxed_int(45);
+    b.set(100);
+    var val = b.get();
+    f"  Box value: {val}";
+    assert(val == 100, "Box failed");
+    "  ✓ Box works!";
+}
+
 
 test "test_slice" {
     "Testing Slice<T>...";

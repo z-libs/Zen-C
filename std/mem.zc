@@ -1,3 +1,30 @@
+trait Allocator {
+    fn alloc(self, size: usize) -> u8*;
+    fn realloc(self, ptr: u8*, new_size: usize) -> u8*;
+    fn free(self, ptr: u8*, size: usize);
+}
+
+struct GeneralAllocator {}
+
+impl Allocator for GeneralAllocator {
+    fn alloc(self, size: usize) -> u8* {
+        raw {
+            return (uint8_t*) malloc(size);
+        }
+    }
+    
+    fn realloc(self, ptr: u8*, new_size: usize) -> u8* {
+        raw {
+            return (uint8_t*) realloc(ptr, new_size);
+        }
+    }
+    
+    fn free(self, ptr: u8*) {
+        raw {
+            return free(ptr);
+        }
+    }
+}
 
 fn alloc<T>() -> T* {
     return (T*)malloc(sizeof(T));
@@ -34,8 +61,16 @@ impl Box<T> {
         return Self { ptr: p };
     }
     
-    fn get(self) -> T* {
+    fn ptr(self) -> T* {
         return self.ptr;
+    }
+
+    fn set(self, val: T) {
+        *self.ptr = val;
+    }
+
+    fn get(self) -> T {
+        return *self.ptr;
     }
     
     fn is_null(self) -> bool {
@@ -45,7 +80,14 @@ impl Box<T> {
     fn free(self) {
         if self.ptr != NULL {
             free(self.ptr);
+            self.ptr = NULL;
         }
+    }
+}
+
+impl Drop for Box<T> {
+    fn drop(self) {
+        self.free();
     }
 }
 
