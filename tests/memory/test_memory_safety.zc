@@ -114,8 +114,8 @@ test "test_alloc" {
 test "test_box" {
     "Testing Box<T>...";
     var b = Box<int>::new();
-    *b.ptr() = 100;
-    var val = *b.ptr();
+    *b.get_ptr() = 100;
+    var val = *b.get_ptr();
     f"  Box value: {val}";
     assert(val == 100, "Box failed");
     b.free();

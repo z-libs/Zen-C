@@ -1,19 +1,26 @@
 trait Allocator {
-    fn alloc(self, size: usize) -> u8*;
-    fn realloc(self, ptr: u8*, new_size: usize) -> u8*;
+    fn allocate(self, size: usize) -> u8*;
+    fn allocate_zeroed(self, size: usize) -> u8*;
+    fn reallocate(self, ptr: u8*, new_size: usize) -> u8*;
     fn free(self, ptr: u8*, size: usize);
 }
 
 struct GeneralAllocator {}
 
 impl Allocator for GeneralAllocator {
-    fn alloc(self, size: usize) -> u8* {
+    fn allocate(self, size: usize) -> u8* {
         raw {
             return (uint8_t*) malloc(size);
         }
     }
+
+    fn allocate_zeroed(self, size: usize) -> u8* {
+        raw {
+            return (uint8_t*) calloc(1, size);
+        }
+    }
     
-    fn realloc(self, ptr: u8*, new_size: usize) -> u8* {
+    fn reallocate(self, ptr: u8*, new_size: usize) -> u8* {
         raw {
             return (uint8_t*) realloc(ptr, new_size);
         }
@@ -26,14 +33,19 @@ impl Allocator for GeneralAllocator {
     }
 }
 
+var GLOBAL_ALLOCATOR: GeneralAllocator;
+
+@deprecated("Replaced with `Allocator::alloc`")
 fn alloc<T>() -> T* {
     return (T*)malloc(sizeof(T));
 }
 
+@deprecated("Replaced with `Allocator`")
 fn zalloc<T>() -> T* {
     return (T*)calloc(1, sizeof(T));
 }
 
+@deprecated("Replaced with `Allocator`")
 fn alloc_n<T>(n: usize) -> T* {
     return (T*)malloc(sizeof(T) * n);
 }
@@ -61,7 +73,7 @@ impl Box<T> {
         return Self { ptr: p };
     }
     
-    fn ptr(self) -> T* {
+    fn get_ptr(self) -> T* {
         return self.ptr;
     }
 
@@ -88,6 +100,49 @@ impl Box<T> {
 impl Drop for Box<T> {
     fn drop(self) {
         self.free();
+    }
+}
+
+
+struct RcInner<T> {
+    value: T;
+    ref_count: usize;
+}
+
+struct Rc<T> {
+    inner: RcInner<T>*;
+}
+
+impl Rc<T> {
+    fn new(value: T) -> Self {
+        var inner: RcInner<T>* = GLOBAL_ALLOCATOR.allocate(sizeof(RcInner<T>));
+
+        inner.value = value;
+        inner.ref_count = 1;
+
+        return Self {
+            inner: inner
+        };
+    }
+}
+
+impl Clone for Rc<T> {
+    fn clone(self) -> Self {
+        self.inner.ref_count++;
+        
+        return Self {
+            inner: self.inner 
+        };
+    }
+}
+
+impl Drop for Rc<T> {
+    fn drop(self) {
+        self.inner.ref_count--;
+
+        if (self.inner.ref_count == 0) {
+            GLOBAL_ALLOCATOR.free(self.inner);
+        }
     }
 }
 

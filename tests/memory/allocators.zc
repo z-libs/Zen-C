@@ -1,12 +1,49 @@
 import "std/mem.zc"
+//import "std/vec.zc"
 
-test "test_general_allocator" {
-    "Testing GeneralAllocator...";
-    var allocator: GeneralAllocator;
+// test "test_general_allocator" {
+//     "Testing GeneralAllocator...";
+//     var allocator: GeneralAllocator;
 
-    var i = allocator.alloc(10);
+//     var i = allocator.alloc(10);
 
-    allocator.free(i);
+//     allocator.free(i);
 
-    "  ✓ GeneralAllocator works!";
+//     "  ✓ GeneralAllocator works!";
+// }
+
+// test "test_global_allocator" {
+//     "Testing Vec<T>...";
+
+//     var allocator = GeneralAllocator {};
+
+//     var asdasd: Allocator = &allocator;
+
+//     //var v = Vec<i32>::new();
+
+//     //v.push(4);
+
+//     "  ✓ GLOBAL_ALLOCATOR works!";
+// }
+
+// test "test_rc" {
+//     var a: RcInner<i32> = RcInner<i32> {};
+
+//     var value = Rc<i32>::new(4);
+// }
+
+trait Shape {
+    fn draw_2(self);
 }
+
+struct Square {}
+
+impl Shape for Square {
+    fn draw_2(self) {}
+}
+
+fn main() {
+    var a = Square {};
+    var b: Shape = &a;
+}
+

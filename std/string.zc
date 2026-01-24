@@ -310,7 +310,7 @@ impl String {
             v.push(0);
             var ch_s = String::new(v.data);
             result.append(&ch_s);
-            v.free();
+            //v.free(); // The array should be cleaned up automatically.
             i = i + 1;
         }
         return result;

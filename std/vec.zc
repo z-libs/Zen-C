@@ -1,8 +1,10 @@
 
 import "./core.zc"
 import "./iter.zc"
+import "./mem.zc"
 
 struct Vec<T> {
+    alloc: Allocator;
     data: T*;
     len: usize;
     cap: usize;
@@ -69,8 +71,8 @@ impl VecIterRef<T> {
 }
 
 impl Vec<T> {
-    fn new() -> Vec<T> {
-        return Vec<T> { data: 0, len: 0, cap: 0 };
+    fn new(allocator: Allocator = &GLOBAL_ALLOCATOR) -> Vec<T> {
+        return Vec<T> { alloc: allocator, data: 0, len: 0, cap: 0 };
     }
 
     fn with_capacity(cap: usize) -> Vec<T> {
@@ -78,7 +80,7 @@ impl Vec<T> {
             return Vec<T> { data: 0, len: 0, cap: 0 };
         }
         return Vec<T> {
-            data: (T*)malloc(cap * sizeof(T)),
+            data: (T*)self.alloc.allocate(cap * sizeof(T)),
             len: 0,
             cap: cap
         };
@@ -87,7 +89,7 @@ impl Vec<T> {
     fn grow(self) {
         if (self.cap == 0) { self.cap = 8; }
         else { self.cap = self.cap * 2; }
-        self.data = (T*)realloc(self.data, self.cap * sizeof(T));
+        self.data = (T*)self.alloc.reallocate(self.data, self.cap * sizeof(T));
     }
 
     fn grow_to_fit(self, new_len: usize) {
@@ -100,7 +102,7 @@ impl Vec<T> {
             self.cap = self.cap * 2;
         }
 
-        self.data = (T*)realloc(self.data, self.cap * sizeof(T));
+        self.data = (T*)self.alloc.reallocate(self.data, self.cap * sizeof(T));
     }
 
     fn iterator(self) -> VecIter<T> {
@@ -218,14 +220,7 @@ impl Vec<T> {
     fn clear(self) {
         self.len = 0;
     }
-    
-    fn free(self) {
-        if (self.data) free(self.data);
-        self.data = 0;
-        self.len = 0;
-        self.cap = 0;
-    }
-    
+
     fn first(self) -> T {
         if (self.len == 0) {
             !"Panic: first called on empty Vec";
@@ -275,7 +270,7 @@ impl Vec<T> {
         if (self.len == 0) {
             return Vec<T> { data: 0, len: 0, cap: 0 };
         }
-        var new_data = (T*)malloc(self.len * sizeof(T));
+        var new_data = (T*)self.alloc.allocate(self.len * sizeof(T));
         var i: usize = 0;
         while i < self.len {
             new_data[i] = self.data[i];
@@ -292,6 +287,11 @@ impl Vec<T> {
 
 impl Drop for Vec {
     fn drop(self) {
-        self.free();
+        if (self.data) 
+            self.alloc.free(self.data);
+
+        self.data = 0;
+        self.len = 0;
+        self.cap = 0;
     }
 }
