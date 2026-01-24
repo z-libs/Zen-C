@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#define strtok_r strtok_s
-#endif
 #include "../plugins/plugin_manager.h"
 #include "ast.h"
 #include "zprep_plugin.h"
