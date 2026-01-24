@@ -59,6 +59,7 @@ typedef enum
     TOK_TEST,
     TOK_ASSERT,
     TOK_SIZEOF,
+    TOK_DEF,
     TOK_DEFER,
     TOK_AUTOFREE,
     TOK_QUESTION,

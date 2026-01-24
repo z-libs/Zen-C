@@ -145,6 +145,10 @@ Token lexer_next(Lexer *l)
         {
             return (Token){TOK_DEFER, s, 5, start_line, start_col};
         }
+        if (len == 3 && strncmp(s, "def", 3) == 0)
+        {
+            return (Token){TOK_DEF, s, 3, start_line, start_col};
+        }
         if (len == 8 && strncmp(s, "autofree", 8) == 0)
         {
             return (Token){TOK_AUTOFREE, s, 8, start_line, start_col};

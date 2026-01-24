@@ -23,3 +23,17 @@ test "Generics" {
     var b = Box<int> { val: 100 };
     assert(b.get() == 100, "Generic impl failed");
 }
+
+struct Container { }
+
+impl Container {
+    fn check_size<T>(self, value: T) -> int {
+        return sizeof(value);
+    }
+}
+
+test "Generic Method in Regular Impl" {
+    var c = Container{};
+    assert(c.check_size<int>(10) == sizeof(int), "Generic method int size");
+    assert(c.check_size<double>(3.14) == sizeof(double), "Generic method double size");
+}

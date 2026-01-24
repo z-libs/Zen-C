@@ -368,6 +368,84 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             free(name);
             return type_new(TYPE_CHAR);
         }
+        if (strcmp(name, "long") == 0)
+        {
+            free(name);
+            return type_new(TYPE_I64);
+        }
+        if (strcmp(name, "short") == 0)
+        {
+            free(name);
+            return type_new(TYPE_I16);
+        }
+        if (strcmp(name, "unsigned") == 0)
+        {
+            free(name);
+            return type_new(TYPE_UINT);
+        }
+        if (strcmp(name, "signed") == 0)
+        {
+            free(name);
+            return type_new(TYPE_INT);
+        }
+        if (strcmp(name, "int8_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_I8);
+        }
+        if (strcmp(name, "uint8_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_U8);
+        }
+        if (strcmp(name, "int16_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_I16);
+        }
+        if (strcmp(name, "uint16_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_U16);
+        }
+        if (strcmp(name, "int32_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_I32);
+        }
+        if (strcmp(name, "uint32_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_U32);
+        }
+        if (strcmp(name, "int64_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_I64);
+        }
+        if (strcmp(name, "uint64_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_U64);
+        }
+        if (strcmp(name, "size_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_USIZE);
+        }
+        if (strcmp(name, "ssize_t") == 0)
+        {
+            free(name);
+            return type_new(TYPE_ISIZE);
+        }
+
+        // Relaxed Type Check: If explicit 'struct Name', trust the user.
+        if (explicit_struct)
+        {
+            Type *ty = type_new(TYPE_STRUCT);
+            ty->name = name;
+            ty->is_explicit_struct = 1;
+        }
 
         // Selective imports ONLY apply when we're NOT in a module context
         if (!ctx->current_module_prefix)
@@ -395,12 +473,18 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             name = prefixed_name;
         }
 
+        if (!is_known_generic(ctx, name) && strcmp(name, "Self") != 0)
+        {
+            register_type_usage(ctx, name, t);
+        }
+
         Type *ty = type_new(TYPE_STRUCT);
         ty->name = name;
         ty->is_explicit_struct = explicit_struct;
 
         // Handle Generics <T> or <K, V>
-        if (lexer_peek(l).type == TOK_LANGLE)
+        if (lexer_peek(l).type == TOK_LANGLE ||
+            (lexer_peek(l).type == TOK_OP && strncmp(lexer_peek(l).start, "<", 1) == 0))
         {
             lexer_next(l); // eat <
             Type *first_arg = parse_type_formal(ctx, l);
@@ -632,17 +716,39 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         return ty;
     }
 
+    // If we have an identifier that wasn't found,
+    // assume it is a valid external C type
+    // (for example, a struct defined in implementation).
+    if (t.type == TOK_IDENT)
+    {
+        char *fallback = token_strdup(t);
+        lexer_next(l);
+        Type *ty = type_new(TYPE_STRUCT);
+        ty->name = fallback;
+        ty->is_explicit_struct = 0;
+        return ty;
+    }
+
     return type_new(TYPE_UNKNOWN);
 }
 
 Type *parse_type_formal(ParserContext *ctx, Lexer *l)
 {
     int is_restrict = 0;
-    if (lexer_peek(l).type == TOK_IDENT && lexer_peek(l).len == 8 &&
-        strncmp(lexer_peek(l).start, "restrict", 8) == 0)
+    int is_const = 0;
+
+    if (lexer_peek(l).type == TOK_IDENT)
     {
-        lexer_next(l); // eat restrict
-        is_restrict = 1;
+        if (lexer_peek(l).len == 8 && strncmp(lexer_peek(l).start, "restrict", 8) == 0)
+        {
+            lexer_next(l); // eat restrict
+            is_restrict = 1;
+        }
+        else if (lexer_peek(l).len == 5 && strncmp(lexer_peek(l).start, "const", 5) == 0)
+        {
+            lexer_next(l); // eat const
+            is_const = 1;
+        }
     }
 
     // Example: fn(int, int) -> int
@@ -753,6 +859,10 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
     if (is_restrict)
     {
         t->is_restrict = 1;
+    }
+    if (is_const)
+    {
+        t->is_const = 1;
     }
     return t;
 }

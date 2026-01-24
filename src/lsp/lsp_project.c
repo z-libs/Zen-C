@@ -38,6 +38,8 @@ void lsp_project_init(const char *root_path)
 void lsp_default_on_error(void *data, Token t, const char *msg)
 {
     (void)data;
+    (void)t;
+    (void)msg;
     // We can log it if we want, but standard zpanic_at already printed it to stderr.
     // The important thing is that we exist so zpanic_at returns.
     // Maybe we suppress duplicates or just let it pass.

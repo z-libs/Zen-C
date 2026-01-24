@@ -42,8 +42,6 @@ static void codegen_literal_expr(ASTNode *node, FILE *out)
 // Emit variable reference expression
 static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
 {
-    (void)ctx; // May be used for context lookup in future
-
     if (g_current_lambda)
     {
         for (int i = 0; i < g_current_lambda->lambda.num_captures; i++)
@@ -603,7 +601,15 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             emit_auto_type(ctx, node->member.target, node->token, out);
             fprintf(out, " _t = (");
             codegen_expression(ctx, node->member.target, out);
-            fprintf(out, "); _t ? _t->%s : 0; })", node->member.field);
+            char *field = node->member.field;
+            if (field && field[0] >= '0' && field[0] <= '9')
+            {
+                fprintf(out, "); _t ? _t->v%s : 0; })", field);
+            }
+            else
+            {
+                fprintf(out, "); _t ? _t->%s : 0; })", field);
+            }
         }
         else
         {
@@ -619,7 +625,15 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             {
                 free(lt);
             }
-            fprintf(out, "%s%s", actually_ptr ? "->" : ".", node->member.field);
+            char *field = node->member.field;
+            if (field && field[0] >= '0' && field[0] <= '9')
+            {
+                fprintf(out, "%sv%s", actually_ptr ? "->" : ".", field);
+            }
+            else
+            {
+                fprintf(out, "%s%s", actually_ptr ? "->" : ".", field);
+            }
         }
         break;
     case NODE_EXPR_INDEX:
@@ -638,6 +652,19 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             if (strncmp(node->index.array->resolved_type, "Slice_", 6) == 0)
             {
                 is_slice_struct = 1;
+            }
+        }
+
+        if (!is_slice_struct && !node->index.array->type_info && !node->index.array->resolved_type)
+        {
+            char *inferred = infer_type(ctx, node->index.array);
+            if (inferred && strncmp(inferred, "Slice_", 6) == 0)
+            {
+                is_slice_struct = 1;
+            }
+            if (inferred)
+            {
+                free(inferred);
             }
         }
 

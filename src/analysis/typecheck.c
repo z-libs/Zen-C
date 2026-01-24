@@ -97,6 +97,7 @@ static void check_use_validity(TypeChecker *tc, ASTNode *var_node, Symbol *sym)
 
 static void mark_symbol_moved(TypeChecker *tc, Symbol *sym, ASTNode *context_node)
 {
+    (void)context_node;
     if (!sym)
     {
         return;
@@ -112,6 +113,7 @@ static void mark_symbol_moved(TypeChecker *tc, Symbol *sym, ASTNode *context_nod
 
 static void mark_symbol_valid(TypeChecker *tc, Symbol *sym)
 {
+    (void)tc;
     if (sym)
     {
         sym->is_moved = 0;

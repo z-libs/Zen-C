@@ -269,6 +269,12 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    if (!validate_types(&ctx))
+    {
+        // Type validation failed
+        return 1;
+    }
+
     if (g_config.mode_check)
     {
         // Just verify

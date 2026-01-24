@@ -732,6 +732,11 @@ void emit_protos(ASTNode *node, FILE *out)
             ASTNode *m = f->impl.methods;
             while (m)
             {
+                if (m->func.generic_params)
+                {
+                    m = m->next;
+                    continue;
+                }
                 char *fname = m->func.name;
                 char *proto = xmalloc(strlen(fname) + strlen(sname) + 2);
                 int slen = strlen(sname);
@@ -810,6 +815,11 @@ void emit_protos(ASTNode *node, FILE *out)
             ASTNode *m = f->impl_trait.methods;
             while (m)
             {
+                if (m->func.generic_params)
+                {
+                    m = m->next;
+                    continue;
+                }
                 if (m->func.is_async)
                 {
                     fprintf(out, "Async %s(%s);\n", m->func.name, m->func.args);

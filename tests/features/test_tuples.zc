@@ -1,0 +1,29 @@
+fn get_pair() -> (int, int) {
+    return (10, 20);
+}
+
+fn main() {
+    // Inferred type tuple literal
+    var p = (1, 2);
+    assert(p.0 == 1, "Tuple access 0");
+    assert(p.1 == 2, "Tuple access 1");
+
+    // Function returning tuple
+    var p2 = get_pair();
+    assert(p2.0 == 10, "Tuple return 0");
+    assert(p2.1 == 20, "Tuple return 1");
+    
+    // Explicit type tuple
+    var p3: (int, int) = (5, 6);
+    assert(p3.0 == 5, "Explicit tuple 0");
+    assert(p3.1 == 6, "Explicit tuple 1");
+    
+    // Different types
+    var mixed: (int, string) = (10, "Hello");
+    assert(mixed.0 == 10, "Mixed 0");
+    
+    // Tuple destructuring
+    var (a, b) = get_pair();
+    assert(a == 10, "Destructured a");
+    assert(b == 20, "Destructured b");
+}

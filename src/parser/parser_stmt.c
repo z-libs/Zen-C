@@ -1869,6 +1869,10 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
     {
         return parse_asm(ctx, l);
     }
+    if (tk.type == TOK_DEF)
+    {
+        return parse_def(ctx, l);
+    }
 
     // Identifiers (Keywords or Expressions)
     if (tk.type == TOK_IDENT)
@@ -1956,9 +1960,11 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             }
             zpanic_at(next, "Expected 'var' after 'static'");
         }
+
         if (strncmp(tk.start, "const", 5) == 0 && tk.len == 5)
         {
-            return parse_const(ctx, l);
+            zpanic_at(tk, "'const' for declarations is deprecated. Use 'def' for constants or 'var "
+                          "x: const T' for read-only variables.");
         }
         if (strncmp(tk.start, "return", 6) == 0 && tk.len == 6)
         {

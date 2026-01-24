@@ -1,0 +1,40 @@
+struct Struct<T> {
+    val: T;
+}
+
+fn hello<T>() {
+    var s = sizeof(Struct<T>);
+    println "size: {s}";
+}
+
+test "sizeof template" {
+    var _first: Struct<i32>;
+    hello<i32>();
+    var _second: Struct<f64>;
+    hello<f64>();
+}
+
+struct Mixed<T> {
+    val: T;
+    flag: u8;
+}
+
+test "sizeof mixed" {
+   var s1 = sizeof(Mixed<i32>);
+   println "i32 mixed: {s1}";
+   var s2 = sizeof(Mixed<f64>);
+   println "f64 mixed: {s2}";
+}
+
+@packed
+struct PackedMixed<T> {
+    val: T;
+    flag: u8;
+}
+
+test "sizeof packed mixed" {
+   var s1 = sizeof(PackedMixed<i32>);
+   println "i32 packed mixed: {s1}";
+   var s2 = sizeof(PackedMixed<f64>);
+   println "f64 packed mixed: {s2}";
+}

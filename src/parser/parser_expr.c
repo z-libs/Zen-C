@@ -7,6 +7,62 @@
 #include <stdlib.h>
 #include <string.h>
 
+static ASTNode *find_function_definition(ParserContext *ctx, const char *name)
+{
+    StructRef *curr = ctx->parsed_funcs_list;
+    while (curr)
+    {
+        if (curr->node && curr->node->func.name && strcmp(curr->node->func.name, name) == 0)
+        {
+            return curr->node;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
+static void validate_named_arguments(Token call_token, const char *func_name, char **arg_names,
+                                     int args_count, ASTNode *func_def)
+{
+    if (!func_def || !arg_names)
+    {
+        (void)func_name;
+        return;
+    }
+
+    for (int i = 0; i < args_count; i++)
+    {
+        // Skip positional arguments (NULL name)
+        if (!arg_names[i])
+        {
+            continue;
+        }
+
+        // Check bounds
+        if (i >= func_def->func.arg_count)
+        {
+            continue;
+        }
+
+        // Check parameter name match
+        const char *expected_name = func_def->func.param_names[i];
+        if (!expected_name)
+        {
+            continue;
+        }
+
+        if (strcmp(arg_names[i], expected_name) != 0)
+        {
+            char msg[256];
+            snprintf(
+                msg, sizeof(msg),
+                "Named arguments must follow function parameter order. Expected '%s' but got '%s'",
+                expected_name, arg_names[i]);
+            zpanic_at(call_token, msg);
+        }
+    }
+}
+
 extern ASTNode *global_user_structs;
 
 // Helper to check if a type is a struct type
@@ -20,6 +76,7 @@ int is_struct_type(ParserContext *ctx, const char *type_name)
 }
 
 Type *get_field_type(ParserContext *ctx, Type *struct_type, const char *field_name);
+char *infer_type(ParserContext *ctx, ASTNode *node); // from codegen
 
 int is_type_copy(ParserContext *ctx, Type *t)
 {
@@ -1610,6 +1667,8 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 lexer_next(&lookahead);
 
                 int valid_generic = 0;
+                int saved_speculative = ctx->is_speculative;
+                ctx->is_speculative = 1;
                 while (1)
                 {
                     parse_type(ctx, &lookahead);
@@ -1624,6 +1683,7 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     }
                     break;
                 }
+                ctx->is_speculative = saved_speculative;
 
                 if (valid_generic)
                 {
@@ -2011,6 +2071,7 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
             ASTNode *head = NULL, *tail = NULL;
             int args_provided = 0;
             char **arg_names = NULL;
+            int arg_names_cap = 0;
             int has_named = 0;
 
             if (lexer_peek(l).type != TOK_RPAREN)
@@ -2033,6 +2094,119 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     }
 
                     ASTNode *arg = parse_expression(ctx, l);
+
+                    // Implicit trait cast logic
+                    if (sig && args_provided < sig->total_args && arg)
+                    {
+                        Type *expected = sig->arg_types[args_provided];
+
+                        if (expected && expected->name && is_trait(expected->name))
+                        {
+                            // Check if we are passing a struct pointer
+                            Type *arg_type =
+                                arg->type_info
+                                    ? arg->type_info
+                                    : ((arg->type == NODE_EXPR_VAR)
+                                           ? find_symbol_type_info(ctx, arg->var_ref.name)
+                                           : NULL);
+
+                            if (!arg_type && arg->type == NODE_EXPR_UNARY &&
+                                strcmp(arg->unary.op, "&") == 0)
+                            {
+                                // Handle &struct
+                                if (arg->unary.operand->type == NODE_EXPR_VAR)
+                                {
+                                    Type *inner = find_symbol_type_info(
+                                        ctx, arg->unary.operand->var_ref.name);
+                                    if (inner && inner->kind == TYPE_STRUCT)
+                                    {
+                                        if (check_impl(ctx, expected->name, inner->name))
+                                        {
+                                            // FOUND MATCH: &Struct -> Trait
+                                            // Construct Trait Object: (Trait){.self = arg, .vtable
+                                            // = &_Struct_Trait_VTable}
+
+                                            ASTNode *init = ast_create(NODE_EXPR_STRUCT_INIT);
+                                            init->struct_init.struct_name = xstrdup(expected->name);
+
+                                            Type *trait_type = type_new(TYPE_STRUCT);
+                                            trait_type->name = xstrdup(expected->name);
+                                            init->type_info = trait_type;
+
+                                            // Field: self
+                                            ASTNode *f_self = ast_create(NODE_VAR_DECL);
+                                            f_self->var_decl.name = xstrdup("self");
+                                            f_self->var_decl.init_expr = arg;
+
+                                            // Field: vtable
+                                            char vtable_name[256];
+                                            sprintf(vtable_name, "%s_%s_VTable", inner->name,
+                                                    expected->name);
+
+                                            ASTNode *vtable_var = ast_create(NODE_EXPR_VAR);
+                                            vtable_var->var_ref.name = xstrdup(vtable_name);
+
+                                            ASTNode *vtable_ref = ast_create(NODE_EXPR_UNARY);
+                                            vtable_ref->unary.op = xstrdup("&");
+                                            vtable_ref->unary.operand = vtable_var;
+
+                                            ASTNode *f_vtable = ast_create(NODE_VAR_DECL);
+                                            f_vtable->var_decl.name = xstrdup("vtable");
+                                            f_vtable->var_decl.init_expr = vtable_ref;
+
+                                            f_self->next = f_vtable;
+                                            init->struct_init.fields = f_self;
+
+                                            arg = init;
+                                        }
+                                    }
+                                }
+                            }
+                            else if (arg_type && arg_type->kind == TYPE_POINTER &&
+                                     arg_type->inner && arg_type->inner->kind == TYPE_STRUCT)
+                            {
+                                // Pointer variable or expression
+                                if (check_impl(ctx, expected->name, arg_type->inner->name))
+                                {
+                                    // Construct Trait Object: (Trait){.self = arg, .vtable =
+                                    // &_Struct_Trait_VTable}
+
+                                    ASTNode *init = ast_create(NODE_EXPR_STRUCT_INIT);
+                                    init->struct_init.struct_name = xstrdup(expected->name);
+
+                                    Type *trait_type = type_new(TYPE_STRUCT);
+                                    trait_type->name = xstrdup(expected->name);
+                                    init->type_info = trait_type;
+
+                                    // Field: self
+                                    ASTNode *f_self = ast_create(NODE_VAR_DECL);
+                                    f_self->var_decl.name = xstrdup("self");
+                                    f_self->var_decl.init_expr = arg;
+
+                                    // Field: vtable
+                                    char vtable_name[256];
+                                    sprintf(vtable_name, "%s_%s_VTable", arg_type->inner->name,
+                                            expected->name);
+
+                                    ASTNode *vtable_var = ast_create(NODE_EXPR_VAR);
+                                    vtable_var->var_ref.name = xstrdup(vtable_name);
+
+                                    ASTNode *vtable_ref = ast_create(NODE_EXPR_UNARY);
+                                    vtable_ref->unary.op = xstrdup("&");
+                                    vtable_ref->unary.operand = vtable_var;
+
+                                    ASTNode *f_vtable = ast_create(NODE_VAR_DECL);
+                                    f_vtable->var_decl.name = xstrdup("vtable");
+                                    f_vtable->var_decl.init_expr = vtable_ref;
+
+                                    f_self->next = f_vtable;
+                                    init->struct_init.fields = f_self;
+
+                                    arg = init;
+                                }
+                            }
+                        }
+                    }
 
                     // Move Semantics Logic (Added for known funcs)
                     check_move_usage(ctx, arg, arg ? arg->token : t1);
@@ -2069,10 +2243,11 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     tail = arg;
                     args_provided++;
 
-                    arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
-                    arg_names[args_provided - 1] = arg_name;
-
-                    arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
+                    if (args_provided > arg_names_cap)
+                    {
+                        arg_names_cap = arg_names_cap ? arg_names_cap * 2 : 8;
+                        arg_names = xrealloc(arg_names, arg_names_cap * sizeof(char *));
+                    }
                     arg_names[args_provided - 1] = arg_name;
 
                     if (lexer_peek(l).type == TOK_COMMA)
@@ -2097,6 +2272,100 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     lexer_init(&def_l, sig->defaults[i]);
                     ASTNode *def = parse_expression(ctx, &def_l);
 
+                    // Implicit trait cast logic for default values
+                    Type *expected = sig->arg_types[i];
+                    if (expected && expected->name && is_trait(expected->name))
+                    {
+                        Type *arg_type = def->type_info
+                                             ? def->type_info
+                                             : ((def->type == NODE_EXPR_VAR)
+                                                    ? find_symbol_type_info(ctx, def->var_ref.name)
+                                                    : NULL);
+
+                        if (!arg_type && def->type == NODE_EXPR_UNARY &&
+                            strcmp(def->unary.op, "&") == 0)
+                        {
+                            if (def->unary.operand->type == NODE_EXPR_VAR)
+                            {
+                                Type *inner =
+                                    find_symbol_type_info(ctx, def->unary.operand->var_ref.name);
+                                if (inner && inner->kind == TYPE_STRUCT)
+                                {
+                                    if (check_impl(ctx, expected->name, inner->name))
+                                    {
+                                        ASTNode *init = ast_create(NODE_EXPR_STRUCT_INIT);
+                                        init->struct_init.struct_name = xstrdup(expected->name);
+
+                                        Type *trait_type = type_new(TYPE_STRUCT);
+                                        trait_type->name = xstrdup(expected->name);
+                                        init->type_info = trait_type;
+
+                                        ASTNode *f_self = ast_create(NODE_VAR_DECL);
+                                        f_self->var_decl.name = xstrdup("self");
+                                        f_self->var_decl.init_expr = def;
+
+                                        char vtable_name[256];
+                                        sprintf(vtable_name, "%s_%s_VTable", inner->name,
+                                                expected->name);
+
+                                        ASTNode *vtable_var = ast_create(NODE_EXPR_VAR);
+                                        vtable_var->var_ref.name = xstrdup(vtable_name);
+
+                                        ASTNode *vtable_ref = ast_create(NODE_EXPR_UNARY);
+                                        vtable_ref->unary.op = xstrdup("&");
+                                        vtable_ref->unary.operand = vtable_var;
+
+                                        ASTNode *f_vtable = ast_create(NODE_VAR_DECL);
+                                        f_vtable->var_decl.name = xstrdup("vtable");
+                                        f_vtable->var_decl.init_expr = vtable_ref;
+
+                                        f_self->next = f_vtable;
+                                        init->struct_init.fields = f_self;
+
+                                        def = init;
+                                    }
+                                }
+                            }
+                        }
+                        else if (arg_type && arg_type->kind == TYPE_POINTER && arg_type->inner &&
+                                 arg_type->inner->kind == TYPE_STRUCT)
+                        {
+                            if (check_impl(ctx, expected->name, arg_type->inner->name))
+                            {
+                                ASTNode *init = ast_create(NODE_EXPR_STRUCT_INIT);
+                                init->struct_init.struct_name = xstrdup(expected->name);
+
+                                Type *trait_type = type_new(TYPE_STRUCT);
+                                trait_type->name = xstrdup(expected->name);
+                                init->type_info = trait_type;
+
+                                ASTNode *f_self = ast_create(NODE_VAR_DECL);
+                                f_self->var_decl.name = xstrdup("self");
+                                f_self->var_decl.init_expr = def;
+
+                                char vtable_name[256];
+                                sprintf(vtable_name, "%s_%s_VTable", arg_type->inner->name,
+                                        expected->name);
+
+                                ASTNode *vtable_var = ast_create(NODE_EXPR_VAR);
+                                vtable_var->var_ref.name = xstrdup(vtable_name);
+
+                                ASTNode *vtable_ref = ast_create(NODE_EXPR_UNARY);
+                                vtable_ref->unary.op = xstrdup("&");
+                                vtable_ref->unary.operand = vtable_var;
+
+                                ASTNode *f_vtable = ast_create(NODE_VAR_DECL);
+                                f_vtable->var_decl.name = xstrdup("vtable");
+                                f_vtable->var_decl.init_expr = vtable_ref;
+
+                                f_self->next = f_vtable;
+                                init->struct_init.fields = f_self;
+
+                                def = init;
+                            }
+                        }
+                    }
+
                     if (!head)
                     {
                         head = def;
@@ -2108,6 +2377,16 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     tail = def;
                 }
             }
+
+            if (has_named && arg_names)
+            {
+                ASTNode *def = find_function_definition(ctx, sig->name);
+                if (def)
+                {
+                    validate_named_arguments(t, sig->name, arg_names, args_provided, def);
+                }
+            }
+
             node = ast_create(NODE_EXPR_CALL);
             node->token = t; // Set source token
             ASTNode *callee = ast_create(NODE_EXPR_VAR);
@@ -2255,35 +2534,48 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
         }
         else
         {
-            node = ast_create(NODE_EXPR_VAR);
-            node->token = t; // Set source token
-            node->var_ref.name = acc;
-            node->type_info = find_symbol_type_info(ctx, acc);
-
             Symbol *sym = find_symbol_entry(ctx, acc);
-            if (sym)
+            if (sym && sym->is_def && sym->is_const_value)
             {
-                sym->is_used = 1;
-                node->definition_token = sym->decl_token;
-            }
-
-            char *type_str = find_symbol_type(ctx, acc);
-
-            if (type_str)
-            {
-                node->resolved_type = type_str;
-                node->var_ref.suggestion = NULL;
+                // Constant Folding for 'def', emits literal
+                node = ast_create(NODE_EXPR_LITERAL);
+                node->token = t;
+                node->literal.type_kind = 0; // INT (assumed for now from const_int_val)
+                node->literal.int_val = sym->const_int_val;
+                node->type_info = type_new(TYPE_INT);
+                // No need for resolution
             }
             else
             {
-                node->resolved_type = xstrdup("unknown");
-                if (should_suppress_undef_warning(ctx, acc))
+                node = ast_create(NODE_EXPR_VAR);
+                node->token = t; // Set source token
+                node->var_ref.name = acc;
+                node->type_info = find_symbol_type_info(ctx, acc);
+
+                if (sym)
                 {
+                    sym->is_used = 1;
+                    node->definition_token = sym->decl_token;
+                }
+
+                char *type_str = find_symbol_type(ctx, acc);
+
+                if (type_str)
+                {
+                    node->resolved_type = type_str;
                     node->var_ref.suggestion = NULL;
                 }
                 else
                 {
-                    node->var_ref.suggestion = find_similar_symbol(ctx, acc);
+                    node->resolved_type = xstrdup("unknown");
+                    if (should_suppress_undef_warning(ctx, acc))
+                    {
+                        node->var_ref.suggestion = NULL;
+                    }
+                    else
+                    {
+                        node->var_ref.suggestion = find_similar_symbol(ctx, acc);
+                    }
                 }
             }
         }
@@ -2387,11 +2679,123 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
         l->pos = saved; // Reset if not a cast
 
         ASTNode *expr = parse_expression(ctx, l);
-        if (lexer_next(l).type != TOK_RPAREN)
+
+        // Check for tuple literal: (expr, expr, ...)
+        if (lexer_peek(l).type == TOK_COMMA)
         {
-            zpanic_at(lexer_peek(l), "Expected )");
+            // This is a tuple literal - collect all elements and infer types
+            ASTNode **elements = xmalloc(sizeof(ASTNode *) * 16);
+            char **type_strs = xmalloc(sizeof(char *) * 16);
+            int count = 0;
+
+            // First element
+            elements[count] = expr;
+            char *t1 = infer_type(ctx, expr);
+            type_strs[count] = t1 ? t1 : xstrdup("int");
+            count++;
+
+            // Parse remaining elements
+            while (lexer_peek(l).type == TOK_COMMA)
+            {
+                lexer_next(l); // eat comma
+                ASTNode *elem = parse_expression(ctx, l);
+                elements[count] = elem;
+                char *ti = infer_type(ctx, elem);
+                type_strs[count] = ti ? ti : xstrdup("int");
+                count++;
+            }
+
+            if (lexer_next(l).type != TOK_RPAREN)
+            {
+                zpanic_at(lexer_peek(l), "Expected ) after tuple");
+            }
+
+            // Build tuple signature
+            char sig[512];
+            sig[0] = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0)
+                {
+                    strcat(sig, "_");
+                }
+                strcat(sig, type_strs[i]);
+            }
+
+            register_tuple(ctx, sig);
+
+            char tuple_name[1024];
+            sprintf(tuple_name, "Tuple_%s", sig);
+
+            char *code = xmalloc(4096);
+            sprintf(code, "(%s){", tuple_name);
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0)
+                {
+                    strcat(code, ", ");
+                }
+
+                if (elements[i]->type == NODE_EXPR_LITERAL)
+                {
+                    char buf[256];
+                    if (elements[i]->literal.type_kind == 0) // int
+                    {
+                        sprintf(buf, "%lld", elements[i]->literal.int_val);
+                    }
+                    else if (elements[i]->literal.type_kind == 1) // float
+                    {
+                        sprintf(buf, "%f", elements[i]->literal.float_val);
+                    }
+                    else if (elements[i]->literal.type_kind == 2) // string
+                    {
+                        sprintf(buf, "\"%s\"", elements[i]->literal.string_val);
+                    }
+                    else
+                    {
+                        sprintf(buf, "0");
+                    }
+                    strcat(code, buf);
+                }
+                else if (elements[i]->type == NODE_EXPR_VAR)
+                {
+                    strcat(code, elements[i]->var_ref.name);
+                }
+                else
+                {
+                    // For complex expressions, we need a different approach
+                    // For now, just put a placeholder - this won't work for all cases
+                    // So it's a TODO...
+                    strcat(code, "/* complex expr */0");
+                }
+            }
+            strcat(code, "}");
+
+            node = ast_create(NODE_RAW_STMT);
+            node->raw_stmt.content = code;
+
+            // Set type info
+            Type *tuple_type = type_new(TYPE_STRUCT);
+            tuple_type->name = xstrdup(tuple_name);
+            node->type_info = tuple_type;
+
+            // Cleanup
+            free(elements);
+            for (int i = 0; i < count; i++)
+            {
+                free(type_strs[i]);
+            }
+            free(type_strs);
         }
-        node = expr;
+        else
+        {
+            if (lexer_next(l).type != TOK_RPAREN)
+            {
+                zpanic_at(lexer_peek(l), "Expected )");
+            }
+            node = expr;
+        }
     }
 
     else if (t.type == TOK_LBRACKET)
@@ -3221,6 +3625,18 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         lexer_next(l); // consume op
         ASTNode *operand = parse_expr_prec(ctx, l, PREC_UNARY);
 
+        if (is_token(t, "&") && operand->type == NODE_EXPR_VAR)
+        {
+            Symbol *s = find_symbol_entry(ctx, operand->var_ref.name);
+            if (s && s->is_def)
+            {
+                zpanic_at(t,
+                          "Cannot take address of manifest constant '%s' (use 'var' if you need an "
+                          "address)",
+                          operand->var_ref.name);
+            }
+        }
+
         char *method = NULL;
         if (is_token(t, "-"))
         {
@@ -3414,44 +3830,8 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
     }
     else if (is_token(t, "sizeof"))
     {
-        lexer_next(l);
-        if (lexer_peek(l).type == TOK_LPAREN)
-        {
-            const char *start = l->src + l->pos;
-            int depth = 0;
-            while (1)
-            {
-                Token tk = lexer_peek(l);
-                if (tk.type == TOK_EOF)
-                {
-                    zpanic_at(tk, "Unterminated sizeof");
-                }
-                if (tk.type == TOK_LPAREN)
-                {
-                    depth++;
-                }
-                if (tk.type == TOK_RPAREN)
-                {
-                    depth--;
-                    if (depth == 0)
-                    {
-                        lexer_next(l);
-                        break;
-                    }
-                }
-                lexer_next(l);
-            }
-            int len = (l->src + l->pos) - start;
-            char *content = xmalloc(len + 8);
-            sprintf(content, "sizeof%.*s", len, start);
-            lhs = ast_create(NODE_RAW_STMT);
-            lhs->raw_stmt.content = content;
-            lhs->type_info = type_new(TYPE_INT);
-        }
-        else
-        {
-            zpanic_at(lexer_peek(l), "sizeof must be followed by (");
-        }
+        lexer_next(l); // consume sizeof
+        lhs = parse_sizeof_expr(ctx, l);
     }
     else
     {
@@ -3488,7 +3868,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         {
             lexer_next(l);
             Token field = lexer_next(l);
-            if (field.type != TOK_IDENT)
+            if (field.type != TOK_IDENT && field.type != TOK_INT)
             {
                 zpanic_at(field, "Expected field name after ->");
                 break;
@@ -3517,7 +3897,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         {
             lexer_next(l);
             Token field = lexer_next(l);
-            if (field.type != TOK_IDENT)
+            if (field.type != TOK_IDENT && field.type != TOK_INT)
             {
                 zpanic_at(field, "Expected field name after ?.");
                 break;
@@ -4080,7 +4460,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         if (op.type == TOK_OP && is_token(op, "."))
         {
             Token field = lexer_next(l);
-            if (field.type != TOK_IDENT)
+            if (field.type != TOK_IDENT && field.type != TOK_INT)
             {
                 zpanic_at(field, "Expected field name after .");
                 break;
@@ -4212,6 +4592,141 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             else
             {
                 node->resolved_type = xstrdup("unknown");
+            }
+
+            // Handle Generic Method Call: object.method<T>
+            if (lexer_peek(l).type == TOK_LANGLE)
+            {
+                Lexer lookahead = *l;
+                lexer_next(&lookahead);
+
+                int valid_generic = 0;
+                int saved = ctx->is_speculative;
+                ctx->is_speculative = 1;
+
+                // Speculatively check if it's a valid generic list
+                while (1)
+                {
+                    parse_type(ctx, &lookahead);
+                    if (lexer_peek(&lookahead).type == TOK_COMMA)
+                    {
+                        lexer_next(&lookahead);
+                        continue;
+                    }
+                    if (lexer_peek(&lookahead).type == TOK_RANGLE)
+                    {
+                        valid_generic = 1;
+                    }
+                    break;
+                }
+                ctx->is_speculative = saved;
+
+                if (valid_generic)
+                {
+                    lexer_next(l); // consume <
+
+                    char **concrete = xmalloc(sizeof(char *) * 8);
+                    char **unmangled = xmalloc(sizeof(char *) * 8);
+                    int argc = 0;
+                    while (1)
+                    {
+                        Type *t = parse_type_formal(ctx, l);
+                        concrete[argc] = type_to_string(t);
+                        unmangled[argc] = type_to_c_string(t);
+                        argc++;
+                        if (lexer_peek(l).type == TOK_COMMA)
+                        {
+                            lexer_next(l);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    if (lexer_next(l).type != TOK_RANGLE)
+                    {
+                        zpanic_at(lexer_peek(l), "Expected >");
+                    }
+
+                    // Locate the generic template
+                    char *mn = NULL; // method name
+                    char full_name[1024];
+
+                    // If logic above found a sig, we have a mangled name in node->type_info->name
+                    // But for templates, find_func might have failed.
+                    // Construct potential template name: Struct__method
+                    char *struct_name = NULL;
+                    if (lhs->type_info)
+                    {
+                        if (lhs->type_info->kind == TYPE_STRUCT)
+                        {
+                            struct_name = lhs->type_info->name;
+                        }
+                        else if (lhs->type_info->kind == TYPE_POINTER && lhs->type_info->inner &&
+                                 lhs->type_info->inner->kind == TYPE_STRUCT)
+                        {
+                            struct_name = lhs->type_info->inner->name;
+                        }
+                    }
+
+                    if (struct_name)
+                    {
+                        sprintf(full_name, "%s__%s", struct_name, node->member.field);
+
+                        // Join types
+                        char all_concrete[1024] = {0};
+                        char all_unmangled[1024] = {0};
+                        for (int i = 0; i < argc; i++)
+                        {
+                            if (i > 0)
+                            {
+                                strcat(all_concrete, ",");
+                                strcat(all_unmangled, ",");
+                            }
+                            strcat(all_concrete, concrete[i]);
+                            strcat(all_unmangled, unmangled[i]);
+                            free(concrete[i]);
+                            free(unmangled[i]);
+                        }
+                        free(concrete);
+                        free(unmangled);
+
+                        mn = instantiate_function_template(ctx, full_name, all_concrete,
+                                                           all_unmangled);
+                        if (mn)
+                        {
+                            // Ensure member field reflects the instantiated name (suffix only)
+                            // The instantiate returns Struct__method_int. We need method_int part?
+                            // Actually member access codegen expects .field to be unmangled or
+                            // checks lookup. But here we are resolving a specific method instance.
+
+                            // AST doesn't support generic member node well, typical approach:
+                            // Replace member node with a special "MEMBER_GENERIC" or hack the field
+                            // name. Hack: Update field name to include mangle suffix? But codegen
+                            // does "Struct__Field". If full_name is Struct__method, mn is
+                            // Struct__method_int. Codegen does: struct_name + "__" + field. So if
+                            // we set field to "method_int", codegen does Struct__method_int.
+
+                            char *p = strstr(mn, "__");
+                            if (p)
+                            {
+                                free(node->member.field);
+                                node->member.field = xstrdup(p + 2);
+                            }
+
+                            // Update Type Info
+                            Type *ft = type_new(TYPE_FUNCTION);
+                            ft->name = xstrdup(mn);
+                            // Look up return type from instantiated func
+                            FuncSig *isig = find_func(ctx, mn);
+                            if (isig)
+                            {
+                                ft->inner = isig->ret_type;
+                            }
+                            node->type_info = ft;
+                        }
+                    }
+                }
             }
 
             lhs = node;

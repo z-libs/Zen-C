@@ -102,3 +102,22 @@ test "test_derive" {
     var p3 = Point{x: 10, y: 21};
     assert(p1.eq(&p3) == false, "Eq works (false)");
 }
+
+test "implicit_trait_cast" {
+    var c = Circle { radius: 10.0 };
+    // This previously required explicit casting: print_shape_info((Shape)(&c));
+    print_shape_info(&c); 
+    
+    var r = Rectangle { width: 5.0, height: 5.0 };
+    print_shape_info(&r);
+}
+
+var g_def_circle = Circle { radius: 2.0 };
+
+fn print_default_shape(s: Shape = &g_def_circle) {
+    println "Default Shape: {s.name()}";
+}
+
+test "implicit_trait_cast_default" {
+    print_default_shape();
+}

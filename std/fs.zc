@@ -3,9 +3,9 @@ import "./result.zc"
 import "./string.zc"
 import "./vec.zc"
 
-const Z_SEEK_SET: int = 0;
-const Z_SEEK_END: int = 2;
-const Z_F_OK: int = 0;
+def Z_SEEK_SET = 0;
+def Z_SEEK_END = 2;
+def Z_F_OK = 0;
 
 
 // TODO: restructure this tomorrow.
@@ -33,12 +33,12 @@ raw {
         return fwrite(ptr, size, nmemb, (FILE*)stream);
     }
 
-    int _z_fs_fseek(void* stream, long offset, int whence) {
-        return fseek((FILE*)stream, offset, whence);
+    int _z_fs_fseek(void* stream, int64_t offset, int whence) {
+        return fseek((FILE*)stream, (long)offset, whence);
     }
 
-    long _z_fs_ftell(void* stream) {
-        return ftell((FILE*)stream);
+    int64_t _z_fs_ftell(void* stream) {
+        return (int64_t)ftell((FILE*)stream);
     }
 
     int _z_fs_access(char* pathname, int mode) {

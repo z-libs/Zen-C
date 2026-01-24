@@ -169,7 +169,26 @@ int type_eq(Type *a, Type *b)
     return 1;
 }
 
+static char *type_to_string_impl(Type *t);
+
 char *type_to_string(Type *t)
+{
+    if (!t)
+    {
+        return xstrdup("void");
+    }
+    char *res = type_to_string_impl(t);
+    if (t->is_const)
+    {
+        char *final = xmalloc(strlen(res) + 7);
+        sprintf(final, "const %s", res);
+        free(res);
+        return final;
+    }
+    return res;
+}
+
+static char *type_to_string_impl(Type *t)
 {
     if (!t)
     {
@@ -293,7 +312,26 @@ char *type_to_string(Type *t)
 // C-compatible type stringifier.
 // Strictly uses 'struct T' for explicit structs to support external types.
 // Does NOT mangle pointers to 'Ptr'.
+static char *type_to_c_string_impl(Type *t);
+
 char *type_to_c_string(Type *t)
+{
+    if (!t)
+    {
+        return xstrdup("void");
+    }
+    char *res = type_to_c_string_impl(t);
+    if (t->is_const)
+    {
+        char *final = xmalloc(strlen(res) + 7);
+        sprintf(final, "const %s", res);
+        free(res);
+        return final;
+    }
+    return res;
+}
+
+static char *type_to_c_string_impl(Type *t)
 {
     if (!t)
     {

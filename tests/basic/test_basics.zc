@@ -8,3 +8,17 @@ test "test_vars" {
     var y: int = 20;
     println "Sum: {x + y}";
 }
+
+fn take_const_arg(x: const int) -> int {
+    return x;
+}
+
+test "test_const_args" {
+    var x = take_const_arg(10);
+    assert(x == 10, "Failed const arg");
+    
+    var y: const int = 20;
+    assert(y == 20, "Failed const var");
+    
+    println "Const args work!";
+}

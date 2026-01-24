@@ -207,9 +207,9 @@ test "test_immutable" {
 }
 
 test "test_permissions" {
-    const READ  : U8 = 0b100;
-    const WRITE : U8 = 0b010;
-    const EXEC  : U8 = 0b001;
+    def READ  : U8 = 0b100;
+    def WRITE : U8 = 0b010;
+    def EXEC  : U8 = 0b001;
 
     var p1 = Permissions::new(READ);
     "Start: {p1.mask} (Read)";

@@ -551,7 +551,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         fprintf(out, ";\n");
         break;
     case NODE_FUNCTION:
-        if (!node->func.body)
+        if (!node->func.body || node->func.generic_params)
         {
             break;
         }

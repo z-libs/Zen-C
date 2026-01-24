@@ -59,7 +59,7 @@ test "test_thread" {
     c.val = 0;
     c.lock = Mutex::new();
     
-    const N = 10000;
+    def N = 10000;
     
     var t1_res = Thread::spawn(fn() {
         for (var i=0; i<N; ++i) {

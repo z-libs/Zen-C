@@ -50,7 +50,7 @@ enum Test {
 }
 
 test "match ref binding concrete" {
-    const t = Test::ONE(Hello{ world: 123 });
+    var t = Test::ONE(Hello{ world: 123 });
 
     var val = 0;
     match t {

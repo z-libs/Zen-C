@@ -166,6 +166,11 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
         }
     }
 
+    if (gen_param)
+    {
+        register_generic(ctx, gen_param);
+    }
+
     // Check for "for" (Trait impl)
     Token pk = lexer_peek(l);
     if (pk.type == TOK_FOR ||
@@ -247,9 +252,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 f->func.args = na;
 
                 // Register function for lookup
-                register_func(ctx, mangled, f->func.arg_count, f->func.defaults, f->func.arg_types,
-                              f->func.ret_type_info, f->func.is_varargs, f->func.is_async,
-                              f->token);
+                if (f->func.generic_params)
+                {
+                    register_func_template(ctx, mangled, f->func.generic_params, f);
+                }
+                else
+                {
+                    register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                  f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
+                                  f->func.is_async, f->token);
+                }
 
                 if (!h)
                 {
@@ -279,9 +291,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     f->func.args = na;
 
                     // Register function for lookup
-                    register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
-                                  f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
-                                  f->func.is_async, f->token);
+                    if (f->func.generic_params)
+                    {
+                        register_func_template(ctx, mangled, f->func.generic_params, f);
+                    }
+                    else
+                    {
+                        register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                      f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
+                                      f->func.is_async, f->token);
+                    }
 
                     if (!h)
                     {
@@ -324,6 +343,10 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             register_impl_template(ctx, name2, gp, n);
         }
 
+        if (gen_param)
+        {
+            ctx->known_generics_count--;
+        }
         return n;
     }
     else
@@ -463,6 +486,10 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             n->impl.methods = h;
             register_impl_template(ctx, name1, gen_param, n);
             ctx->current_impl_struct = NULL;
+            if (gen_param)
+            {
+                ctx->known_generics_count--;
+            }
             return NULL; // Do not emit generic template
         }
         else
@@ -492,9 +519,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     free(f->func.args);
                     f->func.args = na;
 
-                    register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
-                                  f->func.arg_types, f->func.ret_type_info, f->func.is_varargs, 0,
-                                  f->token);
+                    if (f->func.generic_params)
+                    {
+                        register_func_template(ctx, mangled, f->func.generic_params, f);
+                    }
+                    else
+                    {
+                        register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                      f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
+                                      0, f->token);
+                    }
 
                     if (!h)
                     {
@@ -521,9 +555,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                         char *na = patch_self_args(f->func.args, name1);
                         free(f->func.args);
                         f->func.args = na;
-                        register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
-                                      f->func.arg_types, f->func.ret_type_info, f->func.is_varargs,
-                                      1, f->token);
+                        if (f->func.generic_params)
+                        {
+                            register_func_template(ctx, mangled, f->func.generic_params, f);
+                        }
+                        else
+                        {
+                            register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                          f->func.arg_types, f->func.ret_type_info,
+                                          f->func.is_varargs, 1, f->token);
+                        }
                         if (!h)
                         {
                             h = f;
@@ -549,6 +590,11 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             n->impl.struct_name = name1;
             n->impl.methods = h;
             add_to_impl_list(ctx, n);
+
+            if (gen_param)
+            {
+                ctx->known_generics_count--;
+            }
             return n;
         }
     }
@@ -588,7 +634,11 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
                 zpanic_at(next, "Expected ',' or '>' in generic parameter list");
             }
         }
-        register_generic(ctx, name);
+
+        for (int i = 0; i < gp_count; i++)
+        {
+            register_generic(ctx, gps[i]);
+        }
     }
 
     // Check for prototype (forward declaration)
@@ -798,6 +848,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
     if (gp_count > 0)
     {
         node->strct.is_template = 1;
+        ctx->known_generics_count -= gp_count;
         register_template(ctx, name, node);
     }
 
@@ -841,7 +892,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
         Token g = lexer_next(l);
         gp = token_strdup(g);
         lexer_next(l); // eat >
-        register_generic(ctx, n.start ? token_strdup(n) : "anon");
+        register_generic(ctx, gp);
     }
 
     lexer_next(l); // eat {
@@ -934,6 +985,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
     if (gp)
     {
         node->enm.is_template = 1;
+        ctx->known_generics_count--;
         register_template(ctx, node->enm.name, node);
     }
 

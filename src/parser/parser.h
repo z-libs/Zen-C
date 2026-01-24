@@ -41,6 +41,7 @@ typedef struct Symbol
     int is_autofree;
     Token decl_token;
     int is_const_value;
+    int is_def;
     int const_int_val;
     int is_moved;
     struct Symbol *next;
@@ -56,14 +57,14 @@ typedef struct Scope
 typedef struct FuncSig
 {
     char *name;
-    Token decl_token; // For LSP
+    Token decl_token;
     int total_args;
     char **defaults;
     Type **arg_types;
     Type *ret_type;
     int is_varargs;
-    int is_async; // Async function flag
-    int must_use; // Attribute: warn if return value discarded
+    int is_async;
+    int must_use;
     struct FuncSig *next;
 } FuncSig;
 
@@ -268,7 +269,22 @@ struct ParserContext
     int is_repl;        // REPL mode flag
     int has_async;      // Track if async features are used
     int in_defer_block; // Track if currently parsing inside a defer block
+
+    // Type Validation
+    struct TypeUsage *pending_type_validations;
+    int is_speculative; // Flag to suppress side effects during speculative parsing
 };
+
+typedef struct TypeUsage
+{
+    char *name;
+    Token location;
+    struct TypeUsage *next;
+} TypeUsage;
+
+// Type validation prototypes
+void register_type_usage(ParserContext *ctx, const char *name, Token t);
+int validate_types(ParserContext *ctx);
 
 // Token helpers
 char *token_strdup(Token t);
@@ -423,7 +439,7 @@ ASTNode *parse_defer(ParserContext *ctx, Lexer *l);
 ASTNode *parse_asm(ParserContext *ctx, Lexer *l);
 ASTNode *parse_plugin(ParserContext *ctx, Lexer *l);
 ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l);
-ASTNode *parse_const(ParserContext *ctx, Lexer *l);
+ASTNode *parse_def(ParserContext *ctx, Lexer *l);
 ASTNode *parse_type_alias(ParserContext *ctx, Lexer *l);
 
 ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async);

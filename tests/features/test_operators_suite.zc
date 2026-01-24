@@ -93,7 +93,7 @@ test "test_operator_overloading" {
     f1 |= f2; 
     "Result bits: {f1.bits} (Expected 5)";
     
-    const MAX_LIMIT = 100;
+    def MAX_LIMIT = 100;
 }
 
 test "test_extended_overloading" {

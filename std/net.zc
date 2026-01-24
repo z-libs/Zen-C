@@ -9,8 +9,8 @@ import "./core.zc"
 import "./result.zc"
 import "./string.zc"
 
-const Z_AF_INET = 2;
-const Z_SOCK_STREAM = 1;
+def Z_AF_INET = 2;
+def Z_SOCK_STREAM = 1;
 
 raw {
     static int _z_net_bind(int fd, char *host, int port) {

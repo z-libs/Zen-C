@@ -876,10 +876,10 @@ char *replace_in_string(const char *src, const char *old_w, const char *new_w)
         while (*p_ptr && *c_ptr)
         {
             char *p_end = strchr(p_ptr, ',');
-            int p_len = p_end ? (p_end - p_ptr) : strlen(p_ptr);
+            int p_len = p_end ? (int)(p_end - p_ptr) : (int)strlen(p_ptr);
 
             char *c_end = strchr(c_ptr, ',');
-            int c_len = c_end ? (c_end - c_ptr) : strlen(c_ptr);
+            int c_len = c_end ? (int)(c_end - c_ptr) : (int)strlen(c_ptr);
 
             char *curr_p = xmalloc(p_len + 1);
             strncpy(curr_p, p_ptr, p_len);
@@ -1007,12 +1007,12 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
         while (*p_ptr && *c_ptr)
         {
             char *p_end = strchr(p_ptr, ',');
-            int p_len = p_end ? (p_end - p_ptr) : strlen(p_ptr);
+            int p_len = p_end ? (int)(p_end - p_ptr) : (int)strlen(p_ptr);
 
             char *c_end = strchr(c_ptr, ',');
-            int c_len = c_end ? (c_end - c_ptr) : strlen(c_ptr);
+            int c_len = c_end ? (int)(c_end - c_ptr) : (int)strlen(c_ptr);
 
-            if (strlen(src) == p_len && strncmp(src, p_ptr, p_len) == 0)
+            if ((int)strlen(src) == p_len && strncmp(src, p_ptr, p_len) == 0)
             {
                 char *ret = xmalloc(c_len + 1);
                 strncpy(ret, c_ptr, c_len);
@@ -1299,11 +1299,11 @@ Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os,
             while (*p_ptr && *c_ptr)
             {
                 char *p_end = strchr(p_ptr, ',');
-                int p_len = p_end ? (p_end - p_ptr) : strlen(p_ptr);
+                int p_len = p_end ? (int)(p_end - p_ptr) : (int)strlen(p_ptr);
                 char *c_end = strchr(c_ptr, ',');
-                int c_len = c_end ? (c_end - c_ptr) : strlen(c_ptr);
+                int c_len = c_end ? (int)(c_end - c_ptr) : (int)strlen(c_ptr);
 
-                if (strlen(t->name) == p_len && strncmp(t->name, p_ptr, p_len) == 0)
+                if ((int)strlen(t->name) == p_len && strncmp(t->name, p_ptr, p_len) == 0)
                 {
                     char *c_part = xmalloc(c_len + 1);
                     strncpy(c_part, c_ptr, c_len);
@@ -1713,6 +1713,48 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             replace_type_str(n->impl_trait.target_type, p, c, os, ns);
         new_node->impl_trait.methods = copy_ast_replacing(n->impl_trait.methods, p, c, os, ns);
         break;
+    case NODE_EXPR_SIZEOF:
+        if (n->size_of.target_type)
+        {
+            char *replaced = replace_type_str(n->size_of.target_type, p, c, os, ns);
+            if (replaced && strchr(replaced, '<'))
+            {
+                char *src = replaced;
+                char *mangled = xmalloc(strlen(src) * 2 + 1);
+                char *dst = mangled;
+                while (*src)
+                {
+                    if (*src == '<' || *src == ',')
+                    {
+                        *dst++ = '_';
+                        while (*(src + 1) == ' ')
+                        {
+                            src++; // skip space
+                        }
+                    }
+                    else if (*src == '>')
+                    {
+                        // skip
+                    }
+                    else if (*src == '*')
+                    {
+                        strcpy(dst, "Ptr");
+                        dst += 3;
+                    }
+                    else if (!isspace(*src))
+                    {
+                        *dst++ = *src;
+                    }
+                    src++;
+                }
+                *dst = 0;
+                free(replaced);
+                replaced = mangled;
+            }
+            new_node->size_of.target_type = replaced;
+        }
+        new_node->size_of.expr = copy_ast_replacing(n->size_of.expr, p, c, os, ns);
+        break;
     default:
         break;
     }
@@ -1980,6 +2022,7 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
     }
     free(new_fn->func.name);
     new_fn->func.name = xstrdup(mangled);
+    new_fn->func.generic_params = NULL;
 
     register_func(ctx, mangled, new_fn->func.arg_count, new_fn->func.defaults,
                   new_fn->func.arg_types, new_fn->func.ret_type_info, new_fn->func.is_varargs, 0,
@@ -1991,6 +2034,8 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
 
 char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms, int *count)
 {
+    (void)used_syms;
+    (void)count;
     char *gen = xmalloc(8192); // Increased buffer size
 
     strcpy(gen, "({ static char _b[4096]; _b[0]=0; char _t[1024]; ");
@@ -2405,8 +2450,13 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
             i->type_info->traits = t->struct_node->type_info->traits;
             i->type_info->is_restrict = t->struct_node->type_info->is_restrict;
         }
-
-        // Use first generic param for substitution (single-param backward compat)
+        i->strct.is_packed = t->struct_node->strct.is_packed;
+        i->strct.is_union = t->struct_node->strct.is_union;
+        i->strct.align = t->struct_node->strct.align;
+        if (t->struct_node->strct.parent)
+        {
+            i->strct.parent = xstrdup(t->struct_node->strct.parent);
+        }
         const char *gp = (t->struct_node->strct.generic_param_count > 0)
                              ? t->struct_node->strct.generic_params[0]
                              : "T";
@@ -2531,6 +2581,15 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
         ASTNode *i = ast_create(NODE_STRUCT);
         i->strct.name = xstrdup(m);
         i->strct.is_template = 0;
+
+        // Copy struct attributes
+        i->strct.is_packed = t->struct_node->strct.is_packed;
+        i->strct.is_union = t->struct_node->strct.is_union;
+        i->strct.align = t->struct_node->strct.align;
+        if (t->struct_node->strct.parent)
+        {
+            i->strct.parent = xstrdup(t->struct_node->strct.parent);
+        }
 
         // Copy fields with sequential substitutions for each param
         ASTNode *fields = t->struct_node->strct.fields;
@@ -3434,4 +3493,41 @@ const char *resolve_plugin(ParserContext *ctx, const char *name_or_alias)
         }
     }
     return NULL; // Plugin not found
+}
+
+// Type Validation
+void register_type_usage(ParserContext *ctx, const char *name, Token t)
+{
+    if (ctx->is_speculative)
+    {
+        return;
+    }
+
+    TypeUsage *u = xmalloc(sizeof(TypeUsage));
+    u->name = xstrdup(name);
+    u->location = t;
+    u->next = ctx->pending_type_validations;
+    ctx->pending_type_validations = u;
+}
+
+int validate_types(ParserContext *ctx)
+{
+    int errors = 0;
+    TypeUsage *u = ctx->pending_type_validations;
+    while (u)
+    {
+        ASTNode *def = find_struct_def(ctx, u->name);
+        const char *alias = find_type_alias(ctx, u->name);
+
+        if (!def && !alias)
+        {
+            SelectiveImport *si = find_selective_import(ctx, u->name);
+            if (!si && !is_trait(u->name))
+            {
+                zwarn_at(u->location, "Unknown type '%s' (assuming external C struct)", u->name);
+            }
+        }
+        u = u->next;
+    }
+    return errors == 0;
 }
