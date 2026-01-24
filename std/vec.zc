@@ -75,12 +75,13 @@ impl Vec<T> {
         return Vec<T> { alloc: allocator, data: 0, len: 0, cap: 0 };
     }
 
-    fn with_capacity(cap: usize) -> Vec<T> {
+    fn with_capacity(cap: usize, allocator: Allocator = &GLOBAL_ALLOCATOR) -> Vec<T> {
         if (cap == 0) {
-            return Vec<T> { data: 0, len: 0, cap: 0 };
+            return Vec<T> { alloc: allocator, data: 0, len: 0, cap: 0 };
         }
         return Vec<T> {
-            data: (T*)self.alloc.allocate(cap * sizeof(T)),
+            alloc: allocator,
+            data: (T*)allocator.allocate(cap * sizeof(T)),
             len: 0,
             cap: cap
         };
@@ -89,7 +90,7 @@ impl Vec<T> {
     fn grow(self) {
         if (self.cap == 0) { self.cap = 8; }
         else { self.cap = self.cap * 2; }
-        self.data = (T*)self.alloc.reallocate(self.data, self.cap * sizeof(T));
+        self.data = (T*)self.alloc.reallocate((u8*) self.data, self.cap * sizeof(T));
     }
 
     fn grow_to_fit(self, new_len: usize) {
@@ -102,7 +103,7 @@ impl Vec<T> {
             self.cap = self.cap * 2;
         }
 
-        self.data = (T*)self.alloc.reallocate(self.data, self.cap * sizeof(T));
+        self.data = (T*)self.alloc.reallocate((u8*) self.data, self.cap * sizeof(T));
     }
 
     fn iterator(self) -> VecIter<T> {
@@ -259,16 +260,9 @@ impl Vec<T> {
         return true;
     }
 
-    // Prevent Drop from freeing memory (simulates move)
-    fn forget(self) {
-        self.data = 0;
-        self.len = 0;
-        self.cap = 0;
-    }
-
     fn clone(self) -> Vec<T> {
         if (self.len == 0) {
-            return Vec<T> { data: 0, len: 0, cap: 0 };
+            return Vec<T> { alloc: self.alloc, data: 0, len: 0, cap: 0 };
         }
         var new_data = (T*)self.alloc.allocate(self.len * sizeof(T));
         var i: usize = 0;
@@ -277,18 +271,26 @@ impl Vec<T> {
             i = i + 1;
         }
         return Vec<T> {
+            alloc: self.alloc,
             data: new_data,
             len: self.len,
             cap: self.len // Set capacity to exact length
         };
         // No local Vec variable means no Drop is called here.
     }
+
+    // Prevent Drop from freeing memory (simulates move)
+    fn forget(self) {
+        self.data = 0;
+        self.len = 0;
+        self.cap = 0;
+    }
 }
 
-impl Drop for Vec {
+impl Drop for Vec<T> {
     fn drop(self) {
         if (self.data) 
-            self.alloc.free(self.data);
+            self.alloc.free((u8*) self.data);
 
         self.data = 0;
         self.len = 0;

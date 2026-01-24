@@ -19,7 +19,7 @@ raw {
         z_closure_T *closure = (z_closure_T*)c;
         void (*f)(void*) = (void(*)(void*))closure->func;
         f(closure->ctx);
-        GLOBAL_ALLOCATOR.free(c); 
+        free(c); 
         return NULL;
     }
     
@@ -75,7 +75,7 @@ impl Thread {
     fn spawn(func: fn()) -> Result<Thread> {
         var t: usize = 0; 
         
-        var ctx_copy = GLOBAL_ALLOCATOR.allocate(16); // z_closure_T is 16 bytes
+        var ctx_copy = malloc(16); // z_closure_T is 16 bytes
         if (ctx_copy == NULL) return Result<Thread>::Err("OOM");
         
         memcpy(ctx_copy, &func, 16);
@@ -83,7 +83,7 @@ impl Thread {
         var ret = _z_thread_spawn(ctx_copy, &t);
         
         if (ret != 0) {
-            GLOBAL_ALLOCATOR.free(ctx_copy);
+            free(ctx_copy);
             return Result<Thread>::Err("Failed to create thread");
         }
         
@@ -103,7 +103,7 @@ struct Mutex {
 
 impl Mutex {
     fn new() -> Mutex {
-        var ptr = GLOBAL_ALLOCATOR.allocate(64); 
+        var ptr = malloc(64); 
         _z_mutex_init(ptr);
         return Mutex { handle: ptr };
     }
@@ -119,7 +119,7 @@ impl Mutex {
     fn free(self) {
         if (self.handle) {
             _z_mutex_destroy(self.handle);
-            GLOBAL_ALLOCATOR.free(self.handle);
+            free(self.handle);
         }
     }
 }
@@ -127,4 +127,3 @@ impl Mutex {
 fn sleep_ms(ms: int) {
     _z_usleep(ms * 1000);
 }
-

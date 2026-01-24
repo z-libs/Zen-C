@@ -2,7 +2,7 @@ import "std/map.zc"
 import "std/string.zc"
 
 test "map_iterator" {
-    var m = Map<char*, int>::new();
+    var m = Map<int>::new();
     
     m.put("one", 1);
     m.put("two", 2);

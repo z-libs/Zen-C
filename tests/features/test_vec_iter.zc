@@ -1,4 +1,4 @@
-import "../../std/vec.zc"
+import "std/vec.zc"
 
 test "vec_int_iteration" {
     var v = Vec<int>::new();
@@ -15,5 +15,4 @@ test "vec_int_iteration" {
         println "Expected 60, got {sum}";
         exit(1);
     }
-    v.free();
 }

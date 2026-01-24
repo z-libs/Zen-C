@@ -1,8 +1,8 @@
 trait Allocator {
     fn allocate(self, size: usize) -> u8*;
-    fn allocate_zeroed(self, size: usize) -> u8*;
+    fn zeroed(self, size: usize) -> u8*; // Change to allocate_zeroed when it's possible use underscores
     fn reallocate(self, ptr: u8*, new_size: usize) -> u8*;
-    fn free(self, ptr: u8*, size: usize);
+    fn free(self, ptr: u8*);
 }
 
 struct GeneralAllocator {}
@@ -14,7 +14,7 @@ impl Allocator for GeneralAllocator {
         }
     }
 
-    fn allocate_zeroed(self, size: usize) -> u8* {
+    fn zeroed(self, size: usize) -> u8* {
         raw {
             return (uint8_t*) calloc(1, size);
         }

@@ -1,6 +1,7 @@
 import "std/string.zc"
 
 test "string trim" {
+    println "Testing trim";
     var s1 = String::from("  hello  ");
     var t1 = s1.trim();
     var e1 = String::from("hello");
@@ -26,12 +27,13 @@ test "string trim" {
 }
 
 test "string replace" {
+    println "Testing replace";
     var s1 = String::from("foo bar foo");
     var r1 = s1.replace("foo", "baz");
     var e1 = String::from("baz bar baz");
     assert(r1.eq(&e1));
     r1.free(); s1.free(); e1.free();
-    
+
     var s2 = String::from("hello world");
     var r2 = s2.replace("world", "ZenC");
     var e2 = String::from("hello ZenC");
@@ -43,4 +45,5 @@ test "string replace" {
     var e3 = String::from("bb");
     assert(r3.eq(&e3));
     r3.free(); s3.free(); e3.free();
+
 }
