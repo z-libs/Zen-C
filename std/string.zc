@@ -7,9 +7,9 @@ struct String {
 }
 
 impl String {
-    fn new(s: char*) -> String {
+    fn new(s: char*, allocator: Allocator = &GLOBAL_ALLOCATOR) -> String {
         var len = strlen(s);
-        var v = Vec<char>::new();
+        var v = Vec<char>::new(allocator);
         // Manual copy for now
         for (var i = 0; i < len; i = i + 1) {
             v.push(s[i]);
@@ -28,8 +28,8 @@ impl String {
         return String { vec: Vec<char> {alloc: a, data: d, len: l, cap: c } };
     }
 
-    fn from(s: char*) -> String {
-        return String::new(s);
+    fn from(s: char*, allocator: Allocator = &GLOBAL_ALLOCATOR) -> String {
+        return String::new(s, allocator);
     }
 
     fn c_str(self) -> char* {

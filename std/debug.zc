@@ -1,0 +1,117 @@
+import "mem.zc"
+import "vec.zc"
+
+// Pretty rough implementation.
+// Should be improved with a Map<usize, usize> when available.
+struct DebugAllocator {
+    addrs: Vec<usize>,
+    sizes: Vec<usize>
+}
+
+impl DebugAllocator {
+
+    fn new() -> Self {
+
+        // Yep, both vectors will be stored on the general allocator, and that should be fine.
+        return Self {
+            addrs: Vec<usize>::new(),
+            sizes: Vec<usize>::new()
+        }
+    }
+
+    fn validate(self) -> bool {
+        if (self.addrs.length() == 0) {
+            println "No memory leaked.";
+            return true;
+        }
+
+        var total_size: usize = 0;
+
+        for i in 0..self.sizes.length() {
+            total_size += self.sizes.get(i);
+        }
+
+        println "{self.addrs.length()} allocations remaining, with a total size of {total_size} bytes.";
+        return false;
+    }
+
+
+    // --- Internal functions
+    
+    fn add_addr(self, addr: usize, size: usize) {
+        self.addrs.push(addr);
+        self.sizes.push(size);
+    }
+
+    fn remove_addr(self, addr: usize) {
+        var index: isize = -1
+
+        for i in 0..self.addrs.length() {
+            if (self.addrs.get(i) == addr) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index == -1) {
+            !"Panic: attempt to free an unallocated value.";
+            exit(1);
+        }
+
+        self.addrs.remove(index);
+        self.sizes.remove(index);
+    }
+}
+
+impl Allocator for DebugAllocator {
+
+    fn allocate(self, size: usize) -> u8* {
+        var addr: usize;
+
+        raw {
+            addr = (size_t) malloc(size);
+        }
+
+        self.add_addr(addr, size);
+
+        return (u8*) addr;
+    }
+
+    fn zeroed(self, size: usize) -> u8* {
+        var addr: usize;
+
+        raw {
+            addr = (size_t) calloc(1, size);
+        }
+
+        self.add_addr(addr, size);
+
+        return (u8*) addr;
+    }
+    
+    fn reallocate(self, ptr: u8*, new_size: usize) -> u8* {
+        var addr: usize;
+
+        raw {
+            addr = (size_t) realloc(ptr, new_size);
+        }
+
+        if (addr != 0) {
+            if ((usize) ptr != 0) { // realloc allows ptr to be 0, it behaves like malloc.
+                self.remove_addr((usize) ptr);
+            }
+
+            self.add_addr(addr, new_size);        
+        }
+
+        return (u8*) addr;
+    }
+    
+    fn free(self, ptr: u8*) {
+        self.remove_addr((usize) ptr);
+    
+        raw {
+            free(ptr);
+        }
+    }
+}
