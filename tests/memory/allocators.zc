@@ -24,6 +24,7 @@ test "test_global_allocator" {
     "  ✓ GLOBAL_ALLOCATOR works!";
 }
 
+// Vec<i32>
 
 fn test_vec(allocator: DebugAllocator*) {
     var list = Vec<i32>::new(allocator);
@@ -40,6 +41,25 @@ test "test_vec_allocator" {
 
     assert(allocator.validate(), "Memory leak from Vec allocation");
 }
+
+// String
+
+fn test_string(allocator: DebugAllocator*) {
+    var s = String::from("hellooooooooooooooooooo", allocator);
+
+    allocator.validate();
+}
+
+test "test_string_allocator" {
+    "Testing String allocation";
+
+    var allocator = DebugAllocator::new();
+    test_box(&allocator);
+
+    assert(allocator.validate(), "Memory leak from String allocation");
+}
+
+// Box<String>
 
 fn test_box(allocator: DebugAllocator*) {
     var b = Box<String>::new();

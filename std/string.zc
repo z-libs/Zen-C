@@ -312,6 +312,16 @@ impl String {
         return result;
     }
 
-    @deprecated("Strings are freed automatically.")
+    @deprecated("Strings are freed automatically. No they aren't")
     fn free(self) {}
+}
+
+impl Drop for String {
+    fn drop(self) {
+        var vec = self.vec;
+
+        raw {
+            Vec_char__Drop_drop(&vec);
+        }
+    }
 }
