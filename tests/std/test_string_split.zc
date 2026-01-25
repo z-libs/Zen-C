@@ -1,24 +1,24 @@
 import "std/string.zc"
 
 test "string_split_basic" {
-    var s = String::from("a,b,c");
-    var parts = s.split(',');
+    let s = String::from("a,b,c");
+    let parts = s.split(',');
     
     if (parts.length() != 3) {
         println "Split length fail: {parts.length()}";
         exit(1);
     }
     
-    var p0 = parts.get(0);
-    var t0 = String::from("a");
+    let p0 = parts.get(0);
+    let t0 = String::from("a");
     if (!p0.eq(&t0)) exit(1);
     
-    var p1 = parts.get(1);
-    var t1 = String::from("b");
+    let p1 = parts.get(1);
+    let t1 = String::from("b");
     if (!p1.eq(&t1)) exit(1);
     
-    var p2 = parts.get(2);
-    var t2 = String::from("c");
+    let p2 = parts.get(2);
+    let t2 = String::from("c");
     if (!p2.eq(&t2)) exit(1);
     
     for p in &parts {
@@ -28,28 +28,28 @@ test "string_split_basic" {
 }
 
 test "string_split_edge" {
-    var s = String::from("hello");
-    var parts = s.split(' '); // Not found
+    let s = String::from("hello");
+    let parts = s.split(' '); // Not found
     
     if (parts.length() != 1) {
         println "Split edge 1 failed";
         exit(1);
     }
     
-    var p0 = parts.get(0);
+    let p0 = parts.get(0);
     if (!p0.eq(&s)) exit(1);
     
     p0.free();
     parts.free();
     
-    var s2 = String::from("a,,b");
-    var parts2 = s2.split(',');
+    let s2 = String::from("a,,b");
+    let parts2 = s2.split(',');
     if (parts2.length() != 3) {
         println "Split edge 2 failed: {parts2.length()}";
         exit(1);
     }
     
-    var empty = parts2.get(1);
+    let empty = parts2.get(1);
     if (!empty.is_empty()) exit(1);
     
     for p in &parts2 { p.free(); }

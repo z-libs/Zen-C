@@ -2,11 +2,11 @@ import "std/stack.zc"
 
 test "Stack Push/Pop" {
   print "Testing Stack Push/Pop";
-  var stack = Stack<i32>::new();
+  let stack = Stack<i32>::new();
   defer stack.free();
 
   print "Popping on an empty stack without pushing anything prior"
-  var v = stack.pop();
+  let v = stack.pop();
   assert(v.is_none(), "v should not have a valid value");
 
   print "Pushing in three values..."
@@ -30,7 +30,7 @@ test "Stack Push/Pop" {
 
 test "Stack Length and Clear" {
   print "Testing Stack clear";
-  var stack = Stack<i32>::new();
+  let stack = Stack<i32>::new();
   defer stack.free();
 
   assert(stack.is_empty() && stack.length() == 0, "Stack should be empty");
@@ -44,13 +44,13 @@ test "Stack Length and Clear" {
 
 test "Stack Clone" {
   print "Testing Stack Cloning";
-  var stack = Stack<i32>::new();
+  let stack = Stack<i32>::new();
   defer stack.free();
   stack.push(123);
-  var stack2 = stack.clone();
+  let stack2 = stack.clone();
   defer stack2.free();
 
-  var v = stack2.pop();
+  let v = stack2.pop();
   assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
   v = stack2.pop();
   assert(v.is_none(), "v should not have a valid value");

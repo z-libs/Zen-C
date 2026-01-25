@@ -1,0 +1,24 @@
+
+struct Circle {
+    radius: f32;
+}
+
+struct Rect {
+    width: f32;
+    height: f32;
+}
+
+union Shape {
+    circle: Circle;
+    rect: Rect;
+}
+
+test "union_init" {
+    let c = Circle{ radius: 10.0 };
+    let s = Shape{ circle: c };
+    assert(s.circle.radius == 10.0, "s.circle.radius != 10.0");
+
+    let s2 = Shape{};
+    s2.rect = Rect{ width: 5.0, height: 5.0 };
+    assert(s2.rect.width == 5.0, "s2.rect.width != 5.0");
+}

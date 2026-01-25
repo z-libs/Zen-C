@@ -73,14 +73,14 @@ struct Thread {
 
 impl Thread {
     fn spawn(func: fn()) -> Result<Thread> {
-        var t: usize = 0; 
+        let t: usize = 0; 
         
-        var ctx_copy = malloc(16); // z_closure_T is 16 bytes
+        let ctx_copy = malloc(16); // z_closure_T is 16 bytes
         if (ctx_copy == NULL) return Result<Thread>::Err("OOM");
         
         memcpy(ctx_copy, &func, 16);
 
-        var ret = _z_thread_spawn(ctx_copy, &t);
+        let ret = _z_thread_spawn(ctx_copy, &t);
         
         if (ret != 0) {
             free(ctx_copy);
@@ -91,7 +91,7 @@ impl Thread {
     }
     
     fn join(self) -> Result<bool> {
-        var ret = _z_thread_join(self.handle);
+        let ret = _z_thread_join(self.handle);
         if (ret != 0) return Result<bool>::Err("Join failed");
         return Result<bool>::Ok(true);
     }
@@ -103,7 +103,7 @@ struct Mutex {
 
 impl Mutex {
     fn new() -> Mutex {
-        var ptr = malloc(64); 
+        let ptr = malloc(64); 
         _z_mutex_init(ptr);
         return Mutex { handle: ptr };
     }

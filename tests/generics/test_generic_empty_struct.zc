@@ -65,7 +65,7 @@ impl Stack<T> {
 
   fn pop(self) -> Optional<T> {
     if (self.len > 0) {
-      var result = Optional<T>{};
+      let result = Optional<T>{};
       result.emplace(self.data[self.len - 1]);
       self.len = self.len - 1;
       return result;
@@ -75,10 +75,10 @@ impl Stack<T> {
 }
 
 test "Generic Empty Struct Init" {
-  var s = Stack<i32>{};
+  let s = Stack<i32>{};
   defer s.free();
   s.push(123);
-  var result = s.pop();
+  let result = s.pop();
   
   assert(result.has_value(), "Result should have value");
   assert(result.get() == 123, "Result value should be 123");

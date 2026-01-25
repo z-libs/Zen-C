@@ -13,9 +13,9 @@ impl Foo<T> {
 }
 
 test "generic neq" {
-  var f1 = Foo<i32>{value: 10};
-  var f2 = Foo<i32>{value: 20};
-  var f3 = Foo<i32>{value: 10};
+  let f1 = Foo<i32>{value: 10};
+  let f2 = Foo<i32>{value: 20};
+  let f3 = Foo<i32>{value: 10};
   
   assert(f1 != f2, "f1 should not equal f2");
   assert(f1 == f3, "f1 should equal f3");

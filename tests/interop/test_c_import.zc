@@ -2,7 +2,7 @@
 import "math.h" as m;
 
 test "test_c_import" {
-    var x = m::sin(0.0);
+    let x = m::sin(0.0);
     
     if x == 0.0 {
         println "Success: m::sin(0.0) == 0.0";
@@ -16,8 +16,8 @@ test "test_c_import" {
 extern fn abs(x: int) -> int;
 
 test "test_interop_abs" {
-    var x = -10;
-    var y = abs(x);
+    let x = -10;
+    let y = abs(x);
     if (y == 10) println "Abs works";
     else {
         println "Abs failed";

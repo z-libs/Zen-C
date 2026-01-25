@@ -26,18 +26,18 @@ impl Path {
     }
     
     fn join(self, other: char*) -> Path {
-        var base_len = self.str.length();
-        var new_s = String::from(self.str.c_str());
+        let base_len = self.str.length();
+        let new_s = String::from(self.str.c_str());
         
         if (base_len > 0) {
-            var last = self.str.vec.get(base_len - 1);
+            let last = self.str.vec.get(base_len - 1);
             if (last != '/' && last != '\\') {
-                var sep = String::new("/");
+                let sep = String::new("/");
                 new_s.append(&sep);
             }
         }
         
-        var other_str = String::new(other);
+        let other_str = String::new(other);
         new_s.append(&other_str);
         
         return Path { str: new_s }; 
@@ -45,11 +45,11 @@ impl Path {
 
     
     fn extension(self) -> Option<String> {
-        var s = self.c_str();
-        var len = self.str.length();
+        let s = self.c_str();
+        let len = self.str.length();
         
-        for (var i: usize = len; i > 0; i = i - 1) {
-            var c = s[i-1];
+        for (let i: usize = len; i > 0; i = i - 1) {
+            let c = s[i-1];
             if (c == '.') {
                 // Check if we hit a separator before element
                 // e.g. /d.ir/file - found dot
@@ -64,19 +64,19 @@ impl Path {
     }
     
     fn file_name(self) -> Option<String> {
-        var s = self.c_str();
-        var len = self.str.length();
+        let s = self.c_str();
+        let len = self.str.length();
         
         if (len == 0) return Option<String>::None();
         
         // Remove trailing separators
-        var end = len;
+        let end = len;
         while (end > 0 && (s[end-1] == '/' || s[end-1] == '\\')) {
             end = end - 1;
         }
         if (end == 0) return Option<String>::None(); // Root
         
-        var start = end;
+        let start = end;
         while (start > 0 && s[start-1] != '/' && s[start-1] != '\\') {
             start = start - 1;
         }
@@ -85,12 +85,12 @@ impl Path {
     }
     
     fn parent(self) -> Option<Path> {
-        var s = self.c_str();
-        var len = self.str.length();
+        let s = self.c_str();
+        let len = self.str.length();
         if (len == 0) return Option<Path>::None();
         
         // Trim trailing separators
-        var end = len;
+        let end = len;
         while (end > 0 && (s[end-1] == '/' || s[end-1] == '\\')) {
             end = end - 1;
         }
@@ -111,7 +111,7 @@ impl Path {
             return Option<Path>::Some(Path::new("/"));
         }
         
-        var parent_str = self.str.substring(0, end);
+        let parent_str = self.str.substring(0, end);
         return Option<Path>::Some(Path { str: parent_str });
     }
 }

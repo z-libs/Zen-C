@@ -8,7 +8,7 @@ import "std/mem.zc"
 
 @global
 fn add_kernel(a: float*, b: float*, c: float*, n: int) {
-    var i = thread_id();
+    let i = thread_id();
     if i < n {
         c[i] = a[i] + b[i];
     }
@@ -20,9 +20,9 @@ fn main() {
     "=> Zen C CUDA Vector Addition";
     "-> Vector size: {N} elements";
     
-    var h_a = alloc_n<float>(N);
-    var h_b = alloc_n<float>(N);
-    var h_c = alloc_n<float>(N);
+    let h_a = alloc_n<float>(N);
+    let h_b = alloc_n<float>(N);
+    let h_c = alloc_n<float>(N);
     defer free(h_a);
     defer free(h_b);
     defer free(h_c);
@@ -33,9 +33,9 @@ fn main() {
     }
     
     "-> Allocating device memory...";
-    var d_a = cuda_alloc<float>(N);
-    var d_b = cuda_alloc<float>(N);
-    var d_c = cuda_alloc<float>(N);
+    let d_a = cuda_alloc<float>(N);
+    let d_b = cuda_alloc<float>(N);
+    let d_c = cuda_alloc<float>(N);
     defer cuda_free(d_a);
     defer cuda_free(d_b);
     defer cuda_free(d_c);
@@ -44,7 +44,7 @@ fn main() {
     cuda_copy_to_device(d_b, h_b, N * sizeof(float));
     
     const BLOCK_SIZE = 256;
-    var num_blocks = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    let num_blocks = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
     
     "-> Launching: {num_blocks} blocks x {BLOCK_SIZE} threads";
     
@@ -58,9 +58,9 @@ fn main() {
     cuda_copy_to_host(h_c, d_c, N * sizeof(float));
     
     "-> Verifying...";
-    var ok: int = 1;
+    let ok: int = 1;
     for i in 0..10 {
-        var expected = h_a[i] + h_b[i];
+        let expected = h_a[i] + h_b[i];
         if h_c[i] != expected {
             !"-> Mismatch at {i}";
             ok = 0;

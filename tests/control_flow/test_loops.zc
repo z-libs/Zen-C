@@ -3,7 +3,7 @@ test "test_loops" {
     println "Testing loop constructs...";
     
     // for-in range
-    var sum1 = 0;
+    let sum1 = 0;
     for i in 0..5 {
         sum1 += i;
     }
@@ -11,7 +11,7 @@ test "test_loops" {
     println "  -> for-in range (0..5): Passed";
     
     // for-in with step
-    var sum2 = 0;
+    let sum2 = 0;
     for i in 0..10 step 2 {
         sum2 += i;
     }
@@ -19,7 +19,7 @@ test "test_loops" {
     println "  -> for-in with step: Passed";
     
     // Repeat n times
-    var count = 0;
+    let count = 0;
     repeat 7 {
         count++;
     }
@@ -27,7 +27,7 @@ test "test_loops" {
     println "  -> repeat 7: Passed";
     
     // loop with break
-    var i = 0;
+    let i = 0;
     loop {
         i++;
         if (i >= 5) {
@@ -38,7 +38,7 @@ test "test_loops" {
     println "  -> loop with break: Passed";
     
     // While loop
-    var j = 0;
+    let j = 0;
     while j < 3 {
         j++;
     }
@@ -46,16 +46,16 @@ test "test_loops" {
     println "  -> while loop: Passed";
     
     // C-style for loop
-    var sum3 = 0;
-    for (var k = 0; k < 4; k = k + 1) {
+    let sum3 = 0;
+    for (let k = 0; k < 4; k = k + 1) {
         sum3 += k;
     }
     assert(sum3 == 6, "C-style for loop failed");
     println "  -> C-style for loop: Passed";
     
     // loop with continue
-    var sum4 = 0;
-    var m = 0;
+    let sum4 = 0;
+    let m = 0;
     loop {
         m++;
         if (m == 3) {
@@ -76,7 +76,7 @@ test "test_loops" {
 }
 
 fn print_nums(list: [int]) {
-    var i = 0;
+    let i = 0;
     while (i < list.len) {
         println "Num: {list.data[i]}";
         i++;
@@ -85,12 +85,12 @@ fn print_nums(list: [int]) {
 
 test "test_arrays_loop" {
     // Array literal transformation
-    var nums: [int] = [10, 20, 30];
+    let nums: [int] = [10, 20, 30];
     print_nums(nums);
 }
 
 test "test_do_while" {
-    var x = 0;
+    let x = 0;
     
     // Basic do-while (runs at least once)
     do {
@@ -100,7 +100,7 @@ test "test_do_while" {
     assert(x == 5, "do-while x expected 5");
     
     // Do-while with false condition (still runs once)
-    var y = 0;
+    let y = 0;
     do {
         y = 100;
     } while false;
@@ -112,17 +112,17 @@ test "test_range_loops_generic" {
     println "Testing range loops with different types...";
     
     // Test with isize variables
-    var sum_isize: isize = 0;
-    var start: isize = 0;
-    var end: isize = 5;
-    for var i: isize = start; i < end; i++ {
+    let sum_isize: isize = 0;
+    let start: isize = 0;
+    let end: isize = 5;
+    for let i: isize = start; i < end; i++ {
         sum_isize += i;
     }
     println "isize range (0..5): sum = {sum_isize}";
     assert(sum_isize == 10, "isize range failed");
     
     // Test with regular int
-    var sum_int = 0;
+    let sum_int = 0;
     for i in 0..5 {
         sum_int += i;
     }
@@ -133,7 +133,7 @@ test "test_range_loops_generic" {
 }
 
 test "inclusive range basic" {
-    var count1 = 0
+    let count1 = 0
     for i in 0..=5 {
         count1 += 1
     }
@@ -141,7 +141,7 @@ test "inclusive range basic" {
 }
 
 test "inclusive range single" {
-    var count2 = 0
+    let count2 = 0
     for i in 0..=0 {
         count2 += 1
     }
@@ -149,7 +149,7 @@ test "inclusive range single" {
 }
 
 test "inclusive range with step" {
-    var sum = 0
+    let sum = 0
     for i in 0..=10 step 2 {
         sum += i
     }
@@ -158,7 +158,7 @@ test "inclusive range with step" {
 }
 
 test "exclusive range regression check" {
-    var count3 = 0
+    let count3 = 0
     for i in 0..5 {
         count3 += 1
     }
@@ -166,7 +166,7 @@ test "exclusive range regression check" {
 }
 
 test "explicit exclusive range (..<)" {
-    var count4 = 0
+    let count4 = 0
     for i in 0..<5 {
         count4 += 1
     }

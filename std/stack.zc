@@ -21,7 +21,7 @@ impl Stack<T> {
   }
 
   fn clone(self) -> Stack<T> {
-    var new_stack = Stack<T>::new();
+    let new_stack = Stack<T>::new();
     new_stack.len = self.len;
     new_stack.cap = self.cap;
     new_stack.data = malloc(sizeof(T) * new_stack.cap);
@@ -44,7 +44,7 @@ impl Stack<T> {
 
   fn pop(self) -> Option<T> {
     if (self.len > 0) {
-      var value = self.data[self.len - 1];
+      let value = self.data[self.len - 1];
       self.len = self.len - 1;
       return Option<T>::Some(value);
     }

@@ -50,8 +50,8 @@ struct NormalStruct {
     b: U32;
 }
 
-var init_called = 0;
-var cleanup_called = 0;
+let init_called = 0;
+let cleanup_called = 0;
 
 @constructor
 fn my_init() {
@@ -79,18 +79,18 @@ fn unused_func() {}
 
 test "function attributes" {
     // @must_use: result used - no warning
-    var x = compute();
+    let x = compute();
     assert(x == 42, "compute() failed");
     
     // No must_use - can discard
     optional_result();
     
     // @inline works
-    var sum = fast_add(1, 2);
+    let sum = fast_add(1, 2);
     assert(sum == 3, "inline add failed");
     
     // Combined attributes
-    var c = combined();
+    let c = combined();
     assert(c == 100, "combined failed");
     
     // @must_use: result verified

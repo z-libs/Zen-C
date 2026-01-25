@@ -26,6 +26,9 @@ void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t, FILE *out);
 char *codegen_type_to_string(Type *t);
 void emit_func_signature(FILE *out, ASTNode *func, const char *name_override);
 char *strip_template_suffix(const char *name);
+char *strip_template_suffix(const char *name);
+int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out);
+void codegen_expression_with_move(ParserContext *ctx, ASTNode *node, FILE *out);
 
 // Declaration emission  (codegen_decl.c).
 void emit_preamble(ParserContext *ctx, FILE *out);

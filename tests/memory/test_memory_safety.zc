@@ -2,7 +2,7 @@
 import "std/mem.zc"
 
 // ** Globals **
-var DROP_COUNT = 0;
+let DROP_COUNT = 0;
 
 // ** Structs & Helpers **
 
@@ -20,7 +20,7 @@ impl Drop for Resource {
 }
 
 fn create_resource(id: int) {
-    var r = Resource{id: id};
+    let r = Resource{id: id};
     println "Created Resource {r.id}";
 }
 
@@ -30,14 +30,14 @@ struct Point {
 }
 
 fn distance(p1: Point, p2: Point) -> int {
-    var dx = p2.x - p1.x;
-    var dy = p2.y - p1.y;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
     return dx * dx + dy * dy;
 }
 
 fn accumulate(start: int, count: int) -> int {
-    var sum = start;
-    var i = 0;
+    let sum = start;
+    let i = 0;
     while (i < count) {
         sum += i;
         i++;
@@ -46,14 +46,14 @@ fn accumulate(start: int, count: int) -> int {
 }
 
 fn process_point(p: Point) -> Point {
-    var result = Point { x: p.x * 2, y: p.y * 2 };
+    let result = Point { x: p.x * 2, y: p.y * 2 };
     return result;
 }
 
 fn counter_immut() {
-    var count = 0;
+    let count = 0;
     {
-        var inner = 10;
+        let inner = 10;
         inner = inner + 5;
         count = count + inner;
     }
@@ -87,7 +87,7 @@ fn release_resource(id: int) {
 
 fn test_defer_logic() {
     println "start test";
-    var x = get_resource() defer release_resource(it);
+    let x = get_resource() defer release_resource(it);
     println "using resource {x}";
 }
 
@@ -95,14 +95,14 @@ fn test_defer_logic() {
 test "test_alloc" {
     "Testing alloc<T>...";
     
-    var p = alloc<int>();
+    let p = alloc<int>();
     *p = 42;
     f"  alloc<int>(): {*p}";
     assert(*p == 42, "alloc failed");
     free(p);
     
-    var arr = alloc_n<int>(5);
-    for var i = 0; i < 5; i++ {
+    let arr = alloc_n<int>(5);
+    for let i = 0; i < 5; i++ {
         arr[i] = i * 10;
     }
     f"  alloc_n<int>(5): [{arr[0]}, {arr[1]}, {arr[2]}, {arr[3]}, {arr[4]}]";
@@ -113,9 +113,9 @@ test "test_alloc" {
 
 test "test_box" {
     "Testing Box<T>...";
-    var b = Box<int>::new();
+    let b = Box<int>::new();
     *b.get() = 100;
-    var val = *b.get();
+    let val = *b.get();
     f"  Box value: {val}";
     assert(val == 100, "Box failed");
     b.free();
@@ -124,14 +124,14 @@ test "test_box" {
 
 test "test_slice" {
     "Testing Slice<T>...";
-    var data: int[5] = [1, 2, 3, 4, 5];
-    var s = Slice<int>::new(&data[0], 5);
+    let data: int[5] = [1, 2, 3, 4, 5];
+    let s = Slice<int>::new(&data[0], 5);
     f"  Slice len: {(int)s.len}";
-    var v2 = s.get(2);
+    let v2 = s.get(2);
     f"  Slice[2]: {v2}";
     assert(v2 == 3, "Slice get failed");
     s.set(0, 99);
-    var v0 = s.get(0);
+    let v0 = s.get(0);
     f"  After set: Slice[0] = {v0}";
     assert(v0 == 99, "Slice set failed");
     "  ✓ Slice works!";
@@ -139,8 +139,8 @@ test "test_slice" {
 
 test "test_swap" {
     "Testing swap<T>...";
-    var a = 10;
-    var b = 20;
+    let a = 10;
+    let b = 20;
     f"  Before: a={a}, b={b}";
     swap<int>(&a, &b);
     f"  After:  a={a}, b={b}";
@@ -151,15 +151,15 @@ test "test_swap" {
 test "test_autofree" {
     println "Testing autofree...";
     {
-        autofree var p = malloc(1024);
+        autofree let p = malloc(1024);
         if (p == NULL) { eprintln "Malloc failed!"; }
         strcpy(p, "Auto-freed string");
         print f"Allocated: {p}"; println "";
     }
     println "Exited block successfully (hopefully freed)";
     {
-        autofree var p1 = malloc(10);
-        autofree var p2 = malloc(20);
+        autofree let p1 = malloc(10);
+        autofree let p2 = malloc(20);
     }
 }
 
@@ -170,20 +170,20 @@ test "test_raii_drop" {
     "Exited scope.";
     assert(DROP_COUNT == 1, "Expected Drop to be called once");
     {
-        var r2 = Resource{id: 2};
-        var r3 = Resource{id: 3};
+        let r2 = Resource{id: 2};
+        let r3 = Resource{id: 3};
     } 
     assert(DROP_COUNT == 3, "Expected 3 total drops");
 }
 
 test "test_immutable" {
-    var p1 = Point { x: 0, y: 0 };
-    var p2 = Point { x: 3, y: 4 };
-    var dist = distance(p1, p2);
+    let p1 = Point { x: 0, y: 0 };
+    let p2 = Point { x: 3, y: 4 };
+    let dist = distance(p1, p2);
     "Distance: {dist}";
-    var sum = accumulate(10, 5);
+    let sum = accumulate(10, 5);
     "Accumulate: {sum}";
-    var p3 = process_point(Point { x: 0, y: 0 });
+    let p3 = process_point(Point { x: 0, y: 0 });
     "Processed: ({p3.x}, {p3.y})";
     counter_immut();
 }
@@ -193,11 +193,11 @@ test "test_permissions" {
     def WRITE : U8 = 0b010;
     def EXEC  : U8 = 0b001;
 
-    var p1 = Permissions::new(READ);
+    let p1 = Permissions::new(READ);
     "Start: {p1.mask} (Read)";
     
-    var p2 = Permissions::new(WRITE);
-    var p_rw = p1 | p2; 
+    let p2 = Permissions::new(WRITE);
+    let p_rw = p1 | p2; 
     "Combined: {p_rw.mask} (Read + Write)";
 
     if (p_rw.has(EXEC)) { " > Has Execute access"; } 
@@ -205,7 +205,7 @@ test "test_permissions" {
     
     if (p_rw.has(READ)) { " > Has Read access"; }
 
-    var p_all = p_rw | Permissions::new(EXEC);
+    let p_all = p_rw | Permissions::new(EXEC);
     "Final: {p_all.mask} (All)";
 }
 

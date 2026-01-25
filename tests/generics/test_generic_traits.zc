@@ -1,0 +1,42 @@
+
+trait MyClone {
+    fn my_clone(self) -> int;
+}
+
+struct GBox<T> {
+    val: T;
+}
+
+impl MyClone for GBox<T> {
+    fn my_clone(self) -> int {
+        return 1;
+    }
+}
+
+test "generic_trait_method_resolution" {
+    let b = GBox<int>{ val: 10 };
+    let res = b.my_clone();
+    assert(res == 1, "Generic trait method call failed");
+}
+
+trait ValueProvider {
+    fn get_value(self) -> int;
+}
+
+struct Wrapper<T> {
+    inner: T;
+}
+
+impl ValueProvider for Wrapper<T> {
+    fn get_value(self) -> int {
+        return 42;
+    }
+}
+
+test "generic_trait_resolution_complex" {
+    let w = Wrapper<bool>{ inner: true };
+    assert(w.get_value() == 42, "Wrapper<bool> trait call failed");
+    
+    let w2 = Wrapper<int>{ inner: 100 };
+    assert(w2.get_value() == 42, "Wrapper<int> trait call failed");
+}

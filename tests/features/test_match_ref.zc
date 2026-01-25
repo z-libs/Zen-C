@@ -5,7 +5,7 @@ enum MyOption<T> {
 }
 
 test "match_ref_int" {
-    var r = MyOption<int>::Some(42);
+    let r = MyOption<int>::Some(42);
     match r {
         MyOption::Some(ref i) => {
             // i is int*
@@ -21,9 +21,9 @@ struct Mover {
 }
 
 test "match_ref_mover" {
-    var m = Mover { val: 100 };
+    let m = Mover { val: 100 };
     // MyOption<Mover> instantiation
-    var opt = MyOption<Mover>::Some(m);
+    let opt = MyOption<Mover>::Some(m);
     
     match opt {
         MyOption::Some(ref x) => {
@@ -50,9 +50,9 @@ enum Test {
 }
 
 test "match ref binding concrete" {
-    var t = Test::ONE(Hello{ world: 123 });
+    let t = Test::ONE(Hello{ world: 123 });
 
-    var val = 0;
+    let val = 0;
     match t {
         Test::ONE(ref o) => { 
             // o should be Hello*

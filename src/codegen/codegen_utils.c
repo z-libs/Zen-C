@@ -40,19 +40,33 @@ char *strip_template_suffix(const char *name)
     return xstrdup(name);
 }
 
-// Helper to emit variable declarations with array types.
-void emit_var_decl_type(ParserContext *ctx, FILE *out, const char *type_str, const char *var_name)
+// Helper to emit C declaration (handle arrays, function pointers correctly)
+void emit_c_decl(FILE *out, const char *type_str, const char *name)
 {
-    (void)ctx;
-
     char *bracket = strchr(type_str, '[');
     char *generic = strchr(type_str, '<');
+    char *fn_ptr = strstr(type_str, "(*");
 
-    if (generic && (!bracket || generic < bracket))
+    if (fn_ptr)
+    {
+        char *end_paren = strchr(fn_ptr, ')');
+        if (end_paren)
+        {
+            int prefix_len = end_paren - type_str;
+            fprintf(out, "%.*s%s%s", prefix_len, type_str, name, end_paren);
+        }
+        else
+        {
+            // Fallback if malformed (shouldn't happen)
+            int prefix_len = fn_ptr - type_str + 2;
+            fprintf(out, "%.*s%s%s", prefix_len, type_str, name, fn_ptr + 2);
+        }
+    }
+    else if (generic && (!bracket || generic < bracket))
     {
         // Strip generic part for C output
         int base_len = generic - type_str;
-        fprintf(out, "%.*s %s", base_len, type_str, var_name);
+        fprintf(out, "%.*s %s", base_len, type_str, name);
 
         if (bracket)
         {
@@ -62,12 +76,19 @@ void emit_var_decl_type(ParserContext *ctx, FILE *out, const char *type_str, con
     else if (bracket)
     {
         int base_len = bracket - type_str;
-        fprintf(out, "%.*s %s%s", base_len, type_str, var_name, bracket);
+        fprintf(out, "%.*s %s%s", base_len, type_str, name, bracket);
     }
     else
     {
-        fprintf(out, "%s %s", type_str, var_name);
+        fprintf(out, "%s %s", type_str, name);
     }
+}
+
+// Helper to emit variable declarations with array types.
+void emit_var_decl_type(ParserContext *ctx, FILE *out, const char *type_str, const char *var_name)
+{
+    (void)ctx;
+    emit_c_decl(out, type_str, var_name);
 }
 
 // Find struct definition
@@ -455,15 +476,15 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
 
     if (node->type == NODE_EXPR_LITERAL)
     {
-        if (node->literal.type_kind == TOK_STRING)
+        if (node->literal.type_kind == LITERAL_STRING)
         {
-            return "string";
+            return xstrdup("string");
         }
-        if (node->literal.type_kind == TOK_CHAR)
+        if (node->literal.type_kind == LITERAL_CHAR)
         {
-            return "char";
+            return xstrdup("char");
         }
-        if (node->literal.type_kind == 1)
+        if (node->literal.type_kind == LITERAL_FLOAT)
         {
             return "double";
         }
@@ -519,8 +540,22 @@ char *extract_call_args(const char *args)
 // Parse original method name from mangled name.
 const char *parse_original_method_name(const char *mangled)
 {
-    const char *last = strrchr(mangled, '_');
-    return last ? last + 1 : mangled;
+    const char *sep = strstr(mangled, "__");
+    if (!sep)
+    {
+        return mangled;
+    }
+
+    // Let's iterate to find the last `__`.
+    const char *last_double = NULL;
+    const char *p = mangled;
+    while ((p = strstr(p, "__")))
+    {
+        last_double = p;
+        p += 2;
+    }
+
+    return last_double ? last_double + 2 : mangled;
 }
 
 // Replace string type in arguments.
@@ -635,7 +670,20 @@ void emit_func_signature(FILE *out, ASTNode *func, const char *name_override)
         ret_str = xstrdup("void");
     }
 
-    fprintf(out, "%s %s(", ret_str, name_override ? name_override : func->func.name);
+    char *ret_suffix = NULL;
+    char *fn_ptr = strstr(ret_str, "(*)");
+
+    if (fn_ptr)
+    {
+        int prefix_len = fn_ptr - ret_str + 2; // Include "(*"
+        fprintf(out, "%.*s%s(", prefix_len, ret_str,
+                name_override ? name_override : func->func.name);
+        ret_suffix = fn_ptr + 2;
+    }
+    else
+    {
+        fprintf(out, "%s %s(", ret_str, name_override ? name_override : func->func.name);
+    }
     free(ret_str);
 
     // Args
@@ -669,16 +717,7 @@ void emit_func_signature(FILE *out, ASTNode *func, const char *name_override)
             }
 
             // check if array type
-            char *bracket = strchr(type_str, '[');
-            if (bracket)
-            {
-                int base_len = bracket - type_str;
-                fprintf(out, "%.*s %s%s", base_len, type_str, name, bracket);
-            }
-            else
-            {
-                fprintf(out, "%s %s", type_str, name);
-            }
+            emit_c_decl(out, type_str, name);
             free(type_str);
         }
         if (func->func.is_varargs)
@@ -691,4 +730,91 @@ void emit_func_signature(FILE *out, ASTNode *func, const char *name_override)
         }
     }
     fprintf(out, ")");
+
+    if (ret_suffix)
+    {
+        fprintf(out, "%s", ret_suffix);
+    }
+}
+
+// Invalidate a moved-from variable by zeroing it out to prevent double-free
+int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
+{
+    if (!node)
+    {
+        return 0;
+    }
+
+    // Check if it's a valid l-value we can memset
+    if (node->type != NODE_EXPR_VAR && node->type != NODE_EXPR_MEMBER)
+    {
+        return 0;
+    }
+
+    // Common logic to find type and check Drop
+    char *type_name = infer_type(ctx, node);
+    ASTNode *def = NULL;
+    if (type_name)
+    {
+        char *clean_type = type_name;
+        if (strncmp(clean_type, "struct ", 7) == 0)
+        {
+            clean_type += 7;
+        }
+        def = find_struct_def(ctx, clean_type);
+    }
+
+    if (def && def->type_info && def->type_info->traits.has_drop)
+    {
+        if (node->type == NODE_EXPR_VAR)
+        {
+            fprintf(out, "__z_drop_flag_%s = 0; ", node->var_ref.name);
+            fprintf(out, "memset(&%s, 0, sizeof(%s))", node->var_ref.name, node->var_ref.name);
+            return 1;
+        }
+        else if (node->type == NODE_EXPR_MEMBER)
+        {
+            // For members: memset(&foo.bar, 0, sizeof(foo.bar))
+            fprintf(out, "memset(&");
+            codegen_expression(ctx, node, out);
+            fprintf(out, ", 0, sizeof(");
+            codegen_expression(ctx, node, out);
+            fprintf(out, "))");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Emits expression, wrapping it in a move-invalidation block if it's a consuming variable usage
+void codegen_expression_with_move(ParserContext *ctx, ASTNode *node, FILE *out)
+{
+    if (node && (node->type == NODE_EXPR_VAR || node->type == NODE_EXPR_MEMBER))
+    {
+        // Re-use infer logic to see if we need invalidation
+        char *type_name = infer_type(ctx, node);
+        ASTNode *def = NULL;
+        if (type_name)
+        {
+            char *clean_type = type_name;
+            if (strncmp(clean_type, "struct ", 7) == 0)
+            {
+                clean_type += 7;
+            }
+            def = find_struct_def(ctx, clean_type);
+        }
+
+        if (def && def->type_info && def->type_info->traits.has_drop)
+        {
+            fprintf(out, "({ __typeof__(");
+            codegen_expression(ctx, node, out);
+            fprintf(out, ") _mv = ");
+            codegen_expression(ctx, node, out);
+            fprintf(out, "; ");
+            emit_move_invalidation(ctx, node, out);
+            fprintf(out, "; _mv; })");
+            return;
+        }
+    }
+    codegen_expression(ctx, node, out);
 }

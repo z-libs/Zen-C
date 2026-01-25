@@ -4,7 +4,7 @@ import "std.zc"
 fn main() {
     const LIMIT = 50;
     
-    var is_prime: bool[LIMIT];
+    let is_prime: bool[LIMIT];
     for i in 0..LIMIT { is_prime[i] = true; }
     
     is_prime[0] = false;
@@ -12,7 +12,7 @@ fn main() {
 
     for p in 2..LIMIT {
         if is_prime[p] {
-            for (var i = p * p; i < LIMIT; i += p) {
+            for (let i = p * p; i < LIMIT; i += p) {
                 is_prime[i] = false;
             }
         }

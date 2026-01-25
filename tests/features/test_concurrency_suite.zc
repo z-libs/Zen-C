@@ -29,48 +29,48 @@ struct Counter {
 }
 
 test "test_async_basics" {
-    var future1 = double_slowly(21);
-    var future2 = add_async(10, 20);
+    let future1 = double_slowly(21);
+    let future2 = add_async(10, 20);
     
-    var result1 = await future1;
-    var result2 = await future2;
+    let result1 = await future1;
+    let result2 = await future2;
     
     assert(result1 == 42, "Async double failed");
     assert(result2 == 30, "Async add failed");
 }
 
 test "test_async_struct_return" {
-    var f = make_point(5, 7);
-    var p = await f;
+    let f = make_point(5, 7);
+    let p = await f;
     
     assert(p.x == 5, "Async struct x failed");
     assert(p.y == 7, "Async struct y failed");
 }
 
 test "test_async_void" {
-    var f = say_hello();
+    let f = say_hello();
     await f;
 }
 
 test "test_thread" {
     println "Testing Concurrency...";
     
-    var c = (Counter*)malloc(sizeof(Counter));
+    let c = (Counter*)malloc(sizeof(Counter));
     c.val = 0;
     c.lock = Mutex::new();
     
     def N = 10000;
     
-    var t1_res = Thread::spawn(fn() {
-        for (var i=0; i<N; ++i) {
+    let t1_res = Thread::spawn(fn() {
+        for (let i=0; i<N; ++i) {
             c.lock.lock();
             c.val = c.val + 1;
             c.lock.unlock();
         }
     });
     
-    var t2_res = Thread::spawn(fn() {
-        for (var i=0; i<N; ++i) {
+    let t2_res = Thread::spawn(fn() {
+        for (let i=0; i<N; ++i) {
             c.lock.lock();
             c.val = c.val + 1;
             c.lock.unlock();
@@ -80,15 +80,15 @@ test "test_thread" {
     assert(t1_res.is_err() == false, "T1 failed to spawn");
     assert(t2_res.is_err() == false, "T2 failed to spawn");
     
-    var t1 = t1_res.unwrap();
-    var t2 = t2_res.unwrap();
+    let t1 = t1_res.unwrap();
+    let t2 = t2_res.unwrap();
     
     t1.join();
     t2.join();
     
     println "Final Count: {c.val} (Expected {2 * N})";
     
-    var final_val = c.val;
+    let final_val = c.val;
     
     c.lock.free();
     free(c);

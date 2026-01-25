@@ -751,13 +751,30 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
         }
     }
 
+    Type *t = NULL;
+
     // Example: fn(int, int) -> int
     if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "fn", 2) == 0 &&
         lexer_peek(l).len == 2)
     {
         lexer_next(l); // eat 'fn'
+
+        int star_count = 0;
+        while (lexer_peek(l).type == TOK_OP && strncmp(lexer_peek(l).start, "*", 1) == 0)
+        {
+            lexer_next(l);
+            star_count++;
+        }
+
         Type *fn_type = type_new(TYPE_FUNCTION);
+        fn_type->is_raw = (star_count > 0);
         fn_type->is_varargs = 0;
+
+        Type *wrapped = fn_type;
+        for (int i = 1; i < star_count; i++)
+        {
+            wrapped = type_new_ptr(wrapped);
+        }
 
         expect(l, TOK_LPAREN, "Expected '(' for function type");
 
@@ -794,11 +811,13 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
             fn_type->inner = type_new(TYPE_VOID);
         }
 
-        return fn_type;
+        t = wrapped;
     }
-
-    // Handles: int, Struct, Generic<T>, [Slice], (Tuple)
-    Type *t = parse_type_base(ctx, l);
+    else
+    {
+        // Handles: int, Struct, Generic<T>, [Slice], (Tuple)
+        t = parse_type_base(ctx, l);
+    }
 
     // Handles: T*, T**, etc.
     while (lexer_peek(l).type == TOK_OP && *lexer_peek(l).start == '*')

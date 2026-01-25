@@ -6,7 +6,7 @@ test "def_constants" {
     assert(MAX == 100, "def constant value mismatch");
     // PI check (float) - exact match might be tricky but 3.14159 is literal
     
-    var x = MAX; 
+    let x = MAX; 
     assert(x == 100, "Assign from def");
 }
 
@@ -20,12 +20,12 @@ test "def_scoping" {
 }
 
 test "const_type_qualifier" {
-    var x: const int = 10;
+    let x: const int = 10;
     assert(x == 10, "const Var init");
     
-    // Address of const var should be allowed
-    var p: const int* = &x; 
-    assert(*p == 10, "Pointer to const var");
+    // Address of const let should be allowed
+    let p: const int* = &x; 
+    assert(*p == 10, "Pointer to const let");
 }
 
 // Note: Negative tests (compilation failures) are hard to test in this harness currently

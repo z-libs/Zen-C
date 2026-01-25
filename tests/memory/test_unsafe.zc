@@ -9,46 +9,46 @@ raw {
 extern fn legacy_add(a: int, b: int) -> int;
 
 fn process_arrays(n: int, a: restrict int*, b: restrict int*, out: restrict int*) {
-    for (var i = 0; i < n; i = i + 1) {
+    for (let i = 0; i < n; i = i + 1) {
         out[i] = a[i] + b[i];
     }
 }
 
 fn counter() -> int {
-    static var count = 0;
+    static let count = 0;
     count = count + 1;
     return count;
 }
 
 test "test_raw" {
     println "Testing Raw C Embedding...";
-    var res = legacy_add(10, 20);
+    let res = legacy_add(10, 20);
     // Expected: 10 + 20 + 12345 = 12375
     assert(res == 12375, "Raw C Code failed");
     println "  Raw C Code: Success (Result: {res})";
 }
 
 test "test_restrict" {
-    var a: int[10];
-    var b: int[10];
-    var c: int[10];
+    let a: int[10];
+    let b: int[10];
+    let c: int[10];
     
-    for (var i = 0; i < 10; i = i + 1) {
+    for (let i = 0; i < 10; i = i + 1) {
         a[i] = i;
         b[i] = i * 2;
     }
     
     process_arrays(10, a, b, c);
     
-    for (var i = 0; i < 10; i = i + 1) {
+    for (let i = 0; i < 10; i = i + 1) {
         assert(c[i] == i * 3, "Restrict test failed");
     }
 }
 
 test "test_static_local" {
-    var a = counter();  // 1
-    var b = counter();  // 2
-    var c = counter();  // 3
+    let a = counter();  // 1
+    let b = counter();  // 2
+    let c = counter();  // 3
     
     assert a == 1;
     assert b == 2;

@@ -3,7 +3,7 @@ test "test_loop_edge_cases" {
     println "Testing loop edge cases...";
     
     // Empty range (0..0 should not iterate)
-    var count1 = 0;
+    let count1 = 0;
     for i in 0..0 {
         count1++;
     }
@@ -15,7 +15,7 @@ test "test_loop_edge_cases" {
     }
     
     // Single iteration range (0..1)
-    var count2 = 0;
+    let count2 = 0;
     for i in 0..1 {
         count2++;
     }
@@ -27,7 +27,7 @@ test "test_loop_edge_cases" {
     }
     
     // Repeat 0 times (should not execute)
-    var count3 = 0;
+    let count3 = 0;
     repeat 0 {
         count3++;
     }
@@ -39,7 +39,7 @@ test "test_loop_edge_cases" {
     }
     
     // Repeat 1 time
-    var count4 = 0;
+    let count4 = 0;
     repeat 1 {
         count4++;
     }
@@ -51,7 +51,7 @@ test "test_loop_edge_cases" {
     }
     
     // Nested loops
-    var total = 0;
+    let total = 0;
     for i in 0..3 {
         for j in 0..2 {
             total = total + 1;
@@ -65,10 +65,10 @@ test "test_loop_edge_cases" {
     }
     
     // Break in nested loop  
-    var outer_count = 0;
+    let outer_count = 0;
     for i in 0..3 {
         outer_count = outer_count + 1;
-        var inner_done = 0;
+        let inner_done = 0;
         loop {
             inner_done = inner_done + 1;
             if (inner_done >= 2) {
@@ -84,7 +84,7 @@ test "test_loop_edge_cases" {
     }
     
     // Large step value
-    var count7 = 0;
+    let count7 = 0;
     for i in 0..100 step 25 {
         count7++;
     }

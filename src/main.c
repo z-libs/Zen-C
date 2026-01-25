@@ -47,6 +47,7 @@ void print_usage()
     printf("  -g              Debug info\n");
     printf("  -v, --verbose   Verbose output\n");
     printf("  -q, --quiet     Quiet output\n");
+    printf("  --no-zen        Disable Zen facts\n");
     printf("  -c              Compile only (produce .o)\n");
     printf("  --cpp           Use C++ mode.\n");
     printf("  --cuda          Use CUDA mode (requires nvcc).\n");
@@ -144,6 +145,10 @@ int main(int argc, char **argv)
         else if (strcmp(arg, "--quiet") == 0 || strcmp(arg, "-q") == 0)
         {
             g_config.quiet = 1;
+        }
+        else if (strcmp(arg, "--no-zen") == 0)
+        {
+            g_config.no_zen = 1;
         }
         else if (strcmp(arg, "--freestanding") == 0)
         {

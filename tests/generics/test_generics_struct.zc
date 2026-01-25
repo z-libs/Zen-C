@@ -6,7 +6,7 @@ struct Wrapper<T> {
 
 test "test_generics_struct" {
     // Instantiate with int
-    var w1: Wrapper<int>;
+    let w1: Wrapper<int>;
     w1.id = 1;
     w1.item = 500;
     

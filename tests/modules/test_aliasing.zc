@@ -3,8 +3,8 @@ import { Vector as MathVec } from "./test_modules/_math.zc";
 import { Vector as PhysicsVec } from "./test_modules/_physics.zc";
 
 test "test_selective_aliasing" {
-    var mv = MathVec::new(3, 4);
-    var pv = PhysicsVec::new(5.0, 12.0);
+    let mv = MathVec::new(3, 4);
+    let pv = PhysicsVec::new(5.0, 12.0);
     
     assert(mv.x == 3 && mv.y == 4, "MathVec initialization failed");
     assert(pv.vx == 5.0 && pv.vy == 12.0, "PhysicsVec initialization failed");

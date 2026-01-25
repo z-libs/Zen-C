@@ -8,7 +8,7 @@ fn fibonacci(n: int) -> int {
 }
 
 fn test_recursion() {
-    var fib10 = fibonacci(10);
+    let fib10 = fibonacci(10);
     
     if (fib10 != 55) {
         println "FAIL: fibonacci(10) should be 55";
@@ -23,7 +23,7 @@ fn add_three(a: int, b: int, c: int) -> int {
 }
 
 fn test_multi_params() {
-    var result = add_three(1, 2, 3);
+    let result = add_three(1, 2, 3);
     
     if (result != 6) {
         println "FAIL: add_three(1,2,3) should be 6";
@@ -38,7 +38,7 @@ fn double_val(x: int) -> int {
 }
 
 fn test_nested_calls() {
-    var result = double_val(double_val(double_val(2)));
+    let result = double_val(double_val(double_val(2)));
     
     if (result != 16) {
         println "FAIL: nested calls failed";
@@ -67,7 +67,7 @@ impl Counter {
 }
 
 fn test_struct_methods() {
-    var c = Counter::new();
+    let c = Counter::new();
     c.increment();
     c.increment();
     c.increment();
@@ -81,16 +81,16 @@ fn test_struct_methods() {
 }
 
 fn test_casting() {
-    var f: float = 3.7;
-    var i: int = (int)f;
+    let f: float = 3.7;
+    let i: int = (int)f;
     
     if (i != 3) {
         println "FAIL: float to int cast failed";
         exit(1);
     }
     
-    var i2: int = 42;
-    var f2: float = (float)i2;
+    let i2: int = 42;
+    let f2: float = (float)i2;
     
     if (f2 < 41.9 || f2 > 42.1) {
         println "FAIL: int to float cast failed";
@@ -101,12 +101,12 @@ fn test_casting() {
 }
 
 fn test_bitwise() {
-    var a = 0b1010;  // 10
-    var b = 0b1100;  // 12
+    let a = 0b1010;  // 10
+    let b = 0b1100;  // 12
     
-    var and_result = a & b;  // 0b1000 = 8
-    var or_result = a | b;   // 0b1110 = 14
-    var xor_result = a ^ b;  // 0b0110 = 6
+    let and_result = a & b;  // 0b1000 = 8
+    let or_result = a | b;   // 0b1110 = 14
+    let xor_result = a ^ b;  // 0b0110 = 6
     
     if (and_result != 8) {
         println "FAIL: bitwise AND failed";
@@ -127,16 +127,16 @@ fn test_bitwise() {
 }
 
 fn test_shift() {
-    var x = 1;
-    var left = x << 4;   // 16
+    let x = 1;
+    let left = x << 4;   // 16
     
     if (left != 16) {
         println "FAIL: left shift failed";
         exit(1);
     }
     
-    var y = 32;
-    var right = y >> 2;  // 8
+    let y = 32;
+    let right = y >> 2;  // 8
     
     if (right != 8) {
         println "FAIL: right shift failed";
@@ -147,9 +147,9 @@ fn test_shift() {
 }
 
 fn test_modulo() {
-    var a = 17;
-    var b = 5;
-    var result = a % b;
+    let a = 17;
+    let b = 5;
+    let result = a % b;
     
     if (result != 2) {
         println "FAIL: modulo operation failed";
@@ -160,11 +160,11 @@ fn test_modulo() {
 }
 
 fn test_compound_expr() {
-    var x = 5;
-    var y = 10;
-    var z = 3;
+    let x = 5;
+    let y = 10;
+    let z = 3;
     
-    var result = (x + y) * z - (y / 2);
+    let result = (x + y) * z - (y / 2);
     // (5 + 10) * 3 - (10 / 2) = 15 * 3 - 5 = 45 - 5 = 40
     
     if (result != 40) {
@@ -176,7 +176,7 @@ fn test_compound_expr() {
 }
 
 fn test_increment_style() {
-    var x = 5;
+    let x = 5;
     x = x + 1;
     
     if (x != 6) {

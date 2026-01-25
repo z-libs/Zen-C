@@ -25,13 +25,13 @@ enum MixinResult {
 
 // Test match binding with named composition - field access
 test "match_binding_named_composition" {
-    var inner = Inner { value: 42 };
-    var wrapper = NamedWrapper { inner: inner };
-    var result = NamedResult::Ok(wrapper);
+    let inner = Inner { value: 42 };
+    let wrapper = NamedWrapper { inner: inner };
+    let result = NamedResult::Ok(wrapper);
     
     match result {
         NamedResult::Ok(w) => {
-            var val = w.inner.value;
+            let val = w.inner.value;
             assert(val == 42, "Named composition field access failed");
         },
         NamedResult::Err(e) => assert(false, "Should not be Err")
@@ -40,12 +40,12 @@ test "match_binding_named_composition" {
 
 // Test match binding with mixin composition - field access
 test "match_binding_mixin_composition" {
-    var wrapper = MixinWrapper { value: 77 };
-    var result = MixinResult::Ok(wrapper);
+    let wrapper = MixinWrapper { value: 77 };
+    let result = MixinResult::Ok(wrapper);
     
     match result {
         MixinResult::Ok(w) => {
-            var val = w.value;
+            let val = w.value;
             assert(val == 77, "Mixin composition field access failed");
         },
         MixinResult::Err(e) => assert(false, "Should not be Err")
@@ -54,8 +54,8 @@ test "match_binding_mixin_composition" {
 
 // Test match binding with mixin - f-string interpolation
 test "match_binding_mixin_fstring" {
-    var wrapper = MixinWrapper { value: 88 };
-    var result = MixinResult::Ok(wrapper);
+    let wrapper = MixinWrapper { value: 88 };
+    let result = MixinResult::Ok(wrapper);
     
     match result {
         MixinResult::Ok(w) => {
@@ -68,8 +68,8 @@ test "match_binding_mixin_fstring" {
 
 // Test match binding with ref - mixin composition
 test "match_binding_ref_mixin" {
-    var wrapper = MixinWrapper { value: 33 };
-    var result = MixinResult::Ok(wrapper);
+    let wrapper = MixinWrapper { value: 33 };
+    let result = MixinResult::Ok(wrapper);
     
     match result {
         MixinResult::Ok(ref w) => {
@@ -90,9 +90,9 @@ test "match_binding_ref_mixin" {
 
 // Test match binding with ref - named composition
 test "match_binding_ref_named" {
-    var inner = Inner { value: 55 };
-    var wrapper = NamedWrapper { inner: inner };
-    var result = NamedResult::Ok(wrapper);
+    let inner = Inner { value: 55 };
+    let wrapper = NamedWrapper { inner: inner };
+    let result = NamedResult::Ok(wrapper);
     
     match result {
         NamedResult::Ok(ref w) => {

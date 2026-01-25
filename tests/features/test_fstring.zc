@@ -2,7 +2,7 @@ import "tests/features/_fstring_mod.zc" as Mod;
 
 test "alias namespace fstring" {
     // Tests that {Mod::get_val()} is parsed correctly (Mod_get_val)
-    var res = f"{Mod::get_val()}";
+    let res = f"{Mod::get_val()}";
     assert(res == "42", "Import namespace in f-string failed");
     
     // Check local string formatting via println (compile check)
@@ -15,7 +15,7 @@ test "alias C header fstring" {
     // Tests that {Lib::lib_val()} resolves to lib_val() (no mangling/prefix)
     // parser_expr.c strips alias for C headers.
     // parser_utils.c rewrite_expr_methods needs to do the same.
-    var res = f"{Lib::lib_val()}";
+    let res = f"{Lib::lib_val()}";
     assert(res == "99", "C header namespace in f-string failed");
     
     // Verify println (rewrite_expr_methods path)

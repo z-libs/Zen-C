@@ -1,7 +1,7 @@
 //> cflags: -masm=intel
 
 fn add_five_intel(x: int) -> int {
-    var result: int;
+    let result: int;
     asm {
         "mov {result}, {x}"
         "add {result}, 5"
@@ -12,7 +12,7 @@ fn add_five_intel(x: int) -> int {
 }
 
 test "test_intel" {
-    var val = add_five_intel(10);
+    let val = add_five_intel(10);
     "Sum Intel: 10 + 5 = {val}";
 
     match val {

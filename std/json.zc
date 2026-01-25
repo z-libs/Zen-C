@@ -191,33 +191,33 @@ impl JsonValue {
     }
     
     fn array() -> JsonValue {
-        var v: Vec<JsonValue*>* = malloc(sizeof(Vec_JsonValuePtr));
+        let v: Vec<JsonValue*>* = malloc(sizeof(Vec_JsonValuePtr));
         *v = Vec_JsonValuePtr::new();
         return JsonValue { kind: JsonType::JSON_ARRAY(), string_val: 0, number_val: 0, bool_val: false, array_val: v, object_val: 0 };
     }
     
     fn object() -> JsonValue {
-        var m: Map<JsonValue*>* = malloc(sizeof(Map_JsonValuePtr));
+        let m: Map<JsonValue*>* = malloc(sizeof(Map_JsonValuePtr));
         *m = Map_JsonValuePtr::new();
         return JsonValue { kind: JsonType::JSON_OBJECT(), string_val: 0, number_val: 0, bool_val: false, array_val: 0, object_val: m };
     }
     
     fn push(self, val: JsonValue) {
         if (self.kind.tag != JsonType::JSON_ARRAY().tag) return;
-        var p: JsonValue* = malloc(sizeof(JsonValue));
+        let p: JsonValue* = malloc(sizeof(JsonValue));
         *p = val;
         self.array_val.push(p);
     }
     
     fn set(self, key: char*, val: JsonValue) {
         if (self.kind.tag != JsonType::JSON_OBJECT().tag) return;
-        var p: JsonValue* = malloc(sizeof(JsonValue));
+        let p: JsonValue* = malloc(sizeof(JsonValue));
         *p = val;
         self.object_val.put(key, p);
     }
     
     fn parse(json: char*) -> Result<JsonValue*> {
-        var result: JsonValue* = _json_do_parse(json);
+        let result: JsonValue* = _json_do_parse(json);
         if (result != NULL) {
             return Result<JsonValue*>::Ok(result);
         }
@@ -227,9 +227,9 @@ impl JsonValue {
     fn free(self) {
         if (self.kind.tag == JsonType::JSON_STRING().tag) free(self.string_val);
         if (self.kind.tag == JsonType::JSON_ARRAY().tag) {
-             var v: Vec<JsonValue*>* = self.array_val;
-             for (var i: usize = 0; i < v.length(); i = i + 1) {
-                 var item: JsonValue* = v.get(i);
+             let v: Vec<JsonValue*>* = self.array_val;
+             for (let i: usize = 0; i < v.length(); i = i + 1) {
+                 let item: JsonValue* = v.get(i);
                  item.free();
                  free(item);
              }
@@ -238,10 +238,10 @@ impl JsonValue {
              free(v);
         }
         if (self.kind.tag == JsonType::JSON_OBJECT().tag) {
-             var m: Map<JsonValue*>* = self.object_val;
-             for (var i: usize = 0; i < m.capacity(); i = i + 1) {
+             let m: Map<JsonValue*>* = self.object_val;
+             for (let i: usize = 0; i < m.capacity(); i = i + 1) {
                  if (m.is_slot_occupied(i)) {
-                     var child: JsonValue* = m.val_at(i);
+                     let child: JsonValue* = m.val_at(i);
                      child.free();
                      free(child);
                  }

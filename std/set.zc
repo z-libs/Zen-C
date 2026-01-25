@@ -29,10 +29,10 @@ impl Set<T> {
     }
 
     fn _resize(self, new_cap: usize) {
-        var old_data = self.data;
-        var old_occupied = self.occupied;
-        var old_deleted = self.deleted;
-        var old_cap = self.cap;
+        let old_data = self.data;
+        let old_occupied = self.occupied;
+        let old_deleted = self.deleted;
+        let old_cap = self.cap;
 
         self.cap = new_cap;
         self.data = calloc(new_cap, sizeof(T));
@@ -40,7 +40,7 @@ impl Set<T> {
         self.deleted = calloc(new_cap, sizeof(bool));
         self.len = 0;
 
-        for (var i: usize = 0; i < old_cap; i = i + 1) {
+        for (let i: usize = 0; i < old_cap; i = i + 1) {
             if (old_occupied[i] && !old_deleted[i]) {
                 self.add(old_data[i]);
             }
@@ -57,13 +57,13 @@ impl Set<T> {
         }
 
         if (self.len >= self.cap * 0.75) {
-            var new_cap = self.cap * 2;
+            let new_cap = self.cap * 2;
             if (new_cap < 8) new_cap = 8;
             self._resize(new_cap);
         }
 
-        var hash = _set_hash(&val, sizeof(T));
-        var idx = hash % self.cap;
+        let hash = _set_hash(&val, sizeof(T));
+        let idx = hash % self.cap;
 
         while (self.occupied[idx] && !self.deleted[idx]) {
             idx = (idx + 1) % self.cap;
@@ -81,9 +81,9 @@ impl Set<T> {
             return false;
         }
 
-        var hash = _set_hash(&val, sizeof(T));
-        var idx = hash % self.cap;
-        var start_idx = idx;
+        let hash = _set_hash(&val, sizeof(T));
+        let idx = hash % self.cap;
+        let start_idx = idx;
 
         while (self.occupied[idx]) {
             if (!self.deleted[idx] && self.data[idx] == val) {
@@ -101,9 +101,9 @@ impl Set<T> {
     fn remove(self, val: T) -> bool {
         if (self.cap == 0) return false;
 
-        var hash = _set_hash(&val, sizeof(T));
-        var idx = hash % self.cap;
-        var start_idx = idx;
+        let hash = _set_hash(&val, sizeof(T));
+        let idx = hash % self.cap;
+        let start_idx = idx;
 
         while (self.occupied[idx]) {
             if (!self.deleted[idx] && self.data[idx] == val) {
@@ -155,7 +155,7 @@ impl Set<T> {
         return Option<T>::Some(self.data[idx]);
     }
     fn clear(self) {
-        for (var i: usize = 0; i < self.cap; i = i + 1) {
+        for (let i: usize = 0; i < self.cap; i = i + 1) {
             self.occupied[i] = false;
             self.deleted[i] = false;
         }

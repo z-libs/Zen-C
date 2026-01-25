@@ -2,34 +2,34 @@ import "std.zc"
 import "std/env.zc"
 
 test "test_std_env_set_and_get" {
-    var res = Env::set("TEST1", "ok1");
+    let res = Env::set("TEST1", "ok1");
     assert(res == EnvRes::OK(), "result should be EnvRes::OK()");
 
-    var env_var = Env::get("TEST1");
+    let env_var = Env::get("TEST1");
     assert(env_var.is_some(), "env_var should have a value");
     assert(env_var.unwrap() == "ok1", "env_var should be ok1");
 }
 
 test "test_std_env_set_with_overwrite" {
-    var res = Env::set("TEST2", "ok2");
+    let res = Env::set("TEST2", "ok2");
     assert(res == EnvRes::OK(), "res should be EnvRes::OK()");
 
-    var res2 = Env::set("TEST2", "ok2-ovwr");
+    let res2 = Env::set("TEST2", "ok2-ovwr");
     assert(res2 == EnvRes::OK(), "res2 should be EnvRes::OK()");
 
-    var env_var = Env::get("TEST2");
+    let env_var = Env::get("TEST2");
     assert(env_var.is_some(), "env_var should have a value");
     assert(env_var.unwrap() == "ok2-ovwr", "env_var should be ok2-ovwr");
 }
 
 test "test_std_env_get_dup" {
-    var res = Env::set("TEST3", "ok3");
+    let res = Env::set("TEST3", "ok3");
     assert(res == EnvRes::OK(), "result should be EnvRes::OK()");
 
-    var env_var = Env::get_dup("TEST3");
+    let env_var = Env::get_dup("TEST3");
     assert(env_var.is_some(), "env_var should have a value");
 
-    var value = env_var.unwrap();
+    let value = env_var.unwrap();
     assert(value.c_str() == "ok3", "value should be ok3");
 
     value.free();
@@ -38,24 +38,24 @@ test "test_std_env_get_dup" {
 }
 
 test "test_std_env_get_and_get_dup_with_invalid" {
-    var env_var = Env::get("TEST4");
+    let env_var = Env::get("TEST4");
     assert(env_var.is_none(), "env_var should not have a value");
 
-    var env_var2 = Env::get_dup("TEST4");
+    let env_var2 = Env::get_dup("TEST4");
     assert(env_var2.is_none(), "env_var2 should not have a value");
 }
 
 test "test_std_env_unset" {
-    var res = Env::set("TEST5", "ok5");
+    let res = Env::set("TEST5", "ok5");
     assert(res == EnvRes::OK(), "res should be EnvRes::OK()");
 
-    var env_var = Env::get("TEST5");
+    let env_var = Env::get("TEST5");
     assert(env_var.is_some(), "env_var should have a value");
     assert(env_var.unwrap() == "ok5", "env_var should be ok5");
 
-    var res2 = Env::unset("TEST5");
+    let res2 = Env::unset("TEST5");
     assert(res2 == EnvRes::OK(), "res2 should be EnvRes::OK()");
 
-    var env_var2 = Env::get("TEST5");
+    let env_var2 = Env::get("TEST5");
     assert(env_var2.is_none(), "env_var2 should not have a value");
 }

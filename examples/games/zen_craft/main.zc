@@ -30,12 +30,12 @@ extern fn GenImagePerlinNoise(width: int, height: int, offsetX: int, offsetY: in
 
 impl Chunk {
     static fn new(x: int, z: int) -> Chunk {
-        var c: Chunk;
+        let c: Chunk;
         c.x = x;
         c.z = z;
 
         // Generate Heightmap
-        var heights: int[16][16];
+        let heights: int[16][16];
 
         raw {
             Image noise = GenImagePerlinNoise(16, 16, x * 16, z * 16, 0.5f);
@@ -62,7 +62,7 @@ impl Chunk {
 
         for cx in 0..16 {
             for cz in 0..16 {
-                var h = heights[cx][cz];
+                let h = heights[cx][cz];
                 for cy in 0..16 {
                     if cy < h - 1 {
                         c.blocks[cx][cy][cz] = BLOCK_STONE; // Stone base
@@ -83,11 +83,11 @@ impl Chunk {
         for x in 0..16 {
             for y in 0..16 {
                 for z in 0..16 {
-                    var btype = self.blocks[x][y][z];
+                    let btype = self.blocks[x][y][z];
                     if btype != BLOCK_AIR {
-                        var _world_x = (float)(self.x * 16 + x);
-                        var _world_y = (float)y;
-                        var _world_z = (float)(self.z * 16 + z);
+                        let _world_x = (float)(self.x * 16 + x);
+                        let _world_y = (float)y;
+                        let _world_z = (float)(self.z * 16 + z);
                         match btype {
                             BLOCK_DIRT => rl::DrawModel(model_dirt, rl::Vector3{x: _world_x + 0.5, y: _world_y + 0.5, z: _world_z + 0.5}, 1.0, rl::WHITE),
                             BLOCK_STONE => rl::DrawModel(model_stone, rl::Vector3{x: _world_x + 0.5, y: _world_y + 0.5, z: _world_z + 0.5}, 1.0, rl::WHITE),
@@ -109,12 +109,12 @@ fn get_block(chunks: Chunk*, num_chunks: int, x: int, y: int, z: int) -> int {
     if z < 0 || z >= 32 { return BLOCK_AIR; }
 
     // Determine chunk coordinates
-    var cx = x / 16;
-    var cz = z / 16;
+    let cx = x / 16;
+    let cz = z / 16;
 
     // Determine local block coordinates
-    var lx = x % 16;
-    var lz = z % 16;
+    let lx = x % 16;
+    let lz = z % 16;
 
     // Find the right chunk
     for i in 0..num_chunks {
@@ -129,10 +129,10 @@ fn get_block(chunks: Chunk*, num_chunks: int, x: int, y: int, z: int) -> int {
 fn set_block(chunks: Chunk*, num_chunks: int, x: int, y: int, z: int, type: int) {
     if y < 0 || y >= 16 { return; }
 
-    var cx = x / 16;
-    var cz = z / 16;
-    var lx = x % 16;
-    var lz = z % 16;
+    let cx = x / 16;
+    let cz = z / 16;
+    let lx = x % 16;
+    let lz = z % 16;
 
     for i in 0..num_chunks {
         if chunks[i].x == cx && chunks[i].z == cz {
@@ -153,19 +153,19 @@ struct RaycastHit {
 }
 
 fn raycast(chunks: Chunk*, num_chunks: int, ox: float, oy: float, oz: float, dx: float, dy: float, dz: float, max_dist: float) -> RaycastHit {
-    var r: RaycastHit;
+    let r: RaycastHit;
     r.hit = 0;
 
-    var x = ox;
-    var y = oy;
-    var z = oz;
+    let x = ox;
+    let y = oy;
+    let z = oz;
 
-    var step = 0.05;
-    var dist = 0.0;
+    let step = 0.05;
+    let dist = 0.0;
 
-    var last_x = (int)floor(x);
-    var last_y = (int)floor(y);
-    var last_z = (int)floor(z);
+    let last_x = (int)floor(x);
+    let last_y = (int)floor(y);
+    let last_z = (int)floor(z);
 
     while dist < max_dist {
         x += dx * step;
@@ -173,9 +173,9 @@ fn raycast(chunks: Chunk*, num_chunks: int, ox: float, oy: float, oz: float, dx:
         z += dz * step;
         dist += step;
 
-        var ix = (int)floor(x);
-        var iy = (int)floor(y);
-        var iz = (int)floor(z);
+        let ix = (int)floor(x);
+        let iy = (int)floor(y);
+        let iz = (int)floor(z);
 
         if get_block(chunks, num_chunks, ix, iy, iz) != BLOCK_AIR {
             r.hit = 1;
@@ -210,14 +210,14 @@ fn raycast(chunks: Chunk*, num_chunks: int, ox: float, oy: float, oz: float, dx:
 extern fn DrawCubeTexture(texture: rl::Texture2D, position: rl::Vector3, width: float, height: float, length: float, color: rl::Color);
 
 // Textures & Models
-var model_dirt: rl::Model;
-var model_grass: rl::Model;
-var model_stone: rl::Model;
-var tex_sun: rl::Texture2D;
-var tex_moon: rl::Texture2D;
+let model_dirt: rl::Model;
+let model_grass: rl::Model;
+let model_stone: rl::Model;
+let tex_sun: rl::Texture2D;
+let tex_moon: rl::Texture2D;
 
 fn load_texture_from_memory(_data: char*, _len: int) -> rl::Texture2D {
-    var tex: rl::Texture2D;
+    let tex: rl::Texture2D;
     raw {
         Image img = LoadImageFromMemory(".png", (unsigned char*)_data, _len);
         tex = LoadTextureFromImage(img);
@@ -227,20 +227,20 @@ fn load_texture_from_memory(_data: char*, _len: int) -> rl::Texture2D {
 }
 
 fn init_textures() {
-    var dirt_data = embed "examples/games/zen_craft/assets/dirt.png";
-    var grass_data = embed "examples/games/zen_craft/assets/grass_side.png";
-    var stone_data = embed "examples/games/zen_craft/assets/stone.png";
-    var sun_data = embed "examples/games/zen_craft/assets/sun.png";
-    var moon_data = embed "examples/games/zen_craft/assets/moon.png";
+    let dirt_data = embed "examples/games/zen_craft/assets/dirt.png";
+    let grass_data = embed "examples/games/zen_craft/assets/grass_side.png";
+    let stone_data = embed "examples/games/zen_craft/assets/stone.png";
+    let sun_data = embed "examples/games/zen_craft/assets/sun.png";
+    let moon_data = embed "examples/games/zen_craft/assets/moon.png";
 
-    var _tex_dirt = load_texture_from_memory(dirt_data.data, dirt_data.len);
-    var _tex_grass = load_texture_from_memory(grass_data.data, grass_data.len);
-    var _tex_stone = load_texture_from_memory(stone_data.data, stone_data.len);
+    let _tex_dirt = load_texture_from_memory(dirt_data.data, dirt_data.len);
+    let _tex_grass = load_texture_from_memory(grass_data.data, grass_data.len);
+    let _tex_stone = load_texture_from_memory(stone_data.data, stone_data.len);
     tex_sun = load_texture_from_memory(sun_data.data, sun_data.len);
     tex_moon = load_texture_from_memory(moon_data.data, moon_data.len);
 
     // Create Models
-    var mesh = rl::GenMeshCube(1.0, 1.0, 1.0);
+    let mesh = rl::GenMeshCube(1.0, 1.0, 1.0);
     model_dirt = rl::LoadModelFromMesh(mesh);
     model_grass = rl::LoadModelFromMesh(mesh);
     model_stone = rl::LoadModelFromMesh(mesh);
@@ -256,7 +256,7 @@ fn draw_sky(camera: rl::Camera3D) {
     // Disable Depth Mask to draw sky behind everything
     rl::BeginMode3D(camera);
         // Simple Fixed Sun Position or billboard
-        var sun_pos = rl::Vector3{x: camera.position.x + 20.0, y: camera.position.y + 40.0, z: camera.position.z + 20.0};
+        let sun_pos = rl::Vector3{x: camera.position.x + 20.0, y: camera.position.y + 40.0, z: camera.position.z + 20.0};
 
         raw {
             DrawBillboard(camera, tex_sun, sun_pos, 10.0f, WHITE);
@@ -277,12 +277,12 @@ struct Player {
 }
 
 fn check_collision(chunks: Chunk*, num_chunks: int, x: float, y: float, z: float, w: float, h: float) -> int {
-    var min_x = (int)floor(x - w/2.0);
-    var max_x = (int)floor(x + w/2.0);
-    var min_y = (int)floor(y);
-    var max_y = (int)floor(y + h);
-    var min_z = (int)floor(z - w/2.0);
-    var max_z = (int)floor(z + w/2.0);
+    let min_x = (int)floor(x - w/2.0);
+    let max_x = (int)floor(x + w/2.0);
+    let min_y = (int)floor(y);
+    let max_y = (int)floor(y + h);
+    let min_z = (int)floor(z - w/2.0);
+    let max_z = (int)floor(z + w/2.0);
 
     for ix in min_x..max_x+1 {
         for iy in min_y..max_y+1 {
@@ -298,7 +298,7 @@ fn check_collision(chunks: Chunk*, num_chunks: int, x: float, y: float, z: float
 
 impl Player {
     static fn new(x: float, y: float, z: float) -> Player {
-        var p: Player;
+        let p: Player;
         p.x = x;
         p.y = y;
         p.z = z;
@@ -320,7 +320,7 @@ impl Player {
 
     fn update(self, chunks: Chunk*, num_chunks: int, dt: float) {
         // Mouse look
-        var mouse_delta = rl::GetMouseDelta();
+        let mouse_delta = rl::GetMouseDelta();
         self.yaw += mouse_delta.x * 0.003;
         self.pitch += mouse_delta.y * 0.003;
 
@@ -328,22 +328,22 @@ impl Player {
         if self.pitch < -1.5 { self.pitch = -1.5; }
 
         // Movement input
-        var dx = 0.0;
-        var dz = 0.0;
+        let dx = 0.0;
+        let dz = 0.0;
         if rl::IsKeyDown(rl::KEY_W) { dx += 1.0; }
         if rl::IsKeyDown(rl::KEY_S) { dx -= 1.0; }
         if rl::IsKeyDown(rl::KEY_A) { dz -= 1.0; }
         if rl::IsKeyDown(rl::KEY_D) { dz += 1.0; }
 
-        var fx = cos(self.yaw);
-        var fz = sin(self.yaw);
-        var rx = -sin(self.yaw);
-        var rz = cos(self.yaw);
+        let fx = cos(self.yaw);
+        let fz = sin(self.yaw);
+        let rx = -sin(self.yaw);
+        let rz = cos(self.yaw);
 
-        var move_x = fx * dx + rx * dz;
-        var move_z = fz * dx + rz * dz;
+        let move_x = fx * dx + rx * dz;
+        let move_z = fz * dx + rz * dz;
 
-        var mlen = sqrt(move_x*move_x + move_z*move_z);
+        let mlen = sqrt(move_x*move_x + move_z*move_z);
         if mlen > 0.001 {
             move_x /= mlen;
             move_z /= mlen;
@@ -365,8 +365,8 @@ impl Player {
         }
 
         // Physics integration (Separate Axes)
-        var box_w = 0.6;
-        var box_h = 1.8;
+        let box_w = 0.6;
+        let box_h = 1.8;
 
         // X axis
         self.x += self.vx * dt;
@@ -396,9 +396,9 @@ impl Player {
         }
 
         // Sync Camera
-        var view_x = cos(self.yaw) * cos(self.pitch);
-        var view_z = sin(self.yaw) * cos(self.pitch);
-        var view_y = -sin(self.pitch);
+        let view_x = cos(self.yaw) * cos(self.pitch);
+        let view_z = sin(self.yaw) * cos(self.pitch);
+        let view_y = -sin(self.pitch);
 
         self.camera.position.x = self.x;
         self.camera.position.y = self.y + 1.6;
@@ -421,11 +421,11 @@ fn main() {
     init_textures();
 
     // Initialize Player
-    var p = Player::new(10.0, 10.0, 10.0);
-    var selected_block = BLOCK_STONE;
+    let p = Player::new(10.0, 10.0, 10.0);
+    let selected_block = BLOCK_STONE;
 
     // Generate Chunks
-    var chunks: Chunk[4];
+    let chunks: Chunk[4];
     chunks[0] = Chunk::new(0, 0);
     chunks[1] = Chunk::new(1, 0);
     chunks[2] = Chunk::new(0, 1);
@@ -434,7 +434,7 @@ fn main() {
     rl::DisableCursor(); // Capture mouse
 
     while !rl::WindowShouldClose() {
-        var dt: float = rl::GetFrameTime();
+        let dt: float = rl::GetFrameTime();
         (&p).update(&chunks[0], 4, dt);
 
         // Block selection input
@@ -452,25 +452,25 @@ fn main() {
 
         // Render chunks
         for i in 0..4 {
-            var c: Chunk* = &chunks[i];
+            let c: Chunk* = &chunks[i];
             c.draw();
         }
 
         // Block interaction
-        var screen_center = rl::Vector2{
+        let screen_center = rl::Vector2{
             x: (float)rl::GetScreenWidth() / 2.0,
             y: (float)rl::GetScreenHeight() / 2.0
         };
-        var pick_ray = rl::GetScreenToWorldRay(screen_center, p.camera);
+        let pick_ray = rl::GetScreenToWorldRay(screen_center, p.camera);
 
-        var hit = raycast(&chunks[0], 4, pick_ray.position.x, pick_ray.position.y, pick_ray.position.z, 
+        let hit = raycast(&chunks[0], 4, pick_ray.position.x, pick_ray.position.y, pick_ray.position.z, 
                           pick_ray.direction.x, pick_ray.direction.y, pick_ray.direction.z, 5.0);
 
         if hit.hit != 0 {
             // Draw selection
-            var hx = (float)hit.x;
-            var hy = (float)hit.y;
-            var hz = (float)hit.z;
+            let hx = (float)hit.x;
+            let hy = (float)hit.y;
+            let hz = (float)hit.z;
 
             // Draw slight offset wireframe
             rl::DrawCubeWires(rl::Vector3{x: hx + 0.5, y: hy + 0.5, z: hz + 0.5}, 1.01, 1.01, 1.01, rl::BLACK);
@@ -480,14 +480,14 @@ fn main() {
                 set_block(&chunks[0], 4, hit.x, hit.y, hit.z, BLOCK_AIR);
             }
             else if rl::IsMouseButtonPressed(rl::MOUSE_BUTTON_RIGHT) {
-                var nx = hit.x + hit.face_x;
-                var ny = hit.y + hit.face_y;
-                var nz = hit.z + hit.face_z;
+                let nx = hit.x + hit.face_x;
+                let ny = hit.y + hit.face_y;
+                let nz = hit.z + hit.face_z;
 
                 // Don't place inside player (Simple check)
-                var dist_x = p.x - ((float)nx + 0.5);
-                var dist_y = p.y + 1.6 - ((float)ny + 0.5); // Eye pos vs block center
-                var dist_z = p.z - ((float)nz + 0.5);
+                let dist_x = p.x - ((float)nx + 0.5);
+                let dist_y = p.y + 1.6 - ((float)ny + 0.5); // Eye pos vs block center
+                let dist_z = p.z - ((float)nz + 0.5);
                 if (dist_x*dist_x + dist_y*dist_y + dist_z*dist_z) > 2.0 {
                      set_block(&chunks[0], 4, nx, ny, nz, selected_block);
                 }
@@ -497,8 +497,8 @@ fn main() {
         rl::EndMode3D();
 
         // Draw HUD
-        var sw = rl::GetScreenWidth();
-        var sh = rl::GetScreenHeight();
+        let sw = rl::GetScreenWidth();
+        let sh = rl::GetScreenHeight();
         rl::DrawRectangle(sw/2 - 5, sh/2 - 1, 10, 2, rl::RED); // Horizontal
         rl::DrawRectangle(sw/2 - 1, sh/2 - 5, 2, 10, rl::RED); // Vertical
 

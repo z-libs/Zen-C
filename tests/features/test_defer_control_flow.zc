@@ -1,6 +1,6 @@
 
 test "defer_runs_on_break" {
-    var result = 0;
+    let result = 0;
     
     for i in 0..5 {
         defer { result = result + 1; }
@@ -14,7 +14,7 @@ test "defer_runs_on_break" {
 }
 
 test "defer_runs_on_continue" {
-    var result = 0;
+    let result = 0;
     
     for i in 0..5 {
         defer { result = result + 1; }
@@ -28,7 +28,7 @@ test "defer_runs_on_continue" {
 }
 
 fn early_return(x: int) -> int {
-    var side_effect = 0;
+    let side_effect = 0;
     defer { side_effect = 42; }
     
     if x > 0 {
@@ -39,12 +39,12 @@ fn early_return(x: int) -> int {
 }
 
 test "defer_runs_on_return" {
-    var result = early_return(10);
+    let result = early_return(10);
     assert(result == 10, "early return should work with defer");
 }
 
 test "defer_lifo_order" {
-    var result = 0;
+    let result = 0;
     
     for i in 0..2 {
         defer { result = result * 10 + 1; }
@@ -59,8 +59,8 @@ test "defer_lifo_order" {
 }
 
 test "nested_loops_defer" {
-    var outer_count = 0;
-    var inner_count = 0;
+    let outer_count = 0;
+    let inner_count = 0;
     
     for i in 0..3 {
         defer { outer_count = outer_count + 1; }

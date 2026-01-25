@@ -2,14 +2,14 @@ import "std/map.zc"
 import "std/string.zc"
 
 test "map_iterator" {
-    var m = Map<int>::new();
+    let m = Map<int>::new();
     
     m.put("one", 1);
     m.put("two", 2);
     m.put("three", 3);
     
-    var count = 0;
-    var sum = 0;
+    let count = 0;
+    let sum = 0;
     
     for entry in m {
         count = count + 1;

@@ -31,8 +31,8 @@ fn pick_char(iter: int, max_iter: int, edge_chars: char[], edge_count: int) -> c
     if (iter >= max_iter) { return ' '; }
     if (iter <= 0) { return edge_chars[0]; }
 
-    var t: float = ((float)iter) / ((float)max_iter);
-    var idx: int = (int)(t * ((float)(edge_count - 1)));
+    let t: float = ((float)iter) / ((float)max_iter);
+    let idx: int = (int)(t * ((float)(edge_count - 1)));
 
     if (idx < 0) { idx = 0; }
     if (idx >= edge_count) { idx = edge_count - 1; }
@@ -41,36 +41,36 @@ fn pick_char(iter: int, max_iter: int, edge_chars: char[], edge_count: int) -> c
 }
 
 fn main() {
-    var width: int = 120;
-    var height: int = 40;
-    var max_iter: int = 200;
+    let width: int = 120;
+    let height: int = 40;
+    let max_iter: int = 200;
 
-    var edge_chars: char[12] = [ '#', '@', '%', '8', '&', '*', '+', '=', '-', ':', '.', ',' ];
-    var edge_count: int = 12;
+    let edge_chars: char[12] = [ '#', '@', '%', '8', '&', '*', '+', '=', '-', ':', '.', ',' ];
+    let edge_count: int = 12;
 
-    var min_re: float = -2.2;
-    var max_re: float =  1.0;
-    var min_im: float = -1.2;
-    var max_im: float =  1.2;
+    let min_re: float = -2.2;
+    let max_re: float =  1.0;
+    let min_im: float = -1.2;
+    let max_im: float =  1.2;
 
     for y in 0..height {
-        var im: float =
+        let im: float =
             max_im - (max_im - min_im) * ( ((float)y) / ((float)(height - 1)) );
 
         for x in 0..width {
-            var re: float =
+            let re: float =
                 min_re + (max_re - min_re) * ( ((float)x) / ((float)(width - 1)) );
 
-            var c: Complex = complex_make(re, im);
-            var z: Complex = complex_make(0.0, 0.0);
+            let c: Complex = complex_make(re, im);
+            let z: Complex = complex_make(0.0, 0.0);
 
-            var iter: int = 0;
+            let iter: int = 0;
             while (iter < max_iter and complex_abs2(z) <= 4.0) {
                 z = complex_add(complex_mul(z, z), c);
                 iter += 1;
             }
 
-            var pixel = pick_char(iter, max_iter, edge_chars, edge_count);
+            let pixel = pick_char(iter, max_iter, edge_chars, edge_count);
             print "{pixel}";
         }
         print "\n";

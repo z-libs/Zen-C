@@ -207,17 +207,43 @@ char *patch_self_args(const char *args, const char *struct_name)
     {
         return NULL;
     }
-    char *new_args = xmalloc(strlen(args) + strlen(struct_name) + 10);
+
+    // Sanitize struct name for C usage (Vec<T> -> Vec_T)
+    char *safe_name = xmalloc(strlen(struct_name) + 1);
+    int j = 0;
+    for (int i = 0; struct_name[i]; i++)
+    {
+        if (struct_name[i] == '<')
+        {
+            safe_name[j++] = '_';
+        }
+        else if (struct_name[i] == '>')
+        {
+            // skip
+        }
+        else if (struct_name[i] == ' ')
+        {
+            // skip
+        }
+        else
+        {
+            safe_name[j++] = struct_name[i];
+        }
+    }
+    safe_name[j] = 0;
+
+    char *new_args = xmalloc(strlen(args) + strlen(safe_name) + 10);
 
     // Check if it starts with "void* self"
     if (strncmp(args, "void* self", 10) == 0)
     {
-        sprintf(new_args, "%s* self%s", struct_name, args + 10);
+        sprintf(new_args, "%s* self%s", safe_name, args + 10);
     }
     else
     {
         strcpy(new_args, args);
     }
+    free(safe_name);
     return new_args;
 }
 // Helper for Value-Returning Defer
@@ -562,17 +588,17 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
             // Fallbacks for literals
             else if (init->type == NODE_EXPR_LITERAL)
             {
-                if (init->literal.type_kind == 0)
+                if (init->literal.type_kind == LITERAL_INT)
                 {
                     type = xstrdup("int");
                     type_obj = type_new(TYPE_INT);
                 }
-                else if (init->literal.type_kind == 1)
+                else if (init->literal.type_kind == LITERAL_FLOAT)
                 {
                     type = xstrdup("float");
                     type_obj = type_new(TYPE_FLOAT);
                 }
-                else if (init->literal.type_kind == 2)
+                else if (init->literal.type_kind == LITERAL_STRING)
                 {
                     type = xstrdup("string");
                     type_obj = type_new(TYPE_STRING);
@@ -596,7 +622,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
     add_symbol_with_token(ctx, name, type, type_obj, name_tok);
 
     // NEW: Capture Const Integer Values
-    if (init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == 0)
+    if (init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == LITERAL_INT)
     {
         Symbol *s = find_symbol_entry(ctx, name); // Helper to find the struct
         if (s)

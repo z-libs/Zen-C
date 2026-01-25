@@ -4,17 +4,25 @@ fn compute(op: fn(I32, I32) -> I32, a: I32, b: I32) -> I32 {
 }
 
 test "test_lambda_arrow" {
-    var doubler = x -> x * 2;
-    var res1 = doubler(5);
+    let doubler = x -> x * 2;
+    let res1 = doubler(5);
     "doubler(5) = {res1}";
     if res1 != 10 { exit(1); }
 
-    var add = (x, y) -> x + y;
-    var res2 = add(10, 20);
+    let add = (x, y) -> x + y;
+    let res2 = add(10, 20);
     "add(10, 20) = {res2}";
     if res2 != 30 { exit(1); }
     
-    var res3 = compute((a, b) -> a * b, 3, 4);
+    let res3 = compute((a, b) -> a * b, 3, 4);
     "compute((a, b) -> a * b, 3, 4) = {res3}";
     if res3 != 12 { exit(1); }
+}
+
+test "lambda_inference_repro" {
+    let dble = x -> x * 2.0;
+    let res = dble(9.0);
+    if res != 18.0 {
+        exit(1);
+    }
 }

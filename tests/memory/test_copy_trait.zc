@@ -13,8 +13,8 @@ struct Mover {
 }
 
 test "copy_trait" {
-    var p1 = Point { x: 10, y: 20 };
-    var p2 = p1; // Copy, not move
+    let p1 = Point { x: 10, y: 20 };
+    let p2 = p1; // Copy, not move
     
     // Both should be valid
     assert(p1.x == 10, "p1 invalid after copy");
@@ -29,9 +29,9 @@ test "copy_trait" {
 }
 
 test "move_default" {
-    var m1 = Mover { val: 1 };
-    var m2 = m1; // Moved
+    let m1 = Mover { val: 1 };
+    let m2 = m1; // Moved
     
     // Uncommenting this should cause compile error
-    // var m3 = m1; 
+    // let m3 = m1; 
 }

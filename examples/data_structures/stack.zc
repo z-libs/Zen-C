@@ -43,7 +43,7 @@ impl Stack<T> {
 
 fn main() {
     "[Integer Stack]";
-    var int_stack = Stack<int>::new();
+    let int_stack = Stack<int>::new();
     defer int_stack.free();   
  
     "Pushing: 10, 20, 30";
@@ -52,19 +52,19 @@ fn main() {
     int_stack.push(30);
     
     "Size: {int_stack.size()}";
-    var p = int_stack.peek();
+    let p = int_stack.peek();
     "Peek: {p.unwrap()}";
     
     "Popping: "..;
     while !int_stack.is_empty() {
-        var opt = int_stack.pop();
+        let opt = int_stack.pop();
         "{opt.unwrap()} "..;
     }
     "";
     
     "";
     "[String Stack]";
-    var str_stack = Stack<String>::new();
+    let str_stack = Stack<String>::new();
     defer str_stack.free();   
  
     str_stack.push(String::new("First"));
@@ -73,8 +73,8 @@ fn main() {
     
     "Popping: "..;
     while !str_stack.is_empty() {
-        var opt_s = str_stack.pop();
-        var s: String = opt_s.unwrap();
+        let opt_s = str_stack.pop();
+        let s: String = opt_s.unwrap();
         "{s.c_str()} "..;
     }
     "";

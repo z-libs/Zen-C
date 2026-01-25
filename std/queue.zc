@@ -26,15 +26,15 @@ impl Queue<T> {
   }
 
   fn _grow(self) {
-    var new_cap = (self.cap == 0) ? 8 : self.cap * 2;
-    var new_data = malloc(sizeof(T) * new_cap);
+    let new_cap = (self.cap == 0) ? 8 : self.cap * 2;
+    let new_data = malloc(sizeof(T) * new_cap);
     
     if (self.count > 0) {
         if (self.tail > self.head) {
             memcpy(new_data, self.data + self.head, sizeof(T) * self.count);
         } else {
-            var first_part = self.cap - self.head;
-            var second_part = self.tail;
+            let first_part = self.cap - self.head;
+            let second_part = self.tail;
             memcpy(new_data, self.data + self.head, sizeof(T) * first_part);
             memcpy(new_data + first_part, self.data, sizeof(T) * second_part);
         }
@@ -48,7 +48,7 @@ impl Queue<T> {
   }
 
   fn clone(self) -> Queue<T> {
-    var new_queue = Queue<T>::new();
+    let new_queue = Queue<T>::new();
     new_queue.data = malloc(sizeof(T) * self.cap);
     new_queue.cap = self.cap;
     new_queue.head = 0;
@@ -60,8 +60,8 @@ impl Queue<T> {
             memcpy(new_queue.data, self.data + self.head, sizeof(T) * self.count);
         } 
         else {
-            var first_part = self.cap - self.head;
-            var second_part = self.tail;
+            let first_part = self.cap - self.head;
+            let second_part = self.tail;
             memcpy(new_queue.data, self.data + self.head, sizeof(T) * first_part);
             memcpy(new_queue.data + first_part, self.data, sizeof(T) * second_part);
         }
@@ -85,7 +85,7 @@ impl Queue<T> {
       return Option<T>::None();
     }
     
-    var value = self.data[self.head];
+    let value = self.data[self.head];
     self.head = (self.head + 1) % self.cap;
     self.count = self.count - 1;
     

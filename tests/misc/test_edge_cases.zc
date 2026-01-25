@@ -6,8 +6,8 @@ import "std.zc"
 struct Empty {}
 
 fn test_empty_struct() {
-    var e1 = Empty {};
-    var e2 = Empty {};
+    let e1 = Empty {};
+    let e2 = Empty {};
     
     if (!e1.eq(&e2)) {
         println "FAIL: Empty struct eq failed";
@@ -31,9 +31,9 @@ struct ManyFields {
 }
 
 fn test_many_fields() {
-    var m1 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 };
-    var m2 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 };
-    var m3 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 9 }; // h differs
+    let m1 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 };
+    let m2 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 };
+    let m3 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 9 }; // h differs
     
     if (!m1.eq(&m2)) {
         println "FAIL: equal structs not detected as equal";
@@ -55,11 +55,11 @@ struct Point {
 }
 
 fn test_pointer_equality() {
-    var p1 = Point { x: 1, y: 2 };
-    var ptr1: Point* = &p1;
-    var ptr2: Point* = &p1;
-    var p2 = Point { x: 1, y: 2 };
-    var ptr3: Point* = &p2;
+    let p1 = Point { x: 1, y: 2 };
+    let ptr1: Point* = &p1;
+    let ptr2: Point* = &p1;
+    let p2 = Point { x: 1, y: 2 };
+    let ptr3: Point* = &p2;
     
     // Same pointer should be equal
     if (ptr1 != ptr2) {
@@ -78,7 +78,7 @@ fn test_pointer_equality() {
 
 // Very long string
 fn test_long_string() {
-    var s = String::from("This is a very long string that should test the string handling capabilities of the compiler and make sure that buffer allocations are correct and that there are no overflow issues with long strings.");
+    let s = String::from("This is a very long string that should test the string handling capabilities of the compiler and make sure that buffer allocations are correct and that there are no overflow issues with long strings.");
     
     if (s.length() < 100) {
         println "FAIL: long string length incorrect";
@@ -90,7 +90,7 @@ fn test_long_string() {
 
 // Null pointer handling
 fn test_null_pointer() {
-    var ptr: int* = NULL;
+    let ptr: int* = NULL;
     
     if (ptr != NULL) {
         println "FAIL: NULL pointer check failed";
@@ -102,8 +102,8 @@ fn test_null_pointer() {
 
 // Numeric edge cases
 fn test_numeric_edges() {
-    var max_int: int = 2147483647;
-    var min_int: int = -1000000000;
+    let max_int: int = 2147483647;
+    let min_int: int = -1000000000;
     
     if (max_int <= 0) {
         println "FAIL: max_int is wrong";
@@ -120,8 +120,8 @@ fn test_numeric_edges() {
 
 // Boolean operations
 fn test_boolean_ops() {
-    var a = true;
-    var b = false;
+    let a = true;
+    let b = false;
     
     if (!(a && !b)) {
         println "FAIL: boolean AND failed";

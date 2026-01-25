@@ -26,7 +26,7 @@ fn optional_result() -> int {
 
 test "attributes" {
     // This should NOT warn (result used)
-    var x = compute();
+    let x = compute();
     assert(x == 42, "compute() should return 42");
     
     // This should NOT warn (no must_use attribute)
@@ -36,11 +36,11 @@ test "attributes" {
     compute();
     
     // Test inline works
-    var sum = fast_add(1, 2);
+    let sum = fast_add(1, 2);
     assert(sum == 3, "inline add failed");
     
     // Combined attributes
-    var c = combined();
+    let c = combined();
     assert(c == 100, "combined failed");
     
     "Attributes test completed";

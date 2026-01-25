@@ -1,0 +1,27 @@
+
+fn print_msg(msg: char*) {
+    puts(msg);
+}
+
+fn run_callback(cb: fn*(char*), arg: char*) {
+    cb(arg);
+}
+
+fn get_printer() -> fn*(char*) {
+    return print_msg;
+}
+
+test "raw_func_ptr_basic" {
+    run_callback(print_msg, "Hello Raw Ptr");
+}
+
+test "raw_func_ptr_return_explicit" {
+    let p: fn*(char*) = get_printer();
+    p("Returned Ptr Explicit works");
+}
+
+test "fn_ptr_ptr" {
+    let p: fn*(char*) = print_msg;
+    let pp: fn**(char*) = &p;
+    (*pp)("Double Pointer works");
+}

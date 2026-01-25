@@ -14,7 +14,7 @@ fn l_zenc_hello(L: lua_State*) -> int {
 }
 
 fn main() {
-    var L: lua_State* = luaL_newstate();
+    let L: lua_State* = luaL_newstate();
 
     if (!L) return !"Could not initialize LUA.";
 

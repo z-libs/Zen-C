@@ -133,32 +133,48 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
 
         char *pattern = xstrdup(patterns_buf);
         int is_default = (strcmp(pattern, "_") == 0);
-
-        char *binding = NULL;
         int is_destructure = 0;
 
-        int is_ref = 0;
+        // Handle Destructuring: Ok(v) or Rect(w, h)
+        char **bindings = NULL;
+        int *binding_refs = NULL;
+        int binding_count = 0;
 
-        // Handle Destructuring: Ok(v)
-        // (Only allowed if we matched a single pattern, e.g. "Result::Ok(val)")
         if (!is_default && pattern_count == 1 && lexer_peek(l).type == TOK_LPAREN)
         {
             lexer_next(l); // eat (
 
-            // Check for 'ref' keyword
-            if (lexer_peek(l).type == TOK_IDENT && lexer_peek(l).len == 3 &&
-                strncmp(lexer_peek(l).start, "ref", 3) == 0)
+            bindings = xmalloc(sizeof(char *) * 8); // hardcap at 8 for now or realloc
+            binding_refs = xmalloc(sizeof(int) * 8);
+
+            while (1)
             {
-                lexer_next(l); // eat 'ref'
-                is_ref = 1;
+                int is_r = 0;
+                // Check for 'ref' keyword
+                if (lexer_peek(l).type == TOK_IDENT && lexer_peek(l).len == 3 &&
+                    strncmp(lexer_peek(l).start, "ref", 3) == 0)
+                {
+                    lexer_next(l); // eat 'ref'
+                    is_r = 1;
+                }
+
+                Token b = lexer_next(l);
+                if (b.type != TOK_IDENT)
+                {
+                    zpanic_at(b, "Expected variable name in pattern");
+                }
+                bindings[binding_count] = token_strdup(b);
+                binding_refs[binding_count] = is_r;
+                binding_count++;
+
+                if (lexer_peek(l).type == TOK_COMMA)
+                {
+                    lexer_next(l);
+                    continue;
+                }
+                break;
             }
 
-            Token b = lexer_next(l);
-            if (b.type != TOK_IDENT)
-            {
-                zpanic_at(b, "Expected variable name in pattern");
-            }
-            binding = token_strdup(b);
             if (lexer_next(l).type != TOK_RPAREN)
             {
                 zpanic_at(lexer_peek(l), "Expected )");
@@ -166,7 +182,7 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
             is_destructure = 1;
         }
 
-        // --- 3. Parse Guard (if condition) ---
+        // Parse Guard (if condition)
         ASTNode *guard = NULL;
         if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "if", 2) == 0)
         {
@@ -182,18 +198,21 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
 
         // Create scope for the case to hold the binding
         enter_scope(ctx);
-        if (binding)
+        if (binding_count > 0)
         {
             // Try to infer binding type from enum variant payload
-            char *binding_type = is_ref ? "void*" : "unknown";
-            Type *binding_type_info = NULL;
-
             // Look up the enum variant to get its payload type
             EnumVariantReg *vreg = find_enum_variant(ctx, pattern);
+
+            ASTNode *payload_node_field = NULL;
+            int is_tuple_payload = 0;
+            Type *payload_type = NULL;
+            ASTNode *enum_def = NULL;
+
             if (vreg)
             {
                 // Find the enum definition
-                ASTNode *enum_def = find_struct_def(ctx, vreg->enum_name);
+                enum_def = find_struct_def(ctx, vreg->enum_name);
                 if (enum_def && enum_def->type == NODE_ENUM)
                 {
                     // Find the specific variant
@@ -207,25 +226,107 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                         if (strcmp(v_full, pattern) == 0 && v->variant.payload)
                         {
                             // Found the variant, extract payload type
-                            binding_type_info = v->variant.payload;
-                            binding_type = type_to_string(v->variant.payload);
-                            if (is_ref)
+                            payload_type = v->variant.payload;
+                            if (payload_type && payload_type->kind == TYPE_STRUCT &&
+                                strncmp(payload_type->name, "Tuple_", 6) == 0)
                             {
-                                // For ref bindings, make it a pointer to the payload type
-                                char *ptr_type = xmalloc(strlen(binding_type) + 2);
-                                sprintf(ptr_type, "%s*", binding_type);
-                                binding_type = ptr_type;
+                                is_tuple_payload = 1;
+                                ASTNode *tuple_def = find_struct_def(ctx, payload_type->name);
+                                if (tuple_def)
+                                {
+                                    payload_node_field = tuple_def->strct.fields;
+                                }
                             }
                             free(v_full);
                             break;
                         }
-                        free(v_full);
                         v = v->next;
                     }
                 }
             }
 
-            add_symbol(ctx, binding, binding_type, binding_type_info);
+            for (int i = 0; i < binding_count; i++)
+            {
+                char *binding = bindings[i];
+                int is_ref = binding_refs[i];
+                char *binding_type = is_ref ? "void*" : "unknown";
+                Type *binding_type_info = NULL; // Default unknown
+
+                if (payload_type)
+                {
+                    if (binding_count == 1 && !is_tuple_payload)
+                    {
+                        binding_type = type_to_string(payload_type);
+                        binding_type_info = payload_type;
+                    }
+                    else if (binding_count == 1 && is_tuple_payload)
+                    {
+                        binding_type = type_to_string(payload_type);
+                        binding_type_info = payload_type;
+                    }
+                    else if (binding_count > 1 && is_tuple_payload)
+                    {
+                        if (payload_node_field)
+                        {
+                            Lexer tmp;
+                            lexer_init(&tmp, payload_node_field->field.type);
+                            binding_type_info = parse_type_formal(ctx, &tmp);
+                            binding_type = type_to_string(binding_type_info);
+                            payload_node_field = payload_node_field->next;
+                        }
+                    }
+                }
+
+                if (is_ref && binding_type_info)
+                {
+                    Type *ptr = type_new(TYPE_POINTER);
+                    ptr->inner = binding_type_info;
+                    binding_type_info = ptr;
+
+                    char *ptr_s = xmalloc(strlen(binding_type) + 2);
+                    sprintf(ptr_s, "%s*", binding_type);
+                    binding_type = ptr_s;
+                }
+
+                int is_generic_unresolved = 0;
+
+                if (enum_def)
+                {
+                    if (enum_def->enm.generic_param)
+                    {
+                        char *param = enum_def->enm.generic_param;
+                        if (strstr(binding_type, param))
+                        {
+                            is_generic_unresolved = 1;
+                        }
+                    }
+                }
+
+                if (!is_generic_unresolved &&
+                    (strcmp(binding_type, "T") == 0 || strcmp(binding_type, "T*") == 0))
+                {
+                    is_generic_unresolved = 1;
+                }
+
+                if (is_generic_unresolved)
+                {
+                    if (is_ref)
+                    {
+                        binding_type = "unknown*";
+                        Type *u = type_new(TYPE_UNKNOWN);
+                        Type *p = type_new(TYPE_POINTER);
+                        p->inner = u;
+                        binding_type_info = p;
+                    }
+                    else
+                    {
+                        binding_type = "unknown";
+                        binding_type_info = type_new(TYPE_UNKNOWN);
+                    }
+                }
+
+                add_symbol(ctx, binding, binding_type, binding_type_info);
+            }
         }
 
         ASTNode *body;
@@ -252,9 +353,10 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
 
         ASTNode *c = ast_create(NODE_MATCH_CASE);
         c->match_case.pattern = pattern;
-        c->match_case.binding_name = binding;
+        c->match_case.binding_names = bindings;
+        c->match_case.binding_count = binding_count;
+        c->match_case.binding_refs = binding_refs;
         c->match_case.is_destructuring = is_destructure;
-        c->match_case.is_ref = is_ref; // Store is_ref flag
         c->match_case.guard = guard;
         c->match_case.body = body;
         c->match_case.is_default = is_default;
@@ -917,8 +1019,8 @@ ASTNode *parse_while(ParserContext *ctx, Lexer *l)
     check_assignment_condition(cond);
 
     // Zen: While(true)
-    if ((cond->type == NODE_EXPR_LITERAL && cond->literal.type_kind == TOK_INT &&
-         strcmp(cond->literal.string_val, "1") == 0) ||
+    if ((cond->type == NODE_EXPR_LITERAL && cond->literal.type_kind == LITERAL_INT &&
+         cond->literal.int_val == 1) ||
         (cond->type == NODE_EXPR_VAR && strcmp(cond->var_ref.name, "true") == 0))
     {
         zen_trigger_at(TRIGGER_WHILE_TRUE, cond->token);
@@ -1060,7 +1162,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                 // while(true)
                 ASTNode *while_loop = ast_create(NODE_WHILE);
                 ASTNode *true_lit = ast_create(NODE_EXPR_LITERAL);
-                true_lit->literal.type_kind = TOK_INT; // Treated as bool in conditions
+                true_lit->literal.type_kind = LITERAL_INT; // Treated as bool in conditions
                 true_lit->literal.int_val = 1;
                 true_lit->literal.string_val = xstrdup("1");
                 while_loop->while_stmt.condition = true_lit;
@@ -1176,9 +1278,13 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
     ASTNode *init = NULL;
     if (lexer_peek(l).type != TOK_SEMICOLON)
     {
-        if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "var", 3) == 0)
+        if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "let", 3) == 0)
         {
             init = parse_var_decl(ctx, l);
+        }
+        else if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "var", 3) == 0)
+        {
+            zpanic_at(lexer_peek(l), "'var' is deprecated. Use 'let' instead.");
         }
         else
         {
@@ -1203,7 +1309,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
     {
         // Empty condition = true
         ASTNode *true_lit = ast_create(NODE_EXPR_LITERAL);
-        true_lit->literal.type_kind = 0;
+        true_lit->literal.type_kind = LITERAL_INT;
         true_lit->literal.int_val = 1;
         cond = true_lit;
     }
@@ -1243,8 +1349,10 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
 }
 
 char *process_printf_sugar(ParserContext *ctx, const char *content, int newline, const char *target,
-                           char ***used_syms, int *count)
+                           char ***used_syms, int *count, int check_symbols)
 {
+    int saved_silent = ctx->silent_warnings;
+    ctx->silent_warnings = !check_symbols;
     char *gen = xmalloc(8192);
     strcpy(gen, "({ ");
 
@@ -1345,7 +1453,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
         // Analyze usage & Type Check for to_string()
         char *final_expr = xstrdup(clean_expr);
 
-        // Use final_expr in usage analysis if needed, but mainly for symbol tracking
+        if (check_symbols)
         {
             Lexer lex;
             lexer_init(&lex, clean_expr); // Scan original for symbols
@@ -1381,6 +1489,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
         // Parse expression fully
         Lexer lex;
         lexer_init(&lex, clean_expr);
+
         ASTNode *expr_node = parse_expression(ctx, &lex);
 
         char *rw_expr = NULL;
@@ -1413,10 +1522,15 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
                     {
                         char *inner_c = NULL;
                         size_t len = 0;
-                        FILE *ms = open_memstream(&inner_c, &len);
+                        FILE *ms = tmpfile();
                         if (ms)
                         {
                             codegen_expression(ctx, expr_node, ms);
+                            len = ftell(ms);
+                            fseek(ms, 0, SEEK_SET);
+                            inner_c = xmalloc(len + 1);
+                            fread(inner_c, 1, len, ms);
+                            inner_c[len] = 0;
                             fclose(ms);
                         }
 
@@ -1443,10 +1557,15 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
             {
                 char *buf = NULL;
                 size_t len = 0;
-                FILE *ms = open_memstream(&buf, &len);
+                FILE *ms = tmpfile();
                 if (ms)
                 {
                     codegen_expression(ctx, expr_node, ms);
+                    len = ftell(ms);
+                    fseek(ms, 0, SEEK_SET);
+                    buf = xmalloc(len + 1);
+                    fread(buf, 1, len, ms);
+                    buf[len] = 0;
                     fclose(ms);
                     rw_expr = buf;
                     used_codegen = 1;
@@ -1584,6 +1703,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
     strcat(gen, "0; })");
 
     free(s);
+    ctx->silent_warnings = saved_silent;
     return gen;
 }
 
@@ -1759,7 +1879,8 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             int is_ln = (next_type == TOK_SEMICOLON);
             char **used_syms = NULL;
             int used_count = 0;
-            char *code = process_printf_sugar(ctx, inner, is_ln, "stdout", &used_syms, &used_count);
+            char *code =
+                process_printf_sugar(ctx, inner, is_ln, "stdout", &used_syms, &used_count, 1);
 
             if (next_type == TOK_SEMICOLON)
             {
@@ -1775,7 +1896,11 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             }
 
             ASTNode *n = ast_create(NODE_RAW_STMT);
-            n->raw_stmt.content = code;
+            // Append semicolon to Statement Expression to make it a valid statement
+            char *stmt_code = xmalloc(strlen(code) + 2);
+            sprintf(stmt_code, "%s;", code);
+            free(code);
+            n->raw_stmt.content = stmt_code;
             n->raw_stmt.used_symbols = used_syms;
             n->raw_stmt.used_symbol_count = used_count;
             free(inner);
@@ -1801,9 +1926,9 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
     if (tk.type == TOK_AUTOFREE)
     {
         lexer_next(l);
-        if (lexer_peek(l).type != TOK_IDENT || strncmp(lexer_peek(l).start, "var", 3) != 0)
+        if (lexer_peek(l).type != TOK_IDENT || strncmp(lexer_peek(l).start, "let", 3) != 0)
         {
-            zpanic_at(lexer_peek(l), "Expected 'var' after autofree");
+            zpanic_at(lexer_peek(l), "Expected 'let' after autofree");
         }
         s = parse_var_decl(ctx, l);
         s->var_decl.is_autofree = 1;
@@ -1942,28 +2067,33 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             return parse_plugin(ctx, l);
         }
 
-        if (strncmp(tk.start, "var", 3) == 0 && tk.len == 3)
+        if (strncmp(tk.start, "let", 3) == 0 && tk.len == 3)
         {
             return parse_var_decl(ctx, l);
         }
 
-        // Static local variable: static var x = 0;
+        if (strncmp(tk.start, "var", 3) == 0 && tk.len == 3)
+        {
+            zpanic_at(tk, "'var' is deprecated. Use 'let' instead.");
+        }
+
+        // Static local variable: static let x = 0;
         if (strncmp(tk.start, "static", 6) == 0 && tk.len == 6)
         {
             lexer_next(l); // eat 'static'
             Token next = lexer_peek(l);
-            if (strncmp(next.start, "var", 3) == 0 && next.len == 3)
+            if (strncmp(next.start, "let", 3) == 0 && next.len == 3)
             {
                 ASTNode *v = parse_var_decl(ctx, l);
                 v->var_decl.is_static = 1;
                 return v;
             }
-            zpanic_at(next, "Expected 'var' after 'static'");
+            zpanic_at(next, "Expected 'let' after 'static'");
         }
 
         if (strncmp(tk.start, "const", 5) == 0 && tk.len == 5)
         {
-            zpanic_at(tk, "'const' for declarations is deprecated. Use 'def' for constants or 'var "
+            zpanic_at(tk, "'const' for declarations is deprecated. Use 'def' for constants or 'let "
                           "x: const T' for read-only variables.");
         }
         if (strncmp(tk.start, "return", 6) == 0 && tk.len == 6)
@@ -2312,7 +2442,8 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
 
             char **used_syms = NULL;
             int used_count = 0;
-            char *code = process_printf_sugar(ctx, inner, is_ln, target, &used_syms, &used_count);
+            char *code =
+                process_printf_sugar(ctx, inner, is_ln, target, &used_syms, &used_count, 1);
             free(inner);
 
             if (lexer_peek(l).type == TOK_SEMICOLON)
@@ -2321,7 +2452,11 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             }
 
             ASTNode *n = ast_create(NODE_RAW_STMT);
-            n->raw_stmt.content = code;
+            // Append semicolon to Statement Expression to make it a valid statement
+            char *stmt_code = xmalloc(strlen(code) + 2);
+            sprintf(stmt_code, "%s;", code);
+            free(code);
+            n->raw_stmt.content = stmt_code;
             n->raw_stmt.used_symbols = used_syms;
             n->raw_stmt.used_symbol_count = used_count;
             return n;

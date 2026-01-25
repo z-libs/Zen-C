@@ -7,7 +7,7 @@ import "./mem.zc"
 
 /// Allocate device memory for n elements of type T.
 fn cuda_alloc<T>(n: usize) -> T* {
-    var ptr: T* = NULL;
+    let ptr: T* = NULL;
     cudaMalloc((void**)&ptr, n * sizeof(T));
     return ptr;
 }
@@ -76,7 +76,7 @@ fn cuda_sync() {
 
 /// Get the number of CUDA devices.
 fn cuda_device_count() -> int {
-    var count: int = 0;
+    let count: int = 0;
     cudaGetDeviceCount(&count);
     return count;
 }
@@ -90,7 +90,7 @@ fn cuda_set_device(id: int) {
 
 /// Get the last CUDA error code.
 fn cuda_last_error() -> int {
-    var err: int;
+    let err: int;
     err = (int)cudaGetLastError();
     return err;
 }
@@ -134,19 +134,19 @@ struct CudaMemInfo {
 }
 
 fn cuda_device_properties(device_id: int) -> CudaDeviceProp {
-    var mem: usize = 0;
-    var sm: int = 0;
-    var maj: int = 0;
-    var min: int = 0;
-    var max_t: int = 0;
-    var warp: int = 0;
+    let mem: usize = 0;
+    let sm: int = 0;
+    let maj: int = 0;
+    let min: int = 0;
+    let max_t: int = 0;
+    let warp: int = 0;
     
-    var name_ptr = alloc_n<char>(256);
+    let name_ptr = alloc_n<char>(256);
     name_ptr[0] = 0;
     
     _z_cuda_get_props(device_id, name_ptr, &mem, &sm, &maj, &min, &max_t, &warp);
     
-    var s = String::new(name_ptr);
+    let s = String::new(name_ptr);
     free(name_ptr);
     
     return CudaDeviceProp {
@@ -161,20 +161,20 @@ fn cuda_device_properties(device_id: int) -> CudaDeviceProp {
 }
 
 fn cuda_driver_version() -> int {
-    var d: int = 0;
+    let d: int = 0;
     cudaDriverGetVersion(&d);
     return d;
 }
 
 fn cuda_runtime_version() -> int {
-    var r: int = 0;
+    let r: int = 0;
     cudaRuntimeGetVersion(&r);
     return r;
 }
 
 fn cuda_mem_info() -> CudaMemInfo {
-    var f: usize = 0;
-    var t: usize = 0;
+    let f: usize = 0;
+    let t: usize = 0;
     cudaMemGetInfo(&f, &t);
     return CudaMemInfo { free: f, total: t };
 }

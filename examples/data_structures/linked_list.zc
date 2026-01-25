@@ -8,7 +8,7 @@ struct Node {
 
 impl Node {
     fn new(v: int) -> Self* {
-        var n = alloc<Node>();
+        let n = alloc<Node>();
         guard n != NULL else {
             "Out of memory!";
             return NULL;
@@ -29,7 +29,7 @@ impl LinkedList {
     }
     
     fn push(self, v: int) {
-        var new_node = Node::new(v);
+        let new_node = Node::new(v);
         guard new_node != NULL else { return; }
         
         new_node.next = self.head;
@@ -37,7 +37,7 @@ impl LinkedList {
     }
     
     fn print_list(self) {
-        var current: Node* = self.head;
+        let current: Node* = self.head;
         "["..;
         while current != NULL {
             "{current.value}"..;
@@ -50,17 +50,17 @@ impl LinkedList {
     }
     
     fn free(self) {
-        var current: Node* = self.head;
+        let current: Node* = self.head;
         while current != NULL {
-            autofree var temp = current;
+            autofree let temp = current;
             current = current.next;
         }
         self.head = NULL;
     }
     
     fn len(self) -> int {
-        var count = 0;
-        var current: Node* = self.head;
+        let count = 0;
+        let current: Node* = self.head;
         while current != NULL {
             count++;
             current = current.next;
@@ -70,7 +70,7 @@ impl LinkedList {
 }
 
 fn main() {
-    var list = LinkedList::new();
+    let list = LinkedList::new();
     defer list.free();
     
     "Pushing: 10, 20, 30...";

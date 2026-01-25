@@ -20,8 +20,8 @@ extern fn _z_vprintf(fmt: char*, ap: va_list) -> int;
 extern fn _z_vsnprintf(str: char*, size: usize, fmt: char*, ap: va_list) -> int;
 
 fn format(fmt: char*, ...) -> char* {
-    static var buffer: char[1024];
-    var ap: va_list;
+    static let buffer: char[1024];
+    let ap: va_list;
     va_start(ap, fmt);
     _z_vsnprintf(buffer, 1024, fmt, ap);
     va_end(ap);
@@ -29,18 +29,18 @@ fn format(fmt: char*, ...) -> char* {
 }
 
 fn format_into(buffer: char*, size: usize, fmt: char*, ...) -> int {
-    var ap: va_list;
+    let ap: va_list;
     va_start(ap, fmt);
-    var ret = _z_vsnprintf(buffer, size, fmt, ap);
+    let ret = _z_vsnprintf(buffer, size, fmt, ap);
     va_end(ap);
     return ret;
 }
 
 fn format_new(fmt: char*, ...) -> char* {
-    var buffer: char* = malloc(1024);
+    let buffer: char* = malloc(1024);
     if buffer == NULL return NULL;
     
-    var ap: va_list;
+    let ap: va_list;
     va_start(ap, fmt);
     _z_vsnprintf(buffer, 1024, fmt, ap);
     va_end(ap);
@@ -48,31 +48,31 @@ fn format_new(fmt: char*, ...) -> char* {
 }
 
 fn print(fmt: char*, ...) -> int {
-    var ap: va_list;
+    let ap: va_list;
     va_start(ap, fmt);
-    var ret = _z_vprintf(fmt, ap);
+    let ret = _z_vprintf(fmt, ap);
     va_end(ap);
     return ret;
 }
 
 fn println(fmt: char*, ...) -> int {
-    var ap: va_list;
+    let ap: va_list;
     va_start(ap, fmt);
-    var ret = _z_vprintf(fmt, ap);
+    let ret = _z_vprintf(fmt, ap);
     va_end(ap);
     puts("");
     return ret + 1;
 }
 
 fn readln() -> char* {
-    var cap: usize = 64;
-    var len: usize = 0;
-    var line: char* = malloc(cap);
+    let cap: usize = 64;
+    let len: usize = 0;
+    let line: char* = malloc(cap);
     if (line == NULL) return NULL;
     
-    var c: int;
-    var std_in = _z_get_stdin();
-    var eof_val = _z_get_eof();
+    let c: int;
+    let std_in = _z_get_stdin();
+    let eof_val = _z_get_eof();
 
     while (true) {
         c = _z_fgetc(std_in);
@@ -81,7 +81,7 @@ fn readln() -> char* {
 
         if (len + 1 >= cap) {
             cap = cap * 2;
-            var n = realloc(line, cap);
+            let n = realloc(line, cap);
             if (n == NULL) {
                 free(line);
                 return NULL;

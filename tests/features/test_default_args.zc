@@ -16,16 +16,16 @@ fn operation(a: int, b: int = 5 * 2) -> int {
 }
 
 fn main() {
-    var p1 = Point { x: 5, y: 5 };
-    var res1 = add_points(p1);
+    let p1 = Point { x: 5, y: 5 };
+    let res1 = add_points(p1);
     
     println "res1.x: {res1.x}, res1.y: {res1.y}";
     assert(res1.x == 15, "result is not 15");
     assert(res1.y == 15, "result is not 15");
 
-    var p2 = Point { x: 1, y: 1 };
-    var p3 = Point { x: 5, y: 5 };
-    var res2 = add_points(p3, p2);
+    let p2 = Point { x: 1, y: 1 };
+    let p3 = Point { x: 5, y: 5 };
+    let res2 = add_points(p3, p2);
     
     println "res2.x: {res2.x}, res2.y: {res2.y}";
     assert(res2.x == 6, "result is not 6");

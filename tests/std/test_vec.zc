@@ -24,7 +24,7 @@ struct Point {
 
 test "Vec Basics (Construction, Push, Pop, Access)" {
     print "Testing Vec basics...\n";
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     assert_eq(v.len, 0, "Initial len");
     assert_eq(v.cap, 0, "Initial cap");
 
@@ -53,16 +53,16 @@ test "Vec Basics (Construction, Push, Pop, Access)" {
 test "Vec Capacity and Allocation" {
     print "Testing Vec capacity...\n";
     // with_capacity
-    var v1 = Vec<int>::with_capacity(10);
+    let v1 = Vec<int>::with_capacity(10);
     assert_eq(v1.len, 0, "with_capacity len");
     assert_eq(v1.cap, 10, "with_capacity cap");
     v1.push(1);
     assert_eq(v1.cap, 10, "Cap should not change yet");
 
     // Implicit grow
-    var v2 = Vec<int>::new();
+    let v2 = Vec<int>::new();
     // Force grow logic: 0 -> 8 -> 16...
-    var i = 0;
+    let i = 0;
     while i < 9 {
         v2.push(i);
         i = i + 1;
@@ -74,7 +74,7 @@ test "Vec Capacity and Allocation" {
 
 test "Vec Modification (Insert, Append, Remove, Clear)" {
     print "Testing Vec modification...\n";
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     v.push(1);
     v.push(3);
     
@@ -82,7 +82,7 @@ test "Vec Modification (Insert, Append, Remove, Clear)" {
     assert_eq(v.get(1), 2, "insert middle");
     assert_eq(v.len, 3, "insert len");
 
-    var v2 = Vec<int>::new();
+    let v2 = Vec<int>::new();
     v2.push(4);
     v2.push(5);
     v.append(v2);
@@ -91,7 +91,7 @@ test "Vec Modification (Insert, Append, Remove, Clear)" {
         assert_eq(v.get(i), i + 1, "append value");
     }
 
-    var val = v.remove(0); // [2, 3, 4, 5]
+    let val = v.remove(0); // [2, 3, 4, 5]
     assert_eq(val, 1, "remove return");
     assert_eq(v.get(0), 2, "remove shift");
     assert_eq(v.len, 4, "remove len");
@@ -103,25 +103,25 @@ test "Vec Modification (Insert, Append, Remove, Clear)" {
 
 test "Vec Extensions (pop_opt)" {
     print "Testing Vec extensions...\n";
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     v.push(42);
     
-    var opt = v.pop_opt();
+    let opt = v.pop_opt();
     assert_true(!opt.is_none(), "pop_opt some");
     assert_eq(opt.unwrap(), 42, "pop_opt val");
     
-    var empty = v.pop_opt();
+    let empty = v.pop_opt();
     assert_true(empty.is_none(), "pop_opt none");
 }
 
 test "Vec Iteration (Reference and Value)" {
     print "Testing Vec iteration...\n";
-    var v = Vec<Point>::new();
+    let v = Vec<Point>::new();
     v.push(Point { x: 10, y: 10 });
     v.push(Point { x: 20, y: 20 });
 
     // 1. Value Iteration
-    var sum_val = 0;
+    let sum_val = 0;
     for p in v {
         sum_val = sum_val + p.x;
     }
@@ -144,11 +144,11 @@ test "Vec Iteration (Reference and Value)" {
 
 test "Vec Clone and Drop" {
     print "Testing Vec clone and drop...\n";
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     v.push(100);
     v.push(200);
 
-    var v2 = v.clone();
+    let v2 = v.clone();
     assert_eq(v2.len, 2, "Clone len");
     assert_eq(v2.get(0), 100, "Clone val 0");
     
@@ -163,7 +163,7 @@ test "Vec Clone and Drop" {
 
 test "Vec Utils (Reverse, Contains)" {
     print "Testing Vec utils...\n";
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     v.push(1);
     v.push(2);
     v.push(3);

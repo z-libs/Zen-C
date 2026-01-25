@@ -13,24 +13,24 @@ fn tuple_ret() -> (int, int) {
 }
 
 test "test_destructuring" {
-    var p = Point{x: 1, y: 2};
+    let p = Point{x: 1, y: 2};
     
     // Explicit Struct Destructuring (Shorthand)
-    var Point{x, y} = p;
+    let Point{x, y} = p;
     assert(x == 1, "x is 1");
     assert(y == 2, "y is 2");
     
     // Explicit Struct Destructuring (Renamed)
-    var Point{x: a, y: b} = p;
+    let Point{x: a, y: b} = p;
     assert(a == 1, "a is 1");
     assert(b == 2, "b is 2");
     
     // Anonymous Struct Destructuring (Inferred)
     // Note: Anonymous block only supports shorthand {x, y} currently.
-    // var {x: x2} = p; // Not supported yet in anonymous block parser
+    // let {x: x2} = p; // Not supported yet in anonymous block parser
     
     // Tuple Destructuring
-    var (t1, t2) = tuple_ret();
+    let (t1, t2) = tuple_ret();
     assert(t1 == 10, "t1 is 10");
     assert(t2 == 20, "t2 is 20");
     

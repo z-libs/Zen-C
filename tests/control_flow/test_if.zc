@@ -1,10 +1,10 @@
 
 test "test_if" {
-    var x = 10;
+    let x = 10;
 
     if (x > 5) {
         printf("X is big\n");
-        var y = x * 2;
+        let y = x * 2;
         if (y > 15) {
             printf("Y is very big\n");
         }
@@ -12,7 +12,7 @@ test "test_if" {
         printf("X is small\n");
     }
 
-    var i = 0;
+    let i = 0;
     while (i < 3) {
         println "Loop {i}";
         i++;

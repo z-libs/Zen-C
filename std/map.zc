@@ -59,11 +59,11 @@ impl MapIterResult<V> {
 impl MapIter<V> {
     fn next(self) -> MapIterResult<V> {
         while self.idx < self.cap {
-            var i = self.idx;
+            let i = self.idx;
             self.idx = self.idx + 1;
             
             if (self.occupied[i] && !self.deleted[i]) {
-                var entry = MapEntry<V> {
+                let entry = MapEntry<V> {
                     key: self.keys[i],
                     val: self.vals[i]
                 };
@@ -74,7 +74,7 @@ impl MapIter<V> {
             }
         }
         // Empty entry for None
-        var empty = MapEntry<V> { key: 0, val: self.vals[0] }; // Should be 0-init if possible
+        let empty = MapEntry<V> { key: 0, val: self.vals[0] }; // Should be 0-init if possible
         return MapIterResult<V> { entry: empty, has_val: false };
     }
 }
@@ -85,11 +85,11 @@ impl Map<V> {
     }
 
     fn _resize(self, new_cap: usize) {
-        var old_keys = self.keys;
-        var old_vals = self.vals;
-        var old_occupied = self.occupied;
-        var old_deleted = self.deleted;
-        var old_cap = self.cap;
+        let old_keys = self.keys;
+        let old_vals = self.vals;
+        let old_occupied = self.occupied;
+        let old_deleted = self.deleted;
+        let old_cap = self.cap;
 
         self.cap = new_cap;
         self.keys = calloc(new_cap, sizeof(char*));
@@ -98,7 +98,7 @@ impl Map<V> {
         self.deleted = calloc(new_cap, sizeof(bool));
         self.len = 0;
 
-        for (var i: usize = 0; i < old_cap; i = i + 1) {
+        for (let i: usize = 0; i < old_cap; i = i + 1) {
             if (old_occupied[i] && !old_deleted[i]) {
                 self.put(old_keys[i], old_vals[i]);
             }
@@ -113,13 +113,13 @@ impl Map<V> {
 
     fn put(self, key: char*, val: V) {
         if (self.len >= self.cap * 0.75) {
-            var new_cap = self.cap * 2;
+            let new_cap = self.cap * 2;
             if (new_cap < 8) new_cap = 8;
             self._resize(new_cap);
         }
 
-        var hash = _map_hash_str(key);
-        var idx = hash % self.cap;
+        let hash = _map_hash_str(key);
+        let idx = hash % self.cap;
 
         while (true) {
             if (!self.occupied[idx] || (self.occupied[idx] && !self.deleted[idx] && strcmp(self.keys[idx], key) == 0)) {
@@ -144,9 +144,9 @@ impl Map<V> {
             return Option<V>::None();
         }
 
-        var hash = _map_hash_str(key);
-        var idx = hash % self.cap;
-        var start_idx = idx;
+        let hash = _map_hash_str(key);
+        let idx = hash % self.cap;
+        let start_idx = idx;
 
         while (true) {
             if (!self.occupied[idx]) {
@@ -165,15 +165,15 @@ impl Map<V> {
     }
     
     fn contains(self, key: char*) -> bool {
-        var opt: Option<V> = self.get(key);
+        let opt: Option<V> = self.get(key);
         return opt.is_some();
     }
     
     fn remove(self, key: char*) {
         if (self.cap == 0) return;
         
-        var hash = _map_hash_str(key);
-        var idx = hash % self.cap;
+        let hash = _map_hash_str(key);
+        let idx = hash % self.cap;
         
         while (true) {
             if (!self.occupied[idx]) return;
@@ -199,7 +199,7 @@ impl Map<V> {
     
     fn free(self) {
         if (self.keys) {
-            for (var i: usize = 0; i < self.cap; i = i + 1) {
+            for (let i: usize = 0; i < self.cap; i = i + 1) {
                 if (self.occupied[i] && !self.deleted[i]) {
                     free(self.keys[i]);
                 }

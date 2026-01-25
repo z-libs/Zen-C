@@ -337,18 +337,18 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             {
                 s = parse_import(ctx, l);
             }
-            else if (t.len == 3 && strncmp(t.start, "var", 3) == 0)
+            else if (t.len == 3 && strncmp(t.start, "let", 3) == 0)
             {
                 s = parse_var_decl(ctx, l);
             }
-            else if (t.len == 3 && strncmp(t.start, "def", 3) == 0)
+            else if (t.len == 3 && strncmp(t.start, "var", 3) == 0)
             {
-                s = parse_def(ctx, l);
+                zpanic_at(t, "'var' is deprecated. Use 'let' instead.");
             }
             else if (t.len == 5 && strncmp(t.start, "const", 5) == 0)
             {
                 zpanic_at(t, "'const' for declarations is deprecated. Use 'def' for constants or "
-                             "'var x: const T' for read-only variables.");
+                             "'let x: const T' for read-only variables.");
             }
             else if (t.len == 6 && strncmp(t.start, "extern", 6) == 0)
             {

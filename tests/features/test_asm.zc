@@ -32,7 +32,7 @@ test "test_asm" {
 }
 
 fn add_five(x: int) -> int {
-    var result: int;
+    let result: int;
     asm {
         "mov {x}, {result}"
         "add $5, {result}"
@@ -44,7 +44,7 @@ fn add_five(x: int) -> int {
 
 test "test_asm_params" {
     println "Testing assembly parameters...";
-    var val = add_five(10);
+    let val = add_five(10);
     if (val == 15) {
         println "-> Success! add_five(10) = 15";
     } else {

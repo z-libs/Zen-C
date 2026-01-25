@@ -1624,7 +1624,7 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         new_node->field.type = replace_type_str(n->field.type, p, c, os, ns);
         break;
     case NODE_EXPR_LITERAL:
-        if (n->literal.type_kind == 2)
+        if (n->literal.type_kind == LITERAL_STRING)
         {
             new_node->literal.string_val = xstrdup(n->literal.string_val);
         }
@@ -2236,10 +2236,15 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
         // Codegen expression to temporary buffer
         char *code_buffer = NULL;
         size_t code_len = 0;
-        FILE *mem_stream = open_memstream(&code_buffer, &code_len);
+        FILE *mem_stream = tmpfile();
         if (mem_stream)
         {
             codegen_expression(ctx, expr_node, mem_stream);
+            code_len = ftell(mem_stream);
+            code_buffer = xmalloc(code_len + 1);
+            fseek(mem_stream, 0, SEEK_SET);
+            fread(code_buffer, 1, code_len, mem_stream);
+            code_buffer[code_len] = 0;
             fclose(mem_stream);
         }
 

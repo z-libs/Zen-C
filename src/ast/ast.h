@@ -11,6 +11,15 @@ typedef struct ASTNode ASTNode;
 
 // ** Formal Type System **
 // Used for Generics, Type Inference, and robust pointer handling.
+
+typedef enum
+{
+    LITERAL_INT = 0,
+    LITERAL_FLOAT = 1,
+    LITERAL_STRING = 2,
+    LITERAL_CHAR = 3
+} LiteralKind;
+
 typedef enum
 {
     TYPE_VOID,
@@ -55,6 +64,7 @@ typedef struct Type
     int arg_count;
     int is_const;
     int is_explicit_struct; // for example, "struct Foo" vs "Foo"
+    int is_raw;             // Raw function pointer (fn*)
     union
     {
         int array_size;  // For fixed-size arrays [T; N].
@@ -306,9 +316,10 @@ struct ASTNode
         struct
         {
             char *pattern;
-            char *binding_name;
+            char **binding_names; // Multiple bindings
+            int binding_count;    // Count
+            int *binding_refs;    // Ref flags per binding
             int is_destructuring;
-            int is_ref; // New: Supports 'ref' binding (Some(ref x))
             ASTNode *guard;
             ASTNode *body;
             int is_default;
@@ -329,7 +340,7 @@ struct ASTNode
 
         struct
         {
-            int type_kind;
+            LiteralKind type_kind;
             unsigned long long int_val;
             double float_val;
             char *string_val;

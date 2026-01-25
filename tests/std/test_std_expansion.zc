@@ -4,7 +4,7 @@ test "test_std_expansion" {
     "Testing Standard Library Expansion...";
     
     "Testing Map...";
-    var m = Map<int>::new();
+    let m = Map<int>::new();
     m.put("one", 1);
     m.put("two", 2);
     
@@ -17,14 +17,14 @@ test "test_std_expansion" {
     assert(!m.contains("one"), "Map remove failed");
     
     "Testing Time...";
-    var t1 = Time::now();
+    let t1 = Time::now();
     Time::sleep_ms(10);
-    var t2 = Time::now();
+    let t2 = Time::now();
     assert(t2 >= t1, "Time went backwards!");
     "Time passed: {t2 - t1} ms";
     
     "Testing FS...";
-    var content_res = File::read_all("tests/test_0.zc");
+    let content_res = File::read_all("tests/test_0.zc");
     if (content_res.is_ok()) {
         "Read file successfully.";
     } else {
@@ -32,7 +32,7 @@ test "test_std_expansion" {
     }
     
     "Testing JSON...";
-    var j = JsonValue::string("hello");
+    let j = JsonValue::string("hello");
     assert(j.kind == JsonType::JSON_STRING(), "Json string kind failed");
     
     "All expansion tests passed!";

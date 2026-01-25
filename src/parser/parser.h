@@ -272,7 +272,8 @@ struct ParserContext
 
     // Type Validation
     struct TypeUsage *pending_type_validations;
-    int is_speculative; // Flag to suppress side effects during speculative parsing
+    int is_speculative;  // Flag to suppress side effects during speculative parsing
+    int silent_warnings; // Suppress warnings (for example, during codegen interpolation)
 };
 
 typedef struct TypeUsage
@@ -433,7 +434,7 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l);
 ASTNode *parse_return(ParserContext *ctx, Lexer *l);
 
 char *process_printf_sugar(ParserContext *ctx, const char *content, int newline, const char *target,
-                           char ***used_syms, int *count);
+                           char ***used_syms, int *count, int check_symbols);
 ASTNode *parse_assert(ParserContext *ctx, Lexer *l);
 ASTNode *parse_defer(ParserContext *ctx, Lexer *l);
 ASTNode *parse_asm(ParserContext *ctx, Lexer *l);

@@ -5,8 +5,8 @@ enum Result {
 }
 
 fn test_unwrap() -> Result {
-    var res = Result_Ok(42);
-    var val = res?; 
+    let res = Result_Ok(42);
+    let val = res?; 
     if (val == 42) println "  Unwrap: Success";
     else println "  Unwrap: Failed";
     return res;
@@ -16,7 +16,7 @@ test "test_ternary" {
     println "Testing Ternary...";
     
     // Simple Ternary
-    var x = 1 ? 10 : 20;
+    let x = 1 ? 10 : 20;
     if (x == 10) println "  Simple Ternary: Success";
     else println "  Simple Ternary: Failed";
     
@@ -25,6 +25,6 @@ test "test_ternary" {
 
     // Ambiguity / Precredence
     // 1 ? 2 : 3
-    var y = 0 ? 100 : 200;
+    let y = 0 ? 100 : 200;
     if (y == 200) println "  False Branch: Success";
 }

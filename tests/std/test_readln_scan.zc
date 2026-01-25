@@ -2,18 +2,18 @@
 test "test_readln_scan" {
     "Testing readln compilation...";
     
-    var x: int = 0;
-    var f: float = 0.0;
+    let x: int = 0;
+    let f: float = 0.0;
     
     if (1 == 0) {
-        var s = readln();
+        let s = readln();
         
-        var count = readln(x);  
+        let count = readln(x);  
         readln(f);
         
         readln(x, f);
         
-        var count2 = ?"Age? "(x);
+        let count2 = ?"Age? "(x);
         ?"Coords? "(x, f);
     }
     

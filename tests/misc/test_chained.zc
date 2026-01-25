@@ -2,8 +2,8 @@
 import "std/string.zc"
 
 test "test_chained" {
-    var s = String::from("hello");
-    var opt = s.find('e');
+    let s = String::from("hello");
+    let opt = s.find('e');
     if opt.is_some() {
         "Found at index: {opt.unwrap()}";
     }

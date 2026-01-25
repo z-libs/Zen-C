@@ -4,15 +4,15 @@ import "std/result.zc"
 test "generic pointer instantiation" {
     
     // Vector of ints (internally int*) nested in Result
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     v.push(10);
     v.push(20);
     v.push(30);
 
-    var res = Result<Vec<int>>::Ok(v);
+    let res = Result<Vec<int>>::Ok(v);
     
     // Test unwrapping (signatures involving int*)
-    var unwrapped = res.unwrap_ref();
+    let unwrapped = res.unwrap_ref();
     assert(unwrapped.get(0) == 10);
     assert(unwrapped.get(1) == 20);
     assert(unwrapped.get(2) == 30);
@@ -23,15 +23,15 @@ test "generic pointer instantiation" {
 test "generic pointer double nesting" {
     // Double nesting - Result<Vec<int*>>
     
-    var v_ptr = Vec<int*>::new();
-    var a: int = 100;
-    var b: int = 200;
+    let v_ptr = Vec<int*>::new();
+    let a: int = 100;
+    let b: int = 200;
     
     v_ptr.push(&a);
     v_ptr.push(&b);
     
-    var res_ptr = Result<Vec<int*>>::Ok(v_ptr);
-    var unwrapped_ptr = res_ptr.unwrap();
+    let res_ptr = Result<Vec<int*>>::Ok(v_ptr);
+    let unwrapped_ptr = res_ptr.unwrap();
     
     assert(*unwrapped_ptr.get(0) == 100);
     assert(*unwrapped_ptr.get(1) == 200);
