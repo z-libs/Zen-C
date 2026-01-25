@@ -350,14 +350,14 @@ var y = x > 10 ? 1 : 0;
 Powerful alternative to `switch`.
 ```zc
 match val {
-    1 => print("One"),
-    2 || 3 => print("Two or Three"),   // OR with ||
-    4 or 5 => print("Four or Five"),   // OR with 'or'
-    6, 7, 8 => print("Six to Eight"),  // OR with comma
-    10..15 => print("10 to 14"),       // Exclusive range (Legacy)
-    10..<15 => print("10 to 14"),      // Exclusive range (Explicit)
-    20..=25 => print("20 to 25"),      // Inclusive range
-    _ => print("Other")
+    1         => { print "One" },
+    2 || 3    => { print "Two or Three" },    // OR with ||
+    4 or 5    => { print "Four or Five" },    // OR with 'or'
+    6, 7, 8   => { print "Six to Eight" },    // OR with comma
+    10 .. 15  => { print "10 to 14" },        // Exclusive range (Legacy)
+    10 ..< 15 => { print "10 to 14" },        // Exclusive range (Explicit)
+    20 ..= 25 => { print "20 to 25" },        // Inclusive range
+    _         => { print "Other" },
 }
 
 // Destructuring Enums
