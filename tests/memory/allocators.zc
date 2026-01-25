@@ -1,0 +1,80 @@
+import "std/mem.zc"
+import "std/vec.zc"
+import "std/string.zc"
+import "std/debug.zc"
+
+test "test_general_allocator" {
+    "Testing GeneralAllocator...";
+    var allocator: GeneralAllocator;
+
+    var i = allocator.allocate(10);
+
+    allocator.free(i);
+
+    "  ✓ GeneralAllocator works!";
+}
+
+test "test_global_allocator" {
+    "Testing Vec<T>...";
+
+    var v = Vec<i32>::new();
+
+    v.push(4);
+
+    "  ✓ GLOBAL_ALLOCATOR works!";
+}
+
+// Vec<i32>
+
+fn test_vec(allocator: DebugAllocator*) {
+    var list = Vec<i32>::new(allocator);
+
+    list.push(3);
+    allocator.validate();
+}
+
+test "test_vec_allocator" {
+    "Testing Vec allocation";
+
+    var allocator = DebugAllocator::new();
+    test_vec(&allocator);
+
+    assert(allocator.validate(), "Memory leak from Vec allocation");
+}
+
+// String
+
+fn test_string(allocator: DebugAllocator*) {
+    var s = String::from("hellooooooooooooooooooo", allocator);
+
+    allocator.validate();
+}
+
+test "test_string_allocator" {
+    "Testing String allocation";
+
+    var allocator = DebugAllocator::new();
+    test_box(&allocator);
+
+    assert(allocator.validate(), "Memory leak from String allocation");
+}
+
+// Box<String>
+
+fn test_box(allocator: DebugAllocator*) {
+    var b = Box<String>::new();
+    var s = String::from("hellooooooooooooooooooo", allocator);
+
+    b.set(s);
+
+    allocator.validate();
+}
+
+test "test_box_allocator" {
+    "Testing Box allocation";
+
+    var allocator = DebugAllocator::new();
+    test_box(&allocator);
+
+    assert(allocator.validate(), "Memory leak from Box allocation");
+}

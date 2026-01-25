@@ -7,9 +7,9 @@ struct String {
 }
 
 impl String {
-    fn new(s: char*) -> String {
+    fn new(s: char*, allocator: Allocator = &GLOBAL_ALLOCATOR) -> String {
         var len = strlen(s);
-        var v = Vec<char>::new();
+        var v = Vec<char>::new(allocator);
         // Manual copy for now
         for (var i = 0; i < len; i = i + 1) {
             v.push(s[i]);
@@ -17,6 +17,7 @@ impl String {
         v.push(0);
         
         // Extract fields to transfer ownership
+        var a = v.alloc;
         var d = v.data;
         var l = v.len;
         var c = v.cap;
@@ -24,19 +25,15 @@ impl String {
         // Forget the local vector so it doesn't free the memory
         v.forget();
         
-        return String { vec: Vec<char> { data: d, len: l, cap: c } };
+        return String { vec: Vec<char> {alloc: a, data: d, len: l, cap: c } };
     }
 
-    fn from(s: char*) -> String {
-        return String::new(s);
+    fn from(s: char*, allocator: Allocator = &GLOBAL_ALLOCATOR) -> String {
+        return String::new(s, allocator);
     }
 
     fn c_str(self) -> char* {
         return self.vec.data;
-    }
-
-    fn destroy(self) {
-        self.vec.free();
     }
 
     fn forget(self) {
@@ -49,9 +46,9 @@ impl String {
             self.vec.len = self.vec.len - 1;
         }
         
-        var other_len = (*other).vec.len;
+        var other_len = other.vec.len;
         for (var i = 0; i < other_len; i = i + 1) {
-            self.vec.push((*other).vec.get(i));
+            self.vec.push(other.vec.get(i));
         }
     }
 
@@ -59,12 +56,13 @@ impl String {
         var new_s = String::from(self.c_str());
         new_s.append(other);
         
+        var a = new_s.vec.alloc;
         var d = new_s.vec.data;
         var l = new_s.vec.len;
         var c = new_s.vec.cap;
         new_s.forget();
         
-        return String { vec: Vec<char> { data: d, len: l, cap: c } };
+        return String { vec: Vec<char> {alloc: a, data: d, len: l, cap: c } };
     }
 
     fn eq(self, other: String*) -> bool {
@@ -86,12 +84,13 @@ impl String {
         }
         v.push(0);
         
+        var a = v.alloc;
         var d = v.data;
         var l = v.len;
         var c = v.cap;
         v.forget();
         
-        return String { vec: Vec<char> { data: d, len: l, cap: c } };
+        return String { vec: Vec<char> { alloc: a, data: d, len: l, cap: c } };
     }
 
     fn find(self, target: char) -> Option<usize> {
@@ -133,10 +132,6 @@ impl String {
         if slen > len { return false; }
         var offset = (int)(len - slen);
         return strcmp(self.c_str() + offset, suffix) == 0;
-    }
-    
-    fn free(self) {
-        self.vec.free();
     }
 
     fn _utf8_seq_len(first_byte: char) -> usize {
@@ -220,6 +215,7 @@ impl String {
         
         return self.substring(byte_start, byte_len);
     }
+
     fn split(self, delim: char) -> Vec<String> {
         var parts = Vec<String>::new();
         var len = self.length();
@@ -310,9 +306,22 @@ impl String {
             v.push(0);
             var ch_s = String::new(v.data);
             result.append(&ch_s);
-            v.free();
+            //v.free(); // The array should be cleaned up automatically.
             i = i + 1;
         }
         return result;
+    }
+
+    @deprecated("Strings are freed automatically. No they aren't")
+    fn free(self) {}
+}
+
+impl Drop for String {
+    fn drop(self) {
+        var vec = self.vec;
+
+        raw {
+            Vec_char__Drop_drop(&vec);
+        }
     }
 }

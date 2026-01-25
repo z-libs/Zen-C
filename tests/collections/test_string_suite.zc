@@ -1,7 +1,7 @@
 
 include <string.h>
 include <stdio.h>
-import "std.zc"
+import "std/string.zc"
 
 test "test_string_methods" {
     println "Testing String methods...";

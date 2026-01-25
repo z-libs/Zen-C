@@ -29,7 +29,7 @@ struct JsonValue {
 alias JsonValuePtr = JsonValue*;
 
 raw {
-    Vec_JsonValuePtr Vec_JsonValuePtr__new();
+    Vec_JsonValuePtr Vec_JsonValuePtr__new(Allocator allocator);
     void Vec_JsonValuePtr__push(Vec_JsonValuePtr* self, JsonValue* item);
     Map_JsonValuePtr Map_JsonValuePtr__new();
     void Map_JsonValuePtr__put(Map_JsonValuePtr* self, char* key, JsonValue* val);
@@ -71,7 +71,8 @@ raw {
         arr->kind = JsonType_JSON_ARRAY();
         arr->string_val = 0; arr->number_val = 0; arr->bool_val = 0; arr->object_val = 0;
         arr->array_val = malloc(sizeof(Vec_JsonValuePtr));
-        *(arr->array_val) = Vec_JsonValuePtr__new();
+        *(arr->array_val) = Vec_JsonValuePtr__new((Allocator){
+            .self = (&GLOBAL_ALLOCATOR), .vtable = (&GeneralAllocator_Allocator_VTable)});
         
         _json_skip_ws(p);
         if (**p == ']') { (*p)++; return arr; }

@@ -1,4 +1,3 @@
-import "std.zc"
 import "std/env.zc"
 
 test "test_std_env_set_and_get" {
@@ -31,10 +30,6 @@ test "test_std_env_get_dup" {
 
     var value = env_var.unwrap();
     assert(value.c_str() == "ok3", "value should be ok3");
-
-    value.free();
-
-    assert(value.is_empty(), "value should be empty");
 }
 
 test "test_std_env_get_and_get_dup_with_invalid" {

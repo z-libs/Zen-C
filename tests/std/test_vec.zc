@@ -44,10 +44,6 @@ test "Vec Basics (Construction, Push, Pop, Access)" {
 
     v.set(0, 99);
     assert_eq(v.get(0), 99, "set()");
-    
-    // Explicit clean up check (safe idempotent free)
-    v.free();
-    assert_eq(v.len, 0, "Len after free");
 }
 
 test "Vec Capacity and Allocation" {

@@ -24,7 +24,6 @@ test "string_split_basic" {
     for p in &parts {
         p.free();
     }
-    parts.free();
 }
 
 test "string_split_edge" {
@@ -40,7 +39,6 @@ test "string_split_edge" {
     if (!p0.eq(&s)) exit(1);
     
     p0.free();
-    parts.free();
     
     var s2 = String::from("a,,b");
     var parts2 = s2.split(',');
@@ -53,5 +51,4 @@ test "string_split_edge" {
     if (!empty.is_empty()) exit(1);
     
     for p in &parts2 { p.free(); }
-    parts2.free();
 }

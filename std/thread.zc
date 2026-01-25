@@ -127,4 +127,3 @@ impl Mutex {
 fn sleep_ms(ms: int) {
     _z_usleep(ms * 1000);
 }
-
