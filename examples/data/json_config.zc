@@ -13,6 +13,12 @@ struct Features {
     metrics: bool;
 }
 
+impl Features {
+    fn drop(self) {
+        // No heap allocations to free
+    }
+}
+
 @derive(FromJson, ToJson)
 struct Config {
     server_name: String;
@@ -20,6 +26,17 @@ struct Config {
     max_connections: int;
     features: Features;
     allowed_hosts: Vec<String>;
+}
+
+impl Config {
+    fn drop(self) {
+        self.server_name.free();
+        for i in 0..self.allowed_hosts.length() {
+            self.allowed_hosts.get(i).free();
+        }
+        self.allowed_hosts.free();
+        self.features.drop();
+    }
 }
 
 fn main() {
@@ -78,7 +95,7 @@ fn main() {
         let hosts = hosts_opt.unwrap();
         let count = hosts.len();
         "Allowed Hosts:   ({count} entries)";
-        for let i: usize = 0; i < count; i = i + 1 {
+        for i in 0..count {
             let host_opt = hosts.at(i);
             if host_opt.is_some() {
                 let host_val = host_opt.unwrap();
@@ -109,7 +126,7 @@ fn main() {
     "  features.metrics: {config.features.metrics}";
     let hosts_count = config.allowed_hosts.length();
     "  allowed_hosts:   ({hosts_count} entries)";
-    for let i: usize = 0; i < hosts_count; i = i + 1 {
+    for i in 0..hosts_count {
         let host = config.allowed_hosts.get(i).c_str();
         "    - {host}";
     }
@@ -149,12 +166,8 @@ fn main() {
     "  features.metrics: {out_metrics}";
     "  allowed_hosts: {out_hosts_count} entries";
 
-    // Cleanup
-    config.server_name.free();
-    for let i: usize = 0; i < config.allowed_hosts.length(); i = i + 1 {
-        config.allowed_hosts.get(i).free();
-    }
-    config.allowed_hosts.free();
+    // Cleanup - RAII via drop()
+    config.drop();
     json_out.free();
     json_str.free();
     JsonValue::free(root);
