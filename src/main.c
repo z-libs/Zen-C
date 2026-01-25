@@ -376,12 +376,19 @@ int main(int argc, char **argv)
         }
     }
 
-    // If using cosmocc, it handles these usually, but keeping them is okay for Linux targets
+    if (strcmp(g_config.cc, "cc") == 0)
+    {
+        snprintf(cmd, sizeof(cmd), "cl /nologo %s %s -Fe:%s out.c -I./src %s",
+             g_config.gcc_flags, g_cflags,
+             outfile, g_link_flags);
+    } else {
+        // If using cosmocc, it handles these usually, but keeping them is okay for Linux targets
 
-    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s %s %s %s -I./src %s", g_config.cc,
+        snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s %s %s %s -I./src %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "",
              g_config.quiet ? "-w" : "", outfile, temp_source_file, math_flag, thread_flag,
              g_link_flags);
+    }
 
     if (g_config.verbose)
     {
