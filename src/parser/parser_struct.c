@@ -142,6 +142,12 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
     n_node->trait.methods = methods;
     n_node->trait.generic_params = generic_params;
     n_node->trait.generic_param_count = generic_count;
+    
+    if (generic_count > 0)
+    {
+        ctx->known_generics_count -= generic_count;
+    }
+
     register_trait(name);
     return n_node;
 }

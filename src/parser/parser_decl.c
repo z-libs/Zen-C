@@ -56,6 +56,13 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
                 strcat(buf, ",");
             }
             strcat(buf, s);
+            
+            // Check for shadowing
+            if (is_known_generic(ctx, s))
+            {
+                zpanic_at(gt, "Generic parameter '%s' shadows an existing generic parameter", s);
+            }
+            
             free(s);
 
             if (lexer_peek(l).type == TOK_COMMA)
