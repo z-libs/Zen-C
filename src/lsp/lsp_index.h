@@ -4,30 +4,39 @@
 
 #include "parser.h"
 
+/**
+ * @brief Type of an indexed AST range.
+ */
 typedef enum
 {
-    RANGE_DEFINITION,
-    RANGE_REFERENCE
+    RANGE_DEFINITION, ///< Defines a symbol.
+    RANGE_REFERENCE   ///< References a symbol.
 } RangeType;
 
+/**
+ * @brief A range in the source code mapping to semantic info.
+ */
 typedef struct LSPRange
 {
-    int start_line;
-    int start_col;
-    int end_line;
-    int end_col; // Approximation.
-    RangeType type;
-    int def_line;
-    int def_col;
-    char *hover_text;
-    ASTNode *node;
+    int start_line;     ///< Start line (1-based).
+    int start_col;      ///< Start column (1-based).
+    int end_line;       ///< End line.
+    int end_col;        ///< End column (approximated).
+    RangeType type;     ///< Type of range (def or ref).
+    int def_line;       ///< Line of definition (if reference).
+    int def_col;        ///< Column of definition (if reference).
+    char *hover_text;   ///< Tooltip text / signature.
+    ASTNode *node;      ///< Associated AST node.
     struct LSPRange *next;
 } LSPRange;
 
+/**
+ * @brief Index of a single file.
+ */
 typedef struct LSPIndex
 {
-    LSPRange *head;
-    LSPRange *tail;
+    LSPRange *head;     ///< First range in the file.
+    LSPRange *tail;     ///< Last range in the file.
 } LSPIndex;
 
 // API.

@@ -4,7 +4,7 @@ test "test_varargs" {
     println "Testing Varargs...";
     printf("  Direct Printf: %d, %f, %s\n", 42, 3.14, "Hello");
     
-    var buf = malloc(100);
+    let buf = malloc(100);
     sprintf(buf, "Formatted: %d", 123);
     println "  {buf}";
 }

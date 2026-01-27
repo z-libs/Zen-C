@@ -8,13 +8,13 @@
 import "std/option.zc"
 
 fn main() {
-    var val = Option<int>::Some(10);
+    let val = Option<int>::Some(10);
     
     if (val.is_some()) {
         println "{val.unwrap()}";
     }
     
-    var nothing = Option<int>::None();
+    let nothing = Option<int>::None();
     println "{nothing.unwrap_or(0)}"; // Prints 0
 }
 ```

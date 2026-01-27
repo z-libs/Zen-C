@@ -9,7 +9,7 @@ struct RangeIter {
 impl RangeIter {
     fn next(self) -> Option<int> {
         if (self.current < self.stop) {
-            var v = self.current;
+            let v = self.current;
             self.current += 1;
             return Option<int>::Some(v);
         }
@@ -32,8 +32,8 @@ impl MyRange {
 }
 
 test "iterator_desugaring" {
-    var range = MyRange { start: 0, end: 5 };
-    var sum = 0;
+    let range = MyRange { start: 0, end: 5 };
+    let sum = 0;
 
     // This loop should be desugared by the compiler
     for i in range {

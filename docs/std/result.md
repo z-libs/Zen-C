@@ -15,7 +15,7 @@ fn divide(a: int, b: int) -> Result<int> {
 }
 
 fn main() {
-    var res = divide(10, 2);
+    let res = divide(10, 2);
     if (res.is_ok()) {
         println "Result: {res.unwrap()}";
     } else {

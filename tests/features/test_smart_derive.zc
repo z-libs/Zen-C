@@ -6,8 +6,8 @@ struct Container {
 
 // Ensure derived eq uses pointers by trying to use 'c2' after comparison
 test "eq_moves" {
-    var c1 = Container { val: 10 };
-    var c2 = Container { val: 10 };
+    let c1 = Container { val: 10 };
+    let c2 = Container { val: 10 };
     
     // This should call Container__eq(&c1, &c2)
     // If it passed by value, c2 would be moved here

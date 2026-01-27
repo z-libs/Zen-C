@@ -13,12 +13,12 @@ fn square(x: int) -> int {
 }
 
 test "test_result_constructors" {
-    var res = Result_Ok(42);
+    let res = Result_Ok(42);
     
     assert(res.tag == Result_Ok_Tag, "Expected Ok tag");
     assert(res.data.Ok == 42, "Data mismatch");
     
-    var err = Result_Err(500);
+    let err = Result_Err(500);
     assert(err.tag == Result_Err_Tag, "Expected Err tag");
 }
 
@@ -26,17 +26,17 @@ test "test_pipelines" {
     // Logic: ((5 + 5) * (5 + 5))
     // 5 |> add(5) -> 10
     // 10 |> square() -> 100
-    var val = 5 |> add(5) |> square();
+    let val = 5 |> add(5) |> square();
     
     println "Pipeline result: {val}";
     assert(val == 100, "Pipeline calculation failed");
 }
 
 test "test_fstrings" {
-    var x = 10;
-    var name = "ZPrep";
+    let x = 10;
+    let name = "ZPrep";
     
-    var s = f"Hello {name}, x = {x}, x * 2 = {x * 2}";
+    let s = f"Hello {name}, x = {x}, x * 2 = {x * 2}";
     
     println "F-String: {s}";
     assert(x == 10, "Sanity check");
@@ -52,8 +52,8 @@ test "test_defer" {
 }
 
 test "test_hex_binary" {
-    var h = 0xFF;    // 255
-    var b = 0b1010;  // 10
+    let h = 0xFF;    // 255
+    let b = 0b1010;  // 10
     assert(h == 255, "Hex parsing failed");
     assert(b == 10, "Binary parsing failed");
 }

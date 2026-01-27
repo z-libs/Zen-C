@@ -458,15 +458,15 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (ctx->parsed_globals_list)
         {
-            StructRef *s = ctx->parsed_globals_list;
-            while (s)
+            StructRef *struct_ref = ctx->parsed_globals_list;
+            while (struct_ref)
             {
                 ASTNode *copy = xmalloc(sizeof(ASTNode));
-                *copy = *s->node;
+                *copy = *struct_ref->node;
                 copy->next = merged_globals;
                 merged_globals = copy;
 
-                s = s->next;
+                struct_ref = struct_ref->next;
             }
         }
 
@@ -477,11 +477,11 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (ctx->instantiated_funcs)
         {
-            ASTNode *s = ctx->instantiated_funcs;
-            while (s)
+            ASTNode *fn_node = ctx->instantiated_funcs;
+            while (fn_node)
             {
                 ASTNode *copy = xmalloc(sizeof(ASTNode));
-                *copy = *s;
+                *copy = *fn_node;
                 copy->next = NULL;
                 if (!merged_funcs)
                 {
@@ -493,17 +493,17 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                     merged_funcs_tail->next = copy;
                     merged_funcs_tail = copy;
                 }
-                s = s->next;
+                fn_node = fn_node->next;
             }
         }
 
         if (ctx->parsed_funcs_list)
         {
-            StructRef *s = ctx->parsed_funcs_list;
-            while (s)
+            StructRef *fn_ref = ctx->parsed_funcs_list;
+            while (fn_ref)
             {
                 ASTNode *copy = xmalloc(sizeof(ASTNode));
-                *copy = *s->node;
+                *copy = *fn_ref->node;
                 copy->next = NULL;
                 if (!merged_funcs)
                 {
@@ -515,17 +515,17 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                     merged_funcs_tail->next = copy;
                     merged_funcs_tail = copy;
                 }
-                s = s->next;
+                fn_ref = fn_ref->next;
             }
         }
 
         if (ctx->parsed_impls_list)
         {
-            StructRef *s = ctx->parsed_impls_list;
-            while (s)
+            StructRef *impl_ref = ctx->parsed_impls_list;
+            while (impl_ref)
             {
                 ASTNode *copy = xmalloc(sizeof(ASTNode));
-                *copy = *s->node;
+                *copy = *impl_ref->node;
                 copy->next = NULL;
                 if (!merged_funcs)
                 {
@@ -537,7 +537,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                     merged_funcs_tail->next = copy;
                     merged_funcs_tail = copy;
                 }
-                s = s->next;
+                impl_ref = impl_ref->next;
             }
         }
 

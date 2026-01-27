@@ -9,10 +9,10 @@ import "std/fs.zc"
 
 fn main() {
     // Reading a file
-    var res = File::open("example.txt", "r");
+    let res = File::open("example.txt", "r");
     if (res.is_ok()) {
-        var file = res.unwrap();
-        var content = file.read_to_string();
+        let file = res.unwrap();
+        let content = file.read_to_string();
         if (content.is_ok()) {
             println "{content.unwrap()}";
         }

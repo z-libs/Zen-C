@@ -32,7 +32,7 @@ impl Result<T> {
             !"Panic: unwrap called on Err: {self.err}";
             exit(1);
         }
-        var v = self.val;
+        let v = self.val;
         memset(&self.val, 0, sizeof(T));
         return v;
     }

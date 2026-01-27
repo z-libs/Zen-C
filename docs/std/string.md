@@ -8,7 +8,7 @@
 import "std/string.zc"
 
 fn main() {
-    var s = String::from("Hello");
+    let s = String::from("Hello");
     s.append(String::from(" World"));
     
     println "{s}"; // Prints "Hello World"

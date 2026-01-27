@@ -66,20 +66,20 @@ fn main() {
     defer { println "Cleaning up resources..."; }
 
     println "=> Generics and traits.";
-    var btn = Button { 
+    let btn = Button { 
         label: "Submit", 
         width: 120, 
         height: 40 
     };
 
-    var container = Container<Button> { item: btn };
+    let container = Container<Button> { item: btn };
     
-    var b = container.get();
+    let b = container.get();
     b.draw();
     println "";
 
     println "=> Enums and pattern matching.";
-    var events: Event[4] = [
+    let events: Event[4] = [
         Event::Click(Point { x: 150, y: 300 }),
         Event::KeyPress('Z'),
         Event::Click(Point { x: 42, y: 0 }),
@@ -92,7 +92,7 @@ fn main() {
     println "";
 
     println "=> Lambdas";
-    var sum = run_op(10, 20, (a, b) -> a + b);
+    let sum = run_op(10, 20, (a, b) -> a + b);
     println "10 + 20 = {sum}";
     println "";
 }

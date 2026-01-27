@@ -5,8 +5,8 @@ struct Point {
 }
 
 test "auto_deref" {
-    var p = Point { x: 10, y: 20 };
-    var ptr = &p;
+    let p = Point { x: 10, y: 20 };
+    let ptr = &p;
     
     // This uses the dot operator on a pointer
     // In standard C, this requires ->. In Zen-C w/ Auto-Deref, . should work.
@@ -17,9 +17,9 @@ test "auto_deref" {
     
     assert(ptr.y == 30, "read ptr.y after write failed");
 
-    var i = Inner { val: 42 };
-    var o = Outer { inner: i };
-    var p_out = &o;
+    let i = Inner { val: 42 };
+    let o = Outer { inner: i };
+    let p_out = &o;
     
     // Nested access: p.inner.val -> p->inner.val
     assert(p_out.inner.val == 42, "Nested access failed");

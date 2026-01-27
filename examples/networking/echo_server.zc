@@ -4,27 +4,27 @@ import "std/net.zc"
 fn main() {
     "Starting Echo Server on 127.0.0.1:8080...";
     
-    var listener_res = TcpListener::bind("127.0.0.1", 8080);
+    let listener_res = TcpListener::bind("127.0.0.1", 8080);
     if listener_res.is_err() {
         !"Failed to bind: {listener_res.err}";
         return 1;
     }
 
-    var listener = listener_res.unwrap();
+    let listener = listener_res.unwrap();
     defer listener.close();
 
     loop {
-        var client_res = listener.accept();
+        let client_res = listener.accept();
         if client_res.is_ok() {
-            var stream = client_res.unwrap();
+            let stream = client_res.unwrap();
             defer stream.close();
             
-            var buf: char[1024];
+            let buf: char[1024];
             
-            var read_res = stream.read(buf, 1024);
+            let read_res = stream.read(buf, 1024);
             
             if read_res.is_ok() {
-                var bytes = read_res.unwrap();
+                let bytes = read_res.unwrap();
                 if bytes > 0 {
                     stream.write(buf, bytes);
                     "Echoed {bytes} bytes.";

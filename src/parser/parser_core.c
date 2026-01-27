@@ -267,6 +267,10 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             s = ast_create(NODE_RAW_STMT);
             s->raw_stmt.content = content;
         }
+        else if (t.type == TOK_DEF)
+        {
+            s = parse_def(ctx, l);
+        }
         else if (t.type == TOK_IDENT)
         {
             // Inline function: inline fn name(...) { }
@@ -333,13 +337,18 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             {
                 s = parse_import(ctx, l);
             }
-            else if (t.len == 3 && strncmp(t.start, "var", 3) == 0)
+            else if (t.len == 3 && strncmp(t.start, "let", 3) == 0)
             {
                 s = parse_var_decl(ctx, l);
             }
+            else if (t.len == 3 && strncmp(t.start, "var", 3) == 0)
+            {
+                zpanic_at(t, "'var' is deprecated. Use 'let' instead.");
+            }
             else if (t.len == 5 && strncmp(t.start, "const", 5) == 0)
             {
-                s = parse_const(ctx, l);
+                zpanic_at(t, "'const' for declarations is deprecated. Use 'def' for constants or "
+                             "'let x: const T' for read-only variables.");
             }
             else if (t.len == 6 && strncmp(t.start, "extern", 6) == 0)
             {
@@ -582,22 +591,34 @@ static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char *
                         }
                         char cmp[256];
 
-                        ASTNode *fdef = find_struct_def(ctx, ft);
-                        if (fdef && fdef->type == NODE_ENUM)
+                        // Detect pointer using type_info OR string check (fallback)
+                        int is_ptr = 0;
+                        if (f->type_info && f->type_info->kind == TYPE_POINTER)
                         {
-                            // Enum field: compare tags (pointer access via auto-deref)
+                            is_ptr = 1;
+                        }
+                        // Fallback: check if type string ends with '*'
+                        if (!is_ptr && ft && strchr(ft, '*'))
+                        {
+                            is_ptr = 1;
+                        }
+
+                        // Only look up struct def for non-pointer types
+                        ASTNode *fdef = is_ptr ? NULL : find_struct_def(ctx, ft);
+
+                        if (!is_ptr && fdef && fdef->type == NODE_ENUM)
+                        {
+                            // Enum field: compare tags
                             sprintf(cmp, "self.%s.tag == other.%s.tag", fn, fn);
                         }
-                        else if (fdef && fdef->type == NODE_STRUCT)
+                        else if (!is_ptr && fdef && fdef->type == NODE_STRUCT)
                         {
-                            // Struct field: use _eq function, pass addresses
-                            // self.field is L-value, other.field is L-value (auto-deref from
-                            // pointer) We need addresses of them: &self.field, &other.field
+                            // Struct field: use __eq function
                             sprintf(cmp, "%s__eq(&self.%s, &other.%s)", ft, fn, fn);
                         }
                         else
                         {
-                            // Primitive or unknown: use == (auto-deref)
+                            // Primitive, POINTER, or unknown: use ==
                             sprintf(cmp, "self.%s == other.%s", fn, fn);
                         }
                         strcat(body, cmp);
@@ -627,6 +648,233 @@ static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char *
             // Marker trait for Copy/Move semantics
             code = xmalloc(1024);
             sprintf(code, "impl Copy for %s {}", name);
+        }
+        else if (0 == strcmp(trait, "FromJson"))
+        {
+            // Generate from_json(j: JsonValue*) -> Result<StructName>
+            // Only works for structs (not enums)
+            if (strct->type != NODE_STRUCT)
+            {
+                zwarn_at(strct->token, "@derive(FromJson) only works on structs");
+                continue;
+            }
+
+            char body[8192];
+            body[0] = 0;
+
+            // Track Vec<String> fields for forget calls
+            char *vec_fields[32];
+            int vec_field_count = 0;
+
+            // Build field assignments
+            ASTNode *f = strct->strct.fields;
+            while (f)
+            {
+                if (f->type == NODE_FIELD)
+                {
+                    char *fn = f->field.name;
+                    char *ft = f->field.type;
+                    char assign[2048];
+
+                    if (!fn || !ft)
+                    {
+                        f = f->next;
+                        continue;
+                    }
+
+                    // Map types to appropriate get_* calls
+                    if (strcmp(ft, "int") == 0)
+                    {
+                        sprintf(assign, "let _f_%s = (*j).get_int(\"%s\").unwrap_or(0);\n", fn, fn);
+                    }
+                    else if (strcmp(ft, "double") == 0)
+                    {
+                        sprintf(assign, "let _f_%s = (*j).get_float(\"%s\").unwrap_or(0.0);\n", fn,
+                                fn);
+                    }
+                    else if (strcmp(ft, "bool") == 0)
+                    {
+                        sprintf(assign, "let _f_%s = (*j).get_bool(\"%s\").unwrap_or(false);\n", fn,
+                                fn);
+                    }
+                    else if (strcmp(ft, "char*") == 0)
+                    {
+                        sprintf(assign, "let _f_%s = (*j).get_string(\"%s\").unwrap_or(\"\");\n",
+                                fn, fn);
+                    }
+                    else if (strcmp(ft, "String") == 0)
+                    {
+                        sprintf(
+                            assign,
+                            "let _f_%s = String::new((*j).get_string(\"%s\").unwrap_or(\"\"));\n",
+                            fn, fn);
+                    }
+                    else if (ft && strstr(ft, "Vec") && strstr(ft, "String"))
+                    {
+                        // Track this field for forget() call later
+                        if (vec_field_count < 32)
+                        {
+                            vec_fields[vec_field_count++] = fn;
+                        }
+                        sprintf(
+                            assign,
+                            "let _f_%s = Vec<String>::new();\n"
+                            "let _arr_%s = (*j).get_array(\"%s\");\n"
+                            "if _arr_%s.is_some() {\n"
+                            "  let _a_%s = _arr_%s.unwrap();\n"
+                            "  for let _i_%s: usize = 0; _i_%s < _a_%s.len(); _i_%s = _i_%s + 1 {\n"
+                            "    let _item_%s = _a_%s.at(_i_%s);\n"
+                            "    if _item_%s.is_some() {\n"
+                            "      let _str_%s = (*_item_%s.unwrap()).as_string();\n"
+                            "      if _str_%s.is_some() {\n"
+                            "        let _s_%s = String::new(_str_%s.unwrap());\n"
+                            "        _f_%s.push(_s_%s); _s_%s.forget();\n"
+                            "      }\n"
+                            "    }\n"
+                            "  }\n"
+                            "}\n",
+                            fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn,
+                            fn, fn, fn, fn, fn);
+                    }
+                    else
+                    {
+                        // Nested struct: call NestedType::from_json recursively
+                        sprintf(assign,
+                                "let _opt_%s = (*j).get(\"%s\");\n"
+                                "let _f_%s: %s;\n"
+                                "if _opt_%s.is_some() { _f_%s = "
+                                "%s::from_json(_opt_%s.unwrap()).unwrap(); }\n",
+                                fn, fn, fn, ft, fn, fn, ft, fn);
+                    }
+                    strcat(body, assign);
+                }
+                f = f->next;
+            }
+
+            // Build struct initialization
+            strcat(body, "return Result<");
+            strcat(body, name);
+            strcat(body, ">::Ok(");
+            strcat(body, name);
+            strcat(body, " { ");
+
+            f = strct->strct.fields;
+            int first = 1;
+            while (f)
+            {
+                if (f->type == NODE_FIELD)
+                {
+                    if (!first)
+                    {
+                        strcat(body, ", ");
+                    }
+                    char init[128];
+                    // Check if this is a Vec<String> field - clone it to avoid double-free
+                    int is_vec_field = 0;
+                    for (int vi = 0; vi < vec_field_count; vi++)
+                    {
+                        if (strcmp(vec_fields[vi], f->field.name) == 0)
+                        {
+                            is_vec_field = 1;
+                            break;
+                        }
+                    }
+                    if (is_vec_field)
+                    {
+                        sprintf(init, "%s: _f_%s.clone()", f->field.name, f->field.name);
+                    }
+                    else
+                    {
+                        sprintf(init, "%s: _f_%s", f->field.name, f->field.name);
+                    }
+                    strcat(body, init);
+                    first = 0;
+                }
+                f = f->next;
+            }
+            strcat(body, " }); ");
+
+            code = xmalloc(8192 + 1024);
+            sprintf(code, "impl %s { fn from_json(j: JsonValue*) -> Result<%s> { %s } }", name,
+                    name, body);
+        }
+        else if (0 == strcmp(trait, "ToJson"))
+        {
+            // Generate to_json(self) -> JsonValue
+            // Only works for structs (not enums)
+            if (strct->type != NODE_STRUCT)
+            {
+                zwarn_at(strct->token, "@derive(ToJson) only works on structs");
+                continue;
+            }
+
+            char body[8192];
+            strcpy(body, "let _obj = JsonValue::object();\n");
+
+            ASTNode *f = strct->strct.fields;
+            while (f)
+            {
+                if (f->type == NODE_FIELD)
+                {
+                    char *fn = f->field.name;
+                    char *ft = f->field.type;
+                    char set_call[2048];
+
+                    if (!fn || !ft)
+                    {
+                        f = f->next;
+                        continue;
+                    }
+
+                    if (strcmp(ft, "int") == 0)
+                    {
+                        sprintf(set_call, "_obj.set(\"%s\", JsonValue::number((double)self.%s));\n",
+                                fn, fn);
+                    }
+                    else if (strcmp(ft, "double") == 0)
+                    {
+                        sprintf(set_call, "_obj.set(\"%s\", JsonValue::number(self.%s));\n", fn,
+                                fn);
+                    }
+                    else if (strcmp(ft, "bool") == 0)
+                    {
+                        sprintf(set_call, "_obj.set(\"%s\", JsonValue::bool(self.%s));\n", fn, fn);
+                    }
+                    else if (strcmp(ft, "char*") == 0)
+                    {
+                        sprintf(set_call, "_obj.set(\"%s\", JsonValue::string(self.%s));\n", fn,
+                                fn);
+                    }
+                    else if (strcmp(ft, "String") == 0)
+                    {
+                        sprintf(set_call, "_obj.set(\"%s\", JsonValue::string(self.%s.c_str()));\n",
+                                fn, fn);
+                    }
+                    else if (ft && strstr(ft, "Vec") && strstr(ft, "String"))
+                    {
+                        sprintf(set_call,
+                                "let _arr_%s = JsonValue::array();\n"
+                                "for let _i_%s: usize = 0; _i_%s < self.%s.length(); _i_%s = _i_%s "
+                                "+ 1 {\n"
+                                "  _arr_%s.push(JsonValue::string(self.%s.get(_i_%s).c_str()));\n"
+                                "}\n"
+                                "_obj.set(\"%s\", _arr_%s);\n",
+                                fn, fn, fn, fn, fn, fn, fn, fn, fn, fn, fn);
+                    }
+                    else
+                    {
+                        // Nested struct: call to_json recursively
+                        sprintf(set_call, "_obj.set(\"%s\", self.%s.to_json());\n", fn, fn);
+                    }
+                    strcat(body, set_call);
+                }
+                f = f->next;
+            }
+
+            strcat(body, "return _obj;");
+
+            code = xmalloc(8192 + 1024);
+            sprintf(code, "impl %s { fn to_json(self) -> JsonValue { %s } }", name, body);
         }
 
         if (code)

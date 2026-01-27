@@ -1,0 +1,87 @@
+// HTTP Client Example
+// Simple GET, POST, PUT, DELETE
+//> link: -lcurl
+
+import "std/http/client.zc"
+import "std/json.zc"
+
+@derive(ToJson)
+struct CreateUser {
+    name: char*;
+    email: char*;
+}
+
+@derive(ToJson)
+struct UpdateUser {
+    name: char*;
+}
+
+fn example_get() {
+    let client = HttpClient::new();
+    let resp = client.get("https://httpbin.org/get");
+
+    if resp.ok() {
+        "Status: {resp.status_code}";
+    }
+    resp.free();
+    "";
+}
+
+fn example_post() {
+    let client = HttpClient::new();
+
+    let payload = CreateUser { name: "John", email: "john@example.com" };
+    let json_val = payload.to_json();
+    let json = json_val.stringify();
+
+    "Sending: {json}";
+    let resp = client.post_json("https://httpbin.org/post", json);
+
+    if resp.ok() {
+        "Status: {resp.status_code}";
+    }
+    free(json);
+    json_val.free();
+    resp.free();
+    "";
+}
+
+fn example_put() {
+    let client = HttpClient::new();
+    let payload = UpdateUser { name: "Jane" };
+    let json_val = payload.to_json();
+    let json = json_val.stringify();
+
+    "Sending: {json}";
+    let resp = client.put("https://httpbin.org/put", json);
+
+    if resp.ok() {
+        "Status: {resp.status_code}";
+    }
+    free(json);
+    json_val.free();
+    resp.free();
+    "";
+}
+
+fn example_delete() {
+    let client = HttpClient::new();
+    let resp = client.delete("https://httpbin.org/delete");
+
+    if resp.ok() {
+        "Status: {resp.status_code}";
+    }
+    resp.free();
+    "";
+}
+
+fn main() {
+    "HTTP Client \n";
+
+    example_get();
+    example_post();
+    example_put();
+    example_delete();
+
+    "Done!";
+}

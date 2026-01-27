@@ -4,21 +4,27 @@
 
 #include "../zprep.h"
 
+/**
+ * @brief Triggers for Zen facts (easter egg system).
+ * 
+ * Each trigger corresponds to a specific coding pattern or event
+ * which may elicit a "Zen Fact" message to the user.
+ */
 typedef enum
 {
-    TRIGGER_GOTO,
-    TRIGGER_POINTER_ARITH,
-    TRIGGER_BITWISE,
-    TRIGGER_RECURSION,
-    TRIGGER_TERNARY,
-    TRIGGER_ASM,
-    TRIGGER_WHILE_TRUE,
-    TRIGGER_MACRO,
-    TRIGGER_VOID_PTR,
-    TRIGGER_MAIN,
-    TRIGGER_FORMAT_STRING,
-    TRIGGER_STRUCT_PADDING,
-    TRIGGER_GLOBAL
+    TRIGGER_GOTO,           ///< Usage of `goto`.
+    TRIGGER_POINTER_ARITH,  ///< Pointer arithmetic usage.
+    TRIGGER_BITWISE,        ///< Bitwise operations.
+    TRIGGER_RECURSION,      ///< Recursive calls (currently manual trigger).
+    TRIGGER_TERNARY,        ///< Ternary operator usage.
+    TRIGGER_ASM,            ///< Inline assembly.
+    TRIGGER_WHILE_TRUE,     ///< `while(true)` loops.
+    TRIGGER_MACRO,          ///< Macro definitions.
+    TRIGGER_VOID_PTR,       ///< `void*` usage.
+    TRIGGER_MAIN,           ///< Compilation of `main` function.
+    TRIGGER_FORMAT_STRING,  ///< F-string usage.
+    TRIGGER_STRUCT_PADDING, ///< Implicit padding detection.
+    TRIGGER_GLOBAL          ///< Global variables.
 } ZenTrigger;
 
 void zen_init(void);

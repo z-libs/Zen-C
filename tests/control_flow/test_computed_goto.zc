@@ -1,9 +1,9 @@
 
 test "test_computed_goto" -> int {
-    var x = 0;
+    let x = 0;
     
     // Get address of label using && unary operator
-    var target = &&label_B;
+    let target = &&label_B;
     
     // Jump to label A first
     goto label_A;

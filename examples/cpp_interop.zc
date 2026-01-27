@@ -25,8 +25,8 @@ fn main() {
     
     cpp_print("Hello from C++!");
     
-    var vec = cpp_make_vector(10, 20, 30);
-    var result = cpp_sum_vector(vec);
+    let vec = cpp_make_vector(10, 20, 30);
+    let result = cpp_sum_vector(vec);
     "Sum of C++ vector: {result}";
     
     raw {

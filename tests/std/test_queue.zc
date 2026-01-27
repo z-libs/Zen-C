@@ -2,11 +2,11 @@ import "std/queue.zc"
 
 test "Queue Push/Pop" {
   println "Testing Queue Push/Pop";
-  var queue = Queue<i32>::new();
+  let queue = Queue<i32>::new();
   defer queue.free();
 
   println "Popping on an empty queue without pushing anything prior"
-  var v = queue.pop();
+  let v = queue.pop();
   assert(v.is_none(), "v should not have a valid value");
 
   println "Pushing in three values..."
@@ -30,7 +30,7 @@ test "Queue Push/Pop" {
 
 test "Queue Length and Clear" {
   println "Testing Queue clear";
-  var queue = Queue<i32>::new();
+  let queue = Queue<i32>::new();
   defer queue.free();
 
   assert(queue.is_empty() && queue.length() == 0, "queue should be empty");
@@ -44,13 +44,13 @@ test "Queue Length and Clear" {
 
 test "Queue Clone" {
   println "Testing Queue Cloning";
-  var queue = Queue<i32>::new();
+  let queue = Queue<i32>::new();
   defer queue.free();
   queue.push(123);
-  var queue2 = queue.clone();
+  let queue2 = queue.clone();
   defer queue2.free();
 
-  var v = queue2.pop();
+  let v = queue2.pop();
   assert(v.is_some() && v.unwrap() == 123, "v's value should be 123");
   v = queue2.pop();
   assert(v.is_none(), "v should not have a valid value");
@@ -62,7 +62,7 @@ test "Queue Clone" {
 }
 
 test "Queue Ring Buffer (Advanced)" {
-    var q = Queue<int>::new();
+    let q = Queue<int>::new();
     
     println "Fill slightly"
     q.push(1);
@@ -91,10 +91,10 @@ test "Queue Ring Buffer (Advanced)" {
     assert(q.is_empty());
     
     println "Large scale test"
-    for (var i = 0; i < 100; i=i+1) {
+    for (let i = 0; i < 100; i=i+1) {
         q.push(i);
     }
-    for (var i = 0; i < 100; i=i+1) {
+    for (let i = 0; i < 100; i=i+1) {
         assert(*q.pop().unwrap_ref() == i);
     }
     

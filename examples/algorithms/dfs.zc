@@ -7,7 +7,7 @@ struct Graph {
 
 impl Graph {
     fn new(vertices: int) -> Graph {
-        var g = Graph {
+        let g = Graph {
             num_vertices: vertices,
             adj_list: Vec<Vec<int>>::new()
         };
@@ -32,10 +32,10 @@ impl Graph {
         visited[vertex] = true;
         order.push(vertex);
 
-        var neighbors = self.adj_list.data[vertex];
-        var neighbor_count = (int)neighbors.len;
+        let neighbors = self.adj_list.data[vertex];
+        let neighbor_count = (int)neighbors.len;
         for i in 0..neighbor_count {
-            var neighbor = neighbors.data[i];
+            let neighbor = neighbors.data[i];
             if !visited[neighbor] {
                 self._dfs_recursive(neighbor, visited, order);
             }
@@ -43,12 +43,12 @@ impl Graph {
     }
 
     fn dfs_recursive(self, start: int) -> Vec<int> {
-        var order = Vec<int>::new();
+        let order = Vec<int>::new();
         if start < 0 || start >= self.num_vertices {
             return order;
         }
 
-        var visited = Vec<bool>::new();
+        let visited = Vec<bool>::new();
         defer visited.free();
         for i in 0..self.num_vertices {
             visited.push(false);
@@ -59,23 +59,23 @@ impl Graph {
     }
 
     fn dfs(self, start: int) -> Vec<int> {
-        var order = Vec<int>::new();
+        let order = Vec<int>::new();
         if start < 0 || start >= self.num_vertices {
             return order;
         }
 
-        var visited = Vec<bool>::new();
+        let visited = Vec<bool>::new();
         defer visited.free();
         for i in 0..self.num_vertices {
             visited.push(false);
         }
 
-        var stack = Vec<int>::new();
+        let stack = Vec<int>::new();
         defer stack.free();
         stack.push(start);
 
         while !stack.is_empty() {
-            var vertex = stack.pop();
+            let vertex = stack.pop();
             if visited.data[vertex] {
                 continue;
             }
@@ -83,10 +83,10 @@ impl Graph {
             visited.data[vertex] = true;
             order.push(vertex);
 
-            var neighbors = self.adj_list.data[vertex];
-            var i = (int)neighbors.len - 1;
+            let neighbors = self.adj_list.data[vertex];
+            let i = (int)neighbors.len - 1;
             while i >= 0 {
-                var neighbor = neighbors.data[i];
+                let neighbor = neighbors.data[i];
                 if !visited.data[neighbor] {
                     stack.push(neighbor);
                 }
@@ -106,7 +106,7 @@ impl Graph {
 }
 
 fn main() {
-    var g = Graph::new(6);
+    let g = Graph::new(6);
     defer g.free();
 
     g.add_edge(0, 1);
@@ -115,9 +115,9 @@ fn main() {
     g.add_edge(1, 4);
     g.add_edge(3, 5);
 
-    var order_rec = g.dfs_recursive(0);
+    let order_rec = g.dfs_recursive(0);
     defer order_rec.free();
-    var order_it = g.dfs(0);
+    let order_it = g.dfs(0);
     defer order_it.free();
 
     "DFS recursive order: "..;

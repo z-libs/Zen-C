@@ -7,9 +7,9 @@ test "test_string_methods" {
     println "Testing String methods...";
     
     // Substring
-    var s1: String = String::from("Hello World");
-    var sub: String = s1.substring(0, 5);
-    var expected1: String = String::from("Hello");
+    let s1: String = String::from("Hello World");
+    let sub: String = s1.substring(0, 5);
+    let expected1: String = String::from("Hello");
     if (sub.eq(&expected1)) {
         println "  -> substring(0, 5): Passed";
     } else {
@@ -17,8 +17,8 @@ test "test_string_methods" {
     }
     
     // Substring middle
-    var sub2: String = s1.substring(6, 5);
-    var expected2: String = String::from("World");
+    let sub2: String = s1.substring(6, 5);
+    let expected2: String = String::from("World");
     if (sub2.eq(&expected2)) {
         println "  -> substring(6, 5): Passed";
     } else {
@@ -26,9 +26,9 @@ test "test_string_methods" {
     }
     
     // Find character - found
-    var pos: Option<usize> = s1.find('W');
+    let pos: Option<usize> = s1.find('W');
     if (pos.is_some()) {
-        var idx: usize = pos.unwrap();
+        let idx: usize = pos.unwrap();
         assert(idx == (usize)6, "find('W') index mismatch");
         println "  -> find('W'): Passed (found at index 6)";
     } else {
@@ -36,7 +36,7 @@ test "test_string_methods" {
     }
     
     // Find character - not found
-    var pos2: Option<usize> = s1.find('Z');
+    let pos2: Option<usize> = s1.find('Z');
     if (pos2.is_none()) {
         println "  -> find('Z'): Passed (not found)";
     } else {
@@ -44,7 +44,7 @@ test "test_string_methods" {
     }
     
     // Length
-    var len: usize = s1.length();
+    let len: usize = s1.length();
     if (len == (usize)11) {
         println "  -> length(): Passed (11)";
     } else {
@@ -65,10 +65,10 @@ test "test_string_methods" {
     }
 
     // Append
-    var s2: String = String::from("Hello");
-    var s3: String = String::from(" World");
+    let s2: String = String::from("Hello");
+    let s3: String = String::from(" World");
     s2.append(&s3);
-    var expected6: String = String::from("Hello World");
+    let expected6: String = String::from("Hello World");
     if (s2.eq(&expected6)) {
         println "  -> append(): Passed";
     } else {
@@ -80,33 +80,33 @@ test "test_string_methods" {
 
 test "test_fstrings_return" {
     println "Testing F-Strings and Returns...";
-    var x = 100;
-    var y = 50;
+    let x = 100;
+    let y = 50;
 
     println "Direct F-String: x={x}";
-    var nested = f"y is {y}";
+    let nested = f"y is {y}";
     println "Argument F-String: {nested}";
     println "Math inside: 100 + 50 = {x + y}";
     
-    var inner = f"Inner({x})";
-    var outer = f"Outer({inner})";
+    let inner = f"Inner({x})";
+    let outer = f"Outer({inner})";
     println "Composed: {outer}";
     assert(strcmp(outer, "Outer(Inner(100))") == 0, "Composed f-string failed");
 }
 
 test "test_string_std_ops" {
     println "Testing String Std Ops...";
-    var s1 = String::from("Hello");
-    var s2 = String::from(" World");
+    let s1 = String::from("Hello");
+    let s2 = String::from(" World");
     
-    var s3 = s1.add(&s2); 
+    let s3 = s1.add(&s2); 
     
     print "Concatenated: ";
     s3.println();
     
     assert(s3.length() == 11, "Length mismatch");
 
-    var s4 = String::from("Hello World");
+    let s4 = String::from("Hello World");
     if (s3.eq(&s4)) {
         println "Equality check passed: Strings are identical.";
     } else {

@@ -1,10 +1,28 @@
+# OS detection and portable commands
+ifeq ($(OS),Windows_NT)
+    EXE = .exe
+    RM = rm -rf
+    MKDIR = mkdir -p
+    CP = cp -af
+    LN = ln -sf
+    INSTALL = install
+else
+    EXE =
+    RM = rm -rf
+    MKDIR = mkdir -p
+    CP = cp -af
+    LN = ln -sf
+    INSTALL = install
+endif
+
 # Compiler configuration
 # Default: gcc
 # To build with clang: make CC=clang
 # To build with zig:   make CC="zig cc"
-CC = gcc
-CFLAGS = -Wall -Wextra -g -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp
-TARGET = zc
+# Version synchronization
+GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")
+CFLAGS = -Wall -Wextra -g -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -DZEN_VERSION=\"$(GIT_VERSION)\"
+TARGET = zc$(EXE)
 LIBS = -lm -lpthread -ldl
 
 SRCS = src/main.c \
@@ -46,8 +64,22 @@ INCLUDEDIR = $(PREFIX)/include/zenc
 
 PLUGINS = plugins/befunge.so plugins/brainfuck.so plugins/forth.so plugins/lisp.so plugins/regex.so plugins/sql.so
 
+# APE (Actually Portable Executable) configuration
+COSMOCC = cosmocc
+OUT_STAGE = out/stage
+OUT_BIN = out/bin
+ZC_ENTRY_O = $(OUT_STAGE)/zc_entry.o
+ZC_COM_BIN = $(OUT_STAGE)/zc.com
+ZC_COM = $(OUT_BIN)/zc.com
+ZC_BOOT_SRC = ape/boot/boot.zc
+ZC_BOOT_COM_BIN = $(OUT_STAGE)/zc-boot.com
+ZC_BOOT_COM = $(OUT_BIN)/zc-boot.com
+
 # Default target
 all: $(TARGET) $(PLUGINS)
+
+# APE target
+ape: $(ZC_COM) $(ZC_BOOT_COM)
 
 # Build plugins
 plugins/%.so: plugins/%.c
@@ -55,51 +87,104 @@ plugins/%.so: plugins/%.c
 
 # Link
 $(TARGET): $(OBJS)
-	@mkdir -p $(dir $@)
+	@$(MKDIR) $(dir $@)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 	@echo "=> Build complete: $(TARGET)"
 
 # Compile
 $(OBJ_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
+	@$(MKDIR) $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# APE targets
+$(ZC_ENTRY_O): ape/zc_entry.c
+	@$(MKDIR) $(@D)
+	$(COSMOCC) -c $< -o $@
+
+$(ZC_COM_BIN): $(ZC_ENTRY_O) $(SRCS)
+	@$(MKDIR) $(@D)
+	$(MAKE) \
+		PLUGINS= \
+		CC=$(COSMOCC) \
+		OBJ_DIR=obj-ape \
+		ZEN_VERSION="$(GIT_VERSION)" \
+		LIBS="$(abspath $(ZC_ENTRY_O)) -Wl,--wrap=main" \
+		TARGET="$(abspath $@)";
+
+$(ZC_COM): $(ZC_COM_BIN)
+	@$(MKDIR) $(@D)
+	@$(CP) $(ZC_COM_BIN) $(wildcard $(ZC_COM_BIN).*) "$(@D)"; \
+	zip -r "$(abspath $@)" std.zc std LICENSE;
+
+$(ZC_BOOT_COM_BIN): $(ZC_BOOT_SRC) $(ZC_COM)
+	@$(MKDIR) $(@D)
+	./$(ZC_COM) build --cc $(COSMOCC) -o $@ $<
+
+$(ZC_BOOT_COM): $(ZC_BOOT_COM_BIN) ape/boot/.args
+	@$(MKDIR) $(@D)
+	@$(CP) $(ZC_BOOT_COM_BIN) $(wildcard $(ZC_BOOT_COM_BIN).*) "$(@D)"; \
+	(cd ape/boot && zip "$(abspath $@)" .args hello.zc instructions.txt Makefile); \
+	zip "$(abspath $@)" LICENSE;
 
 # Install
 install: $(TARGET)
-	install -d $(BINDIR)
-	install -m 755 $(TARGET) $(BINDIR)/$(TARGET)
+	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) -m 755 $(TARGET) $(BINDIR)/$(TARGET)
 	
 	# Install man pages
-	install -d $(MANDIR)/man1 $(MANDIR)/man5 $(MANDIR)/man7
-	test -f man/zc.1 && install -m 644 man/zc.1 $(MANDIR)/man1/zc.1 || true
-	test -f man/zc.5 && install -m 644 man/zc.5 $(MANDIR)/man5/zc.5 || true
-	test -f man/zc.7 && install -m 644 man/zc.7 $(MANDIR)/man7/zc.7 || true
+	$(INSTALL) -d $(MANDIR)/man1 $(MANDIR)/man5 $(MANDIR)/man7
+	test -f man/zc.1 && $(INSTALL) -m 644 man/zc.1 $(MANDIR)/man1/zc.1 || true
+	test -f man/zc.5 && $(INSTALL) -m 644 man/zc.5 $(MANDIR)/man5/zc.5 || true
+	test -f man/zc.7 && $(INSTALL) -m 644 man/zc.7 $(MANDIR)/man7/zc.7 || true
 	
 	# Install standard library
-	install -d $(SHAREDIR)
-	cp -r std $(SHAREDIR)/
+	$(INSTALL) -d $(SHAREDIR)
+	$(CP) std $(SHAREDIR)/
 	
 	# Install plugin headers
-	install -d $(INCLUDEDIR)
-	install -m 644 plugins/zprep_plugin.h $(INCLUDEDIR)/zprep_plugin.h
+	$(INSTALL) -d $(INCLUDEDIR)
+	$(INSTALL) -m 644 plugins/zprep_plugin.h $(INCLUDEDIR)/zprep_plugin.h
 	@echo "=> Installed to $(BINDIR)/$(TARGET)"
 	@echo "=> Man pages installed to $(MANDIR)"
 	@echo "=> Standard library installed to $(SHAREDIR)/std"
 
 # Uninstall
 uninstall:
-	rm -f $(BINDIR)/$(TARGET)
-	rm -f $(MANDIR)/man1/zc.1
-	rm -f $(MANDIR)/man5/zc.5
-	rm -f $(MANDIR)/man7/zc.7
-	rm -rf $(SHAREDIR)
+	$(RM) $(BINDIR)/$(TARGET)
+	$(RM) $(MANDIR)/man1/zc.1
+	$(RM) $(MANDIR)/man5/zc.5
+	$(RM) $(MANDIR)/man7/zc.7
+	$(RM) $(SHAREDIR)
 	@echo "=> Uninstalled from $(BINDIR)/$(TARGET)"
 	@echo "=> Removed man pages from $(MANDIR)"
 	@echo "=> Removed $(SHAREDIR)"
 
+# Install APE
+install-ape: ape
+	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) -m 755 $(ZC_COM) $(BINDIR)/zc.com
+	$(INSTALL) -m 755 $(ZC_BOOT_COM) $(BINDIR)/zc-boot.com
+	$(LN) $(BINDIR)/zc.com $(BINDIR)/zc
+	
+	# Install standard library (shared)
+	$(INSTALL) -d $(SHAREDIR)
+	$(CP) std $(SHAREDIR)/
+	@echo "=> Installed APE binaries to $(BINDIR)"
+	@echo "=> Alias 'zc' points to zc.com"
+	@echo "=> Standard library installed to $(SHAREDIR)/std"
+
+# Uninstall APE
+uninstall-ape:
+	$(RM) $(BINDIR)/zc
+	$(RM) $(BINDIR)/zc.com
+	$(RM) $(BINDIR)/zc-boot.com
+	$(RM) $(SHAREDIR)
+	@echo "=> Uninstalled APE binaries from $(BINDIR)"
+	@echo "=> Removed $(SHAREDIR)"
+
 # Clean
 clean:
-	rm -rf $(OBJ_DIR) $(TARGET) out.c plugins/*.so
+	$(RM) $(OBJ_DIR) obj-ape $(TARGET) out.c plugins/*.so a.out* out
 	@echo "=> Clean complete!"
 
 # Test
@@ -114,4 +199,4 @@ zig:
 clang:
 	$(MAKE) CC=clang
 
-.PHONY: all clean install uninstall test zig clang
+.PHONY: all clean install uninstall install-ape uninstall-ape test zig clang ape

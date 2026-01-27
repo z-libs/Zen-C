@@ -28,6 +28,10 @@ void run_repl(const char *self_path)
 
     char history_path[512];
     const char *home = getenv("HOME");
+    if (z_is_windows() && !home)
+    {
+        home = getenv("USERPROFILE");
+    }
     if (home)
     {
         snprintf(history_path, sizeof(history_path), "%s/.zprep_history", home);
@@ -262,7 +266,20 @@ void run_repl(const char *self_path)
                     }
 
                     char edit_path[256];
-                    sprintf(edit_path, "/tmp/zprep_edit_%d.zc", rand());
+                    const char *tmpdir = getenv("TEMP");
+                    if (!tmpdir)
+                    {
+                        tmpdir = getenv("TMP");
+                    }
+                    if (!tmpdir && !z_is_windows())
+                    {
+                        tmpdir = "/tmp";
+                    }
+                    if (!tmpdir)
+                    {
+                        tmpdir = ".";
+                    }
+                    snprintf(edit_path, sizeof(edit_path), "%s/zprep_edit_%d.zc", tmpdir, rand());
                     FILE *f = fopen(edit_path, "w");
                     if (f)
                     {
@@ -638,7 +655,21 @@ void run_repl(const char *self_path)
                     strcat(probe_code, "); }");
 
                     char tmp_path[256];
-                    sprintf(tmp_path, "/tmp/zprep_repl_type_%d.zc", rand());
+                    const char *tmpdir = getenv("TEMP");
+                    if (!tmpdir)
+                    {
+                        tmpdir = getenv("TMP");
+                    }
+                    if (!tmpdir && !z_is_windows())
+                    {
+                        tmpdir = "/tmp";
+                    }
+                    if (!tmpdir)
+                    {
+                        tmpdir = ".";
+                    }
+                    snprintf(tmp_path, sizeof(tmp_path), "%s/zprep_repl_type_%d.zc", tmpdir,
+                             rand());
                     FILE *f = fopen(tmp_path, "w");
                     if (f)
                     {
@@ -722,7 +753,21 @@ void run_repl(const char *self_path)
                     strcat(code, "}");
 
                     char tmp_path[256];
-                    sprintf(tmp_path, "/tmp/zprep_repl_time_%d.zc", rand());
+                    const char *tmpdir = getenv("TEMP");
+                    if (!tmpdir)
+                    {
+                        tmpdir = getenv("TMP");
+                    }
+                    if (!tmpdir && !z_is_windows())
+                    {
+                        tmpdir = "/tmp";
+                    }
+                    if (!tmpdir)
+                    {
+                        tmpdir = ".";
+                    }
+                    snprintf(tmp_path, sizeof(tmp_path), "%s/zprep_repl_time_%d.zc", tmpdir,
+                             rand());
                     FILE *f = fopen(tmp_path, "w");
                     if (f)
                     {

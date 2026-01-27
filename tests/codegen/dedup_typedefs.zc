@@ -9,10 +9,10 @@ struct Node {
 }
 
 fn main() {
-    var v: Vec2f;
+    let v: Vec2f;
     v.x = 1.0;
     v.y = 2.0;
 
-    var n: Node;
+    let n: Node;
     n.val = 1;
 }

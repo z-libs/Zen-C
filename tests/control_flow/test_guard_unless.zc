@@ -17,7 +17,7 @@ test "test_guard_unless" {
     println "Testing guard and unless...";
     
     // Unless with true condition (should NOT enter block)
-    var res1 = check_positive(10);
+    let res1 = check_positive(10);
     if (res1 == 20) {
         println "  -> unless (pass condition): Passed";
     } else {
@@ -26,7 +26,7 @@ test "test_guard_unless" {
     }
     
     // Unless with false condition (should enter block)
-    var res2 = check_positive(-5);
+    let res2 = check_positive(-5);
     if (res2 == -1) {
         println "  -> unless (fail condition): Passed";
     } else {
@@ -35,9 +35,9 @@ test "test_guard_unless" {
     }
     
     // Guard with valid pointer
-    var val = 42;
-    var p = &val;
-    var res3 = safe_access(p);
+    let val = 42;
+    let p = &val;
+    let res3 = safe_access(p);
     if (res3 == 42) {
         println "  -> guard (valid ptr): Passed";
     } else {
@@ -46,7 +46,7 @@ test "test_guard_unless" {
     }
     
     // Guard with null pointer
-    var res4 = safe_access(NULL);
+    let res4 = safe_access(NULL);
     if (res4 == -999) {
         println "  -> guard (null ptr): Passed";
     } else {

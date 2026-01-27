@@ -9,29 +9,29 @@ import "std/result.zc"
 test "test_net" {
     "Testing Networking...";
     
-    var t = Thread::spawn(fn() {
-        var listener = TcpListener::bind("127.0.0.1", 9090);
+    let t = Thread::spawn(fn() {
+        let listener = TcpListener::bind("127.0.0.1", 9090);
         if (listener.is_err()) {
             !"Server bind failed"; 
             return;
         }
         
-        var l = listener.unwrap();
+        let l = listener.unwrap();
         
-        var client_res = l.accept();
+        let client_res = l.accept();
         if (client_res.is_err()) {
             !"Accept failed";
             l.close();
             return;
         }
         
-        var client = client_res.unwrap();
+        let client = client_res.unwrap();
         
-        var buf: char* = malloc(100);
-        var n_res = client.read(buf, 100);
+        let buf: char* = malloc(100);
+        let n_res = client.read(buf, 100);
         
         if (n_res.is_ok()) {
-            var n = n_res.unwrap();
+            let n = n_res.unwrap();
             buf[n] = 0;
             if (strcmp(buf, "Ping") == 0) {
                 client.write("Pong", 4);
@@ -50,17 +50,17 @@ test "test_net" {
     
     sleep_ms(100);
     
-    var stream_res = TcpStream::connect("127.0.0.1", 9090);
+    let stream_res = TcpStream::connect("127.0.0.1", 9090);
     if (stream_res.is_err()) {
         !"Client connect failed";
         exit(1);
     }
     
-    var stream = stream_res.unwrap();
+    let stream = stream_res.unwrap();
     stream.write("Ping", 4);
     
-    var buf2: char* = malloc(100);
-    var n2_res = stream.read(buf2, 100);
+    let buf2: char* = malloc(100);
+    let n2_res = stream.read(buf2, 100);
     
     if (n2_res.is_ok()) {
         buf2[n2_res.unwrap()] = 0;

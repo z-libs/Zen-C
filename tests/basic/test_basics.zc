@@ -4,8 +4,8 @@ test "test_hello" {
 }
 
 test "test_vars" {
-    var x = 10;
-    var y: int = 20;
+    let x = 10;
+    let y: int = 20;
     println "Sum: {x + y}";
 }
 
@@ -14,11 +14,11 @@ fn take_const_arg(x: const int) -> int {
 }
 
 test "test_const_args" {
-    var x = take_const_arg(10);
+    let x = take_const_arg(10);
     assert(x == 10, "Failed const arg");
     
-    var y: const int = 20;
-    assert(y == 20, "Failed const var");
+    let y: const int = 20;
+    assert(y == 20, "Failed const let");
     
     println "Const args work!";
 }

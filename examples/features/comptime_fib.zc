@@ -1,17 +1,17 @@
 
 fn main() {
     comptime {
-        var N = 20;
-        var fib: long[20];
+        let N = 20;
+        let fib: long[20];
         fib[0] = (long)0;
         fib[1] = (long)1;
-        for var i=2; i<N; i+=1 {
+        for let i=2; i<N; i+=1 {
             fib[i] = fib[i-1] + fib[i-2];
         }
 
         printf("// Generated Fibonacci Sequence\n");
-        printf("var fibs: int[%d] = [", N);
-        for var i=0; i<N; i+=1 {
+        printf("let fibs: int[%d] = [", N);
+        for let i=0; i<N; i+=1 {
             printf("%ld", fib[i]);
             if (i < N-1) printf(", ");
         }

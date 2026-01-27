@@ -1,11 +1,11 @@
 import "std.zc"
 
 fn binary_search(arr: int*, size: isize, target: int) -> isize {
-    var low: isize = 0;
-    var high: isize = size - 1;
+    let low: isize = 0;
+    let high: isize = size - 1;
     
     while low <= high {
-        var mid = low + (high - low) / 2;
+        let mid = low + (high - low) / 2;
         
         if arr[mid] == target {
             return mid;
@@ -29,10 +29,10 @@ fn print_array(arr: int*, size: isize) {
 }
 
 fn main() {
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     defer v.free();
     
-    var values = [1, 2, 3, 5, 6, 7, 8, 9, 10, 12];
+    let values = [1, 2, 3, 5, 6, 7, 8, 9, 10, 12];
     for i in 0..10 {
         v.push(values[i]);
     }
@@ -40,8 +40,8 @@ fn main() {
     "Array: "..;
     print_array(v.data, (int)v.len);
     
-    var target = 7;
-    var result = binary_search(v.data, (isize)v.len, target);
+    let target = 7;
+    let result = binary_search(v.data, (isize)v.len, target);
     
     "Found {target} at index {result}";
 }

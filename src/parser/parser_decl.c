@@ -56,6 +56,13 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
                 strcat(buf, ",");
             }
             strcat(buf, s);
+
+            // Check for shadowing
+            if (is_known_generic(ctx, s))
+            {
+                zpanic_at(gt, "Generic parameter '%s' shadows an existing generic parameter", s);
+            }
+
             free(s);
 
             if (lexer_peek(l).type == TOK_COMMA)
@@ -150,7 +157,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
     // scope for body) Only check if we parsed a body (not a prototype) function
     if (body && ctx->current_scope)
     {
-        Symbol *sym = ctx->current_scope->symbols;
+        ZenSymbol *sym = ctx->current_scope->symbols;
         while (sym)
         {
             // Check if unused and not prefixed with '_' (conventional ignore)
@@ -207,17 +214,43 @@ char *patch_self_args(const char *args, const char *struct_name)
     {
         return NULL;
     }
-    char *new_args = xmalloc(strlen(args) + strlen(struct_name) + 10);
+
+    // Sanitize struct name for C usage (Vec<T> -> Vec_T)
+    char *safe_name = xmalloc(strlen(struct_name) + 1);
+    int j = 0;
+    for (int i = 0; struct_name[i]; i++)
+    {
+        if (struct_name[i] == '<')
+        {
+            safe_name[j++] = '_';
+        }
+        else if (struct_name[i] == '>')
+        {
+            // skip
+        }
+        else if (struct_name[i] == ' ')
+        {
+            // skip
+        }
+        else
+        {
+            safe_name[j++] = struct_name[i];
+        }
+    }
+    safe_name[j] = 0;
+
+    char *new_args = xmalloc(strlen(args) + strlen(safe_name) + 10);
 
     // Check if it starts with "void* self"
     if (strncmp(args, "void* self", 10) == 0)
     {
-        sprintf(new_args, "%s* self%s", struct_name, args + 10);
+        sprintf(new_args, "%s* self%s", safe_name, args + 10);
     }
     else
     {
         strcpy(new_args, args);
     }
+    free(safe_name);
     return new_args;
 }
 // Helper for Value-Returning Defer
@@ -562,17 +595,17 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
             // Fallbacks for literals
             else if (init->type == NODE_EXPR_LITERAL)
             {
-                if (init->literal.type_kind == 0)
+                if (init->literal.type_kind == LITERAL_INT)
                 {
                     type = xstrdup("int");
                     type_obj = type_new(TYPE_INT);
                 }
-                else if (init->literal.type_kind == 1)
+                else if (init->literal.type_kind == LITERAL_FLOAT)
                 {
                     type = xstrdup("float");
                     type_obj = type_new(TYPE_FLOAT);
                 }
-                else if (init->literal.type_kind == 2)
+                else if (init->literal.type_kind == LITERAL_STRING)
                 {
                     type = xstrdup("string");
                     type_obj = type_new(TYPE_STRING);
@@ -596,9 +629,9 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
     add_symbol_with_token(ctx, name, type, type_obj, name_tok);
 
     // NEW: Capture Const Integer Values
-    if (init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == 0)
+    if (init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == LITERAL_INT)
     {
-        Symbol *s = find_symbol_entry(ctx, name); // Helper to find the struct
+        ZenSymbol *s = find_symbol_entry(ctx, name); // Helper to find the struct
         if (s)
         {
             s->is_const_value = 1;
@@ -643,7 +676,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
         Type *t = find_symbol_type_info(ctx, init->var_ref.name);
         if (!t)
         {
-            Symbol *s = find_symbol_entry(ctx, init->var_ref.name);
+            ZenSymbol *s = find_symbol_entry(ctx, init->var_ref.name);
             if (s)
             {
                 t = s->type_info;
@@ -651,7 +684,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
         }
         if (!is_type_copy(ctx, t))
         {
-            Symbol *s = find_symbol_entry(ctx, init->var_ref.name);
+            ZenSymbol *s = find_symbol_entry(ctx, init->var_ref.name);
             if (s)
             {
                 s->is_moved = 1;
@@ -701,9 +734,9 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
     return n;
 }
 
-ASTNode *parse_const(ParserContext *ctx, Lexer *l)
+ASTNode *parse_def(ParserContext *ctx, Lexer *l)
 {
-    lexer_next(l); // eat const
+    lexer_next(l); // eat def
     Token n = lexer_next(l);
 
     char *type_str = NULL;
@@ -723,7 +756,15 @@ ASTNode *parse_const(ParserContext *ctx, Lexer *l)
         type_obj = type_new(TYPE_UNKNOWN); // Ensure we have an object
     }
     type_obj->is_const = 1;
+
+    // Use is_def flag for manifest constants
     add_symbol(ctx, ns, type_str ? type_str : "unknown", type_obj);
+    ZenSymbol *sym_entry = find_symbol_entry(ctx, ns);
+    if (sym_entry)
+    {
+        sym_entry->is_def = 1;
+        // is_const_value set only if literal
+    }
 
     ASTNode *i = 0;
     if (lexer_peek(l).type == TOK_OP && is_token(lexer_peek(l), "="))
@@ -736,11 +777,12 @@ ASTNode *parse_const(ParserContext *ctx, Lexer *l)
             Token val_tok = lexer_peek(l);
             int val = atoi(token_strdup(val_tok)); // quick check
 
-            Symbol *s = find_symbol_entry(ctx, ns);
+            ZenSymbol *s = find_symbol_entry(ctx, ns);
             if (s)
             {
                 s->is_const_value = 1;
                 s->const_int_val = val;
+                s->is_def = 1; // Double ensure
 
                 if (!s->type_name || strcmp(s->type_name, "unknown") == 0)
                 {
@@ -754,6 +796,7 @@ ASTNode *parse_const(ParserContext *ctx, Lexer *l)
                         free(s->type_info);
                     }
                     s->type_info = type_new(TYPE_INT);
+                    s->type_info->is_const = 1;
                 }
             }
         }
@@ -771,7 +814,7 @@ ASTNode *parse_const(ParserContext *ctx, Lexer *l)
     }
     else
     {
-        lexer_next(l);
+        zpanic_at(n, "'def' constants must be initialized");
     }
 
     if (lexer_peek(l).type == TOK_SEMICOLON)
@@ -783,6 +826,7 @@ ASTNode *parse_const(ParserContext *ctx, Lexer *l)
     o->var_decl.name = ns;
     o->var_decl.type_str = type_str;
     o->var_decl.init_expr = i;
+    // Store extra metadata if needed, but NODE_CONST usually suffices
 
     if (!ctx->current_scope || !ctx->current_scope->parent)
     {
@@ -805,10 +849,7 @@ ASTNode *parse_type_alias(ParserContext *ctx, Lexer *l)
 
     char *o = parse_type(ctx, l);
 
-    lexer_next(l); // consume ';' (parse_type doesn't consume it? parse_type calls parse_type_formal
-                   // which doesn't consume ;?)
-    // Note: parse_type_stmt usually expects ; but parse_type just parses type expression.
-    // Check previous implementation: it had lexer_next(l) at end. This assumes ;.
+    lexer_next(l);
 
     ASTNode *node = ast_create(NODE_TYPE_ALIAS);
     node->type_alias.alias = xmalloc(n.len + 1);

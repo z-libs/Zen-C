@@ -3,13 +3,13 @@ import "std/cuda.zc"
 import "std/string.zc"
 
 fn main() {
-    var count = cuda_device_count();
+    let count = cuda_device_count();
     "---------------------------";
     "CUDA Device Count: {count}";
     "---------------------------";
     
     if (count > 0) {
-        var props = cuda_device_properties(0);
+        let props = cuda_device_properties(0);
         
         "Device Name: {props.name.vec.data}";
         "Total Global Mem: {props.total_global_mem}";
@@ -20,13 +20,13 @@ fn main() {
         
         props.name.free();
         
-        var driver = cuda_driver_version();
-        var runtime = cuda_runtime_version();
+        let driver = cuda_driver_version();
+        let runtime = cuda_runtime_version();
         
         "Driver Version: {driver}";
         "Runtime Version: {runtime}";
         
-        var mem = cuda_mem_info();
+        let mem = cuda_mem_info();
         "Free Mem: {mem.free}";
         "Total Mem: {mem.total}";
     }

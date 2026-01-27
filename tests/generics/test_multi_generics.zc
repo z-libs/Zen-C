@@ -21,7 +21,7 @@ fn make_triple<X, Y, Z>(x: X, y: Y, z: Z) -> Triple<X, Y, Z> {
 }
 
 test "multi-type generics basic" {
-    var p: Pair<int, float>;
+    let p: Pair<int, float>;
     p.first = 42;
     p.second = 3.14;
     assert(p.first == 42, "First field failed");
@@ -29,13 +29,13 @@ test "multi-type generics basic" {
 }
 
 test "generic function with 2 params" {
-    var p = make_pair<int, float>(100, 2.5);
+    let p = make_pair<int, float>(100, 2.5);
     assert(p.first == 100, "Pair first failed");
     println "2-param generic function passed!";
 }
 
 test "generic function with 3 params" {
-    var t = make_triple<int, float, bool>(42, 3.14, true);
+    let t = make_triple<int, float, bool>(42, 3.14, true);
     assert(t.first == 42, "Triple first failed");
     assert(t.third == true, "Triple third failed");
     println "3-param generic function passed!";

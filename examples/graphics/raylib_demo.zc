@@ -8,11 +8,11 @@ fn main() {
 
     raylib::SetTargetFPS(60);
     
-    var x = 400;
-    var y = 300;
-    var dx = 5;
-    var dy = 4;
-    var radius = 30;
+    let x = 400;
+    let y = 300;
+    let dx = 5;
+    let dy = 4;
+    let radius = 30;
     
     while !raylib::WindowShouldClose() 
     {

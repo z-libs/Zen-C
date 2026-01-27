@@ -6,64 +6,64 @@ test "test_std_fs_extended" {
     "Testing FS Extension...";
     
     "Testing Path...";
-    var p = Path::new("/var/log");
-    var p2 = p.join("syslog");
-    assert(strcmp(p2.c_str(), "/var/log/syslog") == 0, "Join failed");
+    let p = Path::new("/let/log");
+    let p2 = p.join("syslog");
+    assert(strcmp(p2.c_str(), "/let/log/syslog") == 0, "Join failed");
     
-    var p3 = Path::new("file.txt");
-    var ext = p3.extension();
+    let p3 = Path::new("file.txt");
+    let ext = p3.extension();
     assert(ext.is_some(), "Extension missed");
     assert(strcmp(ext.unwrap_ref().c_str(), "txt") == 0, "Wrong extension");
     
-    var p4 = Path::new("/usr/bin/gcc");
-    var parent = p4.parent();
+    let p4 = Path::new("/usr/bin/gcc");
+    let parent = p4.parent();
     assert(parent.is_some(), "Parent missed");
     assert(strcmp(parent.unwrap_ref().c_str(), "/usr/bin") == 0, "Wrong parent");
     
-    var fname = p4.file_name();
+    let fname = p4.file_name();
     assert(fname.is_some(), "Filename missed");
     assert(strcmp(fname.unwrap_ref().c_str(), "gcc") == 0, "Wrong filename");
     
     "Testing FS...";
-    var test_dir = "tests/test_fs_sandbox";
+    let test_dir = "tests/test_fs_sandbox";
     
     if (File::exists(test_dir)) {
         File::remove_dir(test_dir); 
     }
     
     "Create Dir";
-    var res = File::create_dir(test_dir);
+    let res = File::create_dir(test_dir);
     if (res.is_err()) {
         "Dir create failed";
     }
     assert(File::exists(test_dir), "Dir create failed");
     
     "Write File";
-    var tmp_path = Path::new(test_dir);
-    var p_file = tmp_path.join("hello.txt");
-    var fpath = p_file.c_str();
-    var f_res = File::open(fpath, "w");
+    let tmp_path = Path::new(test_dir);
+    let p_file = tmp_path.join("hello.txt");
+    let fpath = p_file.c_str();
+    let f_res = File::open(fpath, "w");
     assert(f_res.is_ok(), "File create failed");
-    var f = f_res.unwrap();
+    let f = f_res.unwrap();
     f.write_string("Hello World");
     f.close();
     
     assert(File::exists(fpath), "File exists check failed");
     
     "Metadata";
-    var meta_res = File::metadata(fpath);
+    let meta_res = File::metadata(fpath);
     assert(meta_res.is_ok(), "Metadata failed");
-    var meta = meta_res.unwrap();
+    let meta = meta_res.unwrap();
     assert(meta.is_file, "Is file check failed");
     assert(!meta.is_dir, "Is dir check failed");
     assert(meta.size == 11, "Size check failed");
     
     "Read Dir";
-    var list_res = File::read_dir(test_dir);
+    let list_res = File::read_dir(test_dir);
     assert(list_res.is_ok(), "Read dir failed");
     
-    var entries = list_res.unwrap();
-    var found_idx = -1;
+    let entries = list_res.unwrap();
+    let found_idx = -1;
     for entry in &entries {
         if (strcmp((*entry).name.c_str(), "hello.txt") == 0) {
             found_idx = 1;

@@ -640,7 +640,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 int res = system(cmd);
                 if (res != 0)
                 {
-                    zpanic("Shell directive failed: %s", cmd);
+                    zwarn("Shell directive failed: %s", cmd);
                 }
             }
             else if (strncmp(line, "get:", 4) == 0)
@@ -671,12 +671,20 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 {
                     printf("[zprep] Downloading %s...\n", filename);
                     char cmd[8192];
-                    // Try wget, then curl.
-                    sprintf(cmd, "wget -q \"%s\" -O \"%s\" || curl -s -L \"%s\" -o \"%s\"", url,
-                            filename, url, filename);
+                    if (z_is_windows())
+                    {
+                        // On Windows, try curl which is often built-in now
+                        sprintf(cmd, "curl -s -L \"%s\" -o \"%s\"", url, filename);
+                    }
+                    else
+                    {
+                        // Try wget, then curl.
+                        sprintf(cmd, "wget -q \"%s\" -O \"%s\" || curl -s -L \"%s\" -o \"%s\"", url,
+                                filename, url, filename);
+                    }
                     if (system(cmd) != 0)
                     {
-                        zpanic("Failed to download %s", url);
+                        zwarn("Failed to download %s", url);
                     }
                 }
             }
@@ -688,6 +696,13 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                     libs++;
                 }
 
+                if (z_is_windows())
+                {
+                    zwarn("pkg-config is usually not available on Windows. Build directive "
+                          "'pkg-config:%s' might fail.",
+                          libs);
+                }
+
                 char cmd[4096];
                 sprintf(cmd, "pkg-config --cflags %s", libs);
                 FILE *fp = popen(cmd, "r");
@@ -695,18 +710,20 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 {
                     char flags[4096];
                     flags[0] = 0;
-                    fgets(flags, sizeof(flags), fp);
+                    if (fgets(flags, sizeof(flags), fp))
+                    {
+                        int len = strlen(flags);
+                        if (len > 0 && flags[len - 1] == '\n')
+                        {
+                            flags[len - 1] = 0;
+                        }
+                        if (strlen(g_cflags) > 0)
+                        {
+                            strcat(g_cflags, " ");
+                        }
+                        strcat(g_cflags, flags);
+                    }
                     pclose(fp);
-                    int len = strlen(flags);
-                    if (len > 0 && flags[len - 1] == '\n')
-                    {
-                        flags[len - 1] = 0;
-                    }
-                    if (strlen(g_cflags) > 0)
-                    {
-                        strcat(g_cflags, " ");
-                    }
-                    strcat(g_cflags, flags);
                 }
 
                 sprintf(cmd, "pkg-config --libs %s", libs);
@@ -715,18 +732,20 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 {
                     char flags[4096];
                     flags[0] = 0;
-                    fgets(flags, sizeof(flags), fp);
+                    if (fgets(flags, sizeof(flags), fp))
+                    {
+                        int len = strlen(flags);
+                        if (len > 0 && flags[len - 1] == '\n')
+                        {
+                            flags[len - 1] = 0;
+                        }
+                        if (strlen(g_link_flags) > 0)
+                        {
+                            strcat(g_link_flags, " ");
+                        }
+                        strcat(g_link_flags, flags);
+                    }
                     pclose(fp);
-                    int len = strlen(flags);
-                    if (len > 0 && flags[len - 1] == '\n')
-                    {
-                        flags[len - 1] = 0;
-                    }
-                    if (strlen(g_link_flags) > 0)
-                    {
-                        strcat(g_link_flags, " ");
-                    }
-                    strcat(g_link_flags, flags);
                 }
             }
 

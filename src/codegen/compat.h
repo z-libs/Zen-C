@@ -4,20 +4,20 @@
 
 #ifdef __cplusplus
 /* C++ mode */
-#define ZC_AUTO auto
-#define ZC_CAST(T, x) static_cast<T>(x)
-#define ZC_REINTERPRET(T, x) reinterpret_cast<T>(x)
-#define ZC_EXTERN_C extern "C"
+#define ZC_AUTO auto                                ///< Auto type inference.
+#define ZC_CAST(T, x) static_cast<T>(x)             ///< Static cast.
+#define ZC_REINTERPRET(T, x) reinterpret_cast<T>(x) ///< Reinterpret cast.
+#define ZC_EXTERN_C extern "C"                      ///< Extern "C" linkage.
 #define ZC_EXTERN_C_BEGIN                                                                          \
     extern "C"                                                                                     \
     {
 #define ZC_EXTERN_C_END }
 #else
 /* C mode */
-#define ZC_AUTO __auto_type
-#define ZC_CAST(T, x) ((T)(x))
-#define ZC_REINTERPRET(T, x) ((T)(x))
-#define ZC_EXTERN_C
+#define ZC_AUTO __auto_type                         ///< Auto type inference.
+#define ZC_CAST(T, x) ((T)(x))                      ///< Explicit cast.
+#define ZC_REINTERPRET(T, x) ((T)(x))               ///< Reinterpret cast.
+#define ZC_EXTERN_C                                 ///< Extern "C" (no-op in C).
 #define ZC_EXTERN_C_BEGIN
 #define ZC_EXTERN_C_END
 #endif

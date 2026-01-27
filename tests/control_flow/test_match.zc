@@ -35,7 +35,7 @@ test "test_match" {
     println "Testing match expressions...";
     
     // Match with exact value (0)
-    var res1 = classify_number(0);
+    let res1 = classify_number(0);
     if (res1 == 100) {
         println "  -> match 0: Passed";
     } else {
@@ -44,7 +44,7 @@ test "test_match" {
     }
     
     // Match with exact value (1)
-    var res2 = classify_number(1);
+    let res2 = classify_number(1);
     if (res2 == 200) {
         println "  -> match 1: Passed";
     } else {
@@ -53,7 +53,7 @@ test "test_match" {
     }
     
     // Match with exact value (2)
-    var res3 = classify_number(2);
+    let res3 = classify_number(2);
     if (res3 == 300) {
         println "  -> match 2: Passed";
     } else {
@@ -62,7 +62,7 @@ test "test_match" {
     }
     
     // Match with default case
-    var res4 = classify_number(99);
+    let res4 = classify_number(99);
     if (res4 == -1) {
         println "  -> match default: Passed";
     } else {
@@ -71,7 +71,7 @@ test "test_match" {
     }
     
     // Match with complex body (zero)
-    var sign1 = get_sign(0);
+    let sign1 = get_sign(0);
     if (strcmp(sign1, "zero") == 0) {
         println "  -> match complex (zero): Passed";
     } else {
@@ -80,7 +80,7 @@ test "test_match" {
     }
     
     // Match with complex body (positive)
-    var sign2 = get_sign(42);
+    let sign2 = get_sign(42);
     if (strcmp(sign2, "positive") == 0) {
         println "  -> match complex (positive): Passed";
     } else {
@@ -89,7 +89,7 @@ test "test_match" {
     }
     
     // Match with complex body (negative)
-    var sign3 = get_sign(-10);
+    let sign3 = get_sign(-10);
     if (strcmp(sign3, "negative") == 0) {
         println "  -> match complex (negative): Passed";
     } else {
@@ -98,8 +98,8 @@ test "test_match" {
     }
     
     // OR pattern with ||
-    var or1 = classify_extended(1);
-    var or2 = classify_extended(2);
+    let or1 = classify_extended(1);
+    let or2 = classify_extended(2);
     if (or1 == 100 && or2 == 100) {
         println "  -> match OR (||): Passed";
     } else {
@@ -108,8 +108,8 @@ test "test_match" {
     }
     
     // OR pattern with 'or'
-    var or3 = classify_extended(3);
-    var or4 = classify_extended(4);
+    let or3 = classify_extended(3);
+    let or4 = classify_extended(4);
     if (or3 == 200 && or4 == 200) {
         println "  -> match OR (or): Passed";
     } else {
@@ -118,9 +118,9 @@ test "test_match" {
     }
     
     // Range exclusive (5..8 matches 5, 6, 7)
-    var r5 = classify_extended(5);
-    var r7 = classify_extended(7);
-    var r8 = classify_extended(8);  // Should NOT match
+    let r5 = classify_extended(5);
+    let r7 = classify_extended(7);
+    let r8 = classify_extended(8);  // Should NOT match
     if (r5 == 300 && r7 == 300 && r8 == -1) {
         println "  -> match range exclusive: Passed";
     } else {
@@ -129,9 +129,9 @@ test "test_match" {
     }
     
     // Range inclusive (10..=15 matches 10-15)
-    var r10 = classify_extended(10);
-    var r15 = classify_extended(15);
-    var r16 = classify_extended(16);  // Should NOT match
+    let r10 = classify_extended(10);
+    let r15 = classify_extended(15);
+    let r16 = classify_extended(16);  // Should NOT match
     if (r10 == 400 && r15 == 400 && r16 == -1) {
         println "  -> match range inclusive: Passed";
     } else {

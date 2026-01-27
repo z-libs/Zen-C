@@ -114,7 +114,7 @@ void handle_request(const char *json_str)
             "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\"]},"
             "\"completionProvider\":{"
             "\"triggerCharacters\":[\".\"]}}}}";
-        fprintf(stdout, "Content-Length: %ld\r\n\r\n%s", strlen(response), response);
+        fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(response), response);
         fflush(stdout);
     }
     else if (strcmp(method, "textDocument/didOpen") == 0 ||

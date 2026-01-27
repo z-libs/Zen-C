@@ -70,21 +70,9 @@ static void emit_single_pattern_cond(const char *pat, int id, int is_ptr, FILE *
             fprintf(out, "strcmp(_m_%d, %s) == 0", id, pat);
         }
     }
-    else if (pat[0] == '\'')
-    {
-        // Char literal pattern
-        if (is_ptr)
-        {
-            fprintf(out, "*_m_%d == %s", id, pat);
-        }
-        else
-        {
-            fprintf(out, "_m_%d == %s", id, pat);
-        }
-    }
     else
     {
-        // Numeric or simple pattern
+        // Numeric, Char literal (removed duplicate branch), or simple pattern
         if (is_ptr)
         {
             fprintf(out, "*_m_%d == %s", id, pat);
@@ -177,9 +165,19 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
     ASTNode *ref_check = node->match_stmt.cases;
     while (ref_check)
     {
-        if (ref_check->match_case.is_ref)
+        if (ref_check->match_case.binding_refs)
         {
-            has_ref_binding = 1;
+            for (int i = 0; i < ref_check->match_case.binding_count; i++)
+            {
+                if (ref_check->match_case.binding_refs[i])
+                {
+                    has_ref_binding = 1;
+                    break;
+                }
+            }
+        }
+        if (has_ref_binding)
+        {
             break;
         }
         ref_check = ref_check->next;
@@ -325,157 +323,131 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
             emit_pattern_condition(ctx, c->match_case.pattern, id, has_ref_binding, out);
         }
         fprintf(out, ") { ");
-        if (c->match_case.binding_name)
+        if (c->match_case.binding_count > 0)
         {
-            if (is_option)
+            for (int i = 0; i < c->match_case.binding_count; i++)
             {
-                if (strstr(g_config.cc, "tcc"))
-                {
-                    if (c->match_case.is_ref)
-                    {
-                        fprintf(out, "__typeof__(&_m_%d.val) %s = &_m_%d.val; ", id,
-                                c->match_case.binding_name, id);
-                    }
-                    else
-                    {
-                        fprintf(out, "__typeof__(_m_%d.val) %s = _m_%d.val; ", id,
-                                c->match_case.binding_name, id);
-                    }
-                }
-                else
-                {
-                    if (c->match_case.is_ref)
-                    {
-                        // _m is pointer when has_ref_binding, use ->
-                        fprintf(out, "ZC_AUTO %s = &_m_%d->val; ", c->match_case.binding_name, id);
-                    }
-                    else if (has_ref_binding)
-                    {
-                        // _m is pointer, use -> but don't take address
-                        fprintf(out, "ZC_AUTO %s = _m_%d->val; ", c->match_case.binding_name, id);
-                    }
-                    else
-                    {
-                        // _m is value, use .
-                        fprintf(out, "ZC_AUTO %s = _m_%d.val; ", c->match_case.binding_name, id);
-                    }
-                }
-            }
-            else if (is_result) // FIX: Changed 'if' to 'else if' to match original logic structure
-                                // if needed, but original code had implicit fallthrough checks? No,
-                                // checks match pattern.
-            {
-                if (strcmp(c->match_case.pattern, "Ok") == 0)
+                char *bname = c->match_case.binding_names[i];
+                int is_r = c->match_case.binding_refs ? c->match_case.binding_refs[i] : 0;
+
+                if (is_option)
                 {
                     if (strstr(g_config.cc, "tcc"))
                     {
-                        if (c->match_case.is_ref)
+                        if (is_r)
                         {
-                            fprintf(out, "__typeof__(&_m_%d->val) %s = &_m_%d->val; ", id,
-                                    c->match_case.binding_name, id);
+                            fprintf(out, "__typeof__(&_m_%d.val) %s = &_m_%d.val; ", id, bname, id);
                         }
                         else
                         {
-                            fprintf(out, "__typeof__(_m_%d->val) %s = _m_%d->val; ", id,
-                                    c->match_case.binding_name, id);
+                            fprintf(out, "__typeof__(_m_%d.val) %s = _m_%d.val; ", id, bname, id);
                         }
                     }
                     else
                     {
-                        if (c->match_case.is_ref)
+                        if (is_r)
                         {
-                            // _m is pointer when has_ref_binding, use ->
-                            fprintf(out, "ZC_AUTO %s = &_m_%d->val; ", c->match_case.binding_name,
-                                    id);
+                            fprintf(out, "ZC_AUTO %s = &_m_%d->val; ", bname, id);
                         }
                         else if (has_ref_binding)
                         {
-                            // _m is pointer, use -> but don't take address
-                            fprintf(out, "ZC_AUTO %s = _m_%d->val; ", c->match_case.binding_name,
-                                    id);
+                            fprintf(out, "ZC_AUTO %s = _m_%d->val; ", bname, id);
                         }
                         else
                         {
-                            // _m is value, use .
-                            fprintf(out, "ZC_AUTO %s = _m_%d.val; ", c->match_case.binding_name,
-                                    id);
+                            fprintf(out, "ZC_AUTO %s = _m_%d.val; ", bname, id);
                         }
                     }
                 }
-                else
+                else if (is_result)
                 {
+                    char *field = "val";
+                    if (strcmp(c->match_case.pattern, "Err") == 0)
+                    {
+                        field = "err";
+                    }
+
                     if (strstr(g_config.cc, "tcc"))
                     {
-                        if (c->match_case.is_ref)
+                        if (is_r)
                         {
-                            fprintf(out, "__typeof__(&_m_%d->err) %s = &_m_%d->err; ", id,
-                                    c->match_case.binding_name, id);
+                            fprintf(out, "__typeof__(&_m_%d->%s) %s = &_m_%d->%s; ", id, field,
+                                    bname, id, field);
                         }
                         else
                         {
-                            fprintf(out, "__typeof__(_m_%d->err) %s = _m_%d->err; ", id,
-                                    c->match_case.binding_name, id);
+                            fprintf(out, "__typeof__(_m_%d->%s) %s = _m_%d->%s; ", id, field, bname,
+                                    id, field);
                         }
                     }
                     else
                     {
-                        if (c->match_case.is_ref)
+                        if (is_r)
                         {
-                            // _m is pointer when has_ref_binding, use ->
-                            fprintf(out, "ZC_AUTO %s = &_m_%d->err; ", c->match_case.binding_name,
-                                    id);
+                            fprintf(out, "ZC_AUTO %s = &_m_%d->%s; ", bname, id, field);
                         }
                         else if (has_ref_binding)
                         {
-                            // _m is pointer, use -> but don't take address
-                            fprintf(out, "ZC_AUTO %s = _m_%d->err; ", c->match_case.binding_name,
-                                    id);
+                            fprintf(out, "ZC_AUTO %s = _m_%d->%s; ", bname, id, field);
                         }
                         else
                         {
-                            // _m is value, use .
-                            fprintf(out, "ZC_AUTO %s = _m_%d.err; ", c->match_case.binding_name,
-                                    id);
+                            fprintf(out, "ZC_AUTO %s = _m_%d.%s; ", bname, id, field);
                         }
                     }
                 }
-            }
-            else
-            {
-                char *f = strrchr(c->match_case.pattern, '_');
-                if (f)
-                {
-                    f++;
-                }
                 else
                 {
-                    f = c->match_case.pattern;
-                }
-                // Generic struct destructuring (for example, MyStruct_Variant)
-                // Assuming data union or accessible field.
-                if (c->match_case.is_ref)
-                {
-                    // _m is pointer when has_ref_binding, use ->
-                    fprintf(out, "ZC_AUTO %s = &_m_%d->data.%s; ", c->match_case.binding_name, id,
-                            f);
-                }
-                else if (has_ref_binding)
-                {
-                    // _m is pointer, use -> but don't take address
-                    fprintf(out, "ZC_AUTO %s = _m_%d->data.%s; ", c->match_case.binding_name, id,
-                            f);
-                }
-                else
-                {
-                    // _m is value, use .
-                    fprintf(out, "ZC_AUTO %s = _m_%d.data.%s; ", c->match_case.binding_name, id, f);
+                    char *v = strrchr(c->match_case.pattern, '_');
+                    if (v)
+                    {
+                        v++;
+                    }
+                    else
+                    {
+                        v = c->match_case.pattern;
+                    }
+
+                    if (c->match_case.binding_count > 1)
+                    {
+                        // Tuple destructuring: data.Variant.vI
+                        if (is_r)
+                        {
+                            fprintf(out, "ZC_AUTO %s = &_m_%d->data.%s.v%d; ", bname, id, v, i);
+                        }
+                        else if (has_ref_binding)
+                        {
+                            fprintf(out, "ZC_AUTO %s = _m_%d->data.%s.v%d; ", bname, id, v, i);
+                        }
+                        else
+                        {
+                            fprintf(out, "ZC_AUTO %s = _m_%d.data.%s.v%d; ", bname, id, v, i);
+                        }
+                    }
+                    else
+                    {
+                        // Single destructuring: data.Variant
+                        if (is_r)
+                        {
+                            fprintf(out, "ZC_AUTO %s = &_m_%d->data.%s; ", bname, id, v);
+                        }
+                        else if (has_ref_binding)
+                        {
+                            fprintf(out, "ZC_AUTO %s = _m_%d->data.%s; ", bname, id, v);
+                        }
+                        else
+                        {
+                            fprintf(out, "ZC_AUTO %s = _m_%d.data.%s; ", bname, id, v);
+                        }
+                    }
                 }
             }
         }
 
         // Check if body is a string literal (should auto-print).
         ASTNode *body = c->match_case.body;
-        int is_string_literal = (body->type == NODE_EXPR_LITERAL && body->literal.type_kind == 2);
+        int is_string_literal =
+            (body->type == NODE_EXPR_LITERAL && body->literal.type_kind == LITERAL_STRING);
 
         if (is_expr)
         {
@@ -514,9 +486,10 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
         {
             if (is_string_literal)
             {
-                fprintf(out, "({ printf(\"%%s\", ");
-                codegen_expression(ctx, body, out);
-                fprintf(out, "); printf(\"\\n\"); 0; })");
+                char *inner = body->literal.string_val;
+                char *code = process_printf_sugar(ctx, inner, 1, "stdout", NULL, NULL, 0);
+                fprintf(out, "%s;", code);
+                free(code);
             }
             else
             {
@@ -902,9 +875,27 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
 
                 ASTNode *def = find_struct_def(ctx, clean_type);
-                if (def && def->type_info && def->type_info->traits.has_drop)
+                int has_drop = (def && def->type_info && def->type_info->traits.has_drop);
+
+                if (has_drop)
                 {
-                    fprintf(out, "__attribute__((cleanup(%s__Drop_glue))) ", clean_type);
+                    // Drop Flag: int __z_drop_flag_name = 1;
+                    fprintf(out, "int __z_drop_flag_%s = 1; ", node->var_decl.name);
+
+                    // Synthesize Defer: if (__z_drop_flag_name) Name__Drop_drop(&name);
+                    ASTNode *defer_node = xmalloc(sizeof(ASTNode));
+                    defer_node->type = NODE_RAW_STMT;
+                    char *stmt_str =
+                        xmalloc(256 + strlen(node->var_decl.name) * 2 + strlen(clean_type));
+                    sprintf(stmt_str, "if (__z_drop_flag_%s) %s__Drop_glue(&%s);",
+                            node->var_decl.name, clean_type, node->var_decl.name);
+                    defer_node->raw_stmt.content = stmt_str;
+                    defer_node->line = node->line;
+
+                    if (defer_count < MAX_DEFER)
+                    {
+                        defer_stack[defer_count++] = defer_node;
+                    }
                 }
 
                 // Emit Variable with Type
@@ -917,6 +908,11 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                     codegen_expression(ctx, node->var_decl.init_expr, out);
                 }
                 fprintf(out, ";\n");
+                if (node->var_decl.init_expr &&
+                    emit_move_invalidation(ctx, node->var_decl.init_expr, out))
+                {
+                    fprintf(out, ";\n");
+                }
 
                 if (node->type_info)
                 {
@@ -941,9 +937,29 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                     }
 
                     ASTNode *def = find_struct_def(ctx, clean_type);
-                    if (def && def->type_info && def->type_info->traits.has_drop)
+                    int has_drop = (def && def->type_info && def->type_info->traits.has_drop);
+
+                    if (has_drop)
                     {
-                        fprintf(out, "__attribute__((cleanup(%s__Drop_glue))) ", clean_type);
+                        // Drop Flag: int __z_drop_flag_name = 1;
+                        fprintf(out, "int __z_drop_flag_%s = 1; ", node->var_decl.name);
+
+                        // Synthesize Defer: if (__z_drop_flag_name) Name__Drop_drop(&name);
+                        ASTNode *defer_node = xmalloc(sizeof(ASTNode));
+                        defer_node->type = NODE_RAW_STMT;
+                        // Build string
+                        char *stmt_str =
+                            xmalloc(256 + strlen(node->var_decl.name) * 2 + strlen(clean_type));
+                        sprintf(stmt_str, "if (__z_drop_flag_%s) %s__Drop_glue(&%s);",
+                                node->var_decl.name, clean_type, node->var_decl.name);
+                        defer_node->raw_stmt.content = stmt_str;
+                        defer_node->line = node->line;
+
+                        // Push to defer stack
+                        if (defer_count < MAX_DEFER)
+                        {
+                            defer_stack[defer_count++] = defer_node;
+                        }
                     }
 
                     emit_var_decl_type(ctx, out, inferred, node->var_decl.name);
@@ -951,6 +967,12 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                     fprintf(out, " = ");
                     codegen_expression(ctx, node->var_decl.init_expr, out);
                     fprintf(out, ";\n");
+
+                    if (node->var_decl.init_expr &&
+                        emit_move_invalidation(ctx, node->var_decl.init_expr, out))
+                    {
+                        fprintf(out, ";\n");
+                    }
                 }
                 else
                 {
@@ -965,6 +987,11 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                     fprintf(out, " = ");
                     codegen_expression(ctx, node->var_decl.init_expr, out);
                     fprintf(out, ";\n");
+                    if (node->var_decl.init_expr &&
+                        emit_move_invalidation(ctx, node->var_decl.init_expr, out))
+                    {
+                        fprintf(out, ";\n");
+                    }
                 }
             }
         }
@@ -1475,11 +1502,12 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
     }
     case NODE_REPL_PRINT:
     {
+        // Safe block for printing
         fprintf(out, "{ ");
         emit_auto_type(ctx, node->repl_print.expr, node->token, out);
         fprintf(out, " _zval = (");
         codegen_expression(ctx, node->repl_print.expr, out);
-        fprintf(out, "); fprintf(stdout, _z_str(_zval), _zval); fprintf(stdout, "
+        fprintf(out, "); fprintf(stdout, _z_str(_zval), _z_arg(_zval)); fprintf(stdout, "
                      "\"\\n\"); }\n");
         break;
     }
@@ -1576,7 +1604,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
     }
     case NODE_EXPR_LITERAL:
         // String literal statement should auto-print
-        if (node->literal.type_kind == 2 || node->literal.type_kind == TOK_STRING)
+        if (node->literal.type_kind == LITERAL_STRING)
         {
             fprintf(out, "    printf(\"%%s\\n\", ");
             codegen_expression(ctx, node, out);
@@ -1653,6 +1681,9 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         fprintf(out, ");\n");
         break;
     }
+    case NODE_RAW_STMT:
+        fprintf(out, "    %s\n", node->raw_stmt.content);
+        break;
     default:
         codegen_expression(ctx, node, out);
         fprintf(out, ";\n");

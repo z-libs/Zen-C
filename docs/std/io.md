@@ -12,11 +12,11 @@ fn main() {
     io.println("Hello %s", "World");
     
     // Formatting strings
-    autofree var s = io.format_new("Value: %d", 42);
+    autofree let s = io.format_new("Value: %d", 42);
     
     // Reading input
     io.print("Enter name: ");
-    autofree var name = io.readln();
+    autofree let name = io.readln();
 }
 ```
 

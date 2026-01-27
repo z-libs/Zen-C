@@ -13,7 +13,7 @@ import plugin "regex" as re
 // or simple: import plugin "regex" (uses "regex" as identifier)
 
 fn main() {
-    var valid = re! { ^[a-z]+$ };
+    let valid = re! { ^[a-z]+$ };
 }
 ```
 

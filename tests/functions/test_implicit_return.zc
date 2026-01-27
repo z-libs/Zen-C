@@ -12,7 +12,7 @@ test "test_implicit_return" {
     println " Done!";
     
     // With variables
-    var x = 42;
+    let x = 42;
     print "Value is: ";
     println "{x}";
 }

@@ -11,11 +11,11 @@ import "std/mem.zc"
 
 @global
 fn matrix_multiply_kernel(A: float*, B: float*, C: float*, N: int) {
-    var row = block_id_y() * block_dim_y() + thread_id_y();
-    var col = block_id_x() * block_dim_x() + thread_id_x();
+    let row = block_id_y() * block_dim_y() + thread_id_y();
+    let col = block_id_x() * block_dim_x() + thread_id_x();
 
     if row < N && col < N {
-        var sum = 0.0f;
+        let sum = 0.0f;
         for k in 0..N {
             sum = sum + A[row * N + k] * B[k * N + col];
         }
@@ -29,26 +29,26 @@ fn matrix_multiply_kernel(A: float*, B: float*, C: float*, N: int) {
 
 @global
 fn monte_carlo_pi_kernel(results: float*, num_samples: u64, seed: u64) {
-    var idx = block_id_x() * block_dim_x() + thread_id_x();
-    var total_threads = grid_dim_x() * block_dim_x();
+    let idx = block_id_x() * block_dim_x() + thread_id_x();
+    let total_threads = grid_dim_x() * block_dim_x();
 
-    var local_count: u64 = 0;
-    var samples_per_thread = num_samples / total_threads;
+    let local_count: u64 = 0;
+    let samples_per_thread = num_samples / total_threads;
 
     // Simple random number generator
-    var rand_state = seed + idx;
+    let rand_state = seed + idx;
 
     for i in 0..samples_per_thread {
         // Generate random x and y in [0, 1]
-        var a: u64 = 1103515245u64;
-        var b: u64 = 12345u64;
-        var m: u64 = 2147483648u64;
+        let a: u64 = 1103515245u64;
+        let b: u64 = 12345u64;
+        let m: u64 = 2147483648u64;
 
         rand_state = (a * rand_state + b) % m;
-        var x = (float)rand_state / 2147483648.0f;
+        let x = (float)rand_state / 2147483648.0f;
 
         rand_state = (a * rand_state + b) % m;
-        var y = (float)rand_state / 2147483648.0f;
+        let y = (float)rand_state / 2147483648.0f;
 
         // Check if point is inside quarter circle
         if x * x + y * y <= 1.0f {
@@ -66,30 +66,30 @@ fn monte_carlo_pi_kernel(results: float*, num_samples: u64, seed: u64) {
 fn nbody_kernel(x: float*, y: float*, z: float*,
                 vx: float*, vy: float*, vz: float*,
                 N: int, dt: float) {
-    var i = thread_id();
+    let i = thread_id();
 
     if i < N {
-        var ax = 0.0f;
-        var ay = 0.0f;
-        var az = 0.0f;
-        var xi = x[i];
-        var yi = y[i];
-        var zi = z[i];
+        let ax = 0.0f;
+        let ay = 0.0f;
+        let az = 0.0f;
+        let xi = x[i];
+        let yi = y[i];
+        let zi = z[i];
 
         // Calculate gravitational forces from all other bodies
         for j in 0..N {
             if i != j {
-                var dx = x[j] - xi;
-                var dy = y[j] - yi;
-                var dz = z[j] - zi;
+                let dx = x[j] - xi;
+                let dy = y[j] - yi;
+                let dz = z[j] - zi;
 
-                var dx2 = dx * dx;
-                var dy2 = dy * dy;
-                var dz2 = dz * dz;
-                var softening: float = 0.0000000001f;
-                var dist_sqr = dx2 + dy2 + dz2 + softening;
-                var dist = sqrtf(dist_sqr);
-                var force = 1.0f / (dist_sqr * dist);
+                let dx2 = dx * dx;
+                let dy2 = dy * dy;
+                let dz2 = dz * dz;
+                let softening: float = 0.0000000001f;
+                let dist_sqr = dx2 + dy2 + dz2 + softening;
+                let dist = sqrtf(dist_sqr);
+                let force = 1.0f / (dist_sqr * dist);
 
                 ax = ax + (force * dx);
                 ay = ay + (force * dy);
@@ -115,27 +115,27 @@ fn nbody_kernel(x: float*, y: float*, z: float*,
 
 @global
 fn mandelbrot_kernel(output: int*, width: int, height: int, max_iter: int) {
-    var px = block_id_x() * block_dim_x() + thread_id_x();
-    var py = block_id_y() * block_dim_y() + thread_id_y();
+    let px = block_id_x() * block_dim_x() + thread_id_x();
+    let py = block_id_y() * block_dim_y() + thread_id_y();
 
     if px < width && py < height {
         // Map pixel to complex plane
-        var x0 = ((float)px / (float)width) * 3.5f - 2.5f;
-        var y0 = ((float)py / (float)height) * 2.0f - 1.0f;
+        let x0 = ((float)px / (float)width) * 3.5f - 2.5f;
+        let y0 = ((float)py / (float)height) * 2.0f - 1.0f;
 
-        var x = 0.0f;
-        var y = 0.0f;
-        var iter = 0;
+        let x = 0.0f;
+        let y = 0.0f;
+        let iter = 0;
 
         // Iterate z = z^2 + c
         for i in 0..max_iter {
-            var x2 = x * x;
-            var y2 = y * y;
+            let x2 = x * x;
+            let y2 = y * y;
             if (x2 + y2) > 4.0f {
                 break;
             }
-            var xtemp = x2 - y2 + x0;
-            var xy2 = 2.0f * x * y;
+            let xtemp = x2 - y2 + x0;
+            let xy2 = 2.0f * x * y;
             y = xy2 + y0;
             x = xtemp;
             iter = iter + 1;
@@ -150,7 +150,7 @@ fn mandelbrot_kernel(output: int*, width: int, height: int, max_iter: int) {
 
 fn print_gpu_info() {
 
-    var device_count = cuda_device_count();
+    let device_count = cuda_device_count();
     "Found {device_count} CUDA device(s)\n";
 }
 
@@ -161,13 +161,13 @@ fn print_gpu_info() {
 fn benchmark_matrix_multiply(N: int) {
     "Benchmark 1: Matrix Multiplication ({N}x{N}) ";
 
-    var size = N * N;
+    let size = N * N;
 
     // Allocate host memory
     "-> Allocating host memory...";
-    var h_A = alloc_n<float>(size);
-    var h_B = alloc_n<float>(size);
-    var h_C = alloc_n<float>(size);
+    let h_A = alloc_n<float>(size);
+    let h_B = alloc_n<float>(size);
+    let h_C = alloc_n<float>(size);
     defer free(h_A);
     defer free(h_B);
     defer free(h_C);
@@ -181,9 +181,9 @@ fn benchmark_matrix_multiply(N: int) {
 
     // Allocate device memory
     "-> Allocating device memory...";
-    var d_A = cuda_alloc<float>(size);
-    var d_B = cuda_alloc<float>(size);
-    var d_C = cuda_alloc<float>(size);
+    let d_A = cuda_alloc<float>(size);
+    let d_B = cuda_alloc<float>(size);
+    let d_C = cuda_alloc<float>(size);
     defer cuda_free(d_A);
     defer cuda_free(d_B);
     defer cuda_free(d_C);
@@ -194,13 +194,13 @@ fn benchmark_matrix_multiply(N: int) {
     cuda_copy_to_device(d_B, h_B, size * sizeof(float));
 
     // Configure grid
-    const BLOCK_SIZE = 16;
-    var blocks_per_grid = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    def BLOCK_SIZE = 16;
+    let blocks_per_grid = (N + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
     "-> Launching kernel: {blocks_per_grid}x{blocks_per_grid} blocks, {BLOCK_SIZE}x{BLOCK_SIZE} threads each";
     " GPU IS NOW WORKING HARD - Check nvtop!\n";
 
-    var start = clock();
+    let start = clock();
 
     // Run multiple iterations to keep GPU busy
     for iter in 0..10 {
@@ -212,7 +212,7 @@ fn benchmark_matrix_multiply(N: int) {
         "  Iteration {iter + 1}/10 complete";
     }
 
-    var elapsed = (clock() - start) / CLOCKS_PER_SEC;
+    let elapsed = (clock() - start) / CLOCKS_PER_SEC;
     " Completed in {elapsed} seconds\n";
 
     // Copy result back
@@ -232,25 +232,25 @@ fn benchmark_monte_carlo_pi(num_samples: u64) {
 
     "-> Estimating Pi with {num_samples} samples";
 
-    const BLOCK_SIZE = 256;
-    const NUM_BLOCKS = 1024;
-    var total_threads = BLOCK_SIZE * NUM_BLOCKS;
+    def BLOCK_SIZE = 256;
+    def NUM_BLOCKS = 1024;
+    let total_threads = BLOCK_SIZE * NUM_BLOCKS;
 
     // Allocate memory
-    var h_results = alloc_n<float>(total_threads);
+    let h_results = alloc_n<float>(total_threads);
     defer free(h_results);
 
-    var d_results = cuda_alloc<float>(total_threads);
+    let d_results = cuda_alloc<float>(total_threads);
     defer cuda_free(d_results);
 
     "-> Launching kernel: {NUM_BLOCKS} blocks x {BLOCK_SIZE} threads";
     " GPU IS NOW WORKING HARD - Check nvtop!\n";
 
-    var start = clock();
+    let start = clock();
 
     // Run many iterations
     for iter in 0..100 {
-        var seed = (u64)time(NULL) + (u64)iter;
+        let seed = (u64)time(NULL) + (u64)iter;
 
         launch monte_carlo_pi_kernel(d_results, num_samples, seed) with {
             grid: NUM_BLOCKS,
@@ -263,19 +263,19 @@ fn benchmark_monte_carlo_pi(num_samples: u64) {
         }
     }
 
-    var elapsed = (clock() - start) / CLOCKS_PER_SEC;
+    let elapsed = (clock() - start) / CLOCKS_PER_SEC;
     "\n Completed in {elapsed} seconds\n";
 
     // Copy results and calculate Pi
     cuda_copy_to_host(h_results, d_results, total_threads * sizeof(float));
 
-    var total_inside: u64 = 0;
+    let total_inside: u64 = 0;
     for i in 0..total_threads {
         total_inside = total_inside + (u64)h_results[i];
     }
 
-    var pi_estimate = 4.0 * (double)total_inside / (double)num_samples;
-    var error = fabs(pi_estimate - 3.14159265359);
+    let pi_estimate = 4.0 * (double)total_inside / (double)num_samples;
+    let error = fabs(pi_estimate - 3.14159265359);
 
     "-> Results:";
     "  Estimated Pi: {pi_estimate}";
@@ -294,12 +294,12 @@ fn benchmark_nbody(num_bodies: int, num_steps: int) {
     "-> Simulating {num_bodies} bodies for {num_steps} steps";
 
     // Allocate host memory
-    var h_x = alloc_n<float>(num_bodies);
-    var h_y = alloc_n<float>(num_bodies);
-    var h_z = alloc_n<float>(num_bodies);
-    var h_vx = alloc_n<float>(num_bodies);
-    var h_vy = alloc_n<float>(num_bodies);
-    var h_vz = alloc_n<float>(num_bodies);
+    let h_x = alloc_n<float>(num_bodies);
+    let h_y = alloc_n<float>(num_bodies);
+    let h_z = alloc_n<float>(num_bodies);
+    let h_vx = alloc_n<float>(num_bodies);
+    let h_vy = alloc_n<float>(num_bodies);
+    let h_vz = alloc_n<float>(num_bodies);
     defer free(h_x);
     defer free(h_y);
     defer free(h_z);
@@ -321,12 +321,12 @@ fn benchmark_nbody(num_bodies: int, num_steps: int) {
 
     // Allocate device memory
     "-> Allocating device memory...";
-    var d_x = cuda_alloc<float>(num_bodies);
-    var d_y = cuda_alloc<float>(num_bodies);
-    var d_z = cuda_alloc<float>(num_bodies);
-    var d_vx = cuda_alloc<float>(num_bodies);
-    var d_vy = cuda_alloc<float>(num_bodies);
-    var d_vz = cuda_alloc<float>(num_bodies);
+    let d_x = cuda_alloc<float>(num_bodies);
+    let d_y = cuda_alloc<float>(num_bodies);
+    let d_z = cuda_alloc<float>(num_bodies);
+    let d_vx = cuda_alloc<float>(num_bodies);
+    let d_vy = cuda_alloc<float>(num_bodies);
+    let d_vz = cuda_alloc<float>(num_bodies);
     defer cuda_free(d_x);
     defer cuda_free(d_y);
     defer cuda_free(d_z);
@@ -342,14 +342,14 @@ fn benchmark_nbody(num_bodies: int, num_steps: int) {
     cuda_copy_to_device(d_vy, h_vy, num_bodies * sizeof(float));
     cuda_copy_to_device(d_vz, h_vz, num_bodies * sizeof(float));
 
-    const BLOCK_SIZE = 256;
-    var num_blocks = (num_bodies + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    var dt = 0.01f;
+    def BLOCK_SIZE = 256;
+    let num_blocks = (num_bodies + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    let dt = 0.01f;
 
     "-> Launching simulation: {num_blocks} blocks x {BLOCK_SIZE} threads";
     " GPU IS NOW WORKING HARD - Check nvtop!\n";
 
-    var start = clock();
+    let start = clock();
 
     for step in 0..num_steps {
         launch nbody_kernel(d_x, d_y, d_z, d_vx, d_vy, d_vz, num_bodies, dt) with {
@@ -363,7 +363,7 @@ fn benchmark_nbody(num_bodies: int, num_steps: int) {
         }
     }
 
-    var elapsed = (clock() - start) / CLOCKS_PER_SEC;
+    let elapsed = (clock() - start) / CLOCKS_PER_SEC;
     "\n Completed in {elapsed} seconds\n";
 
     // Copy results back

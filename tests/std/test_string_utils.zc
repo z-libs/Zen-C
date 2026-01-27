@@ -1,46 +1,46 @@
 import "std/string.zc"
 
 test "string trim" {
-    var s1 = String::from("  hello  ");
-    var t1 = s1.trim();
-    var e1 = String::from("hello");
+    let s1 = String::from("  hello  ");
+    let t1 = s1.trim();
+    let e1 = String::from("hello");
     assert(t1.eq(&e1));
     t1.free(); s1.free(); e1.free();
 
-    var s2 = String::from("\n\t  world \r ");
-    var t2 = s2.trim();
-    var e2 = String::from("world");
+    let s2 = String::from("\n\t  world \r ");
+    let t2 = s2.trim();
+    let e2 = String::from("world");
     assert(t2.eq(&e2));
     t2.free(); s2.free(); e2.free();
     
-    var s3 = String::from("no_trim");
-    var t3 = s3.trim();
-    var e3 = String::from("no_trim");
+    let s3 = String::from("no_trim");
+    let t3 = s3.trim();
+    let e3 = String::from("no_trim");
     assert(t3.eq(&e3));
     t3.free(); s3.free(); e3.free();
     
-    var s4 = String::from("   ");
-    var t4 = s4.trim();
+    let s4 = String::from("   ");
+    let t4 = s4.trim();
     assert(t4.is_empty());
     t4.free(); s4.free();
 }
 
 test "string replace" {
-    var s1 = String::from("foo bar foo");
-    var r1 = s1.replace("foo", "baz");
-    var e1 = String::from("baz bar baz");
+    let s1 = String::from("foo bar foo");
+    let r1 = s1.replace("foo", "baz");
+    let e1 = String::from("baz bar baz");
     assert(r1.eq(&e1));
     r1.free(); s1.free(); e1.free();
     
-    var s2 = String::from("hello world");
-    var r2 = s2.replace("world", "ZenC");
-    var e2 = String::from("hello ZenC");
+    let s2 = String::from("hello world");
+    let r2 = s2.replace("world", "ZenC");
+    let e2 = String::from("hello ZenC");
     assert(r2.eq(&e2));
     r2.free(); s2.free(); e2.free();
     
-    var s3 = String::from("aaaa");
-    var r3 = s3.replace("aa", "b");
-    var e3 = String::from("bb");
+    let s3 = String::from("aaaa");
+    let r3 = s3.replace("aa", "b");
+    let e3 = String::from("bb");
     assert(r3.eq(&e3));
     r3.free(); s3.free(); e3.free();
 }

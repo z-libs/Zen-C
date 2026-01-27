@@ -8,7 +8,7 @@ struct Node {
 
 impl Node {
     fn new(v: int) -> Self* {
-        var n = alloc<Self>();
+        let n = alloc<Self>();
         n.value = v;
         n.left = NULL;
         n.right = NULL;
@@ -71,7 +71,7 @@ impl BST {
 }
 
 fn main() {
-    var tree = BST::new();
+    let tree = BST::new();
     defer tree.free();
 
     "Inserting: 50, 30, 20, 40, 70, 60, 80";

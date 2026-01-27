@@ -9,11 +9,11 @@ test "Variadic Sum" {
 }
 
 fn sum_all(count: int, ...) -> int {
-    var total = 0;
-    var ap: va_list;
+    let total = 0;
+    let ap: va_list;
     va_start(ap, count);
     
-    for (var i = 0; i < count; i = i + 1) {
+    for (let i = 0; i < count; i = i + 1) {
         total = total + va_arg(ap, int);
     }
     

@@ -17,7 +17,7 @@ test "test_comptime_block" {
 }
 
 test "test_comptime_attr" {
-    var x = double_ct(21);
+    let x = double_ct(21);
     assert(x == 42, "Comptime function failed");
     println "Comptime function called successfully";
 }

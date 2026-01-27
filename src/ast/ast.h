@@ -11,127 +11,149 @@ typedef struct ASTNode ASTNode;
 
 // ** Formal Type System **
 // Used for Generics, Type Inference, and robust pointer handling.
+
+/**
+ * @brief Kind of literal value.
+ */
 typedef enum
 {
-    TYPE_VOID,
-    TYPE_BOOL,
-    TYPE_CHAR,
-    TYPE_STRING,
-    TYPE_U0,
-    TYPE_I8,
-    TYPE_U8,
-    TYPE_I16,
-    TYPE_U16,
-    TYPE_I32,
-    TYPE_U32,
-    TYPE_I64,
-    TYPE_U64,
-    TYPE_I128,
-    TYPE_U128,
-    TYPE_F32,
-    TYPE_F64,
-    TYPE_INT,
-    TYPE_FLOAT,
-    TYPE_USIZE,
-    TYPE_ISIZE,
-    TYPE_BYTE,
-    TYPE_RUNE,
-    TYPE_UINT,
-    TYPE_STRUCT,
-    TYPE_ENUM,
-    TYPE_POINTER,
-    TYPE_ARRAY,
-    TYPE_FUNCTION,
-    TYPE_GENERIC,
-    TYPE_UNKNOWN
+    LITERAL_INT = 0,    ///< Integer literal.
+    LITERAL_FLOAT = 1,  ///< Floating point literal.
+    LITERAL_STRING = 2, ///< String literal.
+    LITERAL_CHAR = 3    ///< Character literal.
+} LiteralKind;
+
+/**
+ * @brief Formal type system kinds.
+ */
+typedef enum
+{
+    TYPE_VOID,         ///< `void` type.
+    TYPE_BOOL,         ///< `bool` type.
+    TYPE_CHAR,         ///< `char` type.
+    TYPE_STRING,       ///< `string` type.
+    TYPE_U0,           ///< `u0` type.
+    TYPE_I8,           ///< `i8` type.
+    TYPE_U8,           ///< `u8` type.
+    TYPE_I16,          ///< `i16` type.
+    TYPE_U16,          ///< `u16` type.
+    TYPE_I32,          ///< `i32` type.
+    TYPE_U32,          ///< `u32` type.
+    TYPE_I64,          ///< `i64` type.
+    TYPE_U64,          ///< `u64` type.
+    TYPE_I128,         ///< `i128` type.
+    TYPE_U128,         ///< `u128` type.
+    TYPE_F32,          ///< `f32` type.
+    TYPE_F64,          ///< `f64` type.
+    TYPE_INT,          ///< `int` (alias, usually i32).
+    TYPE_FLOAT,        ///< `float` (alias).
+    TYPE_USIZE,        ///< `usize` (pointer size unsigned).
+    TYPE_ISIZE,        ///< `isize` (pointer size signed).
+    TYPE_BYTE,         ///< `byte`.
+    TYPE_RUNE,         ///< `rune`.
+    TYPE_UINT,         ///< `uint` (alias).
+    TYPE_STRUCT,       ///< Struct type.
+    TYPE_ENUM,         ///< Enum type.
+    TYPE_POINTER,      ///< Pointer type (*).
+    TYPE_ARRAY,        ///< Fixed size array [N].
+    TYPE_FUNCTION,     ///< Function pointer or reference.
+    TYPE_GENERIC,      ///< Generic type parameter (T).
+    TYPE_UNKNOWN       ///< Unknown/unresolved type.
 } TypeKind;
 
+/**
+ * @brief Represents a formal type in the type system.
+ */
 typedef struct Type
 {
-    TypeKind kind;
-    char *name;         // For STRUCT, GENERIC, ENUM.
-    struct Type *inner; // For POINTER, ARRAY.
-    struct Type **args; // For GENERIC args.
-    int arg_count;
-    int is_const;
-    int is_explicit_struct; // for example, "struct Foo" vs "Foo"
+    TypeKind kind;          ///< The kind of type.
+    char *name;             ///< Name of the type (for STRUCT, GENERIC, ENUM).
+    struct Type *inner;     ///< Inner type (for POINTER, ARRAY).
+    struct Type **args;     ///< Generic arguments (for GENERIC instantiations).
+    int arg_count;          ///< Count of generic arguments.
+    int is_const;           ///< 1 if const-qualified.
+    int is_explicit_struct; ///< 1 if defined with "struct" keyword explicitly.
+    int is_raw;             // Raw function pointer (fn*)
     union
     {
-        int array_size;  // For fixed-size arrays [T; N].
-        int is_varargs;  // For function types (...).
-        int is_restrict; // For restrict pointers.
+        int array_size;  ///< Size for fixed-size arrays.
+        int is_varargs;  ///< 1 if function type is variadic.
+        int is_restrict; ///< 1 if pointer is restrict-qualified.
         struct
         {
-            int has_drop;     // For RAII: does this type implement Drop?
-            int has_iterable; // For the for iterator: does the type implement Iterable?
+            int has_drop;     ///< 1 if type implements Drop trait (RAII).
+            int has_iterable; ///< 1 if type implements Iterable trait.
         } traits;
     };
 } Type;
 
 // ** AST Node Types **
+/**
+ * @brief AST Node Types.
+ */
 typedef enum
 {
-    NODE_ROOT,
-    NODE_FUNCTION,
-    NODE_BLOCK,
-    NODE_RETURN,
-    NODE_VAR_DECL,
-    NODE_CONST,
-    NODE_TYPE_ALIAS,
-    NODE_IF,
-    NODE_WHILE,
-    NODE_FOR,
-    NODE_FOR_RANGE,
-    NODE_LOOP,
-    NODE_REPEAT,
-    NODE_UNLESS,
-    NODE_GUARD,
-    NODE_BREAK,
-    NODE_CONTINUE,
-    NODE_MATCH,
-    NODE_MATCH_CASE,
-    NODE_EXPR_BINARY,
-    NODE_EXPR_UNARY,
-    NODE_EXPR_LITERAL,
-    NODE_EXPR_VAR,
-    NODE_EXPR_CALL,
-    NODE_EXPR_MEMBER,
-    NODE_EXPR_INDEX,
-    NODE_EXPR_CAST,
-    NODE_EXPR_SIZEOF,
-    NODE_EXPR_STRUCT_INIT,
-    NODE_EXPR_ARRAY_LITERAL,
-    NODE_EXPR_SLICE,
-    NODE_STRUCT,
-    NODE_FIELD,
-    NODE_ENUM,
-    NODE_ENUM_VARIANT,
-    NODE_TRAIT,
-    NODE_IMPL,
-    NODE_IMPL_TRAIT,
-    NODE_INCLUDE,
-    NODE_RAW_STMT,
-    NODE_TEST,
-    NODE_ASSERT,
-    NODE_DEFER,
-    NODE_DESTRUCT_VAR,
-    NODE_TERNARY,
-    NODE_ASM,
-    NODE_LAMBDA,
-    NODE_PLUGIN,
-    NODE_GOTO,
-    NODE_LABEL,
-    NODE_DO_WHILE,
-    NODE_TYPEOF,
-    NODE_TRY,
-    NODE_REFLECTION,
-    NODE_AWAIT,
-    NODE_REPL_PRINT,
-    NODE_CUDA_LAUNCH,
-    NODE_VA_START,
-    NODE_VA_END,
-    NODE_VA_COPY,
-    NODE_VA_ARG
+    NODE_ROOT,              ///< Root of the AST.
+    NODE_FUNCTION,          ///< Function definition.
+    NODE_BLOCK,             ///< Code block { ... }.
+    NODE_RETURN,            ///< Return statement.
+    NODE_VAR_DECL,          ///< Variable declaration.
+    NODE_CONST,             ///< Constant definition.
+    NODE_TYPE_ALIAS,        ///< Type alias (typedef).
+    NODE_IF,                ///< If statement.
+    NODE_WHILE,             ///< While loop.
+    NODE_FOR,               ///< For loop.
+    NODE_FOR_RANGE,         ///< For-range loop (iterator).
+    NODE_LOOP,              ///< Infinite loop.
+    NODE_REPEAT,            ///< Repeat loop (n times).
+    NODE_UNLESS,            ///< Unless statement (if !cond).
+    NODE_GUARD,             ///< Guard clause (if !cond return).
+    NODE_BREAK,             ///< Break statement.
+    NODE_CONTINUE,          ///< Continue statement.
+    NODE_MATCH,             ///< Match statement.
+    NODE_MATCH_CASE,        ///< Case within match.
+    NODE_EXPR_BINARY,       ///< Binary expression (a + b).
+    NODE_EXPR_UNARY,        ///< Unary expression (!a).
+    NODE_EXPR_LITERAL,      ///< Literal value.
+    NODE_EXPR_VAR,          ///< Variable reference.
+    NODE_EXPR_CALL,         ///< Function call.
+    NODE_EXPR_MEMBER,       ///< Member access (a.b).
+    NODE_EXPR_INDEX,        ///< Array index (a[b]).
+    NODE_EXPR_CAST,         ///< Type cast.
+    NODE_EXPR_SIZEOF,       ///< Sizeof expression.
+    NODE_EXPR_STRUCT_INIT,  ///< Struct initializer.
+    NODE_EXPR_ARRAY_LITERAL,///< Array literal.
+    NODE_EXPR_SLICE,        ///< Slice operation.
+    NODE_STRUCT,            ///< Struct definition.
+    NODE_FIELD,             ///< Struct field.
+    NODE_ENUM,              ///< Enum definition.
+    NODE_ENUM_VARIANT,      ///< Enum variant.
+    NODE_TRAIT,             ///< Trait definition.
+    NODE_IMPL,              ///< Impl block.
+    NODE_IMPL_TRAIT,        ///< Trait implementation.
+    NODE_INCLUDE,           ///< Include directive.
+    NODE_RAW_STMT,          ///< Raw statement (transpiler bypass).
+    NODE_TEST,              ///< Test block.
+    NODE_ASSERT,            ///< Assert statement.
+    NODE_DEFER,             ///< Defer statement.
+    NODE_DESTRUCT_VAR,      ///< Destructuring declaration.
+    NODE_TERNARY,           ///< Ternary expression (?:).
+    NODE_ASM,               ///< Assembly block.
+    NODE_LAMBDA,            ///< Lambda function.
+    NODE_PLUGIN,            ///< Plugin invocation.
+    NODE_GOTO,              ///< Goto statement.
+    NODE_LABEL,             ///< Label.
+    NODE_DO_WHILE,          ///< Do-while loop.
+    NODE_TYPEOF,            ///< Typeof operator.
+    NODE_TRY,               ///< Try statement (error handling).
+    NODE_REFLECTION,        ///< Reflection info.
+    NODE_AWAIT,             ///< Await expression.
+    NODE_REPL_PRINT,        ///< Implicit print (REPL).
+    NODE_CUDA_LAUNCH,       ///< CUDA kernel launch (<<<...>>>).
+    NODE_VA_START,          ///< va_start intrinsic.
+    NODE_VA_END,            ///< va_end intrinsic.
+    NODE_VA_COPY,           ///< va_copy intrinsic.
+    NODE_VA_ARG             ///< va_arg intrinsic.
 } NodeType;
 
 // ** AST Node Structure **
@@ -306,9 +328,10 @@ struct ASTNode
         struct
         {
             char *pattern;
-            char *binding_name;
+            char **binding_names; // Multiple bindings
+            int binding_count;    // Count
+            int *binding_refs;    // Ref flags per binding
             int is_destructuring;
-            int is_ref; // New: Supports 'ref' binding (Some(ref x))
             ASTNode *guard;
             ASTNode *body;
             int is_default;
@@ -329,7 +352,7 @@ struct ASTNode
 
         struct
         {
-            int type_kind;
+            LiteralKind type_kind;
             unsigned long long int_val;
             double float_val;
             char *string_val;

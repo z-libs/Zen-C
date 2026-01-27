@@ -8,7 +8,7 @@
 import "std/queue.zc"
 
 fn main() {
-    var q = Queue<int>::new();
+    let q = Queue<int>::new();
     
     q.push(1);
     q.push(2);

@@ -2,19 +2,19 @@
 import "std/map.zc"
 
 fn main() {
-    var text = "apple banana apple cherry banana apple";
-    var delim = " ";
+    let text = "apple banana apple cherry banana apple";
+    let delim = " ";
     
-    var counts = Map<int>::new();
+    let counts = Map<int>::new();
     defer counts.free();
 
-    var temp = strdup(text);
+    let temp = strdup(text);
     defer free(temp);
     
-    var token = strtok(temp, delim);
+    let token = strtok(temp, delim);
     while token != NULL {
         if counts.contains(token) {
-            var val = counts.get(token).unwrap();
+            let val = counts.get(token).unwrap();
             counts.put(token, val + 1);
         } else {
             counts.put(token, 1);
@@ -27,8 +27,8 @@ fn main() {
     
     for i in 0..counts.capacity() {
         if counts.is_slot_occupied(i) {
-            var k = counts.key_at(i);
-            var v = counts.val_at(i);
+            let k = counts.key_at(i);
+            let v = counts.val_at(i);
             println "{k}: {v}";
         }
     }

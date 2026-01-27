@@ -4,26 +4,31 @@
 #include "parser.h"
 #include "lsp_index.h"
 
+/**
+ * @brief Represents a tracked file in the LSP project.
+ */
 typedef struct ProjectFile
 {
-    char *path;      // Absolute path
-    char *uri;       // file:// URI
-    char *source;    // Cached source content
-    LSPIndex *index; // File-specific index (local vars, refs)
+    char *path;      ///< Absolute file path.
+    char *uri;       ///< file:// URI.
+    char *source;    ///< Cached source content (in-memory).
+    LSPIndex *index; ///< File-specific symbol index.
     struct ProjectFile *next;
 } ProjectFile;
 
+/**
+ * @brief Global state for the Language Server Project.
+ */
 typedef struct
 {
-    // Global symbol table (Structs, Functions, Globals)
-    // We reuse ParserContext for this, as it already supports registries.
+    /**
+     * @brief Global shared parser context.
+     * Contains global registries (structs, functions) reused across files.
+     */
     ParserContext *ctx;
 
-    // List of tracked files
-    ProjectFile *files;
-
-    // Root directory
-    char *root_path;
+    ProjectFile *files; ///< List of tracked open files.
+    char *root_path;    ///< Project root directory.
 } LSPProject;
 
 // Global project instance

@@ -21,11 +21,11 @@ struct Rigidbody {
 
 fn main() {
     // Mixin usage - flattened fields
-    var t = Transform{ x: 10.0, y: 5.0, rotation: 90.0 };
+    let t = Transform{ x: 10.0, y: 5.0, rotation: 90.0 };
     println "Transform pos: ({t.x}, {t.y})";
 
     // Named usage - nested fields
-    var rb = Rigidbody{
+    let rb = Rigidbody{
         position: Vector2{x: 0.0, y: 10.0},
         velocity: Vector2{x: 1.0, y: 0.0},
         mass: 50.0

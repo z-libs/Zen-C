@@ -1,0 +1,183 @@
+// HTTP Server Tests
+// Tests the HTTP server functionality with @derive(ToJson) support
+//> link: -lmicrohttpd -lpthread
+
+import "std/http/server.zc"
+import "std/thread.zc"
+
+// ============================================
+// Test Response Structs with @derive(ToJson)
+// ============================================
+
+@derive(ToJson)
+struct TestMessage {
+    message: char*;
+    code: int;
+}
+
+@derive(ToJson)
+struct TestUser {
+    id: int;
+    name: char*;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+fn assert_true(cond: bool, msg: char*) {
+    if !cond {
+        !"FAIL: {msg}";
+        exit(1);
+    }
+}
+
+fn assert_eq(a: int, b: int, msg: char*) {
+    if a != b {
+        !"FAIL: {msg} - expected {a}, got {b}";
+        exit(1);
+    }
+}
+
+// ============================================
+// Test Handlers
+// ============================================
+
+fn test_handler_hello(req: Request) -> Response {
+    let msg = TestMessage { message: "Hello Test", code: 200 };
+    return Response::json_value(msg.to_json());
+}
+
+fn test_handler_user(req: Request) -> Response {
+    let id_str = req.param("id");
+    if id_str == NULL {
+        return Response::bad_request();
+    }
+    let user = TestUser { id: atoi(id_str), name: "TestUser" };
+    return Response::json_value(user.to_json());
+}
+
+fn test_handler_echo(req: Request) -> Response {
+    let body = req.body();
+    if body == NULL {
+        return Response::json("{\"echo\": \"empty\"}");
+    }
+    return Response::json(body);
+}
+
+fn test_handler_method(req: Request) -> Response {
+    let method = req.method();
+    let msg = TestMessage { message: method, code: 200 };
+    return Response::json_value(msg.to_json());
+}
+
+// ============================================
+// Tests
+// ============================================
+
+test "HTTP Server Creation" {
+    "Testing HTTP Server creation...";
+
+    let server = HttpServer::new(9999);
+
+    // Add routes
+    server.get("/hello", test_handler_hello)
+          .get("/user/:id", test_handler_user)
+          .post("/echo", test_handler_echo)
+          .put("/method", test_handler_method)
+          .delete("/method", test_handler_method);
+
+    // Server should be configured (not running yet)
+    "  Server configured with routes";
+
+    // Clean up without running
+    server.free();
+    "  Server freed successfully";
+
+    "PASS: HTTP Server Creation";
+}
+
+test "Response Builder Methods" {
+    "Testing Response builder methods...";
+
+    // Test Response::text
+    let r1 = Response::text("Hello World");
+    assert_eq(r1.status, 200, "text status");
+    "  Response::text - OK";
+
+    // Test Response::html
+    let r2 = Response::html("<h1>Hello</h1>");
+    assert_eq(r2.status, 200, "html status");
+    "  Response::html - OK";
+
+    // Test Response::json
+    let r3 = Response::json("{\"key\": \"value\"}");
+    assert_eq(r3.status, 200, "json status");
+    "  Response::json - OK";
+
+    // Test Response::not_found
+    let r4 = Response::not_found();
+    assert_eq(r4.status, 404, "not_found status");
+    "  Response::not_found - OK";
+
+    // Test Response::bad_request
+    let r5 = Response::bad_request();
+    assert_eq(r5.status, 400, "bad_request status");
+    "  Response::bad_request - OK";
+
+    // Test Response::error (internal error)
+    let r6 = Response::error();
+    assert_eq(r6.status, 500, "error status");
+    "  Response::error - OK";
+
+    "PASS: Response Builder Methods";
+}
+
+test "Response with JsonValue (@derive ToJson)" {
+    "Testing Response with JsonValue...";
+
+    // Create a struct with @derive(ToJson)
+    let msg = TestMessage { message: "Test", code: 123 };
+    let json = msg.to_json();
+
+    // Convert to string
+    let str = json.stringify();
+    assert_true(str != NULL, "stringify not null");
+    "  Stringify result: {str}";
+
+    // Clean up
+    free(str);
+    json.free();
+
+    "PASS: Response with JsonValue";
+}
+
+test "HTTP Status Codes" {
+    "Testing HTTP status codes...";
+
+    assert_eq(HTTP_OK, 200, "HTTP_OK");
+    assert_eq(HTTP_CREATED, 201, "HTTP_CREATED");
+    assert_eq(HTTP_NO_CONTENT, 204, "HTTP_NO_CONTENT");
+    assert_eq(HTTP_BAD_REQUEST, 400, "HTTP_BAD_REQUEST");
+    assert_eq(HTTP_UNAUTHORIZED, 401, "HTTP_UNAUTHORIZED");
+    assert_eq(HTTP_FORBIDDEN, 403, "HTTP_FORBIDDEN");
+    assert_eq(HTTP_NOT_FOUND, 404, "HTTP_NOT_FOUND");
+    assert_eq(HTTP_METHOD_NOT_ALLOWED, 405, "HTTP_METHOD_NOT_ALLOWED");
+    assert_eq(HTTP_INTERNAL_ERROR, 500, "HTTP_INTERNAL_ERROR");
+
+    "PASS: HTTP Status Codes";
+}
+
+test "HTTP Method Constants" {
+    "Testing HTTP method constants...";
+
+    assert_eq(HTTP_GET, 1, "HTTP_GET");
+    assert_eq(HTTP_POST, 2, "HTTP_POST");
+    assert_eq(HTTP_PUT, 3, "HTTP_PUT");
+    assert_eq(HTTP_DELETE, 4, "HTTP_DELETE");
+    assert_eq(HTTP_PATCH, 5, "HTTP_PATCH");
+    assert_eq(HTTP_HEAD, 6, "HTTP_HEAD");
+    assert_eq(HTTP_OPTIONS, 7, "HTTP_OPTIONS");
+
+    "PASS: HTTP Method Constants";
+}

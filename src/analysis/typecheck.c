@@ -15,6 +15,7 @@ static void tc_error(TypeChecker *tc, Token t, const char *msg)
 static void tc_enter_scope(TypeChecker *tc)
 {
     Scope *s = malloc(sizeof(Scope));
+    if (!s) return;
     s->symbols = NULL;
     s->parent = tc->current_scope;
     tc->current_scope = s;
@@ -29,10 +30,10 @@ static void tc_exit_scope(TypeChecker *tc)
     Scope *old = tc->current_scope;
     tc->current_scope = old->parent;
 
-    Symbol *sym = old->symbols;
+    ZenSymbol *sym = old->symbols;
     while (sym)
     {
-        Symbol *next = sym->next;
+        ZenSymbol *next = sym->next;
         free(sym);
         sym = next;
     }
@@ -41,8 +42,8 @@ static void tc_exit_scope(TypeChecker *tc)
 
 static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t)
 {
-    Symbol *s = malloc(sizeof(Symbol));
-    memset(s, 0, sizeof(Symbol));
+    ZenSymbol *s = malloc(sizeof(ZenSymbol));
+    memset(s, 0, sizeof(ZenSymbol));
     s->name = strdup(name);
     s->type_info = type;
     s->decl_token = t;
@@ -50,12 +51,12 @@ static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t
     tc->current_scope->symbols = s;
 }
 
-static Symbol *tc_lookup(TypeChecker *tc, const char *name)
+static ZenSymbol *tc_lookup(TypeChecker *tc, const char *name)
 {
     Scope *s = tc->current_scope;
     while (s)
     {
-        Symbol *curr = s->symbols;
+        ZenSymbol *curr = s->symbols;
         while (curr)
         {
             if (0 == strcmp(curr->name, name))
@@ -77,7 +78,7 @@ static int is_safe_to_copy(TypeChecker *tc, Type *t)
     return is_type_copy(tc->pctx, t);
 }
 
-static void check_use_validity(TypeChecker *tc, ASTNode *var_node, Symbol *sym)
+static void check_use_validity(TypeChecker *tc, ASTNode *var_node, ZenSymbol *sym)
 {
     if (!sym || !var_node)
     {
@@ -95,7 +96,7 @@ static void check_use_validity(TypeChecker *tc, ASTNode *var_node, Symbol *sym)
     }
 }
 
-static void mark_symbol_moved(TypeChecker *tc, Symbol *sym, ASTNode *context_node)
+static void mark_symbol_moved(TypeChecker *tc, ZenSymbol *sym, ASTNode *context_node)
 {
     (void)context_node;
     if (!sym)
@@ -111,7 +112,7 @@ static void mark_symbol_moved(TypeChecker *tc, Symbol *sym, ASTNode *context_nod
     }
 }
 
-static void mark_symbol_valid(TypeChecker *tc, Symbol *sym)
+static void mark_symbol_valid(TypeChecker *tc, ZenSymbol *sym)
 {
     (void)tc;
     if (sym)
@@ -135,7 +136,7 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node)
         // If RHS is a var, it might Move
         if (node->binary.right->type == NODE_EXPR_VAR)
         {
-            Symbol *rhs_sym = tc_lookup(tc, node->binary.right->var_ref.name);
+            ZenSymbol *rhs_sym = tc_lookup(tc, node->binary.right->var_ref.name);
             if (rhs_sym)
             {
                 mark_symbol_moved(tc, rhs_sym, node);
@@ -145,7 +146,7 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node)
         // LHS is being (re-)initialized, so it becomes Valid.
         if (node->binary.left->type == NODE_EXPR_VAR)
         {
-            Symbol *lhs_sym = tc_lookup(tc, node->binary.left->var_ref.name);
+            ZenSymbol *lhs_sym = tc_lookup(tc, node->binary.left->var_ref.name);
             if (lhs_sym)
             {
                 mark_symbol_valid(tc, lhs_sym);
@@ -168,7 +169,7 @@ static void check_expr_call(TypeChecker *tc, ASTNode *node)
         // If passed by ref (UNARY '&'), the child was checked but Is Not A Var Node itself.
         if (arg->type == NODE_EXPR_VAR)
         {
-            Symbol *sym = tc_lookup(tc, arg->var_ref.name);
+            ZenSymbol *sym = tc_lookup(tc, arg->var_ref.name);
             if (sym)
             {
                 mark_symbol_moved(tc, sym, node);
@@ -250,7 +251,7 @@ static void check_var_decl(TypeChecker *tc, ASTNode *node)
         // Move Analysis: If initializing from another variable, it moves.
         if (node->var_decl.init_expr->type == NODE_EXPR_VAR)
         {
-            Symbol *init_sym = tc_lookup(tc, node->var_decl.init_expr->var_ref.name);
+            ZenSymbol *init_sym = tc_lookup(tc, node->var_decl.init_expr->var_ref.name);
             if (init_sym)
             {
                 mark_symbol_moved(tc, init_sym, node);
@@ -292,7 +293,7 @@ static void check_function(TypeChecker *tc, ASTNode *node)
 
 static void check_expr_var(TypeChecker *tc, ASTNode *node)
 {
-    Symbol *sym = tc_lookup(tc, node->var_ref.name);
+    ZenSymbol *sym = tc_lookup(tc, node->var_ref.name);
     if (!sym)
     {
         // Check global functions/contexts if not found in locals
@@ -372,7 +373,7 @@ static void check_node(TypeChecker *tc, ASTNode *node)
             // If returning a variable by value, it is moved.
             if (node->ret.value->type == NODE_EXPR_VAR)
             {
-                Symbol *sym = tc_lookup(tc, node->ret.value->var_ref.name);
+                ZenSymbol *sym = tc_lookup(tc, node->ret.value->var_ref.name);
                 if (sym)
                 {
                     mark_symbol_moved(tc, sym, node);

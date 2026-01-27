@@ -1,0 +1,54 @@
+name: Documentation
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout Doxygen Awesome CSS
+        uses: actions/checkout@v4
+        with:
+          repository: jothepro/doxygen-awesome-css
+          path: doxygen-awesome-css
+
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+
+      - name: Configure Doxyfile for Theme
+        run: |
+          echo "HTML_EXTRA_STYLESHEET = doxygen-awesome-css/doxygen-awesome.css" >> Doxyfile
+          echo "GENERATE_TREEVIEW      = YES" >> Doxyfile
+          echo "HTML_COLORSTYLE        = LIGHT" >> Doxyfile
+
+      - name: Generate Documentation
+        run: doxygen Doxyfile
+
+      - name: Organize Documentation
+        run: |
+          mkdir public
+          
+          # Move the generated HTML to public
+          mv docs/html/* public/
+          
+          # Copy the README to the root so it's visible on the repo view
+          cp README.md public/
+          
+          # Prevent GitHub from ignoring Doxygen's underscore folders
+          touch public/.nojekyll
+
+      - name: Deploy to z-libs/Zen-C-Docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          external_repository: z-libs/Zen-C-Docs
+          publish_branch: main
+          publish_dir: ./public

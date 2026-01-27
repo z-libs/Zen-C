@@ -3,11 +3,11 @@ import "./test_modules/_math.zc" as math;
 import "./test_modules/_physics.zc" as physics;
 
 test "test_namespaced_imports" {
-    var mv = math::Vector::new(3, 4);
-    var pv = physics::Vector::new(5.0, 12.0);
+    let mv = math::Vector::new(3, 4);
+    let pv = physics::Vector::new(5.0, 12.0);
     
-    var len1 = math::Vector::length(&mv);
-    var len2 = physics::Vector::magnitude(&pv);
+    let len1 = math::Vector::length(&mv);
+    let len2 = physics::Vector::magnitude(&pv);
     
     assert(len1 == 5, "Math vector length failed");
     assert(len2 == 13.0, "Physics vector magnitude failed");

@@ -8,13 +8,13 @@
 import "std/map.zc"
 
 fn main() {
-    var m = Map<int>::new();
+    let m = Map<int>::new();
     
     m.put("one", 1);
     m.put("two", 2);
     
     if (m.contains("one")) {
-        var val = m.get("one");
+        let val = m.get("one");
         println "{val.unwrap()}";
     }
     
@@ -45,7 +45,7 @@ struct Map<V> {
 You can iterate over the map's key-value pairs using a `for` loop.
 
 ```zc
-var m = Map<int>::new();
+let m = Map<int>::new();
 m.put("a", 1);
 
 for entry in m {

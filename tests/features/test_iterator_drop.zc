@@ -1,7 +1,7 @@
 import "../../std/iter.zc"
 import "../../std/mem.zc"
 
-var DROP_CALLED = 0;
+let DROP_CALLED = 0;
 
 struct DropIter {
     count: int;
@@ -36,10 +36,10 @@ impl DropRange {
 
 test "iterator_drop" {
     {
-        var range = DropRange { len: 3 };
+        let range = DropRange { len: 3 };
         for i in range {
             // Loop runs 3 times
-            var _ignore = i;
+            let _ignore = i;
         }
         // Iterator should be dropped here
     }

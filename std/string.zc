@@ -8,18 +8,18 @@ struct String {
 
 impl String {
     fn new(s: char*) -> String {
-        var len = strlen(s);
-        var v = Vec<char>::new();
+        let len = strlen(s);
+        let v = Vec<char>::new();
         // Manual copy for now
-        for (var i = 0; i < len; i = i + 1) {
+        for (let i = 0; i < len; i = i + 1) {
             v.push(s[i]);
         }
         v.push(0);
         
         // Extract fields to transfer ownership
-        var d = v.data;
-        var l = v.len;
-        var c = v.cap;
+        let d = v.data;
+        let l = v.len;
+        let c = v.cap;
         
         // Forget the local vector so it doesn't free the memory
         v.forget();
@@ -49,19 +49,19 @@ impl String {
             self.vec.len = self.vec.len - 1;
         }
         
-        var other_len = (*other).vec.len;
-        for (var i = 0; i < other_len; i = i + 1) {
+        let other_len = (*other).vec.len;
+        for (let i = 0; i < other_len; i = i + 1) {
             self.vec.push((*other).vec.get(i));
         }
     }
 
     fn add(self, other: String*) -> String {
-        var new_s = String::from(self.c_str());
+        let new_s = String::from(self.c_str());
         new_s.append(other);
         
-        var d = new_s.vec.data;
-        var l = new_s.vec.len;
-        var c = new_s.vec.cap;
+        let d = new_s.vec.data;
+        let l = new_s.vec.len;
+        let c = new_s.vec.cap;
         new_s.forget();
         
         return String { vec: Vec<char> { data: d, len: l, cap: c } };
@@ -80,23 +80,23 @@ impl String {
         if (start + len > self.length()) {
             panic("substring out of bounds");
         }
-        var v = Vec<char>::new();
-        for (var i: usize = 0; i < len; i = i + 1) {
+        let v = Vec<char>::new();
+        for (let i: usize = 0; i < len; i = i + 1) {
              v.push(self.vec.get(start + i));
         }
         v.push(0);
         
-        var d = v.data;
-        var l = v.len;
-        var c = v.cap;
+        let d = v.data;
+        let l = v.len;
+        let c = v.cap;
         v.forget();
         
         return String { vec: Vec<char> { data: d, len: l, cap: c } };
     }
 
     fn find(self, target: char) -> Option<usize> {
-        var len = self.length();
-        for (var i: usize = 0; i < len; i = i + 1) {
+        let len = self.length();
+        for (let i: usize = 0; i < len; i = i + 1) {
             if (self.vec.get(i) == target) {
                 return Option<usize>::Some(i);
             }
@@ -122,16 +122,16 @@ impl String {
     }
     
     fn starts_with(self, prefix: char*) -> bool {
-        var plen = strlen(prefix);
+        let plen = strlen(prefix);
         if plen > self.length() { return false; }
         return strncmp(self.c_str(), prefix, plen) == 0;
     }
     
     fn ends_with(self, suffix: char*) -> bool {
-        var slen = strlen(suffix);
-        var len = self.length();
+        let slen = strlen(suffix);
+        let len = self.length();
         if slen > len { return false; }
-        var offset = (int)(len - slen);
+        let offset = (int)(len - slen);
         return strcmp(self.c_str() + offset, suffix) == 0;
     }
     
@@ -140,7 +140,7 @@ impl String {
     }
 
     fn _utf8_seq_len(first_byte: char) -> usize {
-        var b = (int)first_byte;
+        let b = (int)first_byte;
         if ((b & 0x80) == 0) { return 1; }
         if ((b & 0xE0) == 0xC0) { return 2; }
         if ((b & 0xF0) == 0xE0) { return 3; }
@@ -149,11 +149,11 @@ impl String {
     }
 
     fn utf8_len(self) -> usize {
-        var count: usize = 0;
-        var i: usize = 0;
-        var len = self.length();
+        let count: usize = 0;
+        let i: usize = 0;
+        let len = self.length();
         while i < len {
-            var c = self.vec.get(i);
+            let c = self.vec.get(i);
             i = i + String::_utf8_seq_len(c);
             count = count + 1;
         }
@@ -161,12 +161,12 @@ impl String {
     }
 
     fn utf8_at(self, idx: usize) -> String {
-        var count: usize = 0;
-        var i: usize = 0;
-        var len = self.length();
+        let count: usize = 0;
+        let i: usize = 0;
+        let len = self.length();
         while i < len {
-            var c = self.vec.get(i);
-            var seq = String::_utf8_seq_len(c);
+            let c = self.vec.get(i);
+            let seq = String::_utf8_seq_len(c);
             
             if (count == idx) {
                 return self.substring(i, seq);
@@ -181,13 +181,13 @@ impl String {
     fn utf8_substr(self, start_idx: usize, num_chars: usize) -> String {
         if (num_chars == 0) { return String::new(""); }
 
-        var byte_start: usize = 0;
-        var byte_len: usize = 0;
+        let byte_start: usize = 0;
+        let byte_len: usize = 0;
         
-        var count: usize = 0;
-        var i: usize = 0;
-        var len = self.length();
-        var found_start = false;
+        let count: usize = 0;
+        let i: usize = 0;
+        let len = self.length();
+        let found_start = false;
         
         while i < len {
             // Check if we reached the start char
@@ -198,7 +198,7 @@ impl String {
                 count = 0; 
             } else if (!found_start) {
                  // Still seeking start
-                 var c = self.vec.get(i);
+                 let c = self.vec.get(i);
                  i = i + String::_utf8_seq_len(c);
                  count = count + 1;
                  continue;
@@ -206,8 +206,8 @@ impl String {
             
             // If we are here, we are collecting chars
             if (count < num_chars) {
-                var c = self.vec.get(i);
-                var seq = String::_utf8_seq_len(c);
+                let c = self.vec.get(i);
+                let seq = String::_utf8_seq_len(c);
                 byte_len = byte_len + seq;
                 i = i + seq;
                 count = count + 1;
@@ -221,12 +221,12 @@ impl String {
         return self.substring(byte_start, byte_len);
     }
     fn split(self, delim: char) -> Vec<String> {
-        var parts = Vec<String>::new();
-        var len = self.length();
+        let parts = Vec<String>::new();
+        let len = self.length();
         if (len == 0) { return parts; }
 
-        var start: usize = 0;
-        var i: usize = 0;
+        let start: usize = 0;
+        let i: usize = 0;
         
         while i < len {
             if (self.vec.get(i) == delim) {
@@ -246,13 +246,13 @@ impl String {
     }
 
     fn trim(self) -> String {
-        var start: usize = 0;
-        var len = self.length();
-        var end = len;
+        let start: usize = 0;
+        let len = self.length();
+        let end = len;
 
         // Find start
         while (start < len) {
-            var c = self.vec.get(start);
+            let c = self.vec.get(start);
             if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
                 break;
             }
@@ -265,7 +265,7 @@ impl String {
 
         // Find end
         while (end > start) {
-            var c = self.vec.get(end - 1);
+            let c = self.vec.get(end - 1);
             if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
                 break;
             }
@@ -276,20 +276,20 @@ impl String {
     }
     
     fn replace(self, target: char*, replacement: char*) -> String {
-        var t_len = strlen(target);
+        let t_len = strlen(target);
         if (t_len == 0) return self.substring(0, self.length()); // clone
         
 
-        var s_len = self.length();
-        var result = String::new("");
+        let s_len = self.length();
+        let result = String::new("");
         
-        var i: usize = 0;
+        let i: usize = 0;
         while (i < s_len) {
             // Check if match
             if (i + t_len <= s_len) {
-                var is_match = true;
+                let is_match = true;
                 // Manual strncmp against vec data
-                for (var k: usize = 0; k < t_len; k = k + 1) {
+                for (let k: usize = 0; k < t_len; k = k + 1) {
                     if (self.vec.get(i + k) != target[k]) {
                         is_match = false;
                         break;
@@ -297,7 +297,7 @@ impl String {
                 }
                 
                 if (is_match) {
-                    var r_str = String::new(replacement);
+                    let r_str = String::new(replacement);
                     result.append(&r_str);
                     i = i + t_len;
                     continue;
@@ -305,10 +305,10 @@ impl String {
             }
             
             // Append single char
-            var v = Vec<char>::new();
+            let v = Vec<char>::new();
             v.push(self.vec.get(i));
             v.push(0);
-            var ch_s = String::new(v.data);
+            let ch_s = String::new(v.data);
             result.append(&ch_s);
             v.free();
             i = i + 1;

@@ -1,6 +1,6 @@
 import "../../std/mem.zc"
 
-var DROP_CALLED = 0;
+let DROP_CALLED = 0;
 
 struct MyResource {
     id: int;
@@ -15,7 +15,7 @@ impl Drop for MyResource {
 
 test "drop_trait" {
     {
-        var res = MyResource { id: 1 };
+        let res = MyResource { id: 1 };
         // Scope ends here, drop should be called
     }
     

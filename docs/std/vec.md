@@ -15,7 +15,7 @@
 import "std/vec.zc"
 
 fn main() {
-    var v = Vec<int>::new();
+    let v = Vec<int>::new();
     v.push(10);
     v.push(20);
     

@@ -11,24 +11,24 @@ import "../mem.zc"
 import "../json.zc"
 
 // HTTP Methods
-const HTTP_GET = 1;
-const HTTP_POST = 2;
-const HTTP_PUT = 3;
-const HTTP_DELETE = 4;
-const HTTP_PATCH = 5;
-const HTTP_HEAD = 6;
-const HTTP_OPTIONS = 7;
+def HTTP_GET = 1;
+def HTTP_POST = 2;
+def HTTP_PUT = 3;
+def HTTP_DELETE = 4;
+def HTTP_PATCH = 5;
+def HTTP_HEAD = 6;
+def HTTP_OPTIONS = 7;
 
 // HTTP Status Codes
-const HTTP_OK = 200;
-const HTTP_CREATED = 201;
-const HTTP_NO_CONTENT = 204;
-const HTTP_BAD_REQUEST = 400;
-const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
-const HTTP_NOT_FOUND = 404;
-const HTTP_METHOD_NOT_ALLOWED = 405;
-const HTTP_INTERNAL_ERROR = 500;
+def HTTP_OK = 200;
+def HTTP_CREATED = 201;
+def HTTP_NO_CONTENT = 204;
+def HTTP_BAD_REQUEST = 400;
+def HTTP_UNAUTHORIZED = 401;
+def HTTP_FORBIDDEN = 403;
+def HTTP_NOT_FOUND = 404;
+def HTTP_METHOD_NOT_ALLOWED = 405;
+def HTTP_INTERNAL_ERROR = 500;
 
 // All HTTP server implementation in raw C
 raw {
@@ -496,17 +496,18 @@ impl Response {
         return _response_json(body);
     }
 
-    fn json_obj(json: Json*) -> Response {
-        var s = json.build();
-        var resp = _response_json(s);
+    // JsonValue support (for @derive(ToJson))
+    fn json_value(json: JsonValue) -> Response {
+        let s = json.stringify();
+        let resp = _response_json(s);
         free(s);
         json.free();
         return resp;
     }
 
-    fn json_status(json: Json*, status: int) -> Response {
-        var s = json.build();
-        var resp = _response_json(s);
+    fn json_value_status(json: JsonValue, status: int) -> Response {
+        let s = json.stringify();
+        let resp = _response_json(s);
         free(s);
         json.free();
         return _response_with_status(resp, status);
@@ -562,34 +563,21 @@ fn Response_with_status(r: Response, status: int) -> Response {
     return _response_with_status(r, status);
 }
 
-// Json builder support
-fn Response_json_obj(json: Json*) -> Response {
-    var s = json.build();
-    var resp = _response_json(s);
+// JsonValue support (for @derive(ToJson))
+fn Response_json_value(json: JsonValue) -> Response {
+    let s = json.stringify();
+    let resp = _response_json(s);
     free(s);
     json.free();
     return resp;
 }
 
-fn Response_json_status(json: Json*, status: int) -> Response {
-    var s = json.build();
-    var resp = _response_json(s);
+fn Response_json_value_status(json: JsonValue, status: int) -> Response {
+    let s = json.stringify();
+    let resp = _response_json(s);
     free(s);
     json.free();
     return _response_with_status(resp, status);
-}
-
-// Create Response from Json builder
-fn Response_from_json(json: Json*) -> Response {
-    var s = json.build();
-    var resp = _response_json(s);
-    free(s);
-    json.free();
-    return resp;
-}
-
-fn Response_from_json_status(json: Json*, status: int) -> Response {
-    return _response_with_status(Response_from_json(json), status);
 }
 
 // HTTP Server with fluent API

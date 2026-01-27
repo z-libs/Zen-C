@@ -233,25 +233,25 @@ impl HttpClient {
     }
 
     fn post(self, url: char*, body: char*) -> HttpResponse {
-        var len: usize = 0;
+        let len: usize = 0;
         if body != NULL { len = strlen(body); }
         return self._request("POST", url, body, len, "application/x-www-form-urlencoded");
     }
 
     fn post_json(self, url: char*, json: char*) -> HttpResponse {
-        var len: usize = 0;
+        let len: usize = 0;
         if json != NULL { len = strlen(json); }
         return self._request("POST", url, json, len, "application/json");
     }
 
     fn put(self, url: char*, body: char*) -> HttpResponse {
-        var len: usize = 0;
+        let len: usize = 0;
         if body != NULL { len = strlen(body); }
         return self._request("PUT", url, body, len, "application/json");
     }
 
     fn patch(self, url: char*, body: char*) -> HttpResponse {
-        var len: usize = 0;
+        let len: usize = 0;
         if body != NULL { len = strlen(body); }
         return self._request("PATCH", url, body, len, "application/json");
     }
@@ -265,7 +265,7 @@ impl HttpClient {
     }
 
     fn _request(self, method: char*, url: char*, body: char*, body_len: usize, content_type: char*) -> HttpResponse {
-        var resp = HttpResponse {
+        let resp = HttpResponse {
             status_code: 0,
             body: NULL,
             body_len: 0,
@@ -292,19 +292,19 @@ impl HttpClient {
 
 // Convenience functions
 fn http_get(url: char*) -> HttpResponse {
-    var client = HttpClient::new();
-    var resp = client.get(url);
+    let client = HttpClient::new();
+    let resp = client.get(url);
     return resp;
 }
 
 fn http_post(url: char*, body: char*) -> HttpResponse {
-    var client = HttpClient::new();
-    var resp = client.post(url, body);
+    let client = HttpClient::new();
+    let resp = client.post(url, body);
     return resp;
 }
 
 fn http_post_json(url: char*, json: char*) -> HttpResponse {
-    var client = HttpClient::new();
-    var resp = client.post_json(url, json);
+    let client = HttpClient::new();
+    let resp = client.post_json(url, json);
     return resp;
 }

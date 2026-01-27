@@ -16,11 +16,11 @@ impl Box<T> {
 
 test "Generics" {
     // Generic Function
-    var i = identity<int>(42);
+    let i = identity<int>(42);
     assert(i == 42, "Generic function failed");
 
     // Generic Struct & Impl
-    var b = Box<int> { val: 100 };
+    let b = Box<int> { val: 100 };
     assert(b.get() == 100, "Generic impl failed");
 }
 
@@ -33,7 +33,7 @@ impl Container {
 }
 
 test "Generic Method in Regular Impl" {
-    var c = Container{};
+    let c = Container{};
     assert(c.check_size<int>(10) == sizeof(int), "Generic method int size");
     assert(c.check_size<double>(3.14) == sizeof(double), "Generic method double size");
 }

@@ -21,22 +21,22 @@ fn str_find_case(haystack: string, needle: string, ignore_case: bool) -> Option<
 {
     if (!ignore_case) 
     {
-        var res = (string)strstr(haystack, needle);
+        let res = (string)strstr(haystack, needle);
         if (res != NULL) return Option<string>::Some(res);
         return Option<string>::None();
     }
     
-    var h = haystack;
-    var n = needle;
-    var n_len = strlen(needle);
+    let h = haystack;
+    let n = needle;
+    let n_len = strlen(needle);
     
     while (*h != 0) 
     {
-        var is_match: bool = true;
+        let is_match: bool = true;
         for i in 0..n_len
         {
-            var hc = to_lower(*(h + i));
-            var nc = to_lower(*(n + i));
+            let hc = to_lower(*(h + i));
+            let nc = to_lower(*(n + i));
             if (hc != nc) 
             {
                 is_match = false;
@@ -59,7 +59,7 @@ fn print_highlight(line: string, match_ptr: string, match_len: usize, config: Gr
         return;
     }
     
-    var current = line;
+    let current = line;
     while (current < match_ptr) 
     {
         "{*current}"..;
@@ -85,15 +85,15 @@ fn print_highlight(line: string, match_ptr: string, match_len: usize, config: Gr
 }
 
 fn grep_file(path: string, config: GrepConfig) -> Result<int> {
-    var content_str: String = File::read_all(path)?;
+    let content_str: String = File::read_all(path)?;
     defer content_str.destroy();
-    var content = content_str.c_str();
+    let content = content_str.c_str();
     
-    var line_num = 1;
-    var ptr = content;
-    var line_start = content;
+    let line_num = 1;
+    let ptr = content;
+    let line_start = content;
     
-    var q_len = strlen(config.query);
+    let q_len = strlen(config.query);
     
     while (*ptr != 0) 
     {
@@ -101,8 +101,8 @@ fn grep_file(path: string, config: GrepConfig) -> Result<int> {
         {
             *ptr = 0;
             
-            var match_opt = str_find_case(line_start, config.query, config.ignore_case);
-            var found_str = "";
+            let match_opt = str_find_case(line_start, config.query, config.ignore_case);
+            let found_str = "";
             if (match_opt.is_some()) found_str = match_opt.unwrap();
             
             if ((match_opt.is_some() and !config.invert) || (!match_opt.is_some() and config.invert)) 
@@ -142,8 +142,8 @@ fn grep_file(path: string, config: GrepConfig) -> Result<int> {
     
     if (ptr > line_start) 
     {
-         var match_opt = str_find_case(line_start, config.query, config.ignore_case);
-         var found_str = "";
+         let match_opt = str_find_case(line_start, config.query, config.ignore_case);
+         let found_str = "";
          if (match_opt.is_some()) found_str = match_opt.unwrap();
          
          if ((match_opt.is_some() and !config.invert) || (!match_opt.is_some() and config.invert)) 
@@ -164,17 +164,17 @@ fn grep_file(path: string, config: GrepConfig) -> Result<int> {
 }
 
 fn visit_dir(path: string, config: GrepConfig) {
-    var entries_res = File::read_dir(path);
+    let entries_res = File::read_dir(path);
     guard entries_res.is_ok() else return;
     
-    var entries = entries_res.unwrap();
-    var p_base = Path::new(path);
+    let entries = entries_res.unwrap();
+    let p_base = Path::new(path);
     
     for i in 0..entries.length() 
     {
-        var entry: DirEntry = entries.get(i);
-        var full_path_obj = p_base.join(entry.name.c_str());
-        var full_path = full_path_obj.c_str();
+        let entry: DirEntry = entries.get(i);
+        let full_path_obj = p_base.join(entry.name.c_str());
+        let full_path = full_path_obj.c_str();
         
         if (entry.is_dir) 
         {
@@ -209,7 +209,7 @@ fn main(argc: int, argv: string*)
         return 0;
     }
     
-    var config = GrepConfig {
+    let config = GrepConfig {
         query: NULL,
         path: NULL,
         ignore_case: false,
@@ -219,10 +219,10 @@ fn main(argc: int, argv: string*)
         color: false
     };
     
-    var arg_idx = 1;
+    let arg_idx = 1;
     while (arg_idx < argc) 
     {
-        var arg = argv[arg_idx];
+        let arg = argv[arg_idx];
         if (arg[0] == '-') 
         {
             if (arg[1] == '-') 
@@ -240,10 +240,10 @@ fn main(argc: int, argv: string*)
             } 
             else 
             {
-                var len = strlen(arg);
+                let len = strlen(arg);
                 for i in 1..len 
                 {
-                    var c = arg[i];
+                    let c = arg[i];
                     match c {
                         'i' => config.ignore_case = true,
                         'n' => config.line_numbers = true,
@@ -275,13 +275,13 @@ fn main(argc: int, argv: string*)
     
     if (File::exists(config.path)) 
     {
-        var meta_res = File::metadata(config.path);
+        let meta_res = File::metadata(config.path);
         if (meta_res.is_err()) 
         {
              !"grep: {config.path}: Error reading metadata";
              return 1;
         }
-        var meta = meta_res.unwrap();
+        let meta = meta_res.unwrap();
         
         if (meta.is_dir) 
         {
@@ -296,7 +296,7 @@ fn main(argc: int, argv: string*)
         } 
         else 
         {
-            var res = grep_file(config.path, config);
+            let res = grep_file(config.path, config);
             if (res.is_err()) {
                 !"Error: {res.err}";
                 return 1;

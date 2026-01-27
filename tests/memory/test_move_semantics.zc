@@ -8,29 +8,29 @@ struct Mover {
 }
 
 test "basic_move" {
-    var p1 = Mover { val: 10 };
-    var p2 = p1; // p1 moved to p2
+    let p1 = Mover { val: 10 };
+    let p2 = p1; // p1 moved to p2
     
     // Valid usage of p2
     assert(p2.val == 10, "p2 should be valid");
 
     // Invalid usage of p1 (Uncomment to test compiler error)
-    // var p3 = p1; 
+    // let p3 = p1; 
 }
 
 test "primitive_copy" {
-    var i = 10;
-    var j = i; // Copy
-    var k = i; // Copy again - should be valid
+    let i = 10;
+    let j = i; // Copy
+    let k = i; // Copy again - should be valid
     assert(k == 10, "Primitive copy failed");
 }
 
 test "reassignment" {
-    var m1 = Mover { val: 1 };
-    var m2 = m1; // m1 moved
+    let m1 = Mover { val: 1 };
+    let m2 = m1; // m1 moved
     
     m1 = Mover { val: 2 }; // Resurrect m1
-    var m3 = m1; // Valid now
+    let m3 = m1; // Valid now
     assert(m3.val == 2, "Resurrection failed");
 }
 
@@ -39,7 +39,7 @@ fn consume(m: Mover) {
 }
 
 test "func_arg" {
-    var m = Mover { val: 10 };
+    let m = Mover { val: 10 };
     consume(m); // m moved
     
     // 2. Use after move (Call - Negative Test)
@@ -49,7 +49,7 @@ test "func_arg" {
 /*
 // 3. Use after return (Negative Test)
 fn fail_return(m: Mover) -> Mover {
-    var m2 = m;
+    let m2 = m;
     return m; // Should fail: Use of moved value 'm'
 }
 */

@@ -8,8 +8,8 @@
 import "std/path.zc"
 
 fn main() {
-    var p = Path::new("/home/user");
-    var full_path = p.join("docs/file.txt");
+    let p = Path::new("/home/user");
+    let full_path = p.join("docs/file.txt");
     
     println "Full path: {full_path.c_str()}";
     

@@ -81,7 +81,7 @@ fn mem_copy<T>(dst: T*, src: T*, count: usize) {
 }
 
 fn swap<T>(a: T*, b: T*) {
-    var tmp = *a;
+    let tmp = *a;
     *a = *b;
     *b = tmp;
 }

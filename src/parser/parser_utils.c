@@ -125,7 +125,7 @@ void exit_scope(ParserContext *ctx)
     }
 
     // Check for unused variables
-    Symbol *sym = ctx->current_scope->symbols;
+    ZenSymbol *sym = ctx->current_scope->symbols;
     while (sym)
     {
         if (!sym->is_used && strcmp(sym->name, "self") != 0 && sym->name[0] != '_')
@@ -156,7 +156,7 @@ void add_symbol_with_token(ParserContext *ctx, const char *n, const char *t, Typ
         Scope *p = ctx->current_scope->parent;
         while (p)
         {
-            Symbol *sh = p->symbols;
+            ZenSymbol *sh = p->symbols;
             while (sh)
             {
                 if (strcmp(sh->name, n) == 0)
@@ -173,7 +173,7 @@ void add_symbol_with_token(ParserContext *ctx, const char *n, const char *t, Typ
             p = p->parent;
         }
     }
-    Symbol *s = xmalloc(sizeof(Symbol));
+    ZenSymbol *s = xmalloc(sizeof(ZenSymbol));
     s->name = xstrdup(n);
     s->type_name = t ? xstrdup(t) : NULL;
     s->type_info = type_info;
@@ -184,7 +184,7 @@ void add_symbol_with_token(ParserContext *ctx, const char *n, const char *t, Typ
     ctx->current_scope->symbols = s;
 
     // LSP: Also add to flat list (for persistent access after scope exit)
-    Symbol *lsp_copy = xmalloc(sizeof(Symbol));
+    ZenSymbol *lsp_copy = xmalloc(sizeof(ZenSymbol));
     *lsp_copy = *s;
     lsp_copy->next = ctx->all_symbols;
     ctx->all_symbols = lsp_copy;
@@ -199,7 +199,7 @@ Type *find_symbol_type_info(ParserContext *ctx, const char *n)
     Scope *s = ctx->current_scope;
     while (s)
     {
-        Symbol *sym = s->symbols;
+        ZenSymbol *sym = s->symbols;
         while (sym)
         {
             if (strcmp(sym->name, n) == 0)
@@ -222,7 +222,7 @@ char *find_symbol_type(ParserContext *ctx, const char *n)
     Scope *s = ctx->current_scope;
     while (s)
     {
-        Symbol *sym = s->symbols;
+        ZenSymbol *sym = s->symbols;
         while (sym)
         {
             if (strcmp(sym->name, n) == 0)
@@ -236,7 +236,7 @@ char *find_symbol_type(ParserContext *ctx, const char *n)
     return NULL;
 }
 
-Symbol *find_symbol_entry(ParserContext *ctx, const char *n)
+ZenSymbol *find_symbol_entry(ParserContext *ctx, const char *n)
 {
     if (!ctx->current_scope)
     {
@@ -245,7 +245,7 @@ Symbol *find_symbol_entry(ParserContext *ctx, const char *n)
     Scope *s = ctx->current_scope;
     while (s)
     {
-        Symbol *sym = s->symbols;
+        ZenSymbol *sym = s->symbols;
         while (sym)
         {
             if (strcmp(sym->name, n) == 0)
@@ -260,9 +260,9 @@ Symbol *find_symbol_entry(ParserContext *ctx, const char *n)
 }
 
 // LSP: Search flat symbol list (works after scopes are destroyed).
-Symbol *find_symbol_in_all(ParserContext *ctx, const char *n)
+ZenSymbol *find_symbol_in_all(ParserContext *ctx, const char *n)
 {
-    Symbol *sym = ctx->all_symbols;
+    ZenSymbol *sym = ctx->all_symbols;
     while (sym)
     {
         if (strcmp(sym->name, n) == 0)
@@ -858,6 +858,7 @@ ASTNode *copy_fields(ASTNode *fields)
     n->next = copy_fields(fields->next);
     return n;
 }
+
 char *replace_in_string(const char *src, const char *old_w, const char *new_w)
 {
     if (!src || !old_w || !new_w)
@@ -921,20 +922,23 @@ char *replace_in_string(const char *src, const char *old_w, const char *new_w)
     int newWlen = strlen(new_w);
     int oldWlen = strlen(old_w);
 
+    // Pass 1: Count replacements
+    int in_string = 0;
     for (i = 0; src[i] != '\0'; i++)
     {
-        if (strstr(&src[i], old_w) == &src[i])
+        if (src[i] == '"' && (i == 0 || src[i - 1] != '\\'))
         {
-            // Check boundaries to ensure we match whole words only
-            int valid = 1;
+            in_string = !in_string;
+        }
 
-            // Check preceding character
+        if (!in_string && strstr(&src[i], old_w) == &src[i])
+        {
+            // Check boundaries
+            int valid = 1;
             if (i > 0 && is_ident_char(src[i - 1]))
             {
                 valid = 0;
             }
-
-            // Check following character
             if (valid && is_ident_char(src[i + oldWlen]))
             {
                 valid = 0;
@@ -951,42 +955,47 @@ char *replace_in_string(const char *src, const char *old_w, const char *new_w)
     // Allocate result buffer
     result = (char *)xmalloc(i + cnt * (newWlen - oldWlen) + 1);
 
-    i = 0;
-    while (*src)
+    // Pass 2: Perform replacement
+    int j = 0;
+    in_string = 0;
+
+    int src_idx = 0;
+
+    while (src[src_idx] != '\0')
     {
-        if (strstr(src, old_w) == src)
+        if (src[src_idx] == '"' && (src_idx == 0 || src[src_idx - 1] != '\\'))
+        {
+            in_string = !in_string;
+        }
+
+        int replaced = 0;
+        if (!in_string && strstr(&src[src_idx], old_w) == &src[src_idx])
         {
             int valid = 1;
-
-            // Check boundary relative to the *new* result buffer built so far
-            if (i > 0 && is_ident_char(result[i - 1]))
+            if (src_idx > 0 && is_ident_char(src[src_idx - 1]))
             {
                 valid = 0;
             }
-
-            // Check boundary relative to the *original* source string
-            if (valid && is_ident_char(src[oldWlen]))
+            if (valid && is_ident_char(src[src_idx + oldWlen]))
             {
                 valid = 0;
             }
 
             if (valid)
             {
-                strcpy(&result[i], new_w);
-                i += newWlen;
-                src += oldWlen;
-            }
-            else
-            {
-                result[i++] = *src++;
+                strcpy(&result[j], new_w);
+                j += newWlen;
+                src_idx += oldWlen;
+                replaced = 1;
             }
         }
-        else
+
+        if (!replaced)
         {
-            result[i++] = *src++;
+            result[j++] = src[src_idx++];
         }
     }
-    result[i] = '\0';
+    result[j] = '\0';
     return result;
 }
 
@@ -1624,7 +1633,7 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         new_node->field.type = replace_type_str(n->field.type, p, c, os, ns);
         break;
     case NODE_EXPR_LITERAL:
-        if (n->literal.type_kind == 2)
+        if (n->literal.type_kind == LITERAL_STRING)
         {
             new_node->literal.string_val = xstrdup(n->literal.string_val);
         }
@@ -1712,6 +1721,48 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         new_node->impl_trait.target_type =
             replace_type_str(n->impl_trait.target_type, p, c, os, ns);
         new_node->impl_trait.methods = copy_ast_replacing(n->impl_trait.methods, p, c, os, ns);
+        break;
+    case NODE_EXPR_SIZEOF:
+        if (n->size_of.target_type)
+        {
+            char *replaced = replace_type_str(n->size_of.target_type, p, c, os, ns);
+            if (replaced && strchr(replaced, '<'))
+            {
+                char *src = replaced;
+                char *mangled = xmalloc(strlen(src) * 2 + 1);
+                char *dst = mangled;
+                while (*src)
+                {
+                    if (*src == '<' || *src == ',')
+                    {
+                        *dst++ = '_';
+                        while (*(src + 1) == ' ')
+                        {
+                            src++; // skip space
+                        }
+                    }
+                    else if (*src == '>')
+                    {
+                        // skip
+                    }
+                    else if (*src == '*')
+                    {
+                        strcpy(dst, "Ptr");
+                        dst += 3;
+                    }
+                    else if (!isspace(*src))
+                    {
+                        *dst++ = *src;
+                    }
+                    src++;
+                }
+                *dst = 0;
+                free(replaced);
+                replaced = mangled;
+            }
+            new_node->size_of.target_type = replaced;
+        }
+        new_node->size_of.expr = copy_ast_replacing(n->size_of.expr, p, c, os, ns);
         break;
     default:
         break;
@@ -1838,6 +1889,129 @@ FuncSig *find_func(ParserContext *ctx, const char *name)
     }
 
     return NULL;
+}
+
+// Helper function to recursively scan AST for sizeof types and trigger instantiation of generic
+// structs
+static void trigger_sizeof_instantiations(ParserContext *ctx, ASTNode *node)
+{
+    if (!node)
+    {
+        return;
+    }
+
+    // Process current node
+    if (node->type == NODE_EXPR_SIZEOF && node->size_of.target_type)
+    {
+        const char *type_str = node->size_of.target_type;
+        if (strchr(type_str, '_'))
+        {
+            // Remove trailing '*' or 'Ptr' if present
+            char *type_copy = xstrdup(type_str);
+            char *star = strchr(type_copy, '*');
+            if (star)
+            {
+                *star = '\0';
+            }
+            else
+            {
+                // Check for "Ptr" suffix and remove it
+                size_t len = strlen(type_copy);
+                if (len > 3 && strcmp(type_copy + len - 3, "Ptr") == 0)
+                {
+                    type_copy[len - 3] = '\0';
+                }
+            }
+
+            char *underscore = strrchr(type_copy, '_');
+            if (underscore && underscore > type_copy)
+            {
+                *underscore = '\0';
+                char *template_name = type_copy;
+                char *concrete_arg = underscore + 1;
+
+                // Check if this is a known generic template
+                GenericTemplate *gt = ctx->templates;
+                int found = 0;
+                while (gt)
+                {
+                    if (strcmp(gt->name, template_name) == 0)
+                    {
+                        found = 1;
+                        break;
+                    }
+                    gt = gt->next;
+                }
+
+                if (found)
+                {
+                    char *unmangled = unmangle_ptr_suffix(concrete_arg);
+                    Token dummy_tok = {0};
+                    instantiate_generic(ctx, template_name, concrete_arg, unmangled, dummy_tok);
+                    free(unmangled);
+                }
+            }
+            free(type_copy);
+        }
+    }
+
+    // Recursively visit children based on node type
+    switch (node->type)
+    {
+    case NODE_FUNCTION:
+        trigger_sizeof_instantiations(ctx, node->func.body);
+        break;
+    case NODE_BLOCK:
+        trigger_sizeof_instantiations(ctx, node->block.statements);
+        break;
+    case NODE_VAR_DECL:
+        trigger_sizeof_instantiations(ctx, node->var_decl.init_expr);
+        break;
+    case NODE_RETURN:
+        trigger_sizeof_instantiations(ctx, node->ret.value);
+        break;
+    case NODE_EXPR_BINARY:
+        trigger_sizeof_instantiations(ctx, node->binary.left);
+        trigger_sizeof_instantiations(ctx, node->binary.right);
+        break;
+    case NODE_EXPR_UNARY:
+        trigger_sizeof_instantiations(ctx, node->unary.operand);
+        break;
+    case NODE_EXPR_CALL:
+        trigger_sizeof_instantiations(ctx, node->call.callee);
+        trigger_sizeof_instantiations(ctx, node->call.args);
+        break;
+    case NODE_EXPR_MEMBER:
+        trigger_sizeof_instantiations(ctx, node->member.target);
+        break;
+    case NODE_EXPR_INDEX:
+        trigger_sizeof_instantiations(ctx, node->index.array);
+        trigger_sizeof_instantiations(ctx, node->index.index);
+        break;
+    case NODE_EXPR_CAST:
+        trigger_sizeof_instantiations(ctx, node->cast.expr);
+        break;
+    case NODE_IF:
+        trigger_sizeof_instantiations(ctx, node->if_stmt.condition);
+        trigger_sizeof_instantiations(ctx, node->if_stmt.then_body);
+        trigger_sizeof_instantiations(ctx, node->if_stmt.else_body);
+        break;
+    case NODE_WHILE:
+        trigger_sizeof_instantiations(ctx, node->while_stmt.condition);
+        trigger_sizeof_instantiations(ctx, node->while_stmt.body);
+        break;
+    case NODE_FOR:
+        trigger_sizeof_instantiations(ctx, node->for_stmt.init);
+        trigger_sizeof_instantiations(ctx, node->for_stmt.condition);
+        trigger_sizeof_instantiations(ctx, node->for_stmt.step);
+        trigger_sizeof_instantiations(ctx, node->for_stmt.body);
+        break;
+    default:
+        break;
+    }
+
+    // Visit next sibling
+    trigger_sizeof_instantiations(ctx, node->next);
 }
 
 char *instantiate_function_template(ParserContext *ctx, const char *name, const char *concrete_type,
@@ -1978,6 +2152,11 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
     {
         return NULL;
     }
+
+    // Scan the function body for sizeof expressions and trigger instantiation
+    // of any generic structs referenced there (e.g., sizeof(RcInner_int32_t))
+    trigger_sizeof_instantiations(ctx, new_fn->func.body);
+
     free(new_fn->func.name);
     new_fn->func.name = xstrdup(mangled);
     new_fn->func.generic_params = NULL;
@@ -2066,10 +2245,15 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
         // Codegen expression to temporary buffer
         char *code_buffer = NULL;
         size_t code_len = 0;
-        FILE *mem_stream = open_memstream(&code_buffer, &code_len);
+        FILE *mem_stream = tmpfile();
         if (mem_stream)
         {
             codegen_expression(ctx, expr_node, mem_stream);
+            code_len = ftell(mem_stream);
+            code_buffer = xmalloc(code_len + 1);
+            fseek(mem_stream, 0, SEEK_SET);
+            fread(code_buffer, 1, code_len, mem_stream);
+            code_buffer[code_len] = 0;
             fclose(mem_stream);
         }
 
@@ -2215,6 +2399,43 @@ ASTNode *copy_fields_replacing(ParserContext *ctx, ASTNode *fields, const char *
                 }
             }
             free(type_copy);
+        }
+    }
+
+    // Additional check: if type_info is a pointer to a struct with a mangled name,
+    // instantiate that struct as well (fixes cases like RcInner<T>* where the
+    // string check above might not catch it)
+    if (n->type_info && n->type_info->kind == TYPE_POINTER && n->type_info->inner)
+    {
+        Type *inner = n->type_info->inner;
+        if (inner->kind == TYPE_STRUCT && inner->name && strchr(inner->name, '_'))
+        {
+            // Extract template name by checking against known templates
+            // We can't use strrchr because types like "Inner_int32_t" have multiple underscores
+            char *template_name = NULL;
+            char *concrete_arg = NULL;
+
+            // Try each known template to see if the type name starts with it
+            GenericTemplate *gt = ctx->templates;
+            while (gt)
+            {
+                size_t tlen = strlen(gt->name);
+                // Check if name starts with template name followed by underscore
+                if (strncmp(inner->name, gt->name, tlen) == 0 && inner->name[tlen] == '_')
+                {
+                    template_name = gt->name;
+                    concrete_arg = inner->name + tlen + 1; // Skip template name and underscore
+                    break;
+                }
+                gt = gt->next;
+            }
+
+            if (template_name && concrete_arg)
+            {
+                char *unmangled = unmangle_ptr_suffix(concrete_arg);
+                instantiate_generic(ctx, template_name, concrete_arg, unmangled, fields->token);
+                free(unmangled);
+            }
         }
     }
 
@@ -2408,8 +2629,13 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
             i->type_info->traits = t->struct_node->type_info->traits;
             i->type_info->is_restrict = t->struct_node->type_info->is_restrict;
         }
-
-        // Use first generic param for substitution (single-param backward compat)
+        i->strct.is_packed = t->struct_node->strct.is_packed;
+        i->strct.is_union = t->struct_node->strct.is_union;
+        i->strct.align = t->struct_node->strct.align;
+        if (t->struct_node->strct.parent)
+        {
+            i->strct.parent = xstrdup(t->struct_node->strct.parent);
+        }
         const char *gp = (t->struct_node->strct.generic_param_count > 0)
                              ? t->struct_node->strct.generic_params[0]
                              : "T";
@@ -2534,6 +2760,15 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
         ASTNode *i = ast_create(NODE_STRUCT);
         i->strct.name = xstrdup(m);
         i->strct.is_template = 0;
+
+        // Copy struct attributes
+        i->strct.is_packed = t->struct_node->strct.is_packed;
+        i->strct.is_union = t->struct_node->strct.is_union;
+        i->strct.align = t->struct_node->strct.align;
+        if (t->struct_node->strct.parent)
+        {
+            i->strct.parent = xstrdup(t->struct_node->strct.parent);
+        }
 
         // Copy fields with sequential substitutions for each param
         ASTNode *fields = t->struct_node->strct.fields;
@@ -3362,7 +3597,7 @@ char *find_similar_symbol(ParserContext *ctx, const char *name)
     Scope *s = ctx->current_scope;
     while (s)
     {
-        Symbol *sym = s->symbols;
+        ZenSymbol *sym = s->symbols;
         while (sym)
         {
             int dist = levenshtein(name, sym->name);
@@ -3468,8 +3703,7 @@ int validate_types(ParserContext *ctx)
             SelectiveImport *si = find_selective_import(ctx, u->name);
             if (!si && !is_trait(u->name))
             {
-                zpanic_at(u->location, "Unknown type '%s'", u->name);
-                errors++;
+                zwarn_at(u->location, "Unknown type '%s' (assuming external C struct)", u->name);
             }
         }
         u = u->next;

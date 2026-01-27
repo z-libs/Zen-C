@@ -3,9 +3,9 @@ import "./result.zc"
 import "./string.zc"
 import "./vec.zc"
 
-const Z_SEEK_SET: int = 0;
-const Z_SEEK_END: int = 2;
-const Z_F_OK: int = 0;
+def Z_SEEK_SET = 0;
+def Z_SEEK_END = 2;
+def Z_F_OK = 0;
 
 
 // TODO: restructure this tomorrow.
@@ -130,7 +130,7 @@ struct DirEntry {
 
 impl File {
     fn open(path: char*, mode: char*) -> Result<File> {
-        var h = _z_fs_fopen(path, mode);
+        let h = _z_fs_fopen(path, mode);
         if (h == NULL) {
             return Result<File>::Err("Failed to open file");
         }
@@ -150,39 +150,39 @@ impl File {
         }
         
         _z_fs_fseek(self.handle, 0, Z_SEEK_END);
-        var size = _z_fs_ftell(self.handle);
+        let size = _z_fs_ftell(self.handle);
         _z_fs_fseek(self.handle, 0, Z_SEEK_SET);
         
-        var buffer: char* = _z_fs_malloc((usize)size + 1);
+        let buffer: char* = _z_fs_malloc((usize)size + 1);
         if (buffer == NULL) {
             return Result<String>::Err("Out of memory");
         }
         
-        var read = _z_fs_fread(buffer, 1, size, self.handle);
+        let read = _z_fs_fread(buffer, 1, size, self.handle);
         buffer[read] = 0;
         
-        var s = String::new(buffer);
+        let s = String::new(buffer);
         _z_fs_free(buffer);
         
-        var res = Result<String>::Ok(s);
+        let res = Result<String>::Ok(s);
         s.forget();
         
-        var ret = res;
+        let ret = res;
         res.forget();
         return ret;
     }
 
     fn read_all(path: char*) -> Result<String> {
-        var res = File::open(path, "rb");
+        let res = File::open(path, "rb");
         if (res.is_err()) {
             return Result<String>::Err(res.err);
         }
         
-        var f: File = res.unwrap();
-        var s_res = f.read_to_string();
+        let f: File = res.unwrap();
+        let s_res = f.read_to_string();
         f.close();
         
-        var ret = s_res;
+        let ret = s_res;
         s_res.forget();
         return ret;
     }
@@ -192,8 +192,8 @@ impl File {
             return Result<bool>::Err("File not open");
         }
         
-        var len = strlen(content);
-        var written = _z_fs_fwrite(content, 1, len, self.handle);
+        let len = strlen(content);
+        let written = _z_fs_fwrite(content, 1, len, self.handle);
         if (written != len) {
             return Result<bool>::Err("Write incomplete");
         }
@@ -205,9 +205,9 @@ impl File {
     }
 
     fn metadata(path: char*) -> Result<Metadata> {
-        var size: uint64_t;
-        var is_d: int;
-        var is_f: int;
+        let size: uint64_t;
+        let is_d: int;
+        let is_f: int;
         
         if (_z_fs_get_metadata(path, &size, &is_d, &is_f) != 0) {
             return Result<Metadata>::Err("Failed to get metadata");
@@ -242,28 +242,28 @@ impl File {
     }
 
     fn read_dir(path: char*) -> Result< Vec<DirEntry> > {
-        var dir = _z_fs_opendir(path);
+        let dir = _z_fs_opendir(path);
         if (dir == NULL) {
             return Result< Vec<DirEntry> >::Err("Failed to open directory");
         }
         
-        var entries = Vec<DirEntry>::new();
-        var name_buf: char* = _z_fs_malloc(256);
+        let entries = Vec<DirEntry>::new();
+        let name_buf: char* = _z_fs_malloc(256);
         
         if (name_buf == NULL) {
             _z_fs_closedir(dir);
             return Result< Vec<DirEntry> >::Err("Out of memory");
         }
         
-        var is_d: int = 0;
+        let is_d: int = 0;
         
         while (_z_fs_read_entry(dir, name_buf, 256, &is_d)) {
             if (strcmp(name_buf, ".") == 0 || strcmp(name_buf, "..") == 0) {
                 continue;
             }
             
-            var s = String::new(name_buf);
-            var ent = DirEntry {
+            let s = String::new(name_buf);
+            let ent = DirEntry {
                 name: s,
                 is_dir: is_d != 0
             };
@@ -280,9 +280,9 @@ impl File {
         _z_fs_free(name_buf);
         _z_fs_closedir(dir);
         
-        var res = Result< Vec<DirEntry> >::Ok(entries);
+        let res = Result< Vec<DirEntry> >::Ok(entries);
         entries.forget();
-        var ret = res;
+        let ret = res;
         res.forget();
         return ret;
     }

@@ -6,8 +6,8 @@ extern fn sin(x: double) -> double;
 
 test "test_build_directives" {
     println "Running Build Directives Test...";
-    var x = 3.14159 / 2.0; // PI/2
-    var s = sin(x);
+    let x = 3.14159 / 2.0; // PI/2
+    let s = sin(x);
     // sin(PI/2) should be 1.0
     println "sin(PI/2) = {s}";
     

@@ -9,8 +9,8 @@ import "./core.zc"
 import "./result.zc"
 import "./string.zc"
 
-const Z_AF_INET = 2;
-const Z_SOCK_STREAM = 1;
+def Z_AF_INET = 2;
+def Z_SOCK_STREAM = 1;
 
 raw {
     static int _z_net_bind(int fd, char *host, int port) {
@@ -66,13 +66,13 @@ struct TcpStream {
 
 impl TcpStream {
     fn read(self, buf: char*, len: usize) -> Result<usize> {
-        var n = _z_net_read(self.fd, buf, len);
+        let n = _z_net_read(self.fd, buf, len);
         if (n < 0) return Result<usize>::Err("Read failed");
         return Result<usize>::Ok((usize)n);
     }
     
     fn write(self, buf: char*, len: usize) -> Result<usize> {
-        var n = _z_net_write(self.fd, buf, len);
+        let n = _z_net_write(self.fd, buf, len);
         if (n < 0) return Result<usize>::Err("Write failed");
         return Result<usize>::Ok((usize)n);
     }
@@ -85,10 +85,10 @@ impl TcpStream {
     }
 
     fn connect(host: char*, port: int) -> Result<TcpStream> {
-        var fd = socket(Z_AF_INET, Z_SOCK_STREAM, 0);
+        let fd = socket(Z_AF_INET, Z_SOCK_STREAM, 0);
         if (fd < 0) return Result<TcpStream>::Err("Failed to create socket");
         
-        var res = _z_net_connect(fd, host, port);
+        let res = _z_net_connect(fd, host, port);
         if (res == -1) { close(fd); return Result<TcpStream>::Err("Invalid address"); }
         if (res == -2) { close(fd); return Result<TcpStream>::Err("Connection failed"); }
         
@@ -102,10 +102,10 @@ struct TcpListener {
 
 impl TcpListener {
     fn bind(host: char*, port: int) -> Result<TcpListener> {
-        var fd = socket(Z_AF_INET, Z_SOCK_STREAM, 0);
+        let fd = socket(Z_AF_INET, Z_SOCK_STREAM, 0);
         if (fd < 0) return Result<TcpListener>::Err("Failed to create socket");
         
-        var res = _z_net_bind(fd, host, port);
+        let res = _z_net_bind(fd, host, port);
         if (res == -1) { close(fd); return Result<TcpListener>::Err("Invalid address"); }
         if (res == -2) { close(fd); return Result<TcpListener>::Err("Bind failed"); }
         if (res == -3) { close(fd); return Result<TcpListener>::Err("Listen failed"); }
@@ -114,7 +114,7 @@ impl TcpListener {
     }
     
     fn accept(self) -> Result<TcpStream> {
-        var client_fd = _z_net_accept(self.fd);
+        let client_fd = _z_net_accept(self.fd);
         if (client_fd < 0) return Result<TcpStream>::Err("Accept failed");
         return Result<TcpStream>::Ok(TcpStream { fd: client_fd });
     }

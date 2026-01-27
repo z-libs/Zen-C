@@ -61,19 +61,19 @@ fn print_shape_info(s: Shape) {
 }
 
 test "basic_traits" {
-    var r: Robot = Robot { id: 42 };    
-    var g: Greeter = &r;
+    let r: Robot = Robot { id: 42 };    
+    let g: Greeter = &r;
     
     g.greet("Hello World");
     g.shout();
 }
 
 test "advanced_traits" {
-    var c = Circle { radius: 5.0 };
-    var r = Rectangle { width: 4.0, height: 6.0 };
+    let c = Circle { radius: 5.0 };
+    let r = Rectangle { width: 4.0, height: 6.0 };
 
-    var s_c: Shape = &c;
-    var s_r: Shape = &r;
+    let s_c: Shape = &c;
+    let s_r: Shape = &r;
 
     print_shape_info(s_c);
     print_shape_info(s_r);
@@ -86,19 +86,59 @@ test "advanced_traits" {
 }
 
 test "test_derive" {
-    var p1 = Point{x: 10, y: 20};
+    let p1 = Point{x: 10, y: 20};
     
     // Debug
-    var s = p1.to_string();
+    let s = p1.to_string();
     assert(strcmp(s, "Point { ... }") == 0, "Debug string matches");
     
     // Clone
-    var p2 = p1.clone();
+    let p2 = p1.clone();
     assert(p2.x == 10, "Clone x matches");
     
     // Eq
     assert(p1.eq(&p2) == true, "Eq works (true)");
     
-    var p3 = Point{x: 10, y: 21};
+    let p3 = Point{x: 10, y: 21};
     assert(p1.eq(&p3) == false, "Eq works (false)");
+}
+
+test "implicit_trait_cast" {
+    let c = Circle { radius: 10.0 };
+    // This previously required explicit casting: print_shape_info((Shape)(&c));
+    print_shape_info(&c); 
+    
+    let r = Rectangle { width: 5.0, height: 5.0 };
+    print_shape_info(&r);
+}
+
+let g_def_circle = Circle { radius: 2.0 };
+
+fn print_default_shape(s: Shape = &g_def_circle) {
+    println "Default Shape: {s.name()}";
+}
+
+test "implicit_trait_cast_default" {
+    print_default_shape();
+}
+
+trait UnderscoreTest {
+    fn method_with_underscores_123(self) -> int;
+}
+
+struct UnderscoreStruct {
+    val: int;
+}
+
+impl UnderscoreTest for UnderscoreStruct {
+    fn method_with_underscores_123(self) -> int {
+        return self.val;
+    }
+}
+
+test "trait_underscores" {
+    let u = UnderscoreStruct { val: 100 };
+    let t: UnderscoreTest = &u;
+    
+    assert(t.method_with_underscores_123() == 100, "Method with underscores call failed");
 }

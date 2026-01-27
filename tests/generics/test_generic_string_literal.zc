@@ -1,0 +1,41 @@
+
+struct StringChecker<T> {
+    dummy: T;
+}
+
+impl StringChecker<T> {
+    fn check(self) -> bool {
+        // The generic parameter T should NOT be replaced inside these string literals
+        // If T is int, this should NOT become "int is a generic param"
+        let s1: char* = "T is a generic param";
+        if (strcmp(s1, "T is a generic param") != 0) {
+            printf("Failed s1: '%s' != 'T is a generic param'\n", s1);
+            return false;
+        }
+
+        // Check for T inside words
+        let s2: char* = "This contains T inside";
+        if (strcmp(s2, "This contains T inside") != 0) {
+             printf("Failed s2: '%s' != 'This contains T inside'\n", s2);
+             return false;
+        }
+        
+        // Check for T at end
+        let s3: char* = "Ends with T";
+        if (strcmp(s3, "Ends with T") != 0) {
+             printf("Failed s3: '%s' != 'Ends with T'\n", s3);
+             return false;
+        }
+
+        return true;
+    }
+}
+
+test "generic_string_substitution" {
+    // Instantiate with 'int' so that if substitution happened, 'T' would become 'int'
+    let checker = StringChecker<int>{ dummy: 0 };
+    
+    if (!checker.check()) {
+        exit(1);
+    }
+}

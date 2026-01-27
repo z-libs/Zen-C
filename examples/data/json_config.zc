@@ -5,95 +5,173 @@ import "std/map.zc"
 import "std/option.zc"
 import "std/string.zc"
 import "std/core.zc"
+import "std/vec.zc"
 
-raw {
-    typedef struct JsonValue* JsonValuePtr;
+@derive(FromJson, ToJson)
+struct Features {
+    logging: bool;
+    metrics: bool;
 }
 
+impl Features {
+    fn drop(self) {
+        // No heap allocations to free
+    }
+}
+
+@derive(FromJson, ToJson)
 struct Config {
     server_name: String;
     port: int;
-    logging: bool;
+    max_connections: int;
+    features: Features;
+    allowed_hosts: Vec<String>;
+}
+
+impl Config {
+    fn drop(self) {
+        self.server_name.free();
+        for i in 0..self.allowed_hosts.length() {
+            self.allowed_hosts.get(i).free();
+        }
+        self.allowed_hosts.free();
+        self.features.drop();
+    }
 }
 
 fn main() {
-    var path = "examples/data/config.json";
+    let path = "examples/data/config.json";
     
-    var content_res = File::read_all(path);
+    let content_res = File::read_all(path);
     if content_res.is_err() {
         !"Failed to read config file: {content_res.err}";
         return 1;
     }
-    
-    var json_str = content_res.unwrap();
 
-    var json_res = JsonValue::parse(json_str.c_str());
-    if json_res.is_err() {
-        !"JSON Parse Error: {json_res.err}";
+    let json_str = content_res.unwrap();
+    let parse_res = JsonValue::parse(json_str.c_str());
+    if parse_res.is_err() {
+        !"JSON Parse Error";
         json_str.free();
         return 1;
     }
-    
-    var root = json_res.unwrap();
-    
-    defer {
-        json_str.free();
-        JsonValue::free(root);
-        free(root);
-    }
-    
-    if (*root).kind.tag != JsonType::JSON_OBJECT().tag {
-         !"Expected JSON Object at root";
-         return 1;
-    }
-    
-    var config = Config { 
-        server_name: String::new("Unknown"), 
-        port: 0, 
-        logging: false 
-    };
 
-    var obj_map = (*root).object_val;
+    let root = parse_res.unwrap();
 
-    if Map<JsonValue*>::contains(obj_map, "server_name") {
-        var opt = Map<JsonValue*>::get(obj_map, "server_name");
-        var val = opt.unwrap();
-        if (*val).kind.tag == JsonType::JSON_STRING().tag {
-            config.server_name.free();
-            config.server_name = String::new((*val).string_val);
-        }
+    // ============================================
+    // Demo 1: Using accessor methods
+    // ============================================
+    "=== Accessor methods ===";
+
+    let server_opt = (*root).get_string("server_name");
+    let server = server_opt.unwrap_or("default");
+
+    let port_opt = (*root).get_int("port");
+    let port = port_opt.unwrap_or(8080);
+
+    let max_conn_opt = (*root).get_int("max_connections");
+    let max_conn = max_conn_opt.unwrap_or(10);
+
+    let logging = false;
+    let metrics = false;
+    let features_opt = (*root).get_object("features");
+    if features_opt.is_some() {
+        let features = features_opt.unwrap();
+        let logging_opt = features.get_bool("logging");
+        logging = logging_opt.unwrap_or(false);
+        let metrics_opt = features.get_bool("metrics");
+        metrics = metrics_opt.unwrap_or(false);
     }
-    
-    if Map<JsonValue*>::contains(obj_map, "port") {
-        var opt = Map<JsonValue*>::get(obj_map, "port");
-        var val = opt.unwrap();
-        if (*val).kind.tag == JsonType::JSON_NUMBER().tag {
-            config.port = (int)(*val).number_val;
-        }
-    }
-    
-    if Map<JsonValue*>::contains(obj_map, "features") {
-        var opt = Map<JsonValue*>::get(obj_map, "features");
-        var features = opt.unwrap();
-        if (*features).kind.tag == JsonType::JSON_OBJECT().tag {
-            var f_obj = (*features).object_val;
-            if Map<JsonValue*>::contains(f_obj, "logging") {
-                var l_opt = Map<JsonValue*>::get(f_obj, "logging");
-                var l = l_opt.unwrap();
-                if (*l).kind.tag == JsonType::JSON_BOOL().tag {
-                    config.logging = (*l).bool_val;
+
+    "Server:          {server}";
+    "Port:            {port}";
+    "Max Connections: {max_conn}";
+    "Logging:         {logging}";
+    "Metrics:         {metrics}";
+
+    // Reading array: allowed_hosts
+    let hosts_opt = (*root).get_array("allowed_hosts");
+    if hosts_opt.is_some() {
+        let hosts = hosts_opt.unwrap();
+        let count = hosts.len();
+        "Allowed Hosts:   ({count} entries)";
+        for i in 0..count {
+            let host_opt = hosts.at(i);
+            if host_opt.is_some() {
+                let host_val = host_opt.unwrap();
+                let host_str = (*host_val).as_string();
+                if host_str.is_some() {
+                    let h = host_str.unwrap();
+                    "  - {h}";
                 }
             }
         }
     }
-    
-    "Configuration Loaded:";
-    var s_name = config.server_name.c_str();
-    "Server:  {s_name}";
-    "Port:    {config.port}";
-    "Logging: {config.logging}";
-    
-    config.server_name.free();
-    
+
+    // ============================================
+    // Demo 2: from_json / to_json
+    // ============================================
+    "";
+    "=== @derive(FromJson, ToJson) ===";
+
+    let config_res = Config::from_json(root);
+    let config = config_res.unwrap();
+
+    let s_name = config.server_name.c_str();
+    "Config from JSON:";
+    "  server_name:     {s_name}";
+    "  port:            {config.port}";
+    "  max_connections: {config.max_connections}";
+    "  features.logging: {config.features.logging}";
+    "  features.metrics: {config.features.metrics}";
+    let hosts_count = config.allowed_hosts.length();
+    "  allowed_hosts:   ({hosts_count} entries)";
+    for i in 0..hosts_count {
+        let host = config.allowed_hosts.get(i).c_str();
+        "    - {host}";
+    }
+
+    // Serialize back to JSON
+    let json_out = config.to_json();
+
+    let out_name_opt = json_out.get_string("server_name");
+    let out_name = out_name_opt.unwrap_or("?");
+
+    let out_port_opt = json_out.get_int("port");
+    let out_port = out_port_opt.unwrap_or(0);
+
+    let out_features_opt = json_out.get_object("features");
+    let out_logging = false;
+    let out_metrics = false;
+    if out_features_opt.is_some() {
+        let out_features = out_features_opt.unwrap();
+        let logging_opt = out_features.get_bool("logging");
+        out_logging = logging_opt.unwrap_or(false);
+        let metrics_opt = out_features.get_bool("metrics");
+        out_metrics = metrics_opt.unwrap_or(false);
+    }
+
+    // Check allowed_hosts in serialized output
+    let out_hosts_opt = json_out.get_array("allowed_hosts");
+    let out_hosts_count: usize = 0;
+    if out_hosts_opt.is_some() {
+        out_hosts_count = out_hosts_opt.unwrap().len();
+    }
+
+    "";
+    "Round-trip to_json:";
+    "  server_name: {out_name}";
+    "  port:        {out_port}";
+    "  features.logging: {out_logging}";
+    "  features.metrics: {out_metrics}";
+    "  allowed_hosts: {out_hosts_count} entries";
+
+    // Cleanup - RAII via drop()
+    config.drop();
+    json_out.free();
+    json_str.free();
+    JsonValue::free(root);
+    free(root);
+
     return 0;
 }

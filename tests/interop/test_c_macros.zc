@@ -3,7 +3,7 @@
 #define DEBUG_MODE 1
 
 test "test_c_macros" {
-    var x = MAX(10, 20);
+    let x = MAX(10, 20);
     
     if x == 20 {
         println "MAX macro worked";

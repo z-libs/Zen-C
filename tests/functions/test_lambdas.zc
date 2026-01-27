@@ -12,8 +12,8 @@ test "test_complex_lambdas" {
     println "Testing complex lambda scenarios...";
     
     // Lambda with multiple parameters
-    var add_three = (a, b, c) -> a + b + c;
-    var res1 = add_three(1, 2, 3);
+    let add_three = (a, b, c) -> a + b + c;
+    let res1 = add_three(1, 2, 3);
     if (res1 == 6) {
         println "  -> Multi-param lambda: Passed";
     } else {
@@ -22,7 +22,7 @@ test "test_complex_lambdas" {
     }
     
     // Higher-order function
-    var res2 = apply_twice(x -> x * 2, 5);
+    let res2 = apply_twice(x -> x * 2, 5);
     if (res2 == 20) {
         println "  -> Higher-order function: Passed";
     } else {
@@ -31,8 +31,8 @@ test "test_complex_lambdas" {
     }
     
     // Returning a lambda (closure)
-    var add10 = make_adder(10);
-    var res3 = add10(5);
+    let add10 = make_adder(10);
+    let res3 = add10(5);
     if (res3 == 15) {
         println "  -> Returned lambda: Passed";
     } else {
@@ -41,9 +41,9 @@ test "test_complex_lambdas" {
     }
     
     // Lambda composition
-    var doubler = x -> x * 2;
-    var add5 = x -> x + 5;
-    var res4 = add5(doubler(10));
+    let doubler = x -> x * 2;
+    let add5 = x -> x + 5;
+    let res4 = add5(doubler(10));
     if (res4 == 25) {
         println "  -> Lambda composition: Passed";
     } else {
@@ -52,12 +52,43 @@ test "test_complex_lambdas" {
     }
     
     // Nested application
-    var res5 = apply_twice(x -> x + 1, apply_twice(x -> x * 2, 3));
+    let res5 = apply_twice(x -> x + 1, apply_twice(x -> x * 2, 3));
     // (3 * 2) * 2 = 12, then (12 + 1) + 1 = 14
     if (res5 == 14) {
         println "  -> Nested application: Passed";
     } else {
         println "  -> Nested application: Failed";
+        exit(1);
+    }
+
+    // Lambda with "fn" syntax (eg. block lambda)
+    let factor = 2;
+    let full = fn(x: int) -> int { return x * factor };
+
+    if (full(3) == 6) {
+        println "  -> Lambda fn syntax: Passed";
+    } else {
+        println "  -> Lambda fn syntax: Failed";
+        exit(1);
+    }
+
+    // Lambda with "fn" syntax (eg. block lambda) + multiple params
+    let addition = fn(sum1: int, sum2: int) -> int { return sum1 + sum2 };
+
+    if (addition(100, 505) == 605) {
+        println "  -> Lambda fn syntax: Passed";
+    } else {
+        println "  -> Lambda fn syntax: Failed";
+        exit(1);
+    }
+
+    // Lambda with "fn" syntax (eg. block lambda) + named args
+    let substract = fn(arg1: int, arg2: int) -> int { return arg1 - arg2 };
+
+    if (substract(arg1: 500, arg2: 100) == 400) {
+        println "  -> Lambda fn syntax: Passed";
+    } else {
+        println "  -> Lambda fn syntax: Failed";
         exit(1);
     }
     
@@ -67,9 +98,9 @@ test "test_complex_lambdas" {
 }
 
 test "test_basic_closure" {
-    var whatever = 10;
-    var closure: fn(I32) -> I32 = x -> x + whatever;
-    var res = closure(5);
+    let whatever = 10;
+    let closure: fn(I32) -> I32 = x -> x + whatever;
+    let res = closure(5);
     // "Result: {res}";
     if (res != 15) {
         println "Closure failed: expected 15, got {res}";

@@ -142,6 +142,12 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
     n_node->trait.methods = methods;
     n_node->trait.generic_params = generic_params;
     n_node->trait.generic_param_count = generic_count;
+
+    if (generic_count > 0)
+    {
+        ctx->known_generics_count -= generic_count;
+    }
+
     register_trait(name);
     return n_node;
 }
@@ -187,12 +193,25 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
         Token t2 = lexer_next(l);
         char *name2 = token_strdup(t2);
 
+        char *target_gen_param = NULL;
+        if (lexer_peek(l).type == TOK_LANGLE)
+        {
+            lexer_next(l); // eat <
+            Token gt = lexer_next(l);
+            target_gen_param = token_strdup(gt);
+            if (lexer_next(l).type != TOK_RANGLE)
+            {
+                zpanic_at(lexer_peek(l), "Expected > in impl struct generic");
+            }
+            register_generic(ctx, target_gen_param);
+        }
+
         register_impl(ctx, name1, name2);
 
         // RAII: Check for "Drop" trait implementation
         if (strcmp(name1, "Drop") == 0)
         {
-            Symbol *s = find_symbol_entry(ctx, name2);
+            ZenSymbol *s = find_symbol_entry(ctx, name2);
             if (s && s->type_info)
             {
                 s->type_info->traits.has_drop = 1;
@@ -211,7 +230,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
         // Iterator: Check for "Iterable" trait implementation
         else if (strcmp(name1, "Iterable") == 0)
         {
-            Symbol *s = find_symbol_entry(ctx, name2);
+            ZenSymbol *s = find_symbol_entry(ctx, name2);
             if (s && s->type_info)
             {
                 s->type_info->traits.has_iterable = 1;
@@ -231,6 +250,18 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
 
         lexer_next(l); // eat {
         ASTNode *h = 0, *tl = 0;
+
+        char *full_target_name = name2;
+        if (target_gen_param)
+        {
+            full_target_name = xmalloc(strlen(name2) + strlen(target_gen_param) + 3);
+            sprintf(full_target_name, "%s<%s>", name2, target_gen_param);
+        }
+        else
+        {
+            full_target_name = xstrdup(name2);
+        }
+
         while (1)
         {
             skip_comments(l);
@@ -247,7 +278,9 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 sprintf(mangled, "%s__%s_%s", name2, name1, f->func.name);
                 free(f->func.name);
                 f->func.name = mangled;
-                char *na = patch_self_args(f->func.args, name2);
+
+                // Use full_target_name (Vec<T>) for self patching
+                char *na = patch_self_args(f->func.args, full_target_name);
                 free(f->func.args);
                 f->func.args = na;
 
@@ -286,7 +319,8 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     sprintf(mangled, "%s__%s_%s", name2, name1, f->func.name);
                     free(f->func.name);
                     f->func.name = mangled;
-                    char *na = patch_self_args(f->func.args, name2);
+
+                    char *na = patch_self_args(f->func.args, full_target_name);
                     free(f->func.args);
                     f->func.args = na;
 
@@ -322,6 +356,16 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 lexer_next(l);
             }
         }
+
+        if (target_gen_param)
+        {
+            free(full_target_name);
+        }
+        else
+        {
+            free(full_target_name); // It was strdup/ref. Wait, xstrdup needs free.
+        }
+
         ctx->current_impl_struct = NULL; // Restore context
         ASTNode *n = ast_create(NODE_IMPL_TRAIT);
         n->impl_trait.trait_name = name1;
@@ -331,11 +375,15 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
 
         // If target struct is generic, register this impl as a template
         ASTNode *def = find_struct_def(ctx, name2);
-        if (def && ((def->type == NODE_STRUCT && def->strct.is_template) ||
-                    (def->type == NODE_ENUM && def->enm.is_template)))
+        if (target_gen_param || (def && ((def->type == NODE_STRUCT && def->strct.is_template) ||
+                                         (def->type == NODE_ENUM && def->enm.is_template))))
         {
             const char *gp = "T";
-            if (def->type == NODE_STRUCT && def->strct.generic_param_count > 0)
+            if (target_gen_param)
+            {
+                gp = target_gen_param;
+            }
+            else if (def && def->type == NODE_STRUCT && def->strct.generic_param_count > 0)
             {
                 gp = def->strct.generic_params[0];
             }
@@ -344,6 +392,10 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
         }
 
         if (gen_param)
+        {
+            ctx->known_generics_count--;
+        }
+        if (target_gen_param)
         {
             ctx->known_generics_count--;
         }
@@ -694,12 +746,14 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
                 // Named use -> Composition (Add field, don't flatten)
                 Token field_name = lexer_next(l);
                 lexer_next(l); // eat :
-                char *field_type_str = parse_type(ctx, l);
+                Type *ft = parse_type_formal(ctx, l);
+                char *field_type_str = type_to_string(ft);
                 expect(l, TOK_SEMICOLON, "Expected ;");
 
                 ASTNode *nf = ast_create(NODE_FIELD);
                 nf->field.name = token_strdup(field_name);
                 nf->field.type = field_type_str;
+                nf->type_info = ft;
 
                 if (!h)
                 {
@@ -746,6 +800,12 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
                     ASTNode *nf = ast_create(NODE_FIELD);
                     nf->field.name = xstrdup(f->field.name);
                     nf->field.type = xstrdup(f->field.type);
+                    // Copy type info? Ideally deep copy or ref
+                    // For now, we leave it NULL or shallow copy if needed, but mixins usually
+                    // aren't generic params themselves in the same way.
+                    // Let's shallow copy for safety if it exists.
+                    nf->type_info = f->type_info;
+
                     if (!h)
                     {
                         h = nf;
@@ -775,11 +835,13 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
         {
             Token f_name = lexer_next(l);
             expect(l, TOK_COLON, "Expected :");
-            char *f_type = parse_type(ctx, l);
+            Type *ft = parse_type_formal(ctx, l);
+            char *f_type = type_to_string(ft);
 
             ASTNode *f = ast_create(NODE_FIELD);
             f->field.name = token_strdup(f_name);
             f->field.type = f_type;
+            f->type_info = ft;
             f->field.bit_width = 0;
 
             // Optional bit width: name: type : 3
@@ -925,8 +987,50 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
             Type *payload = NULL;
             if (lexer_peek(l).type == TOK_LPAREN)
             {
-                lexer_next(l);
-                payload = parse_type_obj(ctx, l);
+                lexer_next(l); // eat (
+                Type *first_t = parse_type_obj(ctx, l);
+
+                if (lexer_peek(l).type == TOK_COMMA)
+                {
+                    // Multi-arg variant -> Tuple
+                    char sig[512];
+                    sig[0] = 0;
+
+                    char *s = type_to_string(first_t);
+                    if (strlen(s) > 250)
+                    { // Safety check
+                        zpanic_at(lexer_peek(l), "Type name too long for tuple generation");
+                    }
+                    strcpy(sig, s);
+                    free(s);
+
+                    while (lexer_peek(l).type == TOK_COMMA)
+                    {
+                        lexer_next(l); // eat ,
+                        strcat(sig, "_");
+                        Type *next_t = parse_type_obj(ctx, l);
+                        char *ns = type_to_string(next_t);
+                        if (strlen(sig) + strlen(ns) + 2 > 510)
+                        {
+                            zpanic_at(lexer_peek(l), "Tuple signature too long");
+                        }
+                        strcat(sig, ns);
+                        free(ns);
+                    }
+
+                    register_tuple(ctx, sig);
+
+                    char *tuple_name = xmalloc(strlen(sig) + 7);
+                    sprintf(tuple_name, "Tuple_%s", sig);
+
+                    payload = type_new(TYPE_STRUCT);
+                    payload->name = tuple_name;
+                }
+                else
+                {
+                    payload = first_t;
+                }
+
                 if (lexer_next(l).type != TOK_RPAREN)
                 {
                     zpanic_at(lexer_peek(l), "Expected )");
@@ -942,6 +1046,24 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
             char mangled[256];
             sprintf(mangled, "%s_%s", ename, vname);
             register_enum_variant(ctx, ename, mangled, va->variant.tag_id);
+
+            // Register Constructor Function Signature
+            if (payload && !gp) // Only for non-generic enums for now
+            {
+                Type **at = xmalloc(sizeof(Type *));
+                at[0] = payload;
+                Type *ret_t = type_new(TYPE_ENUM);
+                ret_t->name = xstrdup(ename);
+
+                register_func(ctx, mangled, 1, NULL, at, ret_t, 0, 0, vt);
+            }
+            else if (!gp)
+            {
+                // No payload: fn Name() -> Enum
+                Type *ret_t = type_new(TYPE_ENUM);
+                ret_t->name = xstrdup(ename);
+                register_func(ctx, mangled, 0, NULL, NULL, ret_t, 0, 0, vt);
+            }
 
             // Handle explicit assignment: Ok = 5
             if (lexer_peek(l).type == TOK_OP && *lexer_peek(l).start == '=')

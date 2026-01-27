@@ -1,0 +1,32 @@
+
+enum Shape {
+    Circle(float),
+    Rect(float, float)
+}
+
+fn main() {
+    let r = Shape.Rect(10.0, 20.0);
+    
+    let matched = 0;
+    match r {
+        Shape::Rect(w, h) => {
+            assert(w == 10.0, "w == 10.0");
+            assert(h == 20.0, "h == 20.0");
+            matched = 1;
+        }
+        Shape::Circle(r) => {
+            exit(1);
+        }
+    }
+    assert(matched == 1, "Matched Rect");
+
+    let c = Shape.Circle(5.0);
+    match c {
+        Shape::Circle(val) => {
+            assert(val == 5.0, "val == 5.0");
+        }
+        _ => {
+            exit(1);
+        }
+    }
+}

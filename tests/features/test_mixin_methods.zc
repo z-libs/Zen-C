@@ -19,11 +19,11 @@ struct Bar {
 }
 
 test "test_mixin_methods" {
-    var b: Bar;
+    let b: Bar;
     b.i = 42;
     b.f = 3.14;
     
-    var val = b.get_i();
+    let val = b.get_i();
     assert(val == 42, "Mixin method get_i() should return 42");
     
     b.set_i(100);

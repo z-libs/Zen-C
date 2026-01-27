@@ -1,0 +1,118 @@
+#define _COSMO_SOURCE
+#include <libc/cosmo.h>
+#include <string.h>
+#include <stdlib.h>
+
+raw {
+  extern char **environ;
+}
+
+fn normalize_wait(ws: int) -> int {
+  if ws == -1 { return -1 }
+  if WIFEXITED(ws) { return WEXITSTATUS(ws) }
+  if WIFSIGNALED(ws) { return 128 + WTERMSIG(ws) }
+  return -1;
+}
+
+fn run_exec(argv: char**) -> int {
+  fflush(NULL);
+  let ws: int = systemvpe(argv[0], argv, environ);
+  return normalize_wait(ws);
+}
+
+fn needs_quote(s: char*) -> bool {
+  for (let p = s; *p; ++p) {
+    if (*p == ' ' || *p == '\t' || *p == '\n' || *p == '"' || *p == '\'' )
+      return true;
+  }
+  return false;
+}
+
+fn print_quoted(s: char*) {
+  if !needs_quote(s) {
+    print f"{s}";
+    return;
+  }
+
+  print f"'";
+  for (let p = s; *p; ++p) {
+    if (*p == '\'') {
+     print f"'\"'\"'";
+    } else {
+     print f"{*p:c}";
+    }
+  }
+  print f"'";
+}
+
+fn log_cmd(argv: char**) {
+  print f"$ ";
+  let i = 0;
+  while argv[i] != NULL {
+    if i { print f" " }
+    print_quoted(argv[i]);
+    i++;
+  }
+  print f"\n";
+}
+
+fn main(argc: int, argv: string*) {
+  def delim = "::";
+
+  let newargc: int = cosmo_args("/zip/.args", &argv);
+  if newargc != -1 { argc = newargc }
+
+  let i = 1;
+  while i < argc && strcmp(argv[i], delim) { i++ }
+
+  while i < argc {
+    if strcmp(argv[i], delim) {
+      f"Expected '{delim}' before each command, got: {argv[i]}";
+      return 2;
+    }
+    i++;
+
+    let start = i;
+    while i < argc && strcmp(argv[i], delim) { i++ }
+    let cmd_argc = i - start;
+
+    if cmd_argc <= 0 {
+      f"Empty command after '{delim}'";
+      return 2;
+    }
+
+    let rc = 0;
+
+    if !strcmp(argv[start], "system") {
+      if cmd_argc != 3 {
+        !"error: system expects 2 arguments, got {cmd_argc}";
+        return -4;
+      }
+
+      if strcmp(argv[start + 1], "-c") {
+        !"error: system got '{argv[start + 1]}' instead of -c";
+        return -5;
+      }
+
+      "$ {argv[start + 2]}";
+      rc = normalize_wait(system(argv[start + 2]));
+
+      if rc { return rc }
+
+      continue;
+    }
+
+    autofree let cmdv = (char**)malloc((cmd_argc + 1) * sizeof(char*));
+    if !cmdv { return 1 }
+    for (let k = 0; k < cmd_argc; k++) { cmdv[k] = argv[start + k] }
+    cmdv[cmd_argc] = NULL;
+
+    log_cmd(cmdv);
+
+    rc = run_exec(cmdv);
+
+    if rc { return rc }
+  }
+
+  return 0;
+}

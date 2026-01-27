@@ -1,7 +1,7 @@
 
 test "boolean_mutability" {
-    // Regression test for issue where 'var b = true' was inferred as const
-    var b = true;
+    // Regression test for issue where 'let b = true' was inferred as const
+    let b = true;
     assert(b, "Expected true");
     
     // This assignment should be valid (previously failed with 'Cannot assign to const variable')
@@ -9,7 +9,7 @@ test "boolean_mutability" {
     assert(!b, "Expected false after assignment");
     
     // Verify explicit type works too
-    var c: bool = true;
+    let c: bool = true;
     c = false;
     assert(!c, "Expected false for explicit type");
 }

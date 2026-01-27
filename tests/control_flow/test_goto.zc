@@ -1,6 +1,6 @@
 
 test "test_goto" -> int {
-    var x = 0;
+    let x = 0;
     
     goto skip;
     x = 100;
@@ -8,7 +8,7 @@ test "test_goto" -> int {
 skip:
     assert x == 0;
     
-    var resource = 1;
+    let resource = 1;
     
     if resource == 1 {
         goto cleanup;

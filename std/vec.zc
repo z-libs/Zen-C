@@ -41,7 +41,7 @@ struct VecIterRef<T> {
 impl VecIter<T> {
     fn next(self) -> Option<T> {
         if (self.idx < self.count) {
-            var item = self.data[self.idx];
+            let item = self.data[self.idx];
             self.idx = self.idx + 1;
             return Option<T>::Some(item);
         }
@@ -56,7 +56,7 @@ impl VecIter<T> {
 impl VecIterRef<T> {
     fn next(self) -> VecIterResult<T> {
         if (self.idx < self.count) {
-            var item = &self.data[self.idx];
+            let item = &self.data[self.idx];
             self.idx = self.idx + 1;
             return VecIterResult<T> { ptr: item };
         }
@@ -165,7 +165,7 @@ impl Vec<T> {
              !"Panic: Remove index out of bounds";
              exit(1);
         }
-        var item = self.data[idx];
+        let item = self.data[idx];
         // Shift elements left
         if (idx < self.len - 1) {
             memmove(self.data + idx, self.data + idx + 1, (self.len - idx - 1) * sizeof(T));
@@ -175,7 +175,7 @@ impl Vec<T> {
     }
 
     fn append(self, other: Vec<T>) {
-        var new_len = self.len + other.len;
+        let new_len = self.len + other.len;
         self.grow_to_fit(new_len);
 
         memcpy(self.data + self.len, other.data, other.len * sizeof(T));
@@ -203,7 +203,7 @@ impl Vec<T> {
     }
 
     fn contains(self, item: T) -> bool {
-        var i: usize = 0;
+        let i: usize = 0;
         while i < self.len {
             if memcmp(&self.data[i], &item, sizeof(T)) == 0 { return true; }
             i++;
@@ -243,10 +243,10 @@ impl Vec<T> {
     }
     
     fn reverse(self) {
-        var i: usize = 0;
-        var j = self.len - 1;
+        let i: usize = 0;
+        let j = self.len - 1;
         while i < j {
-            var tmp = self.data[i];
+            let tmp = self.data[i];
             self.data[i] = self.data[j];
             self.data[j] = tmp;
             i++;
@@ -256,7 +256,7 @@ impl Vec<T> {
     
     fn eq(self, other: Vec<T>) -> bool {
         if self.len != other.len { return false; }
-        var i: usize = 0;
+        let i: usize = 0;
         while i < self.len {
             if memcmp(&self.data[i], &other.data[i], sizeof(T)) != 0 { return false; }
             i = i + 1;
@@ -275,8 +275,8 @@ impl Vec<T> {
         if (self.len == 0) {
             return Vec<T> { data: 0, len: 0, cap: 0 };
         }
-        var new_data = (T*)malloc(self.len * sizeof(T));
-        var i: usize = 0;
+        let new_data = (T*)malloc(self.len * sizeof(T));
+        let i: usize = 0;
         while i < self.len {
             new_data[i] = self.data[i];
             i = i + 1;
