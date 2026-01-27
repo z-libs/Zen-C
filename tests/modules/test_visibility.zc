@@ -1,0 +1,81 @@
+// Test file for visibility modifiers
+
+// Public function - should be exported
+pub fn public_fn() -> int { return 1; }
+
+// Private function - file-local, should emit 'static'
+fn private_fn() -> int { return 2; }
+
+// Public struct - should be exported
+pub struct PublicStruct { x: int; }
+
+// Private struct
+struct PrivateStruct { y: int; }
+
+// Public constant
+pub def PUBLIC_CONST = 42;
+
+// Private constant
+def PRIVATE_CONST = 100;
+
+// Public enum
+pub enum PublicEnum {
+    Variant1,
+    Variant2,
+}
+
+// Private enum
+enum PrivateEnum {
+    A,
+    B,
+}
+
+// Public trait
+pub trait PublicTrait {
+    fn method(self) -> int;
+}
+
+// Private trait
+trait PrivateTrait {
+    fn internal(self) -> int;
+}
+
+// Main function to test the visibility
+fn main() -> int {
+    // Can use all symbols within the same file
+    let x = public_fn();
+    let y = private_fn();
+    let ps = PublicStruct { x: 10 };
+    let prs = PrivateStruct { y: 20 };
+    let pub_const = PUBLIC_CONST;
+    let priv_const = PRIVATE_CONST;
+
+    // Check that values are correct
+    if x != 1 {
+        println "FAIL: public_fn should return 1";
+        return 1;
+    }
+    if y != 2 {
+        println "FAIL: private_fn should return 2";
+        return 1;
+    }
+    if ps.x != 10 {
+        println "FAIL: PublicStruct.x should be 10";
+        return 1;
+    }
+    if prs.y != 20 {
+        println "FAIL: PrivateStruct.y should be 20";
+        return 1;
+    }
+    if pub_const != 42 {
+        println "FAIL: PUBLIC_CONST should be 42";
+        return 1;
+    }
+    if priv_const != 100 {
+        println "FAIL: PRIVATE_CONST should be 100";
+        return 1;
+    }
+    println "PASS: All visibility tests passed!";
+
+    return 0;
+}

@@ -13,7 +13,7 @@
 #include "../codegen/codegen.h"
 
 // Trait Parsing
-ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
+ASTNode *parse_trait(ParserContext *ctx, Lexer *l, int is_public)
 {
     lexer_next(l); // eat trait
     Token n = lexer_next(l);
@@ -142,6 +142,7 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
     n_node->trait.methods = methods;
     n_node->trait.generic_params = generic_params;
     n_node->trait.generic_param_count = generic_count;
+    n_node->trait.is_public = is_public;
 
     if (generic_count > 0)
     {
@@ -272,7 +273,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             }
             if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "fn", 2) == 0)
             {
-                ASTNode *f = parse_function(ctx, l, 0);
+                ASTNode *f = parse_function(ctx, l, 0, 0);
                 // Mangle: Type_Trait_Method
                 char *mangled = xmalloc(strlen(name2) + strlen(name1) + strlen(f->func.name) + 4);
                 sprintf(mangled, "%s__%s_%s", name2, name1, f->func.name);
@@ -311,7 +312,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 lexer_next(l); // eat async
                 if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "fn", 2) == 0)
                 {
-                    ASTNode *f = parse_function(ctx, l, 1);
+                    ASTNode *f = parse_function(ctx, l, 1, 0);
                     f->func.is_async = 1;
                     // Mangle: Type_Trait_Method
                     char *mangled =
@@ -439,7 +440,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 }
                 if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "fn", 2) == 0)
                 {
-                    ASTNode *f = parse_function(ctx, l, 0);
+                    ASTNode *f = parse_function(ctx, l, 0, 0);
                     // Standard Mangle for template: Box_method
                     char *mangled = xmalloc(strlen(name1) + strlen(f->func.name) + 3);
                     sprintf(mangled, "%s__%s", name1, f->func.name);
@@ -484,7 +485,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     if (lexer_peek(l).type == TOK_IDENT &&
                         strncmp(lexer_peek(l).start, "fn", 2) == 0)
                     {
-                        ASTNode *f = parse_function(ctx, l, 1);
+                        ASTNode *f = parse_function(ctx, l, 1, 0);
                         f->func.is_async = 1;
                         char *mangled = xmalloc(strlen(name1) + strlen(f->func.name) + 3);
                         sprintf(mangled, "%s__%s", name1, f->func.name);
@@ -559,7 +560,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 }
                 if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "fn", 2) == 0)
                 {
-                    ASTNode *f = parse_function(ctx, l, 0);
+                    ASTNode *f = parse_function(ctx, l, 0, 0);
 
                     // Standard Mangle: Struct_method
                     char *mangled = xmalloc(strlen(name1) + strlen(f->func.name) + 3);
@@ -598,7 +599,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     if (lexer_peek(l).type == TOK_IDENT &&
                         strncmp(lexer_peek(l).start, "fn", 2) == 0)
                     {
-                        ASTNode *f = parse_function(ctx, l, 1);
+                        ASTNode *f = parse_function(ctx, l, 1, 0);
                         f->func.is_async = 1;
                         char *mangled = xmalloc(strlen(name1) + strlen(f->func.name) + 3);
                         sprintf(mangled, "%s__%s", name1, f->func.name);
@@ -652,7 +653,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
     }
 }
 
-ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
+ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_public)
 {
 
     lexer_next(l); // eat struct or union
@@ -906,6 +907,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
     node->strct.is_union = is_union;
     node->strct.used_structs = temp_used_structs;
     node->strct.used_struct_count = temp_used_count;
+    node->strct.is_public = is_public;
 
     if (gp_count > 0)
     {
@@ -941,7 +943,7 @@ Type *parse_type_obj(ParserContext *ctx, Lexer *l)
     return t;
 }
 
-ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
+ASTNode *parse_enum(ParserContext *ctx, Lexer *l, int is_public)
 {
     lexer_next(l);
     Token n = lexer_next(l);
@@ -1103,6 +1105,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
 
     node->enm.variants = h;
     node->enm.generic_param = gp; // 3. Store generic param
+    node->enm.is_public = is_public;
 
     if (gp)
     {

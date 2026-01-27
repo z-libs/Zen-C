@@ -200,7 +200,7 @@ struct ASTNode
             int destructor;  // @destructor
             int unused;      // @unused
             int weak;        // @weak
-            int is_export;   // @export (visibility default).
+            int is_public;   // pub keyword for visibility.
             int cold;        // @cold
             int hot;         // @hot
             int noreturn;    // @noreturn
@@ -232,6 +232,7 @@ struct ASTNode
             Type *type_info;
             int is_autofree;
             int is_static;
+            int is_public;       // pub keyword for visibility (for def/const).
         } var_decl;
 
         struct
@@ -247,6 +248,7 @@ struct ASTNode
             ASTNode *variants;
             int is_template;
             char *generic_param;
+            int is_public;       // pub keyword for visibility.
         } enm;
 
         struct
@@ -424,6 +426,7 @@ struct ASTNode
             int is_incomplete;   // Forward declaration (prototype)
             char **used_structs; // Names of structs used/mixed-in
             int used_struct_count;
+            int is_public;       // pub keyword for visibility.
         } strct;
 
         struct
@@ -439,6 +442,7 @@ struct ASTNode
             ASTNode *methods;
             char **generic_params;
             int generic_param_count;
+            int is_public;       // pub keyword for visibility.
         } trait;
 
         struct

@@ -297,6 +297,7 @@ void register_func(ParserContext *ctx, const char *name, int count, char **defau
     f->is_varargs = is_varargs;
     f->is_async = is_async;
     f->must_use = 0; // Default: can discard result
+    f->is_public = 0; // Default: private (will be set by caller if public)
     f->next = ctx->func_registry;
     ctx->func_registry = f;
 }
@@ -715,6 +716,7 @@ void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node)
     StructDef *d = xmalloc(sizeof(StructDef));
     d->name = xstrdup(name);
     d->node = node;
+    d->is_public = (node && node->type == NODE_STRUCT) ? node->strct.is_public : 0;
     d->next = ctx->struct_defs;
     ctx->struct_defs = d;
 }

@@ -157,6 +157,10 @@ Token lexer_next(Lexer *l)
         {
             return (Token){TOK_ALIAS, s, 5, start_line, start_col};
         }
+        if (len == 3 && strncmp(s, "pub", 3) == 0)
+        {
+            return (Token){TOK_PUB, s, 3, start_line, start_col};
+        }
         if (len == 3 && strncmp(s, "use", 3) == 0)
         {
             return (Token){TOK_USE, s, 3, start_line, start_col};

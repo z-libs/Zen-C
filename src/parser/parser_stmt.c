@@ -1936,7 +1936,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
     // Keywords / Special
     if (tk.type == TOK_TRAIT)
     {
-        return parse_trait(ctx, l);
+        return parse_trait(ctx, l, 0);
     }
     if (tk.type == TOK_IMPL)
     {
@@ -2015,7 +2015,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
     }
     if (tk.type == TOK_DEF)
     {
-        return parse_def(ctx, l);
+        return parse_def(ctx, l, 0);
     }
 
     // Identifiers (Keywords or Expressions)

@@ -558,7 +558,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             free(args_copy);
             fprintf(out, "};\n");
 
-            fprintf(out, "void* _runner_%s(void* _args)\n", node->func.name);
+            const char *static_prefix = node->func.is_public ? "" : "static ";
+            fprintf(out, "%svoid* _runner_%s(void* _args)\n", static_prefix, node->func.name);
             fprintf(out, "{\n");
             fprintf(out, "    struct %s_Args* args = (struct %s_Args*)_args;\n", node->func.name,
                     node->func.name);
@@ -616,7 +617,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             }
             fprintf(out, "}\n");
 
-            fprintf(out, "%s _impl_%s(%s)\n", node->func.ret_type, node->func.name,
+            fprintf(out, "%s%s _impl_%s(%s)\n", static_prefix, node->func.ret_type, node->func.name,
                     node->func.args);
             fprintf(out, "{\n");
             defer_count = 0;
@@ -628,7 +629,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             fprintf(out, "}\n");
 
             // 4. Define Public Wrapper (Spawns Thread)
-            fprintf(out, "Async %s(%s)\n", node->func.name, node->func.args);
+            fprintf(out, "%sAsync %s(%s)\n", static_prefix, node->func.name, node->func.args);
             fprintf(out, "{\n");
             fprintf(out, "    struct %s_Args* args = malloc(sizeof(struct %s_Args));\n",
                     node->func.name, node->func.name);

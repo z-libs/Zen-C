@@ -676,16 +676,17 @@ void emit_protos(ASTNode *node, FILE *out)
         {
             if (f->func.is_async)
             {
-                fprintf(out, "Async %s(%s);\n", f->func.name, f->func.args);
+                const char *static_prefix = f->func.is_public ? "" : "static ";
+                fprintf(out, "%sAsync %s(%s);\n", static_prefix, f->func.name, f->func.args);
                 // Also emit _impl_ prototype
                 if (f->func.ret_type)
                 {
-                    fprintf(out, "%s _impl_%s(%s);\n", f->func.ret_type, f->func.name,
+                    fprintf(out, "%s%s _impl_%s(%s);\n", static_prefix, f->func.ret_type, f->func.name,
                             f->func.args);
                 }
                 else
                 {
-                    fprintf(out, "void _impl_%s(%s);\n", f->func.name, f->func.args);
+                    fprintf(out, "%svoid _impl_%s(%s);\n", static_prefix, f->func.name, f->func.args);
                 }
             }
             else

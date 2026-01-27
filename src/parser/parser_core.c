@@ -257,6 +257,15 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             t = lexer_peek(l);
         }
 
+        // Check for 'pub' visibility modifier
+        int is_public = 0;
+        if (t.type == TOK_PUB)
+        {
+            is_public = 1;
+            lexer_next(l);  // consume 'pub'
+            t = lexer_peek(l);
+        }
+
         if (t.type == TOK_PREPROC)
         {
             lexer_next(l);
@@ -269,7 +278,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
         }
         else if (t.type == TOK_DEF)
         {
-            s = parse_def(ctx, l);
+            s = parse_def(ctx, l, is_public);
         }
         else if (t.type == TOK_IDENT)
         {
@@ -280,7 +289,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 Token next = lexer_peek(l);
                 if (next.type == TOK_IDENT && 2 == next.len && 0 == strncmp(next.start, "fn", 2))
                 {
-                    s = parse_function(ctx, l, 0);
+                    s = parse_function(ctx, l, 0, is_public);
                     attr_inline = 1;
                 }
                 else
@@ -290,11 +299,11 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             }
             else if (0 == strncmp(t.start, "fn", 2) && 2 == t.len)
             {
-                s = parse_function(ctx, l, 0);
+                s = parse_function(ctx, l, 0, is_public);
             }
             else if (0 == strncmp(t.start, "struct", 6) && 6 == t.len)
             {
-                s = parse_struct(ctx, l, 0);
+                s = parse_struct(ctx, l, 0, is_public);
                 if (s && s->type == NODE_STRUCT)
                 {
                     s->strct.is_packed = attr_packed;
@@ -310,7 +319,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             }
             else if (0 == strncmp(t.start, "enum", 4) && 4 == t.len)
             {
-                s = parse_enum(ctx, l);
+                s = parse_enum(ctx, l, is_public);
                 if (s && s->type == NODE_ENUM)
                 {
                     if (derived_count > 0)
@@ -327,7 +336,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             }
             else if (t.len == 5 && strncmp(t.start, "trait", 5) == 0)
             {
-                s = parse_trait(ctx, l);
+                s = parse_trait(ctx, l, is_public);
             }
             else if (t.len == 7 && strncmp(t.start, "include", 7) == 0)
             {
@@ -357,7 +366,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 Token peek = lexer_peek(l);
                 if (peek.type == TOK_IDENT && peek.len == 2 && strncmp(peek.start, "fn", 2) == 0)
                 {
-                    s = parse_function(ctx, l, 0);
+                    s = parse_function(ctx, l, 0, is_public);
                 }
                 else
                 {
@@ -448,7 +457,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             Token next = lexer_peek(l);
             if (0 == strncmp(next.start, "fn", 2) && 2 == next.len)
             {
-                s = parse_function(ctx, l, 1);
+                s = parse_function(ctx, l, 1, is_public);
                 if (s)
                 {
                     s->func.is_async = 1;
@@ -462,11 +471,11 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
 
         else if (t.type == TOK_UNION)
         {
-            s = parse_struct(ctx, l, 1);
+            s = parse_struct(ctx, l, 1, is_public);
         }
         else if (t.type == TOK_TRAIT)
         {
-            s = parse_trait(ctx, l);
+            s = parse_trait(ctx, l, is_public);
         }
         else if (t.type == TOK_IMPL)
         {
@@ -490,7 +499,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             s->func.destructor = attr_destructor;
             s->func.unused = attr_unused;
             s->func.weak = attr_weak;
-            s->func.is_export = attr_export;
+            s->func.is_public = is_public || attr_export;  // pub keyword or @export attribute
             s->func.cold = attr_cold;
             s->func.hot = attr_hot;
             s->func.noreturn = attr_noreturn;

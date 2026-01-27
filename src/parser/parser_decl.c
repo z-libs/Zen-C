@@ -12,7 +12,7 @@
 #include "zprep_plugin.h"
 #include "../codegen/codegen.h"
 
-ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
+ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_public)
 {
     lexer_next(l); // eat 'fn'
     Token name_tok = lexer_next(l);
@@ -191,6 +191,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
     node->func.defaults = defaults;
     node->func.ret_type_info = ret_type_obj;
     node->func.is_varargs = is_varargs;
+    node->func.is_public = is_public;
 
     if (gen_param)
     {
@@ -734,7 +735,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
     return n;
 }
 
-ASTNode *parse_def(ParserContext *ctx, Lexer *l)
+ASTNode *parse_def(ParserContext *ctx, Lexer *l, int is_public)
 {
     lexer_next(l); // eat def
     Token n = lexer_next(l);
@@ -826,6 +827,7 @@ ASTNode *parse_def(ParserContext *ctx, Lexer *l)
     o->var_decl.name = ns;
     o->var_decl.type_str = type_str;
     o->var_decl.init_expr = i;
+    o->var_decl.is_public = is_public;
     // Store extra metadata if needed, but NODE_CONST usually suffices
 
     if (!ctx->current_scope || !ctx->current_scope->parent)

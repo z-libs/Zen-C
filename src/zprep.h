@@ -107,6 +107,7 @@ typedef enum
     TOK_AWAIT,      ///< 'await' keyword.
     TOK_PREPROC,    ///< Preprocessor directive (#...).
     TOK_ALIAS,      ///< 'alias' keyword.
+    TOK_PUB,        ///< 'pub' keyword for visibility.
     TOK_COMMENT,    ///< Comment (usually skipped).
     TOK_UNKNOWN     ///< Unknown token.
 } TokenType;

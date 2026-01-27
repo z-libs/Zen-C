@@ -56,6 +56,7 @@ typedef struct ZenSymbol
     int is_def;             ///< 1 if it is a definition (vs declaration).
     int const_int_val;      ///< Integer value if it is a constant.
     int is_moved;           ///< 1 if the value has been moved (ownership transfer).
+    int is_public;          ///< 1 if symbol is public (exported via pub keyword).
     struct ZenSymbol *next; ///< Next symbol in the bucket/list (chaining).
 } ZenSymbol;
 
@@ -86,6 +87,7 @@ typedef struct FuncSig
     int is_varargs;         ///< 1 if variadic.
     int is_async;           ///< 1 if async.
     int must_use;           ///< 1 if return value must be used.
+    int is_public;          ///< 1 if function is public (exported via pub keyword).
     struct FuncSig *next;   ///< Next function in registry.
 } FuncSig;
 
@@ -168,6 +170,7 @@ typedef struct StructDef
 {
     char *name;
     ASTNode *node;
+    int is_public;          ///< 1 if struct is public (exported via pub keyword).
     struct StructDef *next;
 } StructDef;
 
@@ -884,7 +887,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l);
 /**
  * @brief Parses a def statement.
  */
-ASTNode *parse_def(ParserContext *ctx, Lexer *l);
+ASTNode *parse_def(ParserContext *ctx, Lexer *l, int is_public);
 
 /**
  * @brief Parses a type alias.
@@ -894,22 +897,22 @@ ASTNode *parse_type_alias(ParserContext *ctx, Lexer *l);
 /**
  * @brief Parses a function definition.
  */
-ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async);
+ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_public);
 
 /**
  * @brief Parses a struct definition.
  */
-ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union);
+ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_public);
 
 /**
  * @brief Parses an enum definition.
  */
-ASTNode *parse_enum(ParserContext *ctx, Lexer *l);
+ASTNode *parse_enum(ParserContext *ctx, Lexer *l, int is_public);
 
 /**
  * @brief Parses a trait definition.
  */
-ASTNode *parse_trait(ParserContext *ctx, Lexer *l);
+ASTNode *parse_trait(ParserContext *ctx, Lexer *l, int is_public);
 
 /**
  * @brief Parses an implementation.

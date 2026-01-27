@@ -638,6 +638,25 @@ void emit_func_signature(FILE *out, ASTNode *func, const char *name_override)
         return;
     }
 
+    // Emit 'static' for private (non-public) functions
+    // Exceptions:
+    // - 'main' function is never static (C entry point requirement)
+    // - impl methods (names containing "__") are not static (struct method dispatch)
+    // - functions inside impl blocks (g_current_impl_type is set)
+    // - internal runtime functions (names starting with "_z_" have inline C definitions)
+    // - weak functions must be visible to the linker
+    // - extern functions (no body) are external symbols
+    int is_impl_method = (strstr(func->func.name, "__") != NULL);
+    int is_internal_runtime = (strncmp(func->func.name, "_z_", 3) == 0);
+    int is_weak = func->func.weak;
+    int is_extern = (func->func.body == NULL);
+    if (!func->func.is_public && strcmp(func->func.name, "main") != 0
+        && !is_impl_method && g_current_impl_type == NULL && !is_internal_runtime && !is_weak
+        && !is_extern)
+    {
+        fprintf(out, "static ");
+    }
+
     // Emit CUDA qualifiers (for both forward declarations and definitions)
     if (g_config.use_cuda)
     {
