@@ -10,6 +10,17 @@
  *
  * Plugins use this structure to interact with the compiler/codegen environment.
  */
+#ifdef _WIN32
+#ifdef BUILDING_PLUGIN
+#    define PLUGINAPI __declspec(dllexport)
+#else
+#    define PLUGINAPI __declspec(dllimport)
+#endif
+#else
+#define PLUGINAPI
+#endif
+
+// The Host provides this API to the Plugin.
 typedef struct
 {
     // Context Information (Where are we?).

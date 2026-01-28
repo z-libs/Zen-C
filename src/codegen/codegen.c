@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "../plugins/plugin_manager.h"
 #include "ast.h"
 #include "zprep_plugin.h"

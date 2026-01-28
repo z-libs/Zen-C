@@ -7,8 +7,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <unistd.h>
-
+#endif
 #ifdef __COSMOPOLITAN__
 #include <cosmo.h>
 #define z_is_windows() IsWindows() ///< Check if running on Windows.
