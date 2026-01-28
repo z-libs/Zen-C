@@ -831,6 +831,23 @@ SelectiveImport *find_selective_import(ParserContext *ctx, const char *name)
 
 char *extract_module_name(const char *path)
 {
+#ifdef _WIN32
+    // Windows: accept both '\' and '/' as separators
+    const char *slash1 = strrchr(path, '/');
+    const char *slash2 = strrchr(path, '\\');
+    const char *slash = slash1;
+    if (slash2 && (!slash1 || slash2 > slash1)) slash = slash2;
+
+    const char *base = slash ? slash + 1 : path;
+    const char *dot = strrchr(base, '.');
+    int len = dot ? (int)(dot - base) : (int)strlen(base);
+
+    char *name = xmalloc(len + 1);
+    strncpy(name, base, len);
+    name[len] = 0;
+    return name;
+#else
+    // Non-Windows: keep existing behavior exactly
     const char *slash = strrchr(path, '/');
     const char *base = slash ? slash + 1 : path;
     const char *dot = strrchr(base, '.');
@@ -839,7 +856,9 @@ char *extract_module_name(const char *path)
     strncpy(name, base, len);
     name[len] = 0;
     return name;
+#endif
 }
+
 
 int is_ident_char(char c)
 {
