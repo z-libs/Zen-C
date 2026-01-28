@@ -1,0 +1,150 @@
+// Sampling strategies demonstration
+// Compares different sampling methods: greedy, balanced, and creative
+// Run: zc run sampling_demo.zc
+
+//> include: ./llama_lib/include
+//> lib: ./llama_lib/lib
+//> link: -lllama -lm -lpthread -lstdc++
+//> rpath: ./llama_lib/lib
+
+import "../../std/llama.zc"
+
+fn generate_with_params(model: LlamaModel*, prompt: char*,
+                        params: LlamaSamplerParams, seed: uint32_t,
+                        label: char*, max_tokens: int) {
+    println "--- {label} ---"
+    println "  Temperature: {params.temperature}"
+    println "  Top-K: {params.top_k}"
+    println "  Top-P: {params.top_p}"
+    println "  Min-P: {params.min_p}"
+    println "  Repeat penalty: {params.repeat_penalty}"
+    println ""
+
+    // Create fresh context
+    var ctx_params = LlamaContextParams::defaults();
+    ctx_params.n_ctx = 512;
+
+    var ctx_res = LlamaContext::new(model, ctx_params);
+    if (ctx_res.is_err()) {
+        !"Error creating context: {ctx_res.err}"
+        return;
+    }
+    var ctx = ctx_res.unwrap();
+
+    // Create sampler with params
+    var sampler = LlamaSampler::new(params, model, seed);
+
+    // Generate
+    print "  Output: {prompt}"
+    fflush(stdout);
+
+    var result_res = llama_generate(&ctx, &sampler, prompt, max_tokens);
+    if (result_res.is_ok()) {
+        var result = result_res.unwrap();
+        result.text.print();
+        println ""
+        println ""
+        println "  Tokens: {result.tokens_generated}"
+        result.free();
+    } else {
+        println "[Error: {result_res.err}]"
+    }
+
+    sampler.free();
+    ctx.free();
+    println ""
+}
+
+fn main() -> int {
+    // Hardcoded configuration - modify these as needed
+    var model_path = "models/tinyllama.gguf";
+    var prompt = "The key to success in life is";
+
+    println "=== Zen-C LLaMA Sampling Strategies Demo ==="
+    println ""
+
+    // Initialize
+    llama_init();
+
+    // Load model
+    println "Loading model: {model_path}"
+    var model_res = LlamaModel::load_cpu(model_path);
+    if (model_res.is_err()) {
+        !"Error: {model_res.err}"
+        llama_cleanup();
+        return 1;
+    }
+    var model = model_res.unwrap();
+    println "Model loaded!"
+    println ""
+
+    var info = model.info();
+    println "Model: {info.n_layers} layers, {info.vocab_size} vocab"
+    println "Prompt: \"{prompt}\""
+    println ""
+
+    var max_tokens = 64;
+    var base_seed: uint32_t = 42;
+
+    // 1. Greedy sampling
+    var greedy_params = LlamaSamplerParams::greedy();
+    generate_with_params(&model, prompt, greedy_params, base_seed,
+                         "Greedy (Temperature = 0)", max_tokens);
+
+    // 2. Balanced sampling (default)
+    var balanced_params = LlamaSamplerParams::balanced();
+    generate_with_params(&model, prompt, balanced_params, base_seed,
+                         "Balanced (Default)", max_tokens);
+
+    // 3. Creative sampling
+    var creative_params = LlamaSamplerParams::creative();
+    generate_with_params(&model, prompt, creative_params, base_seed,
+                         "Creative (High Temperature)", max_tokens);
+
+    // 4. Custom: Low temperature, strict top-k
+    var custom1 = LlamaSamplerParams {
+        temperature: 0.3,
+        top_k: 10,
+        top_p: 0.9,
+        min_p: 0.0,
+        repeat_penalty: 1.0,
+        repeat_last_n: 0
+    };
+    generate_with_params(&model, prompt, custom1, base_seed,
+                         "Custom: Low Temp + Strict Top-K", max_tokens);
+
+    // 5. Custom: Min-P focused
+    var custom2 = LlamaSamplerParams {
+        temperature: 0.7,
+        top_k: 0,           // Disabled
+        top_p: 1.0,         // Disabled
+        min_p: 0.1,         // Only keep tokens with >= 10% of max prob
+        repeat_penalty: 1.2,
+        repeat_last_n: 64
+    };
+    generate_with_params(&model, prompt, custom2, base_seed,
+                         "Custom: Min-P Focused", max_tokens);
+
+    // 6. Run same prompt with different seeds to show randomness
+    println "=== Same Parameters, Different Seeds ==="
+    println ""
+
+    var params = LlamaSamplerParams::defaults();
+    for (var i = 0; i < 3; i++) {
+        var seed = base_seed + (uint32_t)i * 100;
+
+        var label_buf = alloc_n<char>(64);
+        sprintf(label_buf, "Seed %u", seed);
+
+        generate_with_params(&model, prompt, params, seed, label_buf, 32);
+
+        free(label_buf);
+    }
+
+    // Cleanup
+    model.free();
+    llama_cleanup();
+
+    println "=== Demo Complete ==="
+    return 0;
+}

@@ -1,0 +1,154 @@
+// GPU inference example with CUDA support
+// Run: zc run gpu_inference.zc --cuda
+
+//> include: ./llama_lib/include
+//> lib: ./llama_lib/lib
+//> link: -lllama -lm -lpthread -lstdc++
+//> rpath: ./llama_lib/lib
+
+import "../../std/llama.zc"
+
+raw {
+    #include <time.h>
+
+    static double _z_get_time_ms(void) {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return ts.tv_sec * 1000.0 + ts.tv_nsec / 1000000.0;
+    }
+}
+
+extern fn _z_get_time_ms() -> double;
+
+fn main() -> int {
+    // Hardcoded configuration - modify these as needed
+    var model_path = "models/tinyllama.gguf";
+    var prompt = "The future of artificial intelligence is";
+    var gpu_layers = -1;  // -1 = all layers on GPU, 0 = CPU only
+    var max_tokens = 256;
+
+    println "=== Zen-C LLaMA GPU Inference ==="
+    println ""
+
+    // Initialize llama backend
+    llama_init();
+
+    // Load model with GPU layers
+    println "Loading model: {model_path}"
+    println "GPU layers: {gpu_layers}"
+
+    var model_params = LlamaModelParams::gpu(gpu_layers);
+    var model_res = LlamaModel::load(model_path, model_params);
+    if (model_res.is_err()) {
+        !"Error: {model_res.err}"
+        llama_cleanup();
+        return 1;
+    }
+    var model = model_res.unwrap();
+    println "Model loaded successfully!"
+    println ""
+
+    // Print model info
+    var info = model.info();
+    println "Model Info:"
+    println "  Vocab size: {info.vocab_size}"
+    println "  Context length: {info.context_length}"
+    println "  Layers: {info.n_layers}"
+    println "  Attention heads: {info.n_heads}"
+    println "  Embedding dim: {info.embedding_dim}"
+    println ""
+
+    // Create context with larger batch size for GPU
+    var ctx_params = LlamaContextParams::defaults();
+    ctx_params.n_ctx = 2048;
+    ctx_params.n_batch = 512;
+
+    var ctx_res = LlamaContext::new(&model, ctx_params);
+    if (ctx_res.is_err()) {
+        !"Error creating context: {ctx_res.err}"
+        model.free();
+        llama_cleanup();
+        return 1;
+    }
+    var ctx = ctx_res.unwrap();
+
+    // Create sampler with balanced settings
+    var sampler = LlamaSampler::defaults(&model, 42);
+
+    println "Prompt: \"{prompt}\""
+    println "Max tokens: {max_tokens}"
+    println ""
+    println "Generating (streaming)..."
+    println "---"
+
+    // Print prompt first
+    print "{prompt}"
+    fflush(stdout);
+
+    // Tokenize and decode prompt
+    var tokens = model.tokenize(prompt, true);
+    var start_time = _z_get_time_ms();
+
+    var decode_res = ctx.decode(&tokens);
+    tokens.free();
+
+    if (decode_res.is_err()) {
+        !"Error decoding: {decode_res.err}"
+        sampler.free();
+        ctx.free();
+        model.free();
+        llama_cleanup();
+        return 1;
+    }
+
+    // Generate tokens with streaming output
+    var eos = model.eos_token();
+    var generated = 0;
+
+    while (generated < max_tokens) {
+        var token = sampler.sample(&ctx);
+
+        if (token == eos) {
+            break;
+        }
+
+        var piece = model.token_to_string(token);
+        printf("%s", piece.c_str());
+        fflush(stdout);
+        piece.free();
+
+        var tok_res = ctx.decode_token(token);
+        if (tok_res.is_err()) {
+            break;
+        }
+
+        generated = generated + 1;
+    }
+
+    var end_time = _z_get_time_ms();
+    var elapsed = end_time - start_time;
+
+    println ""
+    println "---"
+    println ""
+
+    var tokens_per_sec = 0.0;
+    if (elapsed > 0.0) {
+        tokens_per_sec = (double)generated / (elapsed / 1000.0);
+    }
+
+    println "Performance:"
+    println "  Tokens generated: {generated}"
+    printf("  Time elapsed: %.2f ms\n", elapsed);
+    printf("  Speed: %.2f tokens/sec\n", tokens_per_sec);
+
+    // Cleanup
+    sampler.free();
+    ctx.free();
+    model.free();
+    llama_cleanup();
+
+    println ""
+    println "Done!"
+    return 0;
+}
