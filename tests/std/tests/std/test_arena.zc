@@ -1,0 +1,47 @@
+import "std.zc"
+import "std/arena.zc"
+
+test "test_std_arena" {
+
+    let arena = Arena::new(4096);
+
+    assert(arena.bytes_used() == 0, "Arena should not have used any bytes yet")
+    assert(arena.bytes_free() == 4096, "Arena bytes_free should be 4096 bytes")
+
+    // Allocate integers
+    let arr: int* = arena.alloc_n<int>(10);
+    for (let i = 0; i < 10; i = i + 1) {
+        arr[i] = i * i;
+    }
+
+    assert(arena.bytes_used() == 40, "Arena should have used 40 bytes")
+    assert(arena.bytes_free() == 4056, "Arena bytes_free should be 4056 bytes")
+
+    // Copy string
+    let _ = arena.dup_str("Hello, Arena!");
+
+    assert(arena.bytes_used() == 54, "Arena should have used 54 bytes")
+    assert(arena.bytes_free() == 4042, "Arena bytes_free should be 4002 bytes")
+
+    // Save/restore
+    let mark = arena.save();
+
+    assert(mark == 54, "Arena mark (savepoint) should be at 54 bytes")
+
+    arena.alloc_n<int>(100);
+
+    assert(arena.bytes_used() == 456, "Arena should have used 456 bytes")
+    assert(arena.bytes_free() == 3640, "Arena bytes_free should be 3640 bytes")
+
+    arena.restore(mark);
+
+    assert(arena.bytes_used() == 54, "Arena after savepoint restore should have used 54 bytes")
+    assert(arena.bytes_free() == 4042, "Arena bytes_free should be 4042 bytes")
+
+    arena.reset();
+
+    assert(arena.bytes_used() == 0, "Arena after reset should have used 0 bytes")
+    assert(arena.bytes_free() == 4096, "Arena bytes_free should be 4096 bytes")
+
+    arena.free();
+}
