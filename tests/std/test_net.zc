@@ -1,4 +1,4 @@
-
+//> link: -lws2_32
 //> link: -lpthread
 
 import "std/net.zc"
