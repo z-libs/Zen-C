@@ -23,3 +23,5 @@ out/
 docs/html/
 docs/latex/
 *.db
+/zig-out
+/.zig-cache
