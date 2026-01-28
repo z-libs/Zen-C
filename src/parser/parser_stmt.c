@@ -12,6 +12,7 @@
 #include "zprep_plugin.h"
 #include "../codegen/codegen.h"
 #include "../utils/path_utils.h"
+#include "../utils/zc_path_resolve.h"
 
 char *curr_func_ret = NULL;
 char *run_comptime_block(ParserContext *ctx, Lexer *l);
@@ -2865,36 +2866,11 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     fn[ln] = 0;
 
     // Resolve paths relative to current file
-    char resolved_path[1024];
-    int is_explicit_relative = (fn[0] == '.' && (fn[1] == '/' || (fn[1] == '.' && fn[2] == '/')));
-
     // Try to resolve relative to current file if not absolute
-    if (fn[0] != '/')
-    {
-        char *current_dir = xstrdup(g_current_filename);
-        char *last_slash = strrchr(current_dir, '/');
-        if (last_slash)
-        {
-            *last_slash = 0; // Truncate to directory
-
-            // Handle explicit relative differently?
-            // Existing logic enforced it. Let's try to verify existence first.
-
-            // Construct candidate path
-            const char *leaf = fn;
-            // Clean up ./ prefix for cleaner path construction if we want
-            // but keeping it is fine too, /path/to/./file works.
-
-            snprintf(resolved_path, sizeof(resolved_path), "%s/%s", current_dir, leaf);
-
-            // If it's an explicit relative path, OR if the file exists at this relative location
-            if (is_explicit_relative || access(resolved_path, R_OK) == 0)
-            {
-                free(fn);
-                fn = xstrdup(resolved_path);
-            }
-        }
-        free(current_dir);
+    char *new_fn = zc_resolve_import_path_alloc(g_current_filename, fn);
+    if (new_fn) {
+        free(fn);
+        fn = new_fn;
     }
 
     // Check if file exists, if not try system-wide paths

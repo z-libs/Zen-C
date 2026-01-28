@@ -40,6 +40,7 @@ pub fn build(b: *std.Build) void {
         "src/codegen/codegen_utils.c",
         "src/utils/utils.c",
         "src/utils/path_utils.c",
+        "src/utils/zc_path_resolve.c",
         "src/lexer/token.c",
         "src/analysis/typecheck.c",
         "src/lsp/json_rpc.c",
