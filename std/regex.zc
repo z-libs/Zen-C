@@ -1,0 +1,198 @@
+include <regex.h>
+
+import "./core.zc"
+import "./string.zc"
+import "./vec.zc"
+import "./option.zc"
+
+struct Match {
+    text: char*;
+    start: int;
+    len: int;
+}
+
+impl Match {
+    fn new(text: char*, start: int, len: int) -> Match {
+        return Match { text: text, start: start, len: len };
+    }
+
+    fn as_string(self) -> char* {
+        return self.text;
+    }
+
+    fn end(self) -> int {
+        return self.start + self.len;
+    }
+}
+
+struct Regex {
+    preg: void*;
+    pattern: char*;
+    flags: int;
+}
+
+impl Regex {
+    fn compile(pattern: char*) -> Regex {
+        return Regex::compile_with_flags(pattern, 1 | 2);
+    }
+
+    fn compile_with_flags(pattern: char*, flags: int) -> Regex {
+        let preg = malloc(1024);
+        let status = regcomp(preg, pattern, flags);
+        if (status != 0) {
+            free(preg);
+            return Regex { preg: 0, pattern: 0, flags: flags };
+        }
+        return Regex { preg: preg, pattern: pattern, flags: flags };
+    }
+
+    fn is_valid(self) -> bool {
+        return self.preg != 0;
+    }
+
+    fn match(self, text: char*) -> bool {
+        if (self.preg == 0) { return false; }
+        return regexec(self.preg, text, 0, 0, 0) == 0;
+    }
+
+    fn match_full(self, text: char*) -> bool {
+        return self.match(text);
+    }
+
+    fn match_at(self, text: char*, offset: int) -> bool {
+        if (self.preg == 0) { return false; }
+        let len = strlen(text);
+        if (offset < 0 || offset > len) { return false; }
+        return regexec(self.preg, text + offset, 0, 0, 0) == 0;
+    }
+
+    fn is_match(self, text: char*) -> bool {
+        return self.match(text);
+    }
+
+    fn find(self, text: char*) -> Option<Match> {
+        if (self.preg == 0) { return Option<Match>::None(); }
+        let t_len = strlen(text);
+        for (let i = 0; i <= t_len; i = i + 1) {
+            let sub = text + i;
+            if (regexec(self.preg, sub, 0, 0, 0) == 0) {
+                let j = 0;
+                while (text[i + j] != 0 && regexec(self.preg, sub, 0, 0, 0) == 0) {
+                    j = j + 1;
+                    sub = text + i + j;
+                }
+                return Option<Match>::Some(Match::new(text + i, i, j));
+            }
+        }
+        return Option<Match>::None();
+    }
+
+    fn find_at(self, text: char*, start: int) -> Option<Match> {
+        let len = strlen(text);
+        if (start < 0 || start >= len) {
+            return Option<Match>::None();
+        }
+        return self.find(text + start);
+    }
+
+    fn count(self, text: char*) -> int {
+        if (self.preg == 0) { return 0; }
+        let count = 0;
+        let pos = 0;
+        let t_len = strlen(text);
+        while (pos < t_len) {
+            let sub = text + pos;
+            if (regexec(self.preg, sub, 0, 0, 0) == 0) {
+                count = count + 1;
+                pos = pos + 1;
+            } else {
+                break;
+            }
+        }
+        return count;
+    }
+
+    fn split(self, text: char*) -> Vec<String> {
+        let parts = Vec<String>::new();
+        if (self.preg == 0) {
+            parts.push(String::from(text));
+            return parts;
+        }
+        let t_len = strlen(text);
+        let last_pos = 0;
+        let pos = 0;
+        while (pos < t_len) {
+            let sub = text + pos;
+            if (regexec(self.preg, sub, 0, 0, 0) == 0) {
+                if (pos > last_pos) {
+                    let before = text + last_pos;
+                    let part_len = pos - last_pos;
+                    let v = Vec<char>::new();
+                    for (let i = 0; i < part_len; i = i + 1) {
+                        v.push(before[i]);
+                    }
+                    v.push(0);
+                    parts.push(String { vec: v });
+                }
+                last_pos = pos + 1;
+                pos = pos + 1;
+            } else {
+                pos = pos + 1;
+            }
+        }
+        if (last_pos < t_len) {
+            parts.push(String::from(text + last_pos));
+        }
+        return parts;
+    }
+
+    fn pattern(self) -> char* {
+        return self.pattern;
+    }
+
+    fn flags(self) -> int {
+        return self.flags;
+    }
+
+    fn is_valid_pattern(pattern: char*) -> bool {
+        let test_regex = Regex::compile(pattern);
+        let valid = test_regex.is_valid();
+        test_regex.destroy();
+        return valid;
+    }
+
+    fn destroy(self) {
+        if (self.preg != 0) {
+            regfree(self.preg);
+            free(self.preg);
+        }
+    }
+}
+
+fn regex_match(pattern: char*, text: char*) -> bool {
+    let re = Regex::compile(pattern);
+    let result = re.match(text);
+    re.destroy();
+    return result;
+}
+
+fn regex_find(pattern: char*, text: char*) -> Option<Match> {
+    let re = Regex::compile(pattern);
+    let result = re.find(text);
+    re.destroy();
+    return result;
+}
+
+fn regex_count(pattern: char*, text: char*) -> int {
+    let re = Regex::compile(pattern);
+    let count = re.count(text);
+    re.destroy();
+    return count;
+}
+
+fn regex_split(pattern: char*, text: char*) -> Vec<String> {
+    let re = Regex::compile(pattern);
+    let parts = re.split(text);
+    re.destroy();
+    return parts;
+}
