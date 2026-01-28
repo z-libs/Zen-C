@@ -1,0 +1,310 @@
+// HTTP Client using libcurl
+// Provides easy-to-use HTTP client functionality
+//> link: -lcurl
+
+include <curl/curl.h>
+
+import "../core.zc"
+import "../string.zc"
+import "../vec.zc"
+import "../mem.zc"
+
+// Response structure
+struct HttpResponse {
+    status_code: int;
+    body: char*;
+    body_len: usize;
+    headers: char*;
+    headers_len: usize;
+    error: char*;
+}
+
+impl HttpResponse {
+    fn ok(self) -> bool {
+        return self.status_code >= 200 && self.status_code < 300;
+    }
+
+    fn free(self) {
+        if self.body != NULL { free(self.body); }
+        if self.headers != NULL { free(self.headers); }
+        if self.error != NULL { free(self.error); }
+    }
+}
+
+// All curl operations in raw C block
+raw {
+    struct _http_buffer {
+        char* data;
+        size_t len;
+        size_t cap;
+    };
+
+    static size_t _http_write_cb(void* contents, size_t size, size_t nmemb, void* userp) {
+        size_t realsize = size * nmemb;
+        struct _http_buffer* buf = (struct _http_buffer*)userp;
+
+        if (buf->len + realsize + 1 > buf->cap) {
+            size_t new_cap = buf->cap == 0 ? 1024 : buf->cap * 2;
+            while (new_cap < buf->len + realsize + 1) new_cap *= 2;
+            buf->data = realloc(buf->data, new_cap);
+            buf->cap = new_cap;
+        }
+
+        memcpy(buf->data + buf->len, contents, realsize);
+        buf->len += realsize;
+        buf->data[buf->len] = '\0';
+        return realsize;
+    }
+
+    // Perform HTTP request - all curl logic in C
+    void _http_do_request(
+        char* method,
+        char* url,
+        char* body,
+        size_t body_len,
+        char* content_type,
+        char* user_agent,
+        int timeout_ms,
+        int follow_redirects,
+        int verify_ssl,
+        int* out_status,
+        char** out_body,
+        size_t* out_body_len,
+        char** out_headers,
+        size_t* out_headers_len,
+        char** out_error
+    ) {
+        *out_status = 0;
+        *out_body = NULL;
+        *out_body_len = 0;
+        *out_headers = NULL;
+        *out_headers_len = 0;
+        *out_error = NULL;
+
+        CURL* curl = curl_easy_init();
+        if (!curl) {
+            *out_error = strdup("Failed to initialize curl");
+            return;
+        }
+
+        // Set URL
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+
+        // Set method
+        if (strcmp(method, "POST") == 0) {
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        } else if (strcmp(method, "PUT") == 0) {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+        } else if (strcmp(method, "PATCH") == 0) {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+        } else if (strcmp(method, "DELETE") == 0) {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        } else if (strcmp(method, "HEAD") == 0) {
+            curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+        }
+
+        // Set body
+        if (body && body_len > 0) {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)body_len);
+        }
+
+        // Set headers
+        struct curl_slist* headers = NULL;
+        if (content_type) {
+            char ct_header[256];
+            snprintf(ct_header, sizeof(ct_header), "Content-Type: %s", content_type);
+            headers = curl_slist_append(headers, ct_header);
+        }
+        if (headers) {
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        }
+
+        // Set user agent
+        if (user_agent) {
+            curl_easy_setopt(curl, CURLOPT_USERAGENT, user_agent);
+        }
+
+        // Set timeout
+        if (timeout_ms > 0) {
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
+        }
+
+        // Set follow redirects
+        if (follow_redirects) {
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        }
+
+        // Set SSL verification
+        if (!verify_ssl) {
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        }
+
+        // Setup response buffers
+        struct _http_buffer body_buf = {NULL, 0, 0};
+        struct _http_buffer header_buf = {NULL, 0, 0};
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _http_write_cb);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body_buf);
+        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, _http_write_cb);
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_buf);
+
+        // Perform request
+        CURLcode res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            *out_error = strdup(curl_easy_strerror(res));
+        } else {
+            long code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+            *out_status = (int)code;
+            *out_body = body_buf.data;
+            *out_body_len = body_buf.len;
+            *out_headers = header_buf.data;
+            *out_headers_len = header_buf.len;
+        }
+
+        // Cleanup
+        if (headers) curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
+
+    void _http_global_init() {
+        curl_global_init(CURL_GLOBAL_DEFAULT);
+    }
+
+    void _http_global_cleanup() {
+        curl_global_cleanup();
+    }
+}
+
+extern fn _http_do_request(
+    method: char*, url: char*, body: char*, body_len: usize,
+    content_type: char*, user_agent: char*, timeout_ms: int,
+    follow_redirects: int, verify_ssl: int,
+    out_status: int*, out_body: char**, out_body_len: usize*,
+    out_headers: char**, out_headers_len: usize*, out_error: char**
+);
+extern fn _http_global_init();
+extern fn _http_global_cleanup();
+
+// HTTP Client
+struct HttpClient {
+    timeout_ms: int;
+    follow_redirects: bool;
+    verify_ssl: bool;
+    user_agent: char*;
+}
+
+impl HttpClient {
+    fn new() -> HttpClient {
+        _http_global_init();
+        return HttpClient {
+            timeout_ms: 30000,
+            follow_redirects: true,
+            verify_ssl: true,
+            user_agent: "Zen-C HttpClient/1.0"
+        };
+    }
+
+    fn set_timeout(self, ms: int) -> HttpClient* {
+        self.timeout_ms = ms;
+        return self;
+    }
+
+    fn set_follow_redirects(self, follow: bool) -> HttpClient* {
+        self.follow_redirects = follow;
+        return self;
+    }
+
+    fn set_verify_ssl(self, verify: bool) -> HttpClient* {
+        self.verify_ssl = verify;
+        return self;
+    }
+
+    fn set_user_agent(self, ua: char*) -> HttpClient* {
+        self.user_agent = ua;
+        return self;
+    }
+
+    fn get(self, url: char*) -> HttpResponse {
+        return self._request("GET", url, NULL, 0, NULL);
+    }
+
+    fn post(self, url: char*, body: char*) -> HttpResponse {
+        let len: usize = 0;
+        if body != NULL { len = strlen(body); }
+        return self._request("POST", url, body, len, "application/x-www-form-urlencoded");
+    }
+
+    fn post_json(self, url: char*, json: char*) -> HttpResponse {
+        let len: usize = 0;
+        if json != NULL { len = strlen(json); }
+        return self._request("POST", url, json, len, "application/json");
+    }
+
+    fn put(self, url: char*, body: char*) -> HttpResponse {
+        let len: usize = 0;
+        if body != NULL { len = strlen(body); }
+        return self._request("PUT", url, body, len, "application/json");
+    }
+
+    fn patch(self, url: char*, body: char*) -> HttpResponse {
+        let len: usize = 0;
+        if body != NULL { len = strlen(body); }
+        return self._request("PATCH", url, body, len, "application/json");
+    }
+
+    fn delete(self, url: char*) -> HttpResponse {
+        return self._request("DELETE", url, NULL, 0, NULL);
+    }
+
+    fn head(self, url: char*) -> HttpResponse {
+        return self._request("HEAD", url, NULL, 0, NULL);
+    }
+
+    fn _request(self, method: char*, url: char*, body: char*, body_len: usize, content_type: char*) -> HttpResponse {
+        let resp = HttpResponse {
+            status_code: 0,
+            body: NULL,
+            body_len: 0,
+            headers: NULL,
+            headers_len: 0,
+            error: NULL
+        };
+
+        _http_do_request(
+            method, url, body, body_len, content_type,
+            self.user_agent, self.timeout_ms,
+            (int)self.follow_redirects, (int)self.verify_ssl,
+            &resp.status_code, &resp.body, &resp.body_len,
+            &resp.headers, &resp.headers_len, &resp.error
+        );
+
+        return resp;
+    }
+
+    fn cleanup(self) {
+        _http_global_cleanup();
+    }
+}
+
+// Convenience functions
+fn http_get(url: char*) -> HttpResponse {
+    let client = HttpClient::new();
+    let resp = client.get(url);
+    return resp;
+}
+
+fn http_post(url: char*, body: char*) -> HttpResponse {
+    let client = HttpClient::new();
+    let resp = client.post(url, body);
+    return resp;
+}
+
+fn http_post_json(url: char*, json: char*) -> HttpResponse {
+    let client = HttpClient::new();
+    let resp = client.post_json(url, json);
+    return resp;
+}

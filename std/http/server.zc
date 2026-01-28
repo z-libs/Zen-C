@@ -1,0 +1,643 @@
+// HTTP Server using libmicrohttpd
+// Provides easy-to-use HTTP server functionality with Zen-C style API
+//> link: -lmicrohttpd
+
+include <microhttpd.h>
+include <string.h>
+
+import "../core.zc"
+import "../string.zc"
+import "../mem.zc"
+import "../json.zc"
+
+// HTTP Methods
+def HTTP_GET = 1;
+def HTTP_POST = 2;
+def HTTP_PUT = 3;
+def HTTP_DELETE = 4;
+def HTTP_PATCH = 5;
+def HTTP_HEAD = 6;
+def HTTP_OPTIONS = 7;
+
+// HTTP Status Codes
+def HTTP_OK = 200;
+def HTTP_CREATED = 201;
+def HTTP_NO_CONTENT = 204;
+def HTTP_BAD_REQUEST = 400;
+def HTTP_UNAUTHORIZED = 401;
+def HTTP_FORBIDDEN = 403;
+def HTTP_NOT_FOUND = 404;
+def HTTP_METHOD_NOT_ALLOWED = 405;
+def HTTP_INTERNAL_ERROR = 500;
+
+// All HTTP server implementation in raw C
+raw {
+    #include <signal.h>
+
+    // Internal C structs
+    typedef struct {
+        char* key;
+        char* value;
+    } _HttpKeyValue;
+
+    typedef struct {
+        int method;
+        char* path;
+        char* body;
+        size_t body_len;
+        _HttpKeyValue headers[32];
+        int header_count;
+        _HttpKeyValue params[16];
+        int param_count;
+    } _HttpRequest;
+
+    typedef struct {
+        int method;
+        char* pattern;
+        void* handler;
+    } _HttpRoute;
+
+    typedef struct {
+        int port;
+        _HttpRoute routes[64];
+        int route_count;
+        int running;
+    } _HttpServerData;
+
+    // Response struct - exposed to Zen-C
+    typedef struct Response {
+        int status;
+        char* body;
+        size_t body_len;
+        char* content_type;
+    } Response;
+
+    // Request struct - wrapper for handler functions
+    typedef struct Request {
+        void* _ptr;
+    } Request;
+
+    typedef Response (*_HttpHandlerFunc)(Request);
+
+    // Global state
+    static _HttpServerData* _g_http_server = NULL;
+    static struct MHD_Daemon* _g_http_daemon = NULL;
+    static volatile int _g_http_running = 0;
+
+    struct _http_conn_info {
+        char* data;
+        size_t len;
+        size_t cap;
+    };
+
+    static int _http_parse_method(const char* method) {
+        if (strcmp(method, "GET") == 0) return 1;
+        if (strcmp(method, "POST") == 0) return 2;
+        if (strcmp(method, "PUT") == 0) return 3;
+        if (strcmp(method, "DELETE") == 0) return 4;
+        if (strcmp(method, "PATCH") == 0) return 5;
+        if (strcmp(method, "HEAD") == 0) return 6;
+        if (strcmp(method, "OPTIONS") == 0) return 7;
+        return 0;
+    }
+
+    static const char* _http_method_str(int method) {
+        switch (method) {
+            case 1: return "GET";
+            case 2: return "POST";
+            case 3: return "PUT";
+            case 4: return "DELETE";
+            case 5: return "PATCH";
+            case 6: return "HEAD";
+            case 7: return "OPTIONS";
+            default: return "UNKNOWN";
+        }
+    }
+
+    static int _http_match_route(const char* pattern, const char* path, _HttpRequest* req) {
+        const char* p = pattern;
+        const char* u = path;
+
+        while (*p && *u) {
+            if (*p == ':') {
+                p++;
+                char param_name[64];
+                int ni = 0;
+                while (*p && *p != '/' && ni < 63) {
+                    param_name[ni++] = *p++;
+                }
+                param_name[ni] = '\0';
+
+                char param_value[256];
+                int vi = 0;
+                while (*u && *u != '/' && vi < 255) {
+                    param_value[vi++] = *u++;
+                }
+                param_value[vi] = '\0';
+
+                if (req->param_count < 16) {
+                    req->params[req->param_count].key = strdup(param_name);
+                    req->params[req->param_count].value = strdup(param_value);
+                    req->param_count++;
+                }
+            } else if (*p != *u) {
+                return 0;
+            } else {
+                p++;
+                u++;
+            }
+        }
+
+        if (*p == '\0' && (*u == '\0' || (*u == '/' && *(u+1) == '\0'))) return 1;
+        if (*u == '\0' && (*p == '\0' || (*p == '/' && *(p+1) == '\0'))) return 1;
+
+        return *p == '\0' && *u == '\0';
+    }
+
+    static enum MHD_Result _http_header_cb(void* cls, enum MHD_ValueKind kind,
+                                           const char* key, const char* value) {
+        (void)kind;
+        _HttpRequest* req = (_HttpRequest*)cls;
+        if (req->header_count < 32) {
+            req->headers[req->header_count].key = strdup(key);
+            req->headers[req->header_count].value = strdup(value);
+            req->header_count++;
+        }
+        return MHD_YES;
+    }
+
+    static enum MHD_Result _http_request_handler(
+        void* cls,
+        struct MHD_Connection* connection,
+        const char* url,
+        const char* method,
+        const char* version,
+        const char* upload_data,
+        size_t* upload_data_size,
+        void** con_cls
+    ) {
+        (void)version;
+        _HttpServerData* server = (_HttpServerData*)cls;
+
+        if (*con_cls == NULL) {
+            struct _http_conn_info* info = malloc(sizeof(struct _http_conn_info));
+            info->data = NULL;
+            info->len = 0;
+            info->cap = 0;
+            *con_cls = info;
+            return MHD_YES;
+        }
+
+        struct _http_conn_info* conn_info = (struct _http_conn_info*)*con_cls;
+
+        if (*upload_data_size > 0) {
+            if (conn_info->len + *upload_data_size + 1 > conn_info->cap) {
+                size_t new_cap = conn_info->cap == 0 ? 1024 : conn_info->cap * 2;
+                while (new_cap < conn_info->len + *upload_data_size + 1) new_cap *= 2;
+                conn_info->data = realloc(conn_info->data, new_cap);
+                conn_info->cap = new_cap;
+            }
+            memcpy(conn_info->data + conn_info->len, upload_data, *upload_data_size);
+            conn_info->len += *upload_data_size;
+            conn_info->data[conn_info->len] = '\0';
+            *upload_data_size = 0;
+            return MHD_YES;
+        }
+
+        _HttpRequest req;
+        memset(&req, 0, sizeof(req));
+        req.method = _http_parse_method(method);
+        req.path = (char*)url;
+        req.body = conn_info->data;
+        req.body_len = conn_info->len;
+
+        MHD_get_connection_values(connection, MHD_HEADER_KIND, _http_header_cb, &req);
+
+        Response resp;
+        resp.status = 404;
+        resp.body = strdup("Not Found");
+        resp.body_len = 9;
+        resp.content_type = "text/plain";
+
+        for (int i = 0; i < server->route_count; i++) {
+            _HttpRoute* route = &server->routes[i];
+            if (route->method == req.method || route->method == 0) {
+                for (int j = 0; j < req.param_count; j++) {
+                    free(req.params[j].key);
+                    free(req.params[j].value);
+                }
+                req.param_count = 0;
+
+                if (_http_match_route(route->pattern, url, &req)) {
+                    _HttpHandlerFunc handler = (_HttpHandlerFunc)route->handler;
+                    free(resp.body);
+                    Request req_wrap = { ._ptr = &req };
+                    resp = handler(req_wrap);
+                    break;
+                }
+            }
+        }
+
+        struct MHD_Response* mhd_resp = MHD_create_response_from_buffer(
+            resp.body_len, resp.body, MHD_RESPMEM_MUST_COPY
+        );
+
+        MHD_add_response_header(mhd_resp, "Content-Type", resp.content_type);
+        MHD_add_response_header(mhd_resp, "Server", "Zen-C HttpServer/1.0");
+
+        enum MHD_Result ret = MHD_queue_response(connection, resp.status, mhd_resp);
+        MHD_destroy_response(mhd_resp);
+
+        if (resp.body) free(resp.body);
+        for (int i = 0; i < req.header_count; i++) {
+            free(req.headers[i].key);
+            free(req.headers[i].value);
+        }
+        for (int i = 0; i < req.param_count; i++) {
+            free(req.params[i].key);
+            free(req.params[i].value);
+        }
+        if (conn_info->data) free(conn_info->data);
+        free(conn_info);
+        *con_cls = NULL;
+
+        return ret;
+    }
+
+    static void _http_signal_handler(int sig) {
+        (void)sig;
+        _g_http_running = 0;
+    }
+
+    // Internal C API for server
+    void* _http_server_create(int port) {
+        _HttpServerData* server = malloc(sizeof(_HttpServerData));
+        server->port = port;
+        server->route_count = 0;
+        server->running = 0;
+        return server;
+    }
+
+    void _http_server_add_route(void* srv, int method, char* pattern, void* handler) {
+        _HttpServerData* server = (_HttpServerData*)srv;
+        if (server->route_count < 64) {
+            server->routes[server->route_count].method = method;
+            server->routes[server->route_count].pattern = strdup(pattern);
+            server->routes[server->route_count].handler = handler;
+            server->route_count++;
+        }
+    }
+
+    int _http_server_start(void* srv) {
+        _HttpServerData* server = (_HttpServerData*)srv;
+        _g_http_server = server;
+        _g_http_daemon = MHD_start_daemon(
+            MHD_USE_SELECT_INTERNALLY,
+            (unsigned short)server->port,
+            NULL, NULL,
+            _http_request_handler, server,
+            MHD_OPTION_END
+        );
+        if (!_g_http_daemon) return 0;
+        server->running = 1;
+        return 1;
+    }
+
+    void _http_server_stop(void) {
+        if (_g_http_daemon) {
+            MHD_stop_daemon(_g_http_daemon);
+            _g_http_daemon = NULL;
+        }
+        if (_g_http_server) {
+            _g_http_server->running = 0;
+        }
+    }
+
+    void _http_server_run(void* srv) {
+        _HttpServerData* server = (_HttpServerData*)srv;
+        if (!_http_server_start(srv)) return;
+
+        _g_http_running = 1;
+        signal(SIGINT, _http_signal_handler);
+
+        while (_g_http_running && server->running) {
+            sleep(1);
+        }
+
+        _http_server_stop();
+    }
+
+    void _http_server_destroy(void* srv) {
+        _HttpServerData* server = (_HttpServerData*)srv;
+        _http_server_stop();
+        for (int i = 0; i < server->route_count; i++) {
+            free(server->routes[i].pattern);
+        }
+        free(server);
+    }
+
+    // Request helpers
+    char* _http_request_get_header(void* r, char* name) {
+        _HttpRequest* req = (_HttpRequest*)r;
+        for (int i = 0; i < req->header_count; i++) {
+            if (strcmp(req->headers[i].key, name) == 0) {
+                return req->headers[i].value;
+            }
+        }
+        return NULL;
+    }
+
+    char* _http_request_get_param(void* r, char* name) {
+        _HttpRequest* req = (_HttpRequest*)r;
+        for (int i = 0; i < req->param_count; i++) {
+            if (strcmp(req->params[i].key, name) == 0) {
+                return req->params[i].value;
+            }
+        }
+        return NULL;
+    }
+
+    char* _http_request_method_str(void* r) {
+        _HttpRequest* req = (_HttpRequest*)r;
+        return (char*)_http_method_str(req->method);
+    }
+
+    char* _http_request_body(void* r) {
+        _HttpRequest* req = (_HttpRequest*)r;
+        return req->body;
+    }
+
+    char* _http_request_path(void* r) {
+        _HttpRequest* req = (_HttpRequest*)r;
+        return req->path;
+    }
+
+    // Response creation helpers
+    Response _response_text(char* body) {
+        Response r;
+        r.status = 200;
+        r.body = strdup(body);
+        r.body_len = strlen(body);
+        r.content_type = "text/plain";
+        return r;
+    }
+
+    Response _response_html(char* body) {
+        Response r;
+        r.status = 200;
+        r.body = strdup(body);
+        r.body_len = strlen(body);
+        r.content_type = "text/html";
+        return r;
+    }
+
+    Response _response_json(char* body) {
+        Response r;
+        r.status = 200;
+        r.body = strdup(body);
+        r.body_len = strlen(body);
+        r.content_type = "application/json";
+        return r;
+    }
+
+    Response _response_not_found(void) {
+        Response r;
+        r.status = 404;
+        r.body = strdup("Not Found");
+        r.body_len = 9;
+        r.content_type = "text/plain";
+        return r;
+    }
+
+    Response _response_bad_request(void) {
+        Response r;
+        r.status = 400;
+        r.body = strdup("Bad Request");
+        r.body_len = 11;
+        r.content_type = "text/plain";
+        return r;
+    }
+
+    Response _response_internal_error(void) {
+        Response r;
+        r.status = 500;
+        r.body = strdup("Internal Server Error");
+        r.body_len = 21;
+        r.content_type = "text/plain";
+        return r;
+    }
+
+    Response _response_with_status(Response r, int status) {
+        r.status = status;
+        return r;
+    }
+}
+
+// Extern declarations for internal C functions
+extern fn _http_server_create(port: int) -> void*;
+extern fn _http_server_add_route(srv: void*, method: int, pattern: char*, handler: void*);
+extern fn _http_server_start(srv: void*) -> int;
+extern fn _http_server_stop();
+extern fn _http_server_run(srv: void*);
+extern fn _http_server_destroy(srv: void*);
+
+extern fn _http_request_get_header(r: void*, name: char*) -> char*;
+extern fn _http_request_get_param(r: void*, name: char*) -> char*;
+extern fn _http_request_method_str(r: void*) -> char*;
+extern fn _http_request_body(r: void*) -> char*;
+extern fn _http_request_path(r: void*) -> char*;
+
+extern fn _response_text(body: char*) -> Response;
+extern fn _response_html(body: char*) -> Response;
+extern fn _response_json(body: char*) -> Response;
+extern fn _response_not_found() -> Response;
+extern fn _response_bad_request() -> Response;
+extern fn _response_internal_error() -> Response;
+extern fn _response_with_status(r: Response, status: int) -> Response;
+
+// ============================================
+// Zen-C Style API
+// ============================================
+
+// Request methods (struct defined in raw C block)
+impl Request {
+    fn header(self, name: char*) -> char* {
+        return _http_request_get_header(self._ptr, name);
+    }
+
+    fn param(self, name: char*) -> char* {
+        return _http_request_get_param(self._ptr, name);
+    }
+
+    fn method(self) -> char* {
+        return _http_request_method_str(self._ptr);
+    }
+
+    fn body(self) -> char* {
+        return _http_request_body(self._ptr);
+    }
+
+    fn path(self) -> char* {
+        return _http_request_path(self._ptr);
+    }
+}
+
+// Response builder using impl on raw C struct
+impl Response {
+    fn text(body: char*) -> Response {
+        return _response_text(body);
+    }
+
+    fn html(body: char*) -> Response {
+        return _response_html(body);
+    }
+
+    fn json(body: char*) -> Response {
+        return _response_json(body);
+    }
+
+    // JsonValue support (for @derive(ToJson))
+    fn json_value(json: JsonValue) -> Response {
+        let s = json.stringify();
+        let resp = _response_json(s);
+        free(s);
+        json.free();
+        return resp;
+    }
+
+    fn json_value_status(json: JsonValue, status: int) -> Response {
+        let s = json.stringify();
+        let resp = _response_json(s);
+        free(s);
+        json.free();
+        return _response_with_status(resp, status);
+    }
+
+    fn not_found() -> Response {
+        return _response_not_found();
+    }
+
+    fn bad_request() -> Response {
+        return _response_bad_request();
+    }
+
+    fn error() -> Response {
+        return _response_internal_error();
+    }
+
+    fn status(r: Response, code: int) -> Response {
+        return _response_with_status(r, code);
+    }
+}
+
+// Legacy function names for compatibility
+fn Response_text(body: char*) -> Response {
+    return _response_text(body);
+}
+
+fn Response_html(body: char*) -> Response {
+    return _response_html(body);
+}
+
+fn Response_json(body: char*) -> Response {
+    return _response_json(body);
+}
+
+fn Response_not_found() -> Response {
+    return _response_not_found();
+}
+
+fn Response_bad_request() -> Response {
+    return _response_bad_request();
+}
+
+fn Response_internal_error() -> Response {
+    return _response_internal_error();
+}
+
+fn Response_error() -> Response {
+    return _response_internal_error();
+}
+
+fn Response_with_status(r: Response, status: int) -> Response {
+    return _response_with_status(r, status);
+}
+
+// JsonValue support (for @derive(ToJson))
+fn Response_json_value(json: JsonValue) -> Response {
+    let s = json.stringify();
+    let resp = _response_json(s);
+    free(s);
+    json.free();
+    return resp;
+}
+
+fn Response_json_value_status(json: JsonValue, status: int) -> Response {
+    let s = json.stringify();
+    let resp = _response_json(s);
+    free(s);
+    json.free();
+    return _response_with_status(resp, status);
+}
+
+// HTTP Server with fluent API
+struct HttpServer {
+    _ptr: void*;
+}
+
+impl HttpServer {
+    fn new(port: int) -> HttpServer {
+        return HttpServer {
+            _ptr: _http_server_create(port)
+        };
+    }
+
+    fn route(self, method: int, pattern: char*, handler: void*) -> HttpServer* {
+        _http_server_add_route(self._ptr, method, pattern, handler);
+        return self;
+    }
+
+    fn get(self, pattern: char*, handler: void*) -> HttpServer* {
+        return self.route(HTTP_GET, pattern, handler);
+    }
+
+    fn post(self, pattern: char*, handler: void*) -> HttpServer* {
+        return self.route(HTTP_POST, pattern, handler);
+    }
+
+    fn put(self, pattern: char*, handler: void*) -> HttpServer* {
+        return self.route(HTTP_PUT, pattern, handler);
+    }
+
+    fn delete(self, pattern: char*, handler: void*) -> HttpServer* {
+        return self.route(HTTP_DELETE, pattern, handler);
+    }
+
+    fn patch(self, pattern: char*, handler: void*) -> HttpServer* {
+        return self.route(HTTP_PATCH, pattern, handler);
+    }
+
+    fn head(self, pattern: char*, handler: void*) -> HttpServer* {
+        return self.route(HTTP_HEAD, pattern, handler);
+    }
+
+    fn all(self, pattern: char*, handler: void*) -> HttpServer* {
+        return self.route(0, pattern, handler);
+    }
+
+    fn start(self) -> bool {
+        return _http_server_start(self._ptr) != 0;
+    }
+
+    fn stop(self) {
+        _http_server_stop();
+    }
+
+    fn run(self) {
+        _http_server_run(self._ptr);
+    }
+
+    fn free(self) {
+        _http_server_destroy(self._ptr);
+    }
+}

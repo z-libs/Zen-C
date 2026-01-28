@@ -1,0 +1,168 @@
+// REST API Example
+//> link: -lmicrohttpd
+
+import "std/http/server.zc"
+
+// ========================================
+// Data Model
+// ========================================
+
+@derive(ToJson)
+struct Item {
+    id: int;
+    name: char*;
+    price: int;  // cents to avoid float issues
+}
+
+@derive(ToJson)
+struct ApiError {
+    error: char*;
+}
+
+@derive(ToJson)
+struct DeleteResult {
+    deleted: bool;
+    id: int;
+}
+
+// Simple in-memory store
+struct Store {
+    items: Item[100];
+    count: int;
+    next_id: int;
+}
+
+let store: Store;
+
+impl Store {
+    fn init() {
+        store = Store { items: [], count: 0, next_id: 1 };
+    }
+
+    fn add(name: char*, price: int) -> Item* {
+        if store.count >= 100 { return NULL; }
+        store.items[store.count] = Item { id: store.next_id, name: strdup(name), price: price };
+        store.count = store.count + 1;
+        store.next_id = store.next_id + 1;
+        return &store.items[store.count - 1];
+    }
+
+    fn find(id: int) -> Item* {
+        for i in 0..store.count {
+            if store.items[i].id == id { return &store.items[i]; }
+        }
+        return NULL;
+    }
+
+    fn remove(id: int) -> bool {
+        for i in 0..store.count {
+            if store.items[i].id == id {
+                for j in i..(store.count - 1) {
+                    store.items[j] = store.items[j + 1];
+                }
+                store.count = store.count - 1;
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// ========================================
+// Handlers
+// ========================================
+
+fn handle_list(req: Request) -> Response {
+    // Build JSON array
+    let arr = JsonValue::array();
+    for i in 0..store.count {
+        let item: Item* = &store.items[i];
+        arr.push(item.to_json());
+    }
+    return Response::json_value(arr);
+}
+
+fn handle_get(req: Request) -> Response {
+    let id_str = req.param("id");
+    if id_str == NULL { return Response::bad_request(); }
+
+    let item = Store::find(atoi(id_str));
+    if item == NULL {
+        let err = ApiError { error: "Item not found" };
+        return Response::json_value_status(err.to_json(), HTTP_NOT_FOUND);
+    }
+    return Response::json_value(item.to_json());
+}
+
+fn handle_create(req: Request) -> Response {
+    let body = req.body();
+    if body == NULL {
+        let err = ApiError { error: "Body required" };
+        return Response::json_value_status(err.to_json(), HTTP_BAD_REQUEST);
+    }
+
+    let result = JsonValue::parse(body);
+    if result.is_err() {
+        let err = ApiError { error: "Invalid JSON" };
+        return Response::json_value_status(err.to_json(), HTTP_BAD_REQUEST);
+    }
+
+    let json: JsonValue* = result.unwrap();
+    let name_opt = json.get_string("name");
+    let price_opt = json.get_int("price");
+
+    let name = name_opt.unwrap_or("Unnamed");
+    let price = price_opt.unwrap_or(0);
+
+    json.free();
+    free((void*)json);
+
+    let item = Store::add(name, price);
+    if item == NULL {
+        let err = ApiError { error: "Store full" };
+        return Response::json_value_status(err.to_json(), HTTP_BAD_REQUEST);
+    }
+    return Response::json_value_status(item.to_json(), HTTP_CREATED);
+}
+
+fn handle_delete(req: Request) -> Response {
+    let id_str = req.param("id");
+    if id_str == NULL { return Response::bad_request(); }
+
+    let id = atoi(id_str);
+    if !Store::remove(id) {
+        let err = ApiError { error: "Item not found" };
+        return Response::json_value_status(err.to_json(), HTTP_NOT_FOUND);
+    }
+
+    let result = DeleteResult { deleted: true, id: id };
+    return Response::json_value(result.to_json());
+}
+
+// ========================================
+// Main
+// ========================================
+
+fn main() {
+    "Zen-C REST API with @derive(ToJson)\n";
+
+    Store::init();
+    Store::add("Laptop", 99999);  // $999.99 in cents
+    Store::add("Mouse", 2999);    // $29.99 in cents
+
+    let server = HttpServer::new(8080);
+
+    server.get("/api/items", handle_list)
+          .get("/api/items/:id", handle_get)
+          .post("/api/items", handle_create)
+          .delete("/api/items/:id", handle_delete);
+
+    "Server at http://localhost:8080";
+    "  GET    /api/items";
+    "  GET    /api/items/:id";
+    "  POST   /api/items";
+    "  DELETE /api/items/:id\n";
+
+    server.run();
+    server.free();
+}
