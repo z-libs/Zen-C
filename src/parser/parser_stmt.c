@@ -11,6 +11,7 @@
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
 #include "../codegen/codegen.h"
+#include "../utils/path_utils.h"
 
 char *curr_func_ret = NULL;
 char *run_comptime_block(ParserContext *ctx, Lexer *l);
@@ -2923,9 +2924,8 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     }
 
     // Canonicalize path to avoid duplicates (for example: "./std/io.zc" vs "std/io.zc")
-    char *real_fn = realpath(fn, NULL);
-    if (real_fn)
-    {
+    char *real_fn = zc_realpath_alloc(fn);
+    if (real_fn) {
         free(fn);
         fn = real_fn;
     }
