@@ -26,6 +26,8 @@ extern fn _z_net_connect(fd: int, host: char*, port: int) -> int;
 extern fn _z_net_accept(fd: int) -> int;
 extern fn _z_net_read(fd: int, buf: char*, n: usize) -> isize;
 extern fn _z_net_write(fd: int, buf: char*, n: usize) -> isize;
+extern fn _z_net_last_error_code() -> int;
+extern fn _z_net_last_error_message(out: char*, cap: int) -> int;
 
 struct TcpStream {
     fd: int;

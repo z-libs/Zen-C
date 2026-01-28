@@ -1,10 +1,13 @@
 #ifdef _WIN32
+
 #include "zc_net_platform.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
+#include <string.h>
 
 static int g_wsa_inited = 0;
 
@@ -22,6 +25,54 @@ int _z_socket(int domain, int type, int proto) {
     SOCKET s = socket(domain, type, proto);
     if (s == INVALID_SOCKET) return -1;
     return (int)(uintptr_t)s;
+}
+
+int _z_net_last_error_code(void) {
+    return (int)WSAGetLastError();
+}
+
+static void zc_strip_crlf(char *s) {
+    if (!s) return;
+    size_t n = strlen(s);
+    while (n > 0 && (s[n - 1] == '\r' || s[n - 1] == '\n')) {
+        s[n - 1] = 0;
+        n--;
+    }
+}
+
+int _z_net_last_error_message(char *out, int cap) {
+    if (!out || cap <= 0) return 0;
+
+    DWORD code = (DWORD)WSAGetLastError();
+    out[0] = 0;
+
+    DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+    DWORD wrote = FormatMessageA(
+        flags,
+        NULL,
+        code,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        out,
+        (DWORD)cap,
+        NULL
+    );
+
+    if (wrote == 0) {
+        // Fallback
+        // (safe minimal formatting without stdio dependency)
+        // Write "WSA <code>"
+        // cap is small? Keep it simple.
+        const char prefix[] = "WSA ";
+        size_t p = sizeof(prefix) - 1;
+        if (cap > (int)p + 1) {
+            memcpy(out, prefix, p);
+            out[p] = 0;
+        }
+    } else {
+        zc_strip_crlf(out);
+    }
+
+    return (int)strlen(out);
 }
 
 int _z_net_close(int fd) {

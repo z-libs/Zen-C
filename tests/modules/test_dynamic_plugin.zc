@@ -1,5 +1,5 @@
-
 import plugin "plugins/brainfuck.so" as bf
+//import plugin "plugins/brainfuck.dll" as bf // works on windows! Just keep your compiler consistent
 import "std/io.zc"
 
 test "dynamic plugin loading" {

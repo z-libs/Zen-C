@@ -27,6 +27,11 @@ int     _z_net_close(int fd);
 // Safe to call multiple times.
 int     _z_net_init(void);
 
+// --- Error reporting ---
+int     _z_net_last_error_code(void);
+// Returns number of bytes written (excluding null terminator). Always null-terminates if cap>0.
+int     _z_net_last_error_message(char *out, int cap);
+
 #ifdef __cplusplus
 }
 #endif

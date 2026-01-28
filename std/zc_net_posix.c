@@ -7,11 +7,44 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+
 int _z_net_init(void) { return 0; }
 
 int _z_socket(int domain, int type, int proto) {
     return socket(domain, type, proto);
 }
+
+int _z_net_last_error_code(void) {
+    return errno;
+}
+
+int _z_net_last_error_message(char *out, int cap) {
+    if (!out || cap <= 0) return 0;
+
+    int code = errno;
+    out[0] = 0;
+
+    // strerror_r has two variants (XSI returns int, GNU returns char*)
+    #if defined(__GLIBC__) && defined(_GNU_SOURCE)
+        char *msg = strerror_r(code, out, (size_t)cap);
+        if (msg != out) {
+            // GNU may return pointer to static string
+            strncpy(out, msg, (size_t)cap - 1);
+            out[cap - 1] = 0;
+        }
+    #else
+        // XSI/POSIX variant
+        if (strerror_r(code, out, (size_t)cap) != 0) {
+            snprintf(out, (size_t)cap, "errno %d", code);
+        }
+    #endif
+
+    return (int)strlen(out);
+}
+
 
 int _z_net_close(int fd) {
     return close(fd);
