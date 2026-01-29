@@ -3,99 +3,25 @@ import "./result.zc"
 import "./string.zc"
 import "./vec.zc"
 
+// C ABI declarations live here:
+import "./zc_fs_platform.h"
+
+// C implementation 
+raw {
+    #include "std/zc_fs_platform.h"
+
+    #ifdef _WIN32
+        #include "std/zc_fs_win32.c"
+    #else
+        #include "std/zc_fs_posix.c"
+    #endif
+}
+
 def Z_SEEK_SET = 0;
 def Z_SEEK_END = 2;
 def Z_F_OK = 0;
 
-
-// TODO: restructure this tomorrow.
-raw {
-    #include <dirent.h>
-    #include <sys/stat.h>
-    #include <unistd.h>
-
-    // typedef needed for Vec<DirEntry*> generation if inferred
-    typedef struct DirEntry* DirEntryPtr;
-    
-    void* _z_fs_fopen(char* path, char* mode) {
-        return fopen(path, mode);
-    }
-
-    int _z_fs_fclose(void* stream) {
-        return fclose((FILE*)stream);
-    }
-
-    size_t _z_fs_fread(void* ptr, size_t size, size_t nmemb, void* stream) {
-        return fread(ptr, size, nmemb, (FILE*)stream);
-    }
-
-    size_t _z_fs_fwrite(void* ptr, size_t size, size_t nmemb, void* stream) {
-        return fwrite(ptr, size, nmemb, (FILE*)stream);
-    }
-
-    int _z_fs_fseek(void* stream, int64_t offset, int whence) {
-        return fseek((FILE*)stream, (long)offset, whence);
-    }
-
-    int64_t _z_fs_ftell(void* stream) {
-        return (int64_t)ftell((FILE*)stream);
-    }
-
-    int _z_fs_access(char* pathname, int mode) {
-        return access(pathname, mode);
-    }
-
-    int _z_fs_unlink(char* pathname) {
-        return unlink(pathname);
-    }
-
-    int _z_fs_rmdir(char* pathname) {
-        return rmdir(pathname);
-    }
-
-    void* _z_fs_opendir(char* name) {
-        return opendir(name);
-    }
-
-    int _z_fs_closedir(void* dir) {
-        return closedir((DIR*)dir);
-    }
-
-    void* _z_fs_malloc(size_t size) {
-        return malloc(size);
-    }
-
-    void _z_fs_free(void* ptr) {
-        free(ptr);
-    }
-
-    int _z_fs_get_metadata(char* path, uint64_t* size, int* is_dir, int* is_file) {
-        struct stat st;
-        if (stat(path, &st) != 0) return -1;
-        *size = st.st_size;
-        *is_dir = S_ISDIR(st.st_mode);
-        *is_file = S_ISREG(st.st_mode);
-        return 0;
-    }
-    
-    int _z_fs_read_entry(void* dir, char* out_name, int buf_size, int* is_dir) {
-        struct dirent* ent = readdir((DIR*)dir);
-        if (!ent) return 0;
-        strncpy(out_name, ent->d_name, buf_size - 1);
-        out_name[buf_size - 1] = 0;
-        *is_dir = (ent->d_type == DT_DIR);
-        return 1;
-    }
-
-    int _z_fs_mkdir(char* path) {
-        #ifdef _WIN32
-            return mkdir(path);
-        #else
-            return mkdir(path, 0777);
-        #endif
-    }
-}
-
+// Link to the platform abstraction layer (implemented in zc_fs_* files)
 extern fn _z_fs_mkdir(path: char*) -> int;
 extern fn _z_fs_get_metadata(path: char*, size: U64*, is_dir: int*, is_file: int*) -> int;
 extern fn _z_fs_read_entry(dir: void*, out_name: char*, buf_size: int, is_dir: int*) -> int;
@@ -148,25 +74,25 @@ impl File {
         if (self.handle == NULL) {
             return Result<String>::Err("File not open");
         }
-        
+
         _z_fs_fseek(self.handle, 0, Z_SEEK_END);
         let size = _z_fs_ftell(self.handle);
         _z_fs_fseek(self.handle, 0, Z_SEEK_SET);
-        
+
         let buffer: char* = _z_fs_malloc((usize)size + 1);
         if (buffer == NULL) {
             return Result<String>::Err("Out of memory");
         }
-        
+
         let read = _z_fs_fread(buffer, 1, size, self.handle);
         buffer[read] = 0;
-        
+
         let s = String::new(buffer);
         _z_fs_free(buffer);
-        
+
         let res = Result<String>::Ok(s);
         s.forget();
-        
+
         let ret = res;
         res.forget();
         return ret;
@@ -177,11 +103,11 @@ impl File {
         if (res.is_err()) {
             return Result<String>::Err(res.err);
         }
-        
+
         let f: File = res.unwrap();
         let s_res = f.read_to_string();
         f.close();
-        
+
         let ret = s_res;
         s_res.forget();
         return ret;
@@ -191,7 +117,7 @@ impl File {
         if (self.handle == NULL) {
             return Result<bool>::Err("File not open");
         }
-        
+
         let len = strlen(content);
         let written = _z_fs_fwrite(content, 1, len, self.handle);
         if (written != len) {
@@ -208,15 +134,15 @@ impl File {
         let size: uint64_t;
         let is_d: int;
         let is_f: int;
-        
+
         if (_z_fs_get_metadata(path, &size, &is_d, &is_f) != 0) {
             return Result<Metadata>::Err("Failed to get metadata");
         }
-        
-        return Result<Metadata>::Ok(Metadata { 
-            size: (U64)size, 
-            is_dir: is_d != 0, 
-            is_file: is_f != 0 
+
+        return Result<Metadata>::Ok(Metadata {
+            size: (U64)size,
+            is_dir: is_d != 0,
+            is_file: is_f != 0
         });
     }
 
@@ -246,40 +172,41 @@ impl File {
         if (dir == NULL) {
             return Result< Vec<DirEntry> >::Err("Failed to open directory");
         }
-        
+
         let entries = Vec<DirEntry>::new();
         let name_buf: char* = _z_fs_malloc(256);
-        
+
         if (name_buf == NULL) {
             _z_fs_closedir(dir);
             return Result< Vec<DirEntry> >::Err("Out of memory");
         }
-        
+
         let is_d: int = 0;
-        
+
         while (_z_fs_read_entry(dir, name_buf, 256, &is_d)) {
+            // (Win32 impl already skips "." and "..", but keeping this is fine)
             if (strcmp(name_buf, ".") == 0 || strcmp(name_buf, "..") == 0) {
                 continue;
             }
-            
+
             let s = String::new(name_buf);
             let ent = DirEntry {
                 name: s,
                 is_dir: is_d != 0
             };
-            
+
             // Transfer ownership: String -> DirEntry
             s.forget();
-            
+
             entries.push(ent);
-            
+
             // Transfer ownership: DirEntry -> Vec
             ent.name.forget();
         }
-        
+
         _z_fs_free(name_buf);
         _z_fs_closedir(dir);
-        
+
         let res = Result< Vec<DirEntry> >::Ok(entries);
         entries.forget();
         let ret = res;

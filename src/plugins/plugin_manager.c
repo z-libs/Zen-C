@@ -1,15 +1,48 @@
-
 #include "plugin_manager.h"
-#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(_WIN32)
+    #include <windows.h>
+
+    typedef HMODULE ZcPluginHandle;
+
+    static ZcPluginHandle zc_dlopen(const char *path) {
+        return LoadLibraryA(path);
+    }
+
+    static void *zc_dlsym(ZcPluginHandle handle, const char *symbol) {
+        return (void *)GetProcAddress(handle, symbol);
+    }
+
+    static void zc_dlclose(ZcPluginHandle handle) {
+        if (handle) FreeLibrary(handle);
+    }
+
+#else
+    #include <dlfcn.h>
+
+    typedef void *ZcPluginHandle;
+
+    static ZcPluginHandle zc_dlopen(const char *path) {
+        return dlopen(path, RTLD_LAZY);
+    }
+
+    static void *zc_dlsym(ZcPluginHandle handle, const char *symbol) {
+        return dlsym(handle, symbol);
+    }
+
+    static void zc_dlclose(ZcPluginHandle handle) {
+        if (handle) dlclose(handle);
+    }
+#endif
 
 // Linked list node for plugins.
 typedef struct PluginNode
 {
     ZPlugin *plugin;
-    void *handle; // dlopen handle (NULL for built-ins).
+    ZcPluginHandle handle; // dynamic library handle (NULL for built-ins).
     struct PluginNode *next;
 } PluginNode;
 
@@ -32,26 +65,34 @@ void zptr_register_plugin(ZPlugin *plugin)
         return;
     }
 
-    PluginNode *node = malloc(sizeof(PluginNode));
+    PluginNode *node = (PluginNode *)malloc(sizeof(PluginNode));
+    if (!node) return;
+
     node->plugin = plugin;
-    node->handle = NULL;
+    node->handle = (ZcPluginHandle)0;
     node->next = head;
     head = node;
 }
 
 ZPlugin *zptr_load_plugin(const char *path)
 {
-    void *handle = dlopen(path, RTLD_LAZY);
+    ZcPluginHandle handle = zc_dlopen(path);
     if (!handle)
     {
+#if defined(_WIN32)
+        // Optional: nicer error
+        // fprintf(stderr, "Failed to load plugin '%s' (LoadLibraryA failed)\n", path);
+#else
+        // fprintf(stderr, "Failed to load plugin '%s': %s\n", path, dlerror());
+#endif
         return NULL;
     }
 
-    ZPluginInitFn init_fn = (ZPluginInitFn)dlsym(handle, "z_plugin_init");
+    ZPluginInitFn init_fn = (ZPluginInitFn)zc_dlsym(handle, "z_plugin_init");
     if (!init_fn)
     {
         fprintf(stderr, "Plugin '%s' missing 'z_plugin_init' symbol\n", path);
-        dlclose(handle);
+        zc_dlclose(handle);
         return NULL;
     }
 
@@ -59,12 +100,17 @@ ZPlugin *zptr_load_plugin(const char *path)
     if (!plugin)
     {
         fprintf(stderr, "Plugin '%s' init returned NULL\n", path);
-        dlclose(handle);
+        zc_dlclose(handle);
         return NULL;
     }
 
     // Register
-    PluginNode *node = malloc(sizeof(PluginNode));
+    PluginNode *node = (PluginNode *)malloc(sizeof(PluginNode));
+    if (!node) {
+        zc_dlclose(handle);
+        return NULL;
+    }
+
     node->plugin = plugin;
     node->handle = handle;
     node->next = head;
@@ -95,7 +141,7 @@ void zptr_plugin_mgr_cleanup(void)
         PluginNode *next = curr->next;
         if (curr->handle)
         {
-            dlclose(curr->handle);
+            zc_dlclose(curr->handle);
         }
         free(curr);
         curr = next;

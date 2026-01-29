@@ -23,3 +23,6 @@ out/
 docs/html/
 docs/latex/
 *.db
+/zig-out
+/.zig-cache
+!tests/modules/brainfuck.dll
