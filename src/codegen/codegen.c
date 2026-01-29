@@ -1,4 +1,3 @@
-
 #include "codegen.h"
 #include "zprep.h"
 #include "../constants.h"
@@ -59,9 +58,9 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
         if (node->var_ref.suggestion && !ctx->silent_warnings)
         {
             char msg[256];
-            sprintf(msg, "Undefined variable '%s'", node->var_ref.name);
             char help[256];
-            sprintf(help, "Did you mean '%s'?", node->var_ref.suggestion);
+            snprintf(msg, sizeof(msg), "Undefined variable '%s'", node->var_ref.name);
+            snprintf(help, sizeof(help), "Did you mean '%s'?", node->var_ref.suggestion);
             zwarn_at(node->token, "%s\n   = help: %s", msg, help);
         }
     }
@@ -192,7 +191,6 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         else if ((strcmp(node->binary.op, "==") == 0 || strcmp(node->binary.op, "!=") == 0))
         {
             char *t1 = infer_type(ctx, node->binary.left);
-
             int is_ptr = 0;
             if (t1)
             {
@@ -207,19 +205,16 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     }
                     int resolved = 0;
                     ASTNode *alias = global_user_structs;
-                    if (alias)
+                    while (alias)
                     {
-                        while (alias)
+                        if (alias->type == NODE_TYPE_ALIAS &&
+                            strcmp(check, alias->type_alias.alias) == 0)
                         {
-                            if (alias->type == NODE_TYPE_ALIAS &&
-                                strcmp(check, alias->type_alias.alias) == 0)
-                            {
-                                check = alias->type_alias.original_type;
-                                resolved = 1;
-                                break;
-                            }
-                            alias = alias->next;
+                            check = alias->type_alias.original_type;
+                            resolved = 1;
+                            break;
                         }
+                        alias = alias->next;
                     }
                     if (!resolved)
                     {
@@ -229,10 +224,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             }
 
             int is_basic = IS_BASIC_TYPE(t1);
-
             ASTNode *def = t1 ? find_struct_def(ctx, t1) : NULL;
-            if (t1 && def && (def->type == NODE_STRUCT || def->type == NODE_ENUM) && !is_basic &&
-                !is_ptr)
+            
+            if (t1 && def && (def->type == NODE_STRUCT || def->type == NODE_ENUM) && !is_basic && !is_ptr)
             {
                 char *base = t1;
                 if (strncmp(base, "struct ", 7) == 0)
@@ -285,8 +279,6 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             else if (t1 && (strcmp(t1, "string") == 0 || strcmp(t1, "char*") == 0 ||
                             strcmp(t1, "const char*") == 0))
             {
-                // Check if comparing to NULL - don't use strcmp for NULL comparisons
-                char *t2 = infer_type(ctx, node->binary.right);
                 int is_null_compare = 0;
                 if (node->binary.right->type == NODE_EXPR_VAR &&
                     strcmp(node->binary.right->var_ref.name, "NULL") == 0)
@@ -299,8 +291,15 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     is_null_compare = 1;
                 }
 
-                if (!is_null_compare && strcmp(t1, "string") == 0 && t2 &&
-                    strcmp(t2, "string") == 0)
+                if (is_null_compare)
+                {
+                    fprintf(out, "(");
+                    codegen_expression(ctx, node->binary.left, out);
+                    fprintf(out, " %s ", node->binary.op);
+                    codegen_expression(ctx, node->binary.right, out);
+                    fprintf(out, ")");
+                }
+                else
                 {
                     fprintf(out, "(strcmp(");
                     codegen_expression(ctx, node->binary.left, out);
@@ -315,19 +314,6 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         fprintf(out, ") != 0)");
                     }
                 }
-                else
-                {
-                    // Direct pointer comparison
-                    fprintf(out, "(");
-                    codegen_expression(ctx, node->binary.left, out);
-                    fprintf(out, " %s ", node->binary.op);
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, ")");
-                }
-                if (t2)
-                {
-                    free(t2);
-                }
             }
             else
             {
@@ -337,6 +323,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 codegen_expression(ctx, node->binary.right, out);
                 fprintf(out, ")");
             }
+            if (t1) free(t1);
         }
         else
         {
@@ -394,14 +381,13 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             }
 
             // Check for Static Enum Variant Call: Enum.Variant(...)
-
             if (target->type == NODE_EXPR_VAR)
             {
                 ASTNode *def = find_struct_def(ctx, target->var_ref.name);
                 if (def && def->type == NODE_ENUM)
                 {
                     char mangled[256];
-                    sprintf(mangled, "%s_%s", target->var_ref.name, method);
+                    snprintf(mangled, sizeof(mangled), "%s_%s", target->var_ref.name, method);
                     FuncSig *sig = find_func(ctx, mangled);
                     if (sig)
                     {
@@ -410,15 +396,13 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         int arg_idx = 0;
                         while (arg)
                         {
-                            if (arg_idx > 0 && arg)
+                            if (arg_idx > 0)
                             {
                                 fprintf(out, ", ");
                             }
 
-                            Type *param_t =
-                                (arg_idx < sig->total_args) ? sig->arg_types[arg_idx] : NULL;
+                            Type *param_t = (arg_idx < sig->total_args) ? sig->arg_types[arg_idx] : NULL;
 
-                            // Tuple Packing Logic
                             if (param_t && param_t->kind == TYPE_STRUCT &&
                                 strncmp(param_t->name, "Tuple_", 6) == 0 && sig->total_args == 1 &&
                                 node->call.arg_count > 1)
@@ -436,7 +420,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                     arg = arg->next;
                                 }
                                 fprintf(out, "}");
-                                break; // All args consumed
+                                break;
                             }
 
                             codegen_expression(ctx, arg, out);
@@ -456,7 +440,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 char *ptr = strchr(clean, '*');
                 if (ptr)
                 {
-                    *ptr = 0;
+                    *ptr = '\0';
                 }
 
                 char *base = clean;
@@ -518,33 +502,30 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
                     int need_cast = 0;
                     char mixin_func_name[128];
-                    sprintf(mixin_func_name, "%s__%s", call_base, method);
+                    snprintf(mixin_func_name, sizeof(mixin_func_name), "%s__%s", call_base, method);
 
                     char *resolved_method_suffix = NULL;
 
                     if (!find_func(ctx, mixin_func_name))
                     {
-                        // Try resolving as a trait method: Struct__Trait_Method
                         StructRef *ref = ctx->parsed_impls_list;
                         while (ref)
                         {
-                            if (ref->node && ref->node->type == NODE_IMPL_TRAIT)
+                            if (ref->node && ref->node->type == NODE_IMPL_TRAIT &&
+                                strcmp(ref->node->impl_trait.target_type, base) == 0)
                             {
-                                if (strcmp(ref->node->impl_trait.target_type, base) == 0)
+                                char trait_mangled[256];
+                                snprintf(trait_mangled, sizeof(trait_mangled), "%s__%s_%s", base,
+                                        ref->node->impl_trait.trait_name, method);
+                                if (find_func(ctx, trait_mangled))
                                 {
-                                    char trait_mangled[256];
-                                    sprintf(trait_mangled, "%s__%s_%s", base,
-                                            ref->node->impl_trait.trait_name, method);
-                                    if (find_func(ctx, trait_mangled))
-                                    {
-                                        char *suffix =
-                                            xmalloc(strlen(ref->node->impl_trait.trait_name) +
-                                                    strlen(method) + 2);
-                                        sprintf(suffix, "%s_%s", ref->node->impl_trait.trait_name,
-                                                method);
-                                        resolved_method_suffix = suffix;
-                                        break;
-                                    }
+                                    size_t suffix_len = strlen(ref->node->impl_trait.trait_name) + 
+                                                       strlen(method) + 2;
+                                    char *suffix = xmalloc(suffix_len);
+                                    snprintf(suffix, suffix_len, "%s_%s", 
+                                             ref->node->impl_trait.trait_name, method);
+                                    resolved_method_suffix = suffix;
+                                    break;
                                 }
                             }
                             ref = ref->next;
@@ -559,15 +540,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                 if (it->impl_node && it->impl_node->type == NODE_IMPL_TRAIT)
                                 {
                                     tname = it->impl_node->impl_trait.trait_name;
-                                }
-                                if (tname)
-                                {
                                     char trait_mangled[512];
-                                    sprintf(trait_mangled, "%s__%s_%s", base, tname, method);
+                                    snprintf(trait_mangled, sizeof(trait_mangled), 
+                                             "%s__%s_%s", base, tname, method);
                                     if (find_func(ctx, trait_mangled))
                                     {
-                                        char *suffix = xmalloc(strlen(tname) + strlen(method) + 2);
-                                        sprintf(suffix, "%s_%s", tname, method);
+                                        size_t suffix_len = strlen(tname) + strlen(method) + 2;
+                                        char *suffix = xmalloc(suffix_len);
+                                        snprintf(suffix, suffix_len, "%s_%s", tname, method);
                                         resolved_method_suffix = suffix;
                                         break;
                                     }
@@ -582,15 +562,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                         else
                         {
-                            // Method not found on primary struct, check mixins
                             ASTNode *def = find_struct_def(ctx, base);
                             if (def && def->type == NODE_STRUCT && def->strct.used_structs)
                             {
                                 for (int k = 0; k < def->strct.used_struct_count; k++)
                                 {
                                     char mixin_check[128];
-                                    sprintf(mixin_check, "%s__%s", def->strct.used_structs[k],
-                                            method);
+                                    snprintf(mixin_check, sizeof(mixin_check), "%s__%s", 
+                                             def->strct.used_structs[k], method);
                                     if (find_func(ctx, mixin_check))
                                     {
                                         call_base = def->strct.used_structs[k];
@@ -620,11 +599,19 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         arg = arg->next;
                     }
                     fprintf(out, ")");
+                    
+                    if (resolved_method_suffix)
+                    {
+                        free(resolved_method_suffix);
+                    }
                 }
                 free(clean);
+                free(type);
                 return;
             }
+            if (type) free(type);
         }
+        
         if (node->call.callee->type == NODE_EXPR_VAR)
         {
             ASTNode *def = find_struct_def(ctx, node->call.callee->var_ref.name);
@@ -680,26 +667,6 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (node->call.arg_names && node->call.callee->type == NODE_EXPR_VAR)
         {
-            char *fn_name = node->call.callee->var_ref.name;
-            FuncSig *sig = find_func(ctx, fn_name);
-
-            if (sig && sig->arg_types)
-            {
-                for (int p = 0; p < sig->total_args; p++)
-                {
-                    ASTNode *arg = node->call.args;
-
-                    for (int i = 0; i < node->call.arg_count && arg; i++, arg = arg->next)
-                    {
-                        if (node->call.arg_names[i] && p < node->call.arg_count)
-                        {
-
-                            // For now, emit in order provided...
-                        }
-                    }
-                }
-            }
-
             ASTNode *arg = node->call.args;
             int first = 1;
             while (arg)
@@ -746,11 +713,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                              strncmp(param_t->name, "Tuple_", 6) == 0 && sig->total_args == 1 &&
                              node->call.arg_count > 1)
                     {
-                        // Implicit Tuple Packing:
-                        // Function expects 1 Tuple argument, but call has multiple args -> Pack
-                        // them
                         fprintf(out, "(%s){", param_t->name);
-
                         ASTNode *curr = arg;
                         int first_field = 1;
                         while (curr)
@@ -765,8 +728,6 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                         fprintf(out, "}");
                         handled = 1;
-
-                        // Advance main loop iterator to end
                         arg = NULL;
                     }
                 }
@@ -775,7 +736,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 {
                     if (arg == NULL)
                     {
-                        break; // Tuple packed all args
+                        break;
                     }
                 }
                 else
@@ -800,16 +761,12 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_EXPR_MEMBER:
         if (strcmp(node->member.field, "len") == 0)
         {
-            if (node->member.target->type_info)
+            if (node->member.target->type_info &&
+                node->member.target->type_info->kind == TYPE_ARRAY &&
+                node->member.target->type_info->array_size > 0)
             {
-                if (node->member.target->type_info->kind == TYPE_ARRAY)
-                {
-                    if (node->member.target->type_info->array_size > 0)
-                    {
-                        fprintf(out, "%d", node->member.target->type_info->array_size);
-                        break;
-                    }
-                }
+                fprintf(out, "%d", node->member.target->type_info->array_size);
+                break;
             }
         }
 
@@ -831,26 +788,15 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else
         {
-            if (node->member.target->type == NODE_EXPR_CAST)
-            {
-                fprintf(out, "(");
-            }
             codegen_expression(ctx, node->member.target, out);
-            if (node->member.target->type == NODE_EXPR_CAST)
-            {
-                fprintf(out, ")");
-            }
-            // Verify actual type instead of trusting is_pointer_access flag
             char *lt = infer_type(ctx, node->member.target);
             int actually_ptr = 0;
             if (lt && (lt[strlen(lt) - 1] == '*' || strstr(lt, "*")))
             {
                 actually_ptr = 1;
             }
-            if (lt)
-            {
-                free(lt);
-            }
+            if (lt) free(lt);
+            
             char *field = node->member.field;
             if (field && field[0] >= '0' && field[0] <= '9')
             {
@@ -873,7 +819,8 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 is_slice_struct = 1;
             }
         }
-        if (node->index.array->resolved_type)
+        
+        if (!is_slice_struct && node->index.array->resolved_type)
         {
             if (strncmp(node->index.array->resolved_type, "Slice_", 6) == 0)
             {
@@ -888,10 +835,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             {
                 is_slice_struct = 1;
             }
-            if (inferred)
-            {
-                free(inferred);
-            }
+            if (inferred) free(inferred);
         }
 
         if (is_slice_struct)
@@ -990,7 +934,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             }
             else
             {
-                fprintf(out, "/* UNSAFE: Full Slice on unknown size */ 0; ");
+                fprintf(out, "0; ");
             }
         }
 
@@ -1006,6 +950,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             fprintf(out, "(Slice_%s){ .data = _arr + _start, .len = _len, .cap = _len }; })",
                     tname);
         }
+        if (tname && strcmp(tname, "unknown") != 0) free(tname);
         break;
     }
     case NODE_BLOCK:
@@ -1096,9 +1041,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         break;
     case NODE_PLUGIN:
     {
-        // Plugin registry - declare external plugins
         ZPlugin *found = zptr_find_plugin(node->plugin_stmt.plugin_name);
-
         if (found)
         {
             ZApi api = {.filename = g_current_filename ? g_current_filename : "input.zc",
@@ -1211,20 +1154,19 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     {
         Type *t = node->reflection.target_type;
         if (node->reflection.kind == 0)
-        { // @type_name
+        {
             char *s = codegen_type_to_string(t);
             fprintf(out, "\"%s\"", s);
             free(s);
         }
         else
-        { // @fields
+        {
             if (t->kind != TYPE_STRUCT || !t->name)
             {
                 fprintf(out, "((void*)0)");
                 break;
             }
             char *sname = t->name;
-            // Find definition
             ASTNode *def = find_struct_def(ctx, sname);
             if (!def)
             {
