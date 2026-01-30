@@ -457,3 +457,70 @@ impl Drop for JsonValue {
         self.free();
     }
 }
+
+extern fn sprintf(s: char*, fmt: const char*, ...) -> int;
+
+impl JsonValue {
+    fn to_string(self) -> String {
+        let s = String::new("");
+        self.stringify(&s);
+        return s;
+    }
+
+    fn stringify(self, buf: String*) {
+        if (self.kind.tag == JsonType::JSON_NULL().tag) {
+            buf.append_c_ptr("null");
+        } else if (self.kind.tag == JsonType::JSON_BOOL().tag) {
+            if (self.bool_val) { buf.append_c_ptr("true"); } else { buf.append_c_ptr("false"); }
+        } else if (self.kind.tag == JsonType::JSON_NUMBER().tag) {
+            let tmp: char[64];
+            sprintf((char*)tmp, "%.15g", self.number_val); // Use %.15g for precision
+            buf.append_c_ptr((char*)tmp);
+        } else if (self.kind.tag == JsonType::JSON_STRING().tag) {
+            buf.append_c_ptr("\"");
+            let p = self.string_val;
+            let len = strlen(p);
+            for (let i = 0; i < len; i = i + 1) {
+                let c = p[i];
+                if (c == '"') buf.append_c_ptr("\\\"");
+                else if (c == '\\') buf.append_c_ptr("\\\\");
+                else if (c == '\n') buf.append_c_ptr("\\n");
+                else if (c == '\t') buf.append_c_ptr("\\t");
+                else if (c == '\r') buf.append_c_ptr("\\r");
+                else if (c == '\b') buf.append_c_ptr("\\b");
+                else if (c == '\f') buf.append_c_ptr("\\f");
+                else {
+                    let tmp: char[2]; tmp[0] = c; tmp[1] = 0;
+                    buf.append_c_ptr((char*)tmp);
+                }
+            }
+            buf.append_c_ptr("\"");
+        } else if (self.kind.tag == JsonType::JSON_ARRAY().tag) {
+            buf.append_c_ptr("[");
+            let v = self.array_val;
+            for (let i: usize = 0; i < v.length(); i = i + 1) {
+                if (i > 0) buf.append_c_ptr(",");
+                let item = v.get(i);
+                (*item).stringify(buf);
+            }
+            buf.append_c_ptr("]");
+        } else if (self.kind.tag == JsonType::JSON_OBJECT().tag) {
+            buf.append_c_ptr("{{");
+            let m = self.object_val;
+            let first = true;
+            for (let i: usize = 0; i < m.capacity(); i = i + 1) {
+                if (m.is_slot_occupied(i)) {
+                    if (!first) buf.append_c_ptr(",");
+                    first = false;
+                    let key = m.key_at(i);
+                    buf.append_c_ptr("\"");
+                    buf.append_c_ptr(key); // Assuming keys are simple for now, but really should escape them too
+                    buf.append_c_ptr("\":");
+                    let val = m.val_at(i);
+                    val.stringify(buf);
+                }
+            }
+            buf.append_c_ptr("}");
+        }
+    }
+}

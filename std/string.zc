@@ -55,6 +55,28 @@ impl String {
         }
     }
 
+    fn append_c(self, s: char*) {
+        if (self.vec.len > 0) {
+            self.vec.len = self.vec.len - 1;
+        }
+        let len = strlen(s);
+        for (let i = 0; i < len; i = i + 1) {
+            self.vec.push(s[i]);
+        }
+        self.vec.push(0);
+    }
+
+    fn append_c_ptr(ptr: String*, s: char*) {
+        if (ptr.vec.len > 0) {
+            ptr.vec.len = ptr.vec.len - 1;
+        }
+        let len = strlen(s);
+        for (let i = 0; i < len; i = i + 1) {
+            ptr.vec.push(s[i]);
+        }
+        ptr.vec.push(0);
+    }
+
     fn add(self, other: String*) -> String {
         let new_s = String::from(self.c_str());
         new_s.append(other);

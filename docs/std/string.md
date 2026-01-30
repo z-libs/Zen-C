@@ -49,7 +49,11 @@ struct String {
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | **append** | `append(self, other: String*)` | Appends another string to this one. |
+| **append_c** | `append_c(self, s: char*)` | Appends a C string literal. Uses value receiver. |
+| **append_c_ptr** | `append_c_ptr(ptr: String*, s: char*)` | Appends a C string literal using pointer receiver for guaranteed mutation. |
 | **add** | `add(self, other: String*) -> String` | Concatenates this string and another into a new String. |
+
+**Note:** When passing `String*` to functions that need to mutate, use `append_c_ptr` instead of `append_c` for reliable mutation.
 
 ### Access & Query
 

@@ -1,0 +1,149 @@
+import "std/json.zc"
+import "std/io.zc"
+
+test "primitives" {
+    // Null
+    let v = JsonValue::null();
+    let s = v.to_string();
+    let expected = String::from("null");
+    if (!s.eq(&expected)) {
+        panic("Null serialization failed");
+    }
+    expected.free();
+    s.free();
+
+    // Bool True
+    v = JsonValue::bool(true);
+    s = v.to_string();
+    expected = String::from("true");
+    if (!s.eq(&expected)) {
+        panic("Bool true serialization failed");
+    }
+    expected.free();
+    s.free();
+
+    // Bool False
+    v = JsonValue::bool(false);
+    s = v.to_string();
+    expected = String::from("false");
+    if (!s.eq(&expected)) {
+        panic("Bool false serialization failed");
+    }
+    expected.free();
+    s.free();
+
+    // Number Int
+    v = JsonValue::number(123.0);
+    s = v.to_string();
+    expected = String::from("123");
+    if (!s.eq(&expected)) {
+         println "{s.c_str()}";
+         panic("Number 123 serialization failed");
+    }
+    expected.free();
+    s.free();
+
+    // Number Float
+    v = JsonValue::number(12.5);
+    s = v.to_string();
+    expected = String::from("12.5");
+    if (!s.eq(&expected)) {
+         panic("Number 12.5 serialization failed");
+    }
+    expected.free();
+    s.free();
+
+    // String Simple
+    v = JsonValue::string("hello");
+    s = v.to_string();
+    expected = String::from("\"hello\"");
+    if (!s.eq(&expected)) {
+         println "{s.c_str()}";
+         panic("String hello serialization failed");
+    }
+    expected.free();
+    s.free();
+
+    // String Escaped
+    v = JsonValue::string("hello \"world\"");
+    s = v.to_string();
+    expected = String::from("\"hello \\\"world\\\"\"");
+    if (!s.eq(&expected)) {
+         println "Got: {s.c_str()}";
+         panic("String escaped serialization failed");
+    }
+    expected.free();
+    s.free();
+}
+
+test "array" {
+    let v = JsonValue::array();
+    v.push(JsonValue::number(1.0));
+    v.push(JsonValue::bool(true));
+    v.push(JsonValue::string("a"));
+    
+    let s = v.to_string();
+    let expected = String::from("[1,true,\"a\"]");
+    if (!s.eq(&expected)) {
+         println "Got: {s.c_str()}";
+         panic("Array serialization failed");
+    }
+    expected.free();
+    s.free();
+}
+
+test "object" {
+    let v = JsonValue::object();
+    v.set("key", JsonValue::string("value"));
+    
+    let s = v.to_string();
+    // Round trip verification to avoid parser bug with literals
+    let parsed_res = JsonValue::parse(s.c_str());
+    if (parsed_res.is_err()) {
+        panic("Object round trip parse failed");
+    }
+    let parsed = parsed_res.unwrap();
+    if (!parsed.is_object()) panic("Round trip not object");
+    
+    let val_opt = (*parsed).get_string("key");
+    if (val_opt.is_none()) panic("Round trip missing 'key'");
+    
+    let val_str = val_opt.unwrap();
+    if (strcmp(val_str, "value") != 0) panic("Round trip wrong value");
+
+    // Cleanup
+    (*parsed).free();
+    free(parsed);
+    s.free();
+}
+
+test "nested" {
+    // {"arr":[1,2]}
+    let v = JsonValue::object();
+    let arr = JsonValue::array();
+    arr.push(JsonValue::number(1.0));
+    arr.push(JsonValue::number(2.0));
+    v.set("arr", arr);
+    
+    let s = v.to_string();
+    
+    // Round trip
+    let parsed_res = JsonValue::parse(s.c_str());
+    if (parsed_res.is_err()) {
+        panic("Round trip parse failed");
+    }
+    let parsed = parsed_res.unwrap();
+    if (!parsed.is_object()) panic("Round trip type mismatch");
+    
+    let arr_opt = (*parsed).get_array("arr");
+    if (arr_opt.is_none()) panic("Round trip missing arr");
+    
+    let arr_ptr = arr_opt.unwrap();
+    if (!(*arr_ptr).is_array()) panic("Inner not array");
+    if ((*arr_ptr).len() != 2) panic("Wrong array length");
+    
+    // Cleanup
+    (*parsed).free();
+    free(parsed);
+    s.free();
+}

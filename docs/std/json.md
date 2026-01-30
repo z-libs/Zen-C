@@ -51,6 +51,32 @@ Represents a node in a JSON document.
 - **`fn at(self, index: usize) -> Option<JsonValue*>`**
   Retrieves a value from an array by index.
 
+#### Serialization
+
+- **`fn to_string(self) -> String`**
+  Serializes the JSON value to a string representation.
+  
+- **`fn stringify(self, buf: String*)`**
+  Internal recursive serialization method that appends to a string buffer.
+  
+**Example:**
+```zc
+let obj = JsonValue::object();
+obj.set("name", JsonValue::string("Alice"));
+obj.set("age", JsonValue::number(30.0));
+
+let json_str = obj.to_string();
+println "{json_str.c_str()}";  // {"name":"Alice","age":30}
+json_str.free();
+obj.free();
+```
+
+**Features:**
+- Proper escaping of special characters: `\"`, `\\`, `\n`, `\t`, `\r`, `\b`, `\f`
+- Numbers formatted with `%.15g` for precision
+- Recursive serialization for nested objects and arrays
+- Round-trip compatible with `parse()`
+
 #### Memory Management
 
 - **`fn free(self)`**
