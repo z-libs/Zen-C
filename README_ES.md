@@ -13,7 +13,7 @@
 
 [![Estado de la Construcción](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![Licencia](https://img.shields.io/badge/license-MIT-blue)]()
-[![Versión](https://img.shields.io/badge/version-0.1.0-orange)]()
+[![Versión](https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange)]()
 [![Plataforma](https://img.shields.io/badge/platform-linux-lightgrey)]()
 
 *Escribe como un lenguaje de alto nivel, ejecuta como C.*

@@ -4,7 +4,7 @@ import "std/net.zc"
 def SIZE = 1024;
 
 fn main() {
-    raw { setbuf(stdout, NULL); }
+    setbuf(stdout, NULL);
     "Starting Echo Server on 127.0.0.1:8080...";
     
     let listener_res = TcpListener::bind("127.0.0.1", 8080);

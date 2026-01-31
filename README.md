@@ -13,7 +13,7 @@
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
-[![Version](https://img.shields.io/badge/version-0.1.0-orange)]()
+[![Version](https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange)]()
 [![Platform](https://img.shields.io/badge/platform-linux-lightgrey)]()
 
 *Write like a high-level language, run like C.*

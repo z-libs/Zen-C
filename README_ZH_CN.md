@@ -13,7 +13,7 @@
 
 [![构建状态](https://img.shields.io/badge/build-passing-brightgreen)]()
 [![许可证](https://img.shields.io/badge/license-MIT-blue)]()
-[![版本](https://img.shields.io/badge/version-0.1.0-orange)]()
+[![版本](https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange)]()
 [![平台](https://img.shields.io/badge/platform-linux-lightgrey)]()
 
 *像高级语言一样编写，像 C 一样运行。*
