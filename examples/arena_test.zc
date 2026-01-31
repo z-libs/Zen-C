@@ -1,0 +1,42 @@
+// Test Arena allocator
+
+import "std/core.zc"
+import "std/arena.zc"
+
+fn main() -> int {
+    printf("=== Testing Arena ===\n");
+
+    let arena = Arena::new(4096);
+    printf("Created arena with 4096 bytes\n");
+    printf("Bytes used: %zu\n", arena.bytes_used());
+
+    // Allocate integers
+    let arr: int* = arena.alloc_n<int>(10);
+    for (let i = 0; i < 10; i = i + 1) {
+        arr[i] = i * i;
+    }
+    printf("Allocated 10 integers\n");
+    printf("Bytes used: %zu\n", arena.bytes_used());
+
+    // Copy string
+    let s = arena.dup_str("Hello, Arena!");
+    printf("Copied string: %s\n", s);
+    printf("Bytes used: %zu\n", arena.bytes_used());
+
+    // Save/restore
+    let mark = arena.save();
+    printf("Savepoint at: %zu\n", mark);
+
+    let _: int* = arena.alloc_n<int>(100);
+    printf("After 100 more ints: %zu\n", arena.bytes_used());
+
+    arena.restore(mark);
+    printf("After restore: %zu\n", arena.bytes_used());
+
+    arena.reset();
+    printf("After reset: %zu\n", arena.bytes_used());
+
+    arena.free();
+    printf("Arena test passed!\n");
+    return 0;
+}

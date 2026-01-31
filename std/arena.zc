@@ -1,0 +1,81 @@
+// Arena Allocator - Fast bump allocator for bulk allocations
+// All memory is freed at once when arena.free() is called.
+
+import "./core.zc"
+
+struct Arena {
+    data: void*;
+    capacity: usize;
+    used: usize;
+}
+
+impl Arena {
+    fn new(cap: usize) -> Arena {
+        let ptr = malloc(cap);
+        return Arena { data: ptr, capacity: cap, used: 0 };
+    }
+
+    fn alloc_bytes(self, size: usize) -> void* {
+        let aligned = (self.used + 7) & ~7;
+        if (aligned + size > self.capacity) {
+            return 0;
+        }
+        let ptr: void* = (char*)self.data + aligned;
+        self.used = aligned + size;
+        return ptr;
+    }
+
+    fn alloc<T>(self) -> T* {
+        let ptr: T* = (T*)self.alloc_bytes(sizeof(T));
+        if (ptr != NULL) {
+            memset(ptr, 0, sizeof(T));
+        }
+        return ptr;
+    }
+
+    fn alloc_n<T>(self, count: usize) -> T* {
+        let size = sizeof(T) * count;
+        let ptr: T* = (T*)self.alloc_bytes(size);
+        if (ptr != NULL) {
+            memset(ptr, 0, size);
+        }
+        return ptr;
+    }
+
+    fn dup_str(self, src: char*) -> char* {
+        let len = strlen(src);
+        let ptr: char* = (char*)self.alloc_bytes(len + 1);
+        if (ptr != NULL) {
+            strcpy(ptr, src);
+        }
+        return ptr;
+    }
+
+    fn bytes_used(self) -> usize {
+        return self.used;
+    }
+
+    fn bytes_free(self) -> usize {
+        return self.capacity - self.used;
+    }
+
+    fn save(self) -> usize {
+        return self.used;
+    }
+
+    fn restore(self, mark: usize) {
+        if (mark <= self.used) {
+            self.used = mark;
+        }
+    }
+
+    fn reset(self) {
+        self.used = 0;
+    }
+
+    fn free(self) {
+        if (self.data != NULL) {
+            free(self.data);
+        }
+    }
+}
