@@ -1,0 +1,670 @@
+//> link: -lllama -lm -lpthread
+
+import "./core.zc"
+import "./result.zc"
+import "./string.zc"
+import "./vec.zc"
+import "./mem.zc"
+
+// Token type alias
+type LlamaToken = int32_t;
+
+// Model loading configuration
+struct LlamaModelParams {
+    n_gpu_layers: int;      // Number of layers to offload to GPU (0 = CPU only, -1 = all)
+    use_mmap: bool;         // Use memory-mapped file for model
+    use_mlock: bool;        // Lock model in memory (prevent swap)
+}
+
+impl LlamaModelParams {
+    fn defaults() -> LlamaModelParams {
+        return LlamaModelParams {
+            n_gpu_layers: 0,
+            use_mmap: true,
+            use_mlock: false
+        };
+    }
+
+    fn cpu() -> LlamaModelParams {
+        return LlamaModelParams::defaults();
+    }
+
+    fn gpu(n_layers: int) -> LlamaModelParams {
+        return LlamaModelParams {
+            n_gpu_layers: n_layers,
+            use_mmap: true,
+            use_mlock: false
+        };
+    }
+
+    fn gpu_all() -> LlamaModelParams {
+        return LlamaModelParams {
+            n_gpu_layers: -1,
+            use_mmap: true,
+            use_mlock: false
+        };
+    }
+}
+
+// Inference context configuration
+struct LlamaContextParams {
+    n_ctx: int;             // Context size (max tokens)
+    n_batch: int;           // Batch size for prompt processing
+    n_threads: int;         // Number of threads (0 = auto)
+    seed: uint32_t;         // Random seed
+}
+
+impl LlamaContextParams {
+    fn defaults() -> LlamaContextParams {
+        return LlamaContextParams {
+            n_ctx: 2048,
+            n_batch: 512,
+            n_threads: 0,
+            seed: 0
+        };
+    }
+
+    fn with_context_size(n_ctx: int) -> LlamaContextParams {
+        var params = LlamaContextParams::defaults();
+        params.n_ctx = n_ctx;
+        return params;
+    }
+}
+
+// Sampling configuration
+struct LlamaSamplerParams {
+    temperature: float;     // Sampling temperature (0 = greedy)
+    top_k: int;             // Top-K sampling (0 = disabled)
+    top_p: float;           // Top-P (nucleus) sampling
+    min_p: float;           // Min-P sampling
+    repeat_penalty: float;  // Repetition penalty
+    repeat_last_n: int;     // Look back N tokens for repeat penalty
+}
+
+impl LlamaSamplerParams {
+    fn defaults() -> LlamaSamplerParams {
+        return LlamaSamplerParams {
+            temperature: 0.8,
+            top_k: 40,
+            top_p: 0.95,
+            min_p: 0.05,
+            repeat_penalty: 1.1,
+            repeat_last_n: 64
+        };
+    }
+
+    fn greedy() -> LlamaSamplerParams {
+        return LlamaSamplerParams {
+            temperature: 0.0,
+            top_k: 1,
+            top_p: 1.0,
+            min_p: 0.0,
+            repeat_penalty: 1.0,
+            repeat_last_n: 0
+        };
+    }
+
+    fn creative() -> LlamaSamplerParams {
+        return LlamaSamplerParams {
+            temperature: 1.2,
+            top_k: 100,
+            top_p: 0.98,
+            min_p: 0.02,
+            repeat_penalty: 1.15,
+            repeat_last_n: 128
+        };
+    }
+
+    fn balanced() -> LlamaSamplerParams {
+        return LlamaSamplerParams::defaults();
+    }
+}
+
+// Model metadata
+struct LlamaModelInfo {
+    vocab_size: int;
+    context_length: int;
+    n_layers: int;
+    n_heads: int;
+    embedding_dim: int;
+}
+
+// Generation result
+struct LlamaGenerateResult {
+    text: String;
+    tokens_generated: int;
+    stopped_by_eos: bool;
+}
+
+impl LlamaGenerateResult {
+    fn free(self) {
+        self.text.free();
+    }
+}
+
+// Raw FFI block with C wrapper functions
+raw {
+    #include "llama.h"
+    #include <string.h>
+    #include <stdlib.h>
+
+    static int _z_llama_initialized = 0;
+
+    static void _z_llama_init(void) {
+        if (!_z_llama_initialized) {
+            llama_backend_init();
+            _z_llama_initialized = 1;
+        }
+    }
+
+    static void _z_llama_cleanup(void) {
+        if (_z_llama_initialized) {
+            llama_backend_free();
+            _z_llama_initialized = 0;
+        }
+    }
+
+    static void* _z_llama_load_model(const char* path, int n_gpu_layers, int use_mmap, int use_mlock) {
+        _z_llama_init();
+
+        struct llama_model_params params = llama_model_default_params();
+        params.n_gpu_layers = n_gpu_layers;
+        params.use_mmap = use_mmap;
+        params.use_mlock = use_mlock;
+
+        return llama_model_load_from_file(path, params);
+    }
+
+    static void _z_llama_free_model(void* model) {
+        if (model) {
+            llama_model_free((struct llama_model*)model);
+        }
+    }
+
+    static void* _z_llama_new_context(void* model, int n_ctx, int n_batch, int n_threads, uint32_t seed) {
+        if (!model) return NULL;
+
+        struct llama_context_params params = llama_context_default_params();
+        params.n_ctx = n_ctx;
+        params.n_batch = n_batch;
+        if (n_threads > 0) {
+            params.n_threads = n_threads;
+            params.n_threads_batch = n_threads;
+        }
+
+        return llama_init_from_model((struct llama_model*)model, params);
+    }
+
+    static void _z_llama_free_context(void* ctx) {
+        if (ctx) {
+            llama_free((struct llama_context*)ctx);
+        }
+    }
+
+    static int _z_llama_tokenize(void* model, const char* text, int32_t* tokens, int max_tokens, int add_bos, int special) {
+        if (!model || !text || !tokens) return -1;
+        const struct llama_vocab* vocab = llama_model_get_vocab((struct llama_model*)model);
+        return llama_tokenize(vocab, text, strlen(text), tokens, max_tokens, add_bos, special);
+    }
+
+    static int _z_llama_token_to_piece(void* model, int32_t token, char* buf, int buf_size, int special) {
+        if (!model || !buf) return -1;
+        const struct llama_vocab* vocab = llama_model_get_vocab((struct llama_model*)model);
+        return llama_token_to_piece(vocab, token, buf, buf_size, 0, special);
+    }
+
+    static int _z_llama_decode_batch(void* ctx, int32_t* tokens, int n_tokens, int n_past) {
+        if (!ctx || !tokens || n_tokens <= 0) return -1;
+
+        struct llama_batch batch = llama_batch_get_one(tokens, n_tokens);
+        return llama_decode((struct llama_context*)ctx, batch);
+    }
+
+    static void _z_llama_kv_cache_clear(void* ctx) {
+        if (ctx) {
+            llama_memory_t mem = llama_get_memory((struct llama_context*)ctx);
+            if (mem) {
+                llama_memory_clear(mem, true);
+            }
+        }
+    }
+
+    static int _z_llama_get_vocab_size(void* model) {
+        if (!model) return 0;
+        const struct llama_vocab* vocab = llama_model_get_vocab((struct llama_model*)model);
+        return llama_vocab_n_tokens(vocab);
+    }
+
+    static int _z_llama_get_ctx_len(void* model) {
+        if (!model) return 0;
+        return llama_model_n_ctx_train((struct llama_model*)model);
+    }
+
+    static int _z_llama_get_n_layers(void* model) {
+        if (!model) return 0;
+        return llama_model_n_layer((struct llama_model*)model);
+    }
+
+    static int _z_llama_get_n_heads(void* model) {
+        if (!model) return 0;
+        return llama_model_n_head((struct llama_model*)model);
+    }
+
+    static int _z_llama_get_n_embd(void* model) {
+        if (!model) return 0;
+        return llama_model_n_embd((struct llama_model*)model);
+    }
+
+    static int32_t _z_llama_token_bos(void* model) {
+        if (!model) return 0;
+        const struct llama_vocab* vocab = llama_model_get_vocab((struct llama_model*)model);
+        return llama_vocab_bos(vocab);
+    }
+
+    static int32_t _z_llama_token_eos(void* model) {
+        if (!model) return 0;
+        const struct llama_vocab* vocab = llama_model_get_vocab((struct llama_model*)model);
+        return llama_vocab_eos(vocab);
+    }
+
+    static int32_t _z_llama_token_nl(void* model) {
+        if (!model) return 0;
+        const struct llama_vocab* vocab = llama_model_get_vocab((struct llama_model*)model);
+        return llama_vocab_nl(vocab);
+    }
+
+    // Sampler chain functions
+    static void* _z_llama_sampler_chain_init(void) {
+        struct llama_sampler_chain_params params = llama_sampler_chain_default_params();
+        return llama_sampler_chain_init(params);
+    }
+
+    static void _z_llama_sampler_chain_add_greedy(void* chain) {
+        if (chain) {
+            llama_sampler_chain_add((struct llama_sampler*)chain, llama_sampler_init_greedy());
+        }
+    }
+
+    static void _z_llama_sampler_chain_add_dist(void* chain, uint32_t seed) {
+        if (chain) {
+            llama_sampler_chain_add((struct llama_sampler*)chain, llama_sampler_init_dist(seed));
+        }
+    }
+
+    static void _z_llama_sampler_chain_add_top_k(void* chain, int k) {
+        if (chain) {
+            llama_sampler_chain_add((struct llama_sampler*)chain, llama_sampler_init_top_k(k));
+        }
+    }
+
+    static void _z_llama_sampler_chain_add_top_p(void* chain, float p, size_t min_keep) {
+        if (chain) {
+            llama_sampler_chain_add((struct llama_sampler*)chain, llama_sampler_init_top_p(p, min_keep));
+        }
+    }
+
+    static void _z_llama_sampler_chain_add_min_p(void* chain, float p, size_t min_keep) {
+        if (chain) {
+            llama_sampler_chain_add((struct llama_sampler*)chain, llama_sampler_init_min_p(p, min_keep));
+        }
+    }
+
+    static void _z_llama_sampler_chain_add_temp(void* chain, float temp) {
+        if (chain) {
+            llama_sampler_chain_add((struct llama_sampler*)chain, llama_sampler_init_temp(temp));
+        }
+    }
+
+    static void _z_llama_sampler_chain_add_penalties(void* chain, int penalty_last_n, float repeat_penalty, float freq_penalty, float presence_penalty) {
+        if (chain) {
+            llama_sampler_chain_add((struct llama_sampler*)chain,
+                llama_sampler_init_penalties(penalty_last_n, repeat_penalty, freq_penalty, presence_penalty));
+        }
+    }
+
+    static int32_t _z_llama_sampler_sample(void* sampler, void* ctx, int idx) {
+        if (!sampler || !ctx) return -1;
+        return llama_sampler_sample((struct llama_sampler*)sampler, (struct llama_context*)ctx, idx);
+    }
+
+    static void _z_llama_sampler_accept(void* sampler, int32_t token) {
+        if (sampler) {
+            llama_sampler_accept((struct llama_sampler*)sampler, token);
+        }
+    }
+
+    static void _z_llama_sampler_reset(void* sampler) {
+        if (sampler) {
+            llama_sampler_reset((struct llama_sampler*)sampler);
+        }
+    }
+
+    static void _z_llama_sampler_free(void* sampler) {
+        if (sampler) {
+            llama_sampler_free((struct llama_sampler*)sampler);
+        }
+    }
+
+    static int _z_llama_get_n_ctx(void* ctx) {
+        if (!ctx) return 0;
+        return llama_n_ctx((struct llama_context*)ctx);
+    }
+}
+
+// Extern declarations for FFI functions
+extern fn _z_llama_init();
+extern fn _z_llama_cleanup();
+extern fn _z_llama_load_model(path: const char*, n_gpu_layers: int, use_mmap: int, use_mlock: int) -> void*;
+extern fn _z_llama_free_model(model: void*);
+extern fn _z_llama_new_context(model: void*, n_ctx: int, n_batch: int, n_threads: int, seed: uint32_t) -> void*;
+extern fn _z_llama_free_context(ctx: void*);
+extern fn _z_llama_tokenize(model: void*, text: const char*, tokens: int32_t*, max_tokens: int, add_bos: int, special: int) -> int;
+extern fn _z_llama_token_to_piece(model: void*, token: int32_t, buf: char*, buf_size: int, special: int) -> int;
+extern fn _z_llama_decode_batch(ctx: void*, tokens: int32_t*, n_tokens: int, n_past: int) -> int;
+extern fn _z_llama_kv_cache_clear(ctx: void*);
+extern fn _z_llama_get_vocab_size(model: void*) -> int;
+extern fn _z_llama_get_ctx_len(model: void*) -> int;
+extern fn _z_llama_get_n_layers(model: void*) -> int;
+extern fn _z_llama_get_n_heads(model: void*) -> int;
+extern fn _z_llama_get_n_embd(model: void*) -> int;
+extern fn _z_llama_token_bos(model: void*) -> int32_t;
+extern fn _z_llama_token_eos(model: void*) -> int32_t;
+extern fn _z_llama_token_nl(model: void*) -> int32_t;
+extern fn _z_llama_sampler_chain_init() -> void*;
+extern fn _z_llama_sampler_chain_add_greedy(chain: void*);
+extern fn _z_llama_sampler_chain_add_dist(chain: void*, seed: uint32_t);
+extern fn _z_llama_sampler_chain_add_top_k(chain: void*, k: int);
+extern fn _z_llama_sampler_chain_add_top_p(chain: void*, p: float, min_keep: usize);
+extern fn _z_llama_sampler_chain_add_min_p(chain: void*, p: float, min_keep: usize);
+extern fn _z_llama_sampler_chain_add_temp(chain: void*, temp: float);
+extern fn _z_llama_sampler_chain_add_penalties(chain: void*, penalty_last_n: int, repeat_penalty: float, freq_penalty: float, presence_penalty: float);
+extern fn _z_llama_sampler_sample(sampler: void*, ctx: void*, idx: int) -> int32_t;
+extern fn _z_llama_sampler_accept(sampler: void*, token: int32_t);
+extern fn _z_llama_sampler_reset(sampler: void*);
+extern fn _z_llama_sampler_free(sampler: void*);
+extern fn _z_llama_get_n_ctx(ctx: void*) -> int;
+
+// Model handle
+struct LlamaModel {
+    handle: void*;
+}
+
+impl LlamaModel {
+    fn load(path: char*, params: LlamaModelParams) -> Result<LlamaModel> {
+        var h = _z_llama_load_model(path, params.n_gpu_layers,
+                                     params.use_mmap ? 1 : 0,
+                                     params.use_mlock ? 1 : 0);
+        if (h == NULL) {
+            return Result<LlamaModel>::Err("Failed to load model");
+        }
+        return Result<LlamaModel>::Ok(LlamaModel { handle: h });
+    }
+
+    fn load_cpu(path: char*) -> Result<LlamaModel> {
+        return LlamaModel::load(path, LlamaModelParams::cpu());
+    }
+
+    fn load_gpu(path: char*, n_layers: int) -> Result<LlamaModel> {
+        return LlamaModel::load(path, LlamaModelParams::gpu(n_layers));
+    }
+
+    fn load_gpu_all(path: char*) -> Result<LlamaModel> {
+        return LlamaModel::load(path, LlamaModelParams::gpu_all());
+    }
+
+    fn free(self) {
+        if (self.handle) {
+            _z_llama_free_model(self.handle);
+            self.handle = NULL;
+        }
+    }
+
+    fn info(self) -> LlamaModelInfo {
+        return LlamaModelInfo {
+            vocab_size: _z_llama_get_vocab_size(self.handle),
+            context_length: _z_llama_get_ctx_len(self.handle),
+            n_layers: _z_llama_get_n_layers(self.handle),
+            n_heads: _z_llama_get_n_heads(self.handle),
+            embedding_dim: _z_llama_get_n_embd(self.handle)
+        };
+    }
+
+    fn tokenize(self, text: char*, add_bos: bool) -> Vec<LlamaToken> {
+        var max_tokens = (int)strlen(text) + 128;
+        var tokens = alloc_n<LlamaToken>((usize)max_tokens);
+
+        var n = _z_llama_tokenize(self.handle, text, tokens, max_tokens,
+                                   add_bos ? 1 : 0, 0);
+
+        var result = Vec<LlamaToken>::new();
+        for (var i = 0; i < n; i++) {
+            result.push(tokens[i]);
+        }
+
+        free(tokens);
+        return result;
+    }
+
+    fn token_to_string(self, token: LlamaToken) -> String {
+        var buf = alloc_n<char>(256);
+        var len = _z_llama_token_to_piece(self.handle, token, buf, 256, 0);
+        if (len < 0) {
+            buf[0] = 0;
+        } else {
+            buf[len] = 0;
+        }
+        var s = String::new(buf);
+        free(buf);
+        return s;
+    }
+
+    fn bos_token(self) -> LlamaToken {
+        return _z_llama_token_bos(self.handle);
+    }
+
+    fn eos_token(self) -> LlamaToken {
+        return _z_llama_token_eos(self.handle);
+    }
+
+    fn nl_token(self) -> LlamaToken {
+        return _z_llama_token_nl(self.handle);
+    }
+}
+
+// Context handle
+struct LlamaContext {
+    handle: void*;
+    model: LlamaModel*;
+    n_past: int;
+}
+
+impl LlamaContext {
+    fn new(model: LlamaModel*, params: LlamaContextParams) -> Result<LlamaContext> {
+        var h = _z_llama_new_context((*model).handle, params.n_ctx, params.n_batch,
+                                      params.n_threads, params.seed);
+        if (h == NULL) {
+            return Result<LlamaContext>::Err("Failed to create context");
+        }
+        return Result<LlamaContext>::Ok(LlamaContext {
+            handle: h,
+            model: model,
+            n_past: 0
+        });
+    }
+
+    fn from_model(model: LlamaModel*) -> Result<LlamaContext> {
+        return LlamaContext::new(model, LlamaContextParams::defaults());
+    }
+
+    fn free(self) {
+        if (self.handle) {
+            _z_llama_free_context(self.handle);
+            self.handle = NULL;
+        }
+    }
+
+    fn decode(self, tokens: Vec<LlamaToken>*) -> Result<bool> {
+        if ((*tokens).len == 0) {
+            return Result<bool>::Ok(true);
+        }
+
+        var ret = _z_llama_decode_batch(self.handle, (*tokens).data, (int)(*tokens).len, self.n_past);
+        if (ret != 0) {
+            return Result<bool>::Err("Decode failed");
+        }
+
+        self.n_past = self.n_past + (int)(*tokens).len;
+        return Result<bool>::Ok(true);
+    }
+
+    fn decode_token(self, token: LlamaToken) -> Result<bool> {
+        var ret = _z_llama_decode_batch(self.handle, &token, 1, self.n_past);
+        if (ret != 0) {
+            return Result<bool>::Err("Decode failed");
+        }
+        self.n_past = self.n_past + 1;
+        return Result<bool>::Ok(true);
+    }
+
+    fn clear_kv_cache(self) {
+        _z_llama_kv_cache_clear(self.handle);
+        self.n_past = 0;
+    }
+
+    fn get_n_ctx(self) -> int {
+        return _z_llama_get_n_ctx(self.handle);
+    }
+
+    fn n_tokens(self) -> int {
+        return self.n_past;
+    }
+}
+
+// Sampler chain
+struct LlamaSampler {
+    handle: void*;
+    model: LlamaModel*;
+}
+
+impl LlamaSampler {
+    fn new(params: LlamaSamplerParams, model: LlamaModel*, seed: uint32_t) -> LlamaSampler {
+        var chain = _z_llama_sampler_chain_init();
+
+        // Add penalties first
+        if (params.repeat_penalty != 1.0 && params.repeat_last_n > 0) {
+            _z_llama_sampler_chain_add_penalties(chain, params.repeat_last_n,
+                                                  params.repeat_penalty, 0.0, 0.0);
+        }
+
+        // Add sampling methods
+        if (params.temperature <= 0.0) {
+            // Greedy sampling
+            _z_llama_sampler_chain_add_greedy(chain);
+        } else {
+            // Temperature-based sampling
+            if (params.top_k > 0) {
+                _z_llama_sampler_chain_add_top_k(chain, params.top_k);
+            }
+            if (params.top_p < 1.0) {
+                _z_llama_sampler_chain_add_top_p(chain, params.top_p, 1);
+            }
+            if (params.min_p > 0.0) {
+                _z_llama_sampler_chain_add_min_p(chain, params.min_p, 1);
+            }
+            _z_llama_sampler_chain_add_temp(chain, params.temperature);
+            _z_llama_sampler_chain_add_dist(chain, seed);
+        }
+
+        return LlamaSampler { handle: chain, model: model };
+    }
+
+    fn greedy(model: LlamaModel*) -> LlamaSampler {
+        return LlamaSampler::new(LlamaSamplerParams::greedy(), model, 0);
+    }
+
+    fn defaults(model: LlamaModel*, seed: uint32_t) -> LlamaSampler {
+        return LlamaSampler::new(LlamaSamplerParams::defaults(), model, seed);
+    }
+
+    fn creative(model: LlamaModel*, seed: uint32_t) -> LlamaSampler {
+        return LlamaSampler::new(LlamaSamplerParams::creative(), model, seed);
+    }
+
+    fn sample(self, ctx: LlamaContext*) -> LlamaToken {
+        var token = _z_llama_sampler_sample(self.handle, (*ctx).handle, -1);
+        _z_llama_sampler_accept(self.handle, token);
+        return token;
+    }
+
+    fn reset(self) {
+        _z_llama_sampler_reset(self.handle);
+    }
+
+    fn free(self) {
+        if (self.handle) {
+            _z_llama_sampler_free(self.handle);
+            self.handle = NULL;
+        }
+    }
+}
+
+// High-level generation function
+fn llama_generate(ctx: LlamaContext*, sampler: LlamaSampler*,
+                  prompt: char*, max_tokens: int) -> Result<LlamaGenerateResult> {
+    // Tokenize prompt
+    var tokens = (*(*ctx).model).tokenize(prompt, true);
+
+    // Decode prompt
+    var decode_res = (*ctx).decode(&tokens);
+    if (decode_res.is_err()) {
+        tokens.free();
+        return Result<LlamaGenerateResult>::Err(decode_res.err);
+    }
+    tokens.free();
+
+    // Generate tokens
+    var output = String::new("");
+    var eos = (*(*ctx).model).eos_token();
+    var generated = 0;
+    var stopped_eos = false;
+
+    while (generated < max_tokens) {
+        var token = (*sampler).sample(ctx);
+
+        if (token == eos) {
+            stopped_eos = true;
+            break;
+        }
+
+        var piece = (*(*ctx).model).token_to_string(token);
+        output.append(&piece);
+        piece.free();
+
+        // Decode the new token
+        var tok_res = (*ctx).decode_token(token);
+        if (tok_res.is_err()) {
+            break;
+        }
+
+        generated++;
+    }
+
+    var result = LlamaGenerateResult {
+        text: output,
+        tokens_generated: generated,
+        stopped_by_eos: stopped_eos
+    };
+    output.forget();
+
+    return Result<LlamaGenerateResult>::Ok(result);
+}
+
+// Initialize llama backend
+fn llama_init() {
+    _z_llama_init();
+}
+
+// Cleanup llama backend
+fn llama_cleanup() {
+    _z_llama_cleanup();
+}
