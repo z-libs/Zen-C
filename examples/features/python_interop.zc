@@ -1,0 +1,69 @@
+
+import "std/python.zc"
+
+fn main() {
+    // Initialize Python
+    Py::init();
+    println "Python interpreter initialized.\n";
+
+    // --- Inline Python code ---
+    raw python {
+        import math
+        print(f"  math.sqrt(144) = {math.sqrt(144)}")
+        print(f"  math.pi        = {math.pi}")
+    }
+
+    // --- JSON from inline Python ---
+    raw python {
+        import json
+        data = {"name": "Zen-C", "version": 1, "interop": True}
+        print(f"  json.dumps = {json.dumps(data)}")
+    }
+
+    // --- Eval an expression back into Zen-C ---
+    let val = Py::eval("2 ** 10");
+    println "\nPy::eval('2 ** 10') = {val.as_int()}";
+
+    // --- Mix: run Python, then pull results into Zen-C ---
+    raw python {
+        import math
+        _result = math.factorial(10)
+    }
+    let fact = Py::eval("_result");
+    println "10! = {fact.as_int()}";
+
+    // --- Use PyObj API for structured calls ---
+    let math = Py::import("math");
+    let sqrt = math.attr("sqrt");
+    let result = sqrt.call1(PyObj::from_f64(256.0));
+    println "math.sqrt(256) = {result.as_f64()}";
+
+    // --- Build a dict with PyObj ---
+    let config = Py::dict();
+    config.set("host", PyObj::from_str("localhost"));
+    config.set("port", PyObj::from_int(8080));
+    let host = config.get("host").as_str();
+    let port = config.get("port").as_int();
+    println "\nconfig['host'] = {host}";
+    println "config['port'] = {port}";
+
+    // --- Lists ---
+    let items: PyObj[3];
+    items[0] = PyObj::from_int(10);
+    items[1] = PyObj::from_int(20);
+    items[2] = PyObj::from_int(30);
+    let lst = Py::list(&items[0], 3);
+    println "\nList: {lst.repr()}";
+    println "List[1] = {lst.item(1).as_int()}";
+
+    // --- Error handling ---
+    let bad = Py::import("nonexistent_module_xyz");
+    if (bad.is_none()) {
+        println "\nCorrectly caught: failed to import nonexistent module.";
+        Py::err_clear();
+    }
+
+    Py::finalize();
+    println "\nDone!";
+    return 0;
+}

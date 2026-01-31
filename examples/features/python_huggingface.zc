@@ -1,0 +1,97 @@
+
+import "std/python.zc"
+import "std/io.zc"
+
+// Zen-C: render a progress bar for confidence score
+fn print_bar(score: f64) {
+    let filled = (int)(score * 30.0);
+    print "  [";
+    for (let i = 0; i < 30; i = i + 1) {
+        if (i < filled) {
+            print "#";
+        } else {
+            print "-";
+        }
+    }
+    let pct = score * 100.0;
+    print "] ";
+    printf("%.1f%%%%\n", pct);
+}
+
+fn main() {
+    Py::init();
+
+    println "=================================";
+    println "  HuggingFace + Zen-C Demo";
+    println "  Sentiment Analysis (CPU)";
+    println "=================================\n";
+
+    // ---- Python: load model and classify ----
+    println "Loading model (first run downloads ~260MB)...";
+
+    raw python {
+        from transformers import pipeline
+        classifier = pipeline("sentiment-analysis", device=-1)
+        print("Model ready!\n")
+
+        texts = [
+            "Zen-C is an amazing programming language!",
+            "I hate waiting for slow builds.",
+            "The weather is okay today.",
+            "This interop between Python and Zen-C works great.",
+            "The crash destroyed all my unsaved work."
+        ]
+
+        results = classifier(texts)
+        _count = len(results)
+    }
+
+    // ---- Zen-C: process and display results ----
+    let count = Py::eval("_count").as_int();
+    println "Analyzed {count} sentences:\n";
+
+    let positive = 0;
+    let negative = 0;
+
+    for (let i = 0; i < (int)count; i = i + 1) {
+        // Set the index in Python, then eval the fields
+        let idx_cmd = format("_i = %d", i);
+        Py::run(idx_cmd);
+
+        let text  = Py::eval("texts[_i]");
+        let label = Py::eval("results[_i]['label']");
+        let score = Py::eval("results[_i]['score']");
+
+        let s = score.as_f64();
+        let l = label.as_str();
+
+        println "  \"{text.as_str()}\"";
+        println "  -> {l}";
+        print_bar(s);
+        println "";
+
+        // Zen-C tallies the stats
+        if (strcmp(l, "POSITIVE") == 0) {
+            positive = positive + 1;
+        } else {
+            negative = negative + 1;
+        }
+    }
+
+    // ---- Zen-C: summary ----
+    println "--- Summary ---";
+    println "  Positive: {positive}/{count}";
+    println "  Negative: {negative}/{count}";
+
+    if (positive > negative) {
+        println "  Overall mood: Positive!";
+    } else if (negative > positive) {
+        println "  Overall mood: Negative.";
+    } else {
+        println "  Overall mood: Mixed.";
+    }
+
+    Py::finalize();
+    println "\nDone!";
+    return 0;
+}

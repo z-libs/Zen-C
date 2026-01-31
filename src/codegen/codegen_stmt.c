@@ -1781,7 +1781,82 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         break;
     }
     case NODE_RAW_STMT:
-        fprintf(out, "    %s\n", node->raw_stmt.content);
+        if (node->raw_stmt.language && strcmp(node->raw_stmt.language, "python") == 0)
+        {
+            // Emit Python code as PyRun_SimpleString() with dedented content.
+            // Find minimum indentation (common leading whitespace) and strip it
+            // so Python doesn't get unexpected IndentationErrors.
+            const char *src = node->raw_stmt.content;
+
+            // Skip leading blank lines
+            while (*src == '\n')
+                src++;
+
+            // Find minimum indent (spaces/tabs) across non-empty lines
+            int min_indent = 9999;
+            const char *line = src;
+            while (*line)
+            {
+                if (*line != '\n')
+                {
+                    int indent = 0;
+                    const char *p = line;
+                    while (*p == ' ' || *p == '\t')
+                    {
+                        indent++;
+                        p++;
+                    }
+                    // Only count non-empty lines
+                    if (*p != '\n' && *p != '\0' && indent < min_indent)
+                        min_indent = indent;
+                }
+                // Advance to next line
+                while (*line && *line != '\n')
+                    line++;
+                if (*line == '\n')
+                    line++;
+            }
+            if (min_indent == 9999)
+                min_indent = 0;
+
+            // Emit the dedented Python code as a C string
+            fprintf(out, "    PyRun_SimpleString(\"");
+            const char *p = src;
+            while (*p)
+            {
+                // At start of each line, skip min_indent characters
+                int skipped = 0;
+                while (skipped < min_indent && (*p == ' ' || *p == '\t'))
+                {
+                    skipped++;
+                    p++;
+                }
+                // Emit rest of the line
+                while (*p && *p != '\n')
+                {
+                    if (*p == '"')
+                        fprintf(out, "\\\"");
+                    else if (*p == '\\')
+                        fprintf(out, "\\\\");
+                    else
+                        fputc(*p, out);
+                    p++;
+                }
+                if (*p == '\n')
+                {
+                    fprintf(out, "\\n");
+                    p++;
+                    // Skip trailing empty content
+                    if (*p)
+                        fprintf(out, "\"\n        \"");
+                }
+            }
+            fprintf(out, "\");\n");
+        }
+        else
+        {
+            fprintf(out, "    %s\n", node->raw_stmt.content);
+        }
         break;
     default:
         codegen_expression(ctx, node, out);

@@ -491,6 +491,7 @@ struct ASTNode
             char *content;
             char **used_symbols;
             int used_symbol_count;
+            char *language; ///< Optional language qualifier (e.g., "python")
         } raw_stmt;
 
         struct
