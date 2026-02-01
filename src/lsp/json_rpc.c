@@ -48,6 +48,62 @@ static void get_params(cJSON *root, char **uri, int *line, int *col)
     }
 }
 
+void send_lsp_message(const char *response)
+{
+	fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(response), response);
+	fflush(stdout);
+}
+
+void handle_initialize(cJSON *json, int id)
+{
+	cJSON *params = cJSON_GetObjectItem(json, "params");
+	char *root = NULL;
+	if (params)
+	{
+		cJSON *rp = cJSON_GetObjectItem(params, "rootPath");
+		if (rp && rp->valuestring)
+		{
+			root = strdup(rp->valuestring);
+		}
+		else
+		{
+			cJSON *ru = cJSON_GetObjectItem(params, "rootUri");
+			if (ru && ru->valuestring)
+			{
+				root = strdup(ru->valuestring);
+			}
+		}
+	}
+
+	if (root && strncmp(root, "file://", 7) == 0)
+	{
+		char *clean = strdup(root + 7);
+		free(root);
+		root = clean;
+	}
+
+	lsp_project_init(root ? root : ".");
+	if (root)
+	{
+		free(root);
+	}
+
+	char response[1024];
+
+	snprintf(response, 1024, 
+		"{\"jsonrpc\":\"2.0\",\"id\":%d,\"result\":{"
+		"\"serverInfo\":{\"name\":\"ZenC LS\",\"version\": \"1.0.0\"},"
+		"\"capabilities\":{\"textDocumentSync\":{\"openClose\":true,\"change\":1},"
+		"\"definitionProvider\":true,\"hoverProvider\":true,"
+		"\"referencesProvider\":true,\"documentSymbolProvider\":true,"
+		"\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\"]},"
+		"\"completionProvider\":{"
+		"\"triggerCharacters\":[\".\"]}}}}"
+		, id);
+
+	send_lsp_message(response);
+}
+
 void handle_request(const char *json_str)
 {
     cJSON *json = cJSON_Parse(json_str);
@@ -73,49 +129,7 @@ void handle_request(const char *json_str)
 
     if (strcmp(method, "initialize") == 0)
     {
-        cJSON *params = cJSON_GetObjectItem(json, "params");
-        char *root = NULL;
-        if (params)
-        {
-            cJSON *rp = cJSON_GetObjectItem(params, "rootPath");
-            if (rp && rp->valuestring)
-            {
-                root = strdup(rp->valuestring);
-            }
-            else
-            {
-                cJSON *ru = cJSON_GetObjectItem(params, "rootUri");
-                if (ru && ru->valuestring)
-                {
-                    root = strdup(ru->valuestring);
-                }
-            }
-        }
-
-        if (root && strncmp(root, "file://", 7) == 0)
-        {
-            char *clean = strdup(root + 7);
-            free(root);
-            root = clean;
-        }
-
-        lsp_project_init(root ? root : ".");
-        if (root)
-        {
-            free(root);
-        }
-
-        const char *response =
-            "{\"jsonrpc\":\"2.0\",\"id\":0,\"result\":{"
-            "\"serverInfo\":{\"name\":\"ZenC LS\",\"version\": \"1.0.0\"},"
-            "\"capabilities\":{\"textDocumentSync\":{\"openClose\":true,\"change\":1},"
-            "\"definitionProvider\":true,\"hoverProvider\":true,"
-            "\"referencesProvider\":true,\"documentSymbolProvider\":true,"
-            "\"signatureHelpProvider\":{\"triggerCharacters\":[\"(\"]},"
-            "\"completionProvider\":{"
-            "\"triggerCharacters\":[\".\"]}}}}";
-        fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(response), response);
-        fflush(stdout);
+        handle_initialize(json, id);
     }
     else if (strcmp(method, "textDocument/didOpen") == 0 ||
              strcmp(method, "textDocument/didChange") == 0)
