@@ -997,12 +997,13 @@ Zen C simplifies the complex GCC constraint syntax with named bindings.
 // Syntax: : out(variable) : in(variable) : clobber(reg)
 // Uses {variable} placeholder syntax for readability
 
-fn add(a: int, b: int) -> int {
+fn add_five(x: int) -> int {
     let result: int;
     asm {
-        "add {result}, {a}, {b}"
+        "mov {x}, {result}"
+        "add $5, {result}"
         : out(result)
-        : in(a), in(b)
+        : in(x)
         : clobber("cc")
     }
     return result;

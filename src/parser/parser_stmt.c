@@ -842,7 +842,7 @@ ASTNode *parse_asm(ParserContext *ctx, Lexer *l)
         }
     }
 
-    // Parse clobbers (: "eax", "memory")
+    // Parse clobbers (: "eax", "memory" OR : clobber("eax"), clobber("memory"))
     char **clobbers = NULL;
     int num_clobbers = 0;
 
@@ -865,17 +865,36 @@ ASTNode *parse_asm(ParserContext *ctx, Lexer *l)
                 continue;
             }
 
-            if (t.type == TOK_STRING)
+            // check for clobber("...")
+            if (t.type == TOK_IDENT && strncmp(t.start, "clobber", 7) == 0)
             {
-                lexer_next(l);
-                // Extract string content
-                char *clob = xmalloc(t.len);
-                strncpy(clob, t.start + 1, t.len - 2);
-                clob[t.len - 2] = 0;
-                clobbers[num_clobbers++] = clob;
+                lexer_next(l); // eat clobber
+                if (lexer_peek(l).type != TOK_LPAREN)
+                {
+                    zpanic_at(lexer_peek(l), "Expected ( after clobber");
+                }
+                lexer_next(l); // eat (
+
+                Token clob = lexer_next(l);
+                if (clob.type != TOK_STRING)
+                {
+                    zpanic_at(clob, "Expected string literal for clobber");
+                }
+
+                if (lexer_peek(l).type != TOK_RPAREN)
+                {
+                    zpanic_at(lexer_peek(l), "Expected ) after clobber string");
+                }
+                lexer_next(l); // eat )
+
+                char *c = xmalloc(clob.len);
+                strncpy(c, clob.start + 1, clob.len - 2);
+                c[clob.len - 2] = 0;
+                clobbers[num_clobbers++] = c;
             }
             else
             {
+                zpanic_at(t, "Expected 'clobber(\"...\")' in clobber list");
                 break;
             }
         }

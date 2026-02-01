@@ -996,12 +996,13 @@ Zen C 通过命名绑定简化了复杂的 GCC 约束语法。
 // 语法: : out(变量) : in(变量) : clobber(寄存器)
 // 使用 {变量} 占位符语法以提高可读性
 
-fn add(a: int, b: int) -> int {
+fn add_five(x: int) -> int {
     let result: int;
     asm {
-        "add {result}, {a}, {b}"
+        "mov {x}, {result}"
+        "add $5, {result}"
         : out(result)
-        : in(a), in(b)
+        : in(x)
         : clobber("cc")
     }
     return result;

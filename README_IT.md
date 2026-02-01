@@ -993,12 +993,13 @@ Zen C semplifica la sintassi complessa dei vincoli di GCC con dei binding nomina
 // Sintassi: : out(variable) : in(variable) : clobber(reg)
 // Usa una sintassi placeholder (`{variabile}`) per la leggibilità
 
-fn somma(a: int, b: int) -> int {
+fn aggiungi_cinque(x: int) -> int {
     let risultato: int;
     asm {
-        "add {risultato}, {a}, {b}"
+        "mov {x}, {risultato}"
+        "add $5, {risultato}"
         : out(risultato)
-        : in(a), in(b)
+        : in(x)
         : clobber("cc")
     }
     return risultato;

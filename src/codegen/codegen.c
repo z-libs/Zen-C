@@ -225,8 +225,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
             int is_basic = IS_BASIC_TYPE(t1);
             ASTNode *def = t1 ? find_struct_def(ctx, t1) : NULL;
-            
-            if (t1 && def && (def->type == NODE_STRUCT || def->type == NODE_ENUM) && !is_basic && !is_ptr)
+
+            if (t1 && def && (def->type == NODE_STRUCT || def->type == NODE_ENUM) && !is_basic &&
+                !is_ptr)
             {
                 char *base = t1;
                 if (strncmp(base, "struct ", 7) == 0)
@@ -335,7 +336,10 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 codegen_expression(ctx, node->binary.right, out);
                 fprintf(out, ")");
             }
-            if (t1) free(t1);
+            if (t1)
+            {
+                free(t1);
+            }
         }
         else
         {
@@ -413,7 +417,8 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                 fprintf(out, ", ");
                             }
 
-                            Type *param_t = (arg_idx < sig->total_args) ? sig->arg_types[arg_idx] : NULL;
+                            Type *param_t =
+                                (arg_idx < sig->total_args) ? sig->arg_types[arg_idx] : NULL;
 
                             if (param_t && param_t->kind == TYPE_STRUCT &&
                                 strncmp(param_t->name, "Tuple_", 6) == 0 && sig->total_args == 1 &&
@@ -528,13 +533,13 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                             {
                                 char trait_mangled[256];
                                 snprintf(trait_mangled, sizeof(trait_mangled), "%s__%s_%s", base,
-                                        ref->node->impl_trait.trait_name, method);
+                                         ref->node->impl_trait.trait_name, method);
                                 if (find_func(ctx, trait_mangled))
                                 {
-                                    size_t suffix_len = strlen(ref->node->impl_trait.trait_name) + 
-                                                       strlen(method) + 2;
+                                    size_t suffix_len = strlen(ref->node->impl_trait.trait_name) +
+                                                        strlen(method) + 2;
                                     char *suffix = xmalloc(suffix_len);
-                                    snprintf(suffix, suffix_len, "%s_%s", 
+                                    snprintf(suffix, suffix_len, "%s_%s",
                                              ref->node->impl_trait.trait_name, method);
                                     resolved_method_suffix = suffix;
                                     break;
@@ -553,8 +558,8 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                 {
                                     tname = it->impl_node->impl_trait.trait_name;
                                     char trait_mangled[512];
-                                    snprintf(trait_mangled, sizeof(trait_mangled), 
-                                             "%s__%s_%s", base, tname, method);
+                                    snprintf(trait_mangled, sizeof(trait_mangled), "%s__%s_%s",
+                                             base, tname, method);
                                     if (find_func(ctx, trait_mangled))
                                     {
                                         size_t suffix_len = strlen(tname) + strlen(method) + 2;
@@ -580,7 +585,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                 for (int k = 0; k < def->strct.used_struct_count; k++)
                                 {
                                     char mixin_check[128];
-                                    snprintf(mixin_check, sizeof(mixin_check), "%s__%s", 
+                                    snprintf(mixin_check, sizeof(mixin_check), "%s__%s",
                                              def->strct.used_structs[k], method);
                                     if (find_func(ctx, mixin_check))
                                     {
@@ -611,7 +616,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         arg = arg->next;
                     }
                     fprintf(out, ")");
-                    
+
                     if (resolved_method_suffix)
                     {
                         free(resolved_method_suffix);
@@ -621,9 +626,12 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 free(type);
                 return;
             }
-            if (type) free(type);
+            if (type)
+            {
+                free(type);
+            }
         }
-        
+
         if (node->call.callee->type == NODE_EXPR_VAR)
         {
             ASTNode *def = find_struct_def(ctx, node->call.callee->var_ref.name);
@@ -807,8 +815,11 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             {
                 actually_ptr = 1;
             }
-            if (lt) free(lt);
-            
+            if (lt)
+            {
+                free(lt);
+            }
+
             char *field = node->member.field;
             if (field && field[0] >= '0' && field[0] <= '9')
             {
@@ -831,7 +842,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 is_slice_struct = 1;
             }
         }
-        
+
         if (!is_slice_struct && node->index.array->resolved_type)
         {
             if (strncmp(node->index.array->resolved_type, "Slice_", 6) == 0)
@@ -847,7 +858,10 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             {
                 is_slice_struct = 1;
             }
-            if (inferred) free(inferred);
+            if (inferred)
+            {
+                free(inferred);
+            }
         }
 
         if (is_slice_struct)
@@ -962,7 +976,10 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             fprintf(out, "(Slice_%s){ .data = _arr + _start, .len = _len, .cap = _len }; })",
                     tname);
         }
-        if (tname && strcmp(tname, "unknown") != 0) free(tname);
+        if (tname && strcmp(tname, "unknown") != 0)
+        {
+            free(tname);
+        }
         break;
     }
     case NODE_BLOCK:

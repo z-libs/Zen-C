@@ -997,12 +997,13 @@ Zen C simplifica la compleja sintaxis de restricciones de GCC con vinculaciones 
 // Sintaxis: : out(variable) : in(variable) : clobber(reg)
 // Usa la sintaxis de marcador de posición {variable} para legibilidad
 
-fn sumar(a: int, b: int) -> int {
+fn sumar(x: int) -> int {
     let resultado: int;
     asm {
-        "add {resultado}, {a}, {b}"
+        "mov {x}, {resultado}"
+        "add $5, {resultado}"
         : out(resultado)
-        : in(a), in(b)
+        : in(x)
         : clobber("cc")
     }
     return resultado;

@@ -193,6 +193,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
     {
         return NULL;
     }
+
     if (node->resolved_type && strcmp(node->resolved_type, "unknown") != 0 &&
         strcmp(node->resolved_type, "void*") != 0)
     {
@@ -324,6 +325,65 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                     strncpy(extracted, start, len);
                     extracted[len] = 0;
                     return extracted;
+                }
+            }
+
+            // Find the struct/enum definition and look for "Ok" or "val"
+            char *search_name = inner_type;
+            if (strncmp(search_name, "struct ", 7) == 0)
+            {
+                search_name += 7;
+            }
+
+            ASTNode *def = find_struct_def_codegen(ctx, search_name);
+            if (!def)
+            {
+                // check enums list explicitly if not found in instantiated list
+                StructRef *er = ctx->parsed_enums_list;
+                while (er)
+                {
+                    if (er->node && er->node->type == NODE_ENUM &&
+                        strcmp(er->node->enm.name, search_name) == 0)
+                    {
+                        def = er->node;
+                        break;
+                    }
+                    er = er->next;
+                }
+            }
+
+            if (def)
+            {
+                if (def->type == NODE_ENUM)
+                {
+                    // Look for "Ok" variant
+                    ASTNode *var = def->enm.variants;
+                    while (var)
+                    {
+                        if (var->variant.name && strcmp(var->variant.name, "Ok") == 0)
+                        {
+                            if (var->variant.payload)
+                            {
+                                return codegen_type_to_string(var->variant.payload);
+                            }
+                            // Ok with no payload? Then it's void/u0.
+                            return "void";
+                        }
+                        var = var->next;
+                    }
+                }
+                else if (def->type == NODE_STRUCT)
+                {
+                    // Look for "val" field
+                    ASTNode *field = def->strct.fields;
+                    while (field)
+                    {
+                        if (field->field.name && strcmp(field->field.name, "val") == 0)
+                        {
+                            return xstrdup(field->field.type);
+                        }
+                        field = field->next;
+                    }
                 }
             }
         }
