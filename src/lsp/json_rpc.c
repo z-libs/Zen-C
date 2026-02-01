@@ -54,7 +54,7 @@ void send_lsp_message(const char *response)
 	fflush(stdout);
 }
 
-void handle_initialize(cJSON *json, int id)
+void handle_initialize(const cJSON *json, const int id)
 {
 	cJSON *params = cJSON_GetObjectItem(json, "params");
 	char *root = NULL;
@@ -100,6 +100,21 @@ void handle_initialize(cJSON *json, int id)
 		"\"completionProvider\":{"
 		"\"triggerCharacters\":[\".\"]}}}}"
 		, id);
+
+	send_lsp_message(response);
+}
+
+void handle_shutdown(const int id)
+{
+	fprintf(stderr, "zls: shutdown receive\n");
+
+	// TODO: exit clean
+	char response[1024];
+
+	snprintf(response, 1024,
+"{\"jsonrpc\":\"2.0\",\"id\":%d,\"result\":null}",
+    	id
+	);
 
 	send_lsp_message(response);
 }
@@ -226,6 +241,10 @@ void handle_request(const char *json_str)
             free(uri);
         }
     }
+    else if (strcmp(method, "shutdown") == 0)
+	{
+
+	}
 
     cJSON_Delete(json);
 }
