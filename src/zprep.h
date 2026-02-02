@@ -27,6 +27,14 @@
 #define PATH_MAX 260
 #endif
 #define realpath(N, R) _fullpath((R), (N), PATH_MAX) ///< Get absolute path.
+#include <io.h>
+#define access _access
+#ifndef R_OK
+#define	R_OK 0x04
+#endif
+#ifndef STDIN_FILENO
+#define STDIN_FILENO 0
+#endif
 #endif
 
 // **ZEN VERSION**
