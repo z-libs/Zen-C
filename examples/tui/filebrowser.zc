@@ -1,6 +1,14 @@
 // TUI File Browser Example - Two-pane file browser
+// Uses the standard library (std/fs.zc) for all file I/O
 // Showcases: List, Paragraph, Input, Block, Layout
 
+import "std/core.zc"
+import "std/vec.zc"
+import "std/string.zc"
+import "std/mem.zc"
+import "std/result.zc"
+import "std/option.zc"
+import "std/fs.zc"
 import "std/tui/style.zc"
 import "std/tui/text.zc"
 import "std/tui/terminal.zc"
@@ -16,56 +24,27 @@ import "std/tui/widgets/input.zc"
 include <stdlib.h>
 include <string.h>
 include <stdio.h>
-include <dirent.h>
-include <sys/stat.h>
-include <unistd.h>
 
-struct FBEntry {
-    name: char[256];
-    is_dir: int;
-}
-
-// Raw block for directory reading
+// Only raw block needed: getcwd is not in the std library yet
 raw {
-    int _fb_read_dir(const char* path, FBEntry* entries, int max_entries) {
-        DIR* d = opendir(path);
-        if (!d) return 0;
-
-        int count = 0;
-        struct dirent* ent;
-        while ((ent = readdir(d)) != NULL && count < max_entries) {
-            if (strcmp(ent->d_name, ".") == 0) continue;
-            strncpy(entries[count].name, ent->d_name, 255);
-            entries[count].name[255] = 0;
-            entries[count].is_dir = (ent->d_type == DT_DIR);
-            count++;
-        }
-        closedir(d);
-        return count;
-    }
-
-    int _fb_read_file(const char* path, char* buf, int max_len) {
-        FILE* f = fopen(path, "r");
-        if (!f) return 0;
-        int n = fread(buf, 1, max_len - 1, f);
-        buf[n] = 0;
-        fclose(f);
-        return n;
-    }
-
     void _fb_getcwd(char* buf, int size) {
         getcwd(buf, size);
     }
 }
-
-extern fn _fb_read_dir(path: const char*, entries: FBEntry*, max_entries: int) -> int;
-extern fn _fb_read_file(path: const char*, buf: char*, max_len: int) -> int;
 extern fn _fb_getcwd(buf: char*, size: int);
+
+// Entry stored in our flat array for rendering
+struct FBItem {
+    name: char[256];
+    is_dir: bool;
+}
+
+impl Copy for FBItem {}
 
 // Global state
 def MAX_ENTRIES = 256;
-let g_entries: FBEntry[256];
-let g_entry_count = 0;
+let g_items: FBItem[256];
+let g_item_count = 0;
 let g_list_state: ListState;
 let g_current_path: char[1024];
 let g_preview_buf: char[4096];
@@ -74,20 +53,49 @@ let g_input: Input;
 let g_input_active = false;
 
 fn load_directory(path: char*) {
-    g_entry_count = _fb_read_dir(path, g_entries, MAX_ENTRIES);
+    g_item_count = 0;
     g_list_state = ListState::new();
     g_preview_buf[0] = 0;
     g_preview_len = 0;
     strcpy(g_current_path, path);
+
+    // Always add ".." entry first
+    strcpy(g_items[0].name, "..");
+    g_items[0].is_dir = true;
+    g_item_count = 1;
+
+    // Use std library File::read_dir
+    let res = File::read_dir(path);
+    if (res.is_err()) return;
+
+    let entries = res.unwrap();
+    let i: usize = 0;
+    while (i < entries.len && g_item_count < MAX_ENTRIES) {
+        let ent = &entries.data[i];
+        let name_str = ent.name.c_str();
+        strncpy(g_items[g_item_count].name, name_str, 255);
+        g_items[g_item_count].name[255] = 0;
+        g_items[g_item_count].is_dir = ent.is_dir;
+        g_item_count = g_item_count + 1;
+        i = i + 1;
+    }
+
+    // Free the Vec<DirEntry>
+    i = 0;
+    while (i < entries.len) {
+        entries.data[i].name.free();
+        i = i + 1;
+    }
+    entries.free();
 }
 
 fn load_preview() {
-    if (g_entry_count == 0) return;
+    if (g_item_count == 0) return;
     let idx = g_list_state.selected;
-    if (idx < 0 || idx >= g_entry_count) return;
+    if (idx < 0 || idx >= g_item_count) return;
 
-    let entry = &g_entries[idx];
-    if (entry.is_dir) {
+    let item = &g_items[idx];
+    if (item.is_dir) {
         strcpy(g_preview_buf, "[Directory]");
         g_preview_len = (int)strlen(g_preview_buf);
         return;
@@ -95,24 +103,35 @@ fn load_preview() {
 
     // Build full path
     let fullpath: char[2048];
-    sprintf(fullpath, "%s/%s", g_current_path, entry.name);
+    sprintf(fullpath, "%s/%s", g_current_path, item.name);
 
-    g_preview_len = _fb_read_file(fullpath, g_preview_buf, 4096);
-    if (g_preview_len == 0) {
+    // Use std library File::read_all
+    let res = File::read_all(fullpath);
+    if (res.is_err()) {
         strcpy(g_preview_buf, "[Cannot read file]");
         g_preview_len = (int)strlen(g_preview_buf);
+        return;
     }
+
+    let content = res.unwrap();
+    let cstr = content.c_str();
+    let len = content.length();
+    if (len > 4095) len = 4095;
+    memcpy(g_preview_buf, cstr, len);
+    g_preview_buf[len] = 0;
+    g_preview_len = (int)len;
+    content.free();
 }
 
 fn enter_directory() {
-    if (g_entry_count == 0) return;
+    if (g_item_count == 0) return;
     let idx = g_list_state.selected;
-    if (idx < 0 || idx >= g_entry_count) return;
+    if (idx < 0 || idx >= g_item_count) return;
 
-    let entry = &g_entries[idx];
-    if (!entry.is_dir) return;
+    let item = &g_items[idx];
+    if (!item.is_dir) return;
 
-    if (strcmp(entry.name, "..") == 0) {
+    if (strcmp(item.name, "..") == 0) {
         // Go up one directory
         let len = (int)strlen(g_current_path);
         let i = len - 1;
@@ -128,9 +147,9 @@ fn enter_directory() {
     } else {
         let new_path: char[2048];
         if (g_current_path[strlen(g_current_path) - 1] == '/') {
-            sprintf(new_path, "%s%s", g_current_path, entry.name);
+            sprintf(new_path, "%s%s", g_current_path, item.name);
         } else {
-            sprintf(new_path, "%s/%s", g_current_path, entry.name);
+            sprintf(new_path, "%s/%s", g_current_path, item.name);
         }
         strcpy(g_current_path, new_path);
     }
@@ -166,25 +185,25 @@ fn draw(f: Frame*) {
     // File list
     let items: ListItem[256];
     let i = 0;
-    while (i < g_entry_count && i < MAX_ENTRIES) {
+    while (i < g_item_count && i < MAX_ENTRIES) {
         let style = Style::new();
-        if (g_entries[i].is_dir) {
+        if (g_items[i].is_dir) {
             style = Style::fg(Color::blue()).add_modifier(MOD_BOLD);
         }
-        items[i] = ListItem::styled(g_entries[i].name, style);
+        items[i] = ListItem::styled(g_items[i].name, style);
         i = i + 1;
     }
 
-    let list = List::new(items, g_entry_count)
+    let list = List::new(items, g_item_count)
         .set_block(Block::bordered().set_title("Files").set_border_type(BORDER_ROUNDED))
         .set_highlight_style(Style::fg(Color::black()).set_bg(Color::cyan()))
         .set_highlight_symbol("> ");
     list.render_stateful(h_rects[0], f.buffer, &g_list_state);
 
     // Preview
-    let preview_title: char[256];
-    if (g_entry_count > 0 && g_list_state.selected < g_entry_count) {
-        sprintf(preview_title, "Preview: %s", g_entries[g_list_state.selected].name);
+    let preview_title: char[300];
+    if (g_item_count > 0 && g_list_state.selected < g_item_count) {
+        sprintf(preview_title, "Preview: %.255s", g_items[g_list_state.selected].name);
     } else {
         strcpy(preview_title, "Preview");
     }
@@ -239,11 +258,11 @@ fn handle_event(evt: Event) -> int {
     }
 
     if (evt.key.code == KEY_DOWN) {
-        g_list_state.next(g_entry_count);
+        g_list_state.next(g_item_count);
         load_preview();
     }
     if (evt.key.code == KEY_UP) {
-        g_list_state.previous(g_entry_count);
+        g_list_state.previous(g_item_count);
         load_preview();
     }
     if (evt.key.code == KEY_ENTER) {
