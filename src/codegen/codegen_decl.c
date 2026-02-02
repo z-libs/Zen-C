@@ -57,6 +57,7 @@ void emit_preamble(ParserContext *ctx, FILE *out)
               out);
         fputs("#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n", out);
         
+        fputs("#include ZC_COMPAT_IMPLEMENTATION\n", out);
         fputs(compat_str, out);
         //fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
 
