@@ -383,7 +383,7 @@ int is_token(Token t, const char *s);
 /**
  * @brief Expects a token of a specific type.
  */
-Token expect(Lexer *l, TokenType type, const char *msg);
+Token expect(Lexer *l, ZTokenType type, const char *msg);
 
 /**
  * @brief Skips comments in the lexer.

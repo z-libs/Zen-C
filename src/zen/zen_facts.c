@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>
+//#include <unistd.h>
+#include "compat/compat.h"
 
 // We keep it low by default.
 #define ZEN_PROBABILITY 10

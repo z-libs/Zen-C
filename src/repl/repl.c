@@ -7,7 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
-#include <unistd.h>
+//#include <unistd.h>
+#include "compat/compat.h"
 #include <ctype.h>
 
 ASTNode *parse_program(ParserContext *ctx, Lexer *l);

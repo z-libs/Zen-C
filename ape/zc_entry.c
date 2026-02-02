@@ -2,8 +2,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <libc/cosmo.h>
+//#include <unistd.h>
+#include "compat/compat.h"
+//#include <libc/cosmo.h>
 
 int __real_main(int argc, char **argv);
 
