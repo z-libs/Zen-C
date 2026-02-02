@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../compat/embed.h"
 
 static void emit_freestanding_preamble(FILE *out)
 {
@@ -55,7 +56,9 @@ void emit_preamble(ParserContext *ctx, FILE *out)
               "<stddef.h>\n#include <string.h>\n",
               out);
         fputs("#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n", out);
-        fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
+        
+        fputs(compat_str, out);
+        //fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
 
         // C++ compatibility
         if (g_config.use_cpp)
