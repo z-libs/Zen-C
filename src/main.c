@@ -361,7 +361,7 @@ int main(int argc, char **argv)
 
     // Compile C
     char cmd[8192];
-    char *outfile = g_config.output_file ? g_config.output_file : "a.out";
+    char *outfile = g_config.output_file ? g_config.output_file : DEFAULT_OUTPUT_FILE;
 
     const char *thread_flag = g_parser_ctx->has_async ? "-lpthread" : "";
     const char *math_flag = "-lm";
@@ -376,11 +376,11 @@ int main(int argc, char **argv)
         }
     }
 
-    if (strcmp(g_config.cc, "cc") == 0)
+    if (z_is_windows() && (strcmp(g_config.cc, "cc") == 0 || strcmp(g_config.cc, "cl") == 0))
     {
-        snprintf(cmd, sizeof(cmd), "cl /nologo %s %s -Fe:%s out.c -I./src %s",
+        snprintf(cmd, sizeof(cmd), "cl -nologo %s %s -Fe:%s %s -I./src %s",
              g_config.gcc_flags, g_cflags,
-             outfile, g_link_flags);
+             outfile, temp_source_file, g_link_flags);
     } else {
         // If using cosmocc, it handles these usually, but keeping them is okay for Linux targets
 
