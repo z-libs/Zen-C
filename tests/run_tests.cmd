@@ -40,24 +40,25 @@ REM Find and run all .zc test files
 for /r "%TEST_DIR%" %%F in (*.zc) do (
     set test_file=%%F
     set test_name=%%~nxF
-    
-    setlocal enabledelayedexpansion
+
     set /p =Testing !test_name!... <nul
-    
-    REM Run the test and capture output
-    for /f "delims=" %%O in ('!ZC! run "!test_file!" %* 2^>^&1') do (
-        set output=%%O
-    )
-    
-    if !errorlevel! equ 0 (
+
+    REM Run the test, capture output to temporary file
+    set tempfile=%TEMP%\zc_test_output_!random!.txt
+    !ZC! run "!test_file!" %* > "!tempfile!" 2>&1
+    set err=!errorlevel!
+
+    if !err! equ 0 (
         echo PASS
-        set /a PASSED=!PASSED!+1
+        set /a PASSED+=1
     ) else (
         echo FAIL
-        set /a FAILED=!FAILED!+1
+        set /a FAILED+=1
         set FAILED_TESTS=!FAILED_TESTS! - !test_name!
+        echo Output:
+        type "!tempfile!"
     )
-    endlocal
+    if exist "!tempfile!" del "!tempfile!"
 )
 
 echo ----------------------------------------
