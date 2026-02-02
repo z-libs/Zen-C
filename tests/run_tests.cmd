@@ -41,24 +41,27 @@ for /r "%TEST_DIR%" %%F in (*.zc) do (
     set test_file=%%F
     set test_name=%%~nxF
 
-    set /p =Testing !test_name!... <nul
+    REM Skip files starting with underscore
+    if not "!test_name:~0,1!"=="_" (
+        set /p =Testing !test_name!... <nul
 
-    REM Run the test, capture output to temporary file
-    set tempfile=%TEMP%\zc_test_output_!random!.txt
-    !ZC! run "!test_file!" %* > "!tempfile!" 2>&1
-    set err=!errorlevel!
+        REM Run the test, capture output to temporary file
+        set tempfile=%TEMP%\zc_test_output_!random!.txt
+        !ZC! run "!test_file!" %* > "!tempfile!" 2>&1
+        set err=!errorlevel!
 
-    if !err! equ 0 (
-        echo PASS
-        set /a PASSED+=1
-    ) else (
-        echo FAIL
-        set /a FAILED+=1
-        set FAILED_TESTS=!FAILED_TESTS! - !test_name!
-        echo Output:
-        type "!tempfile!"
+        if !err! equ 0 (
+            echo PASS
+            set /a PASSED+=1
+        ) else (
+            echo FAIL
+            set /a FAILED+=1
+            set FAILED_TESTS=!FAILED_TESTS! - !test_name!
+            echo Output:
+            type "!tempfile!"
+        )
+        if exist "!tempfile!" del "!tempfile!"
     )
-    if exist "!tempfile!" del "!tempfile!"
 )
 
 echo ----------------------------------------
