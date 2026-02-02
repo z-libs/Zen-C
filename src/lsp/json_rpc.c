@@ -171,6 +171,7 @@ void handle_shutdown(cJSON *id_item)
     fprintf(stderr, "zls: shutdown received\n");
 
     // lsp_state.shutdown = 1;
+	// TODO: after shutdown every request except exit gonna send JSONRPC_INVALID_REQUEST
 
     cJSON *result = cJSON_CreateNull();
 
@@ -201,15 +202,17 @@ void handle_request(const char *json_str)
 
     int id = 0;
     cJSON *id_item = cJSON_GetObjectItem(json, "id");
-	if (!id_item || !(cJSON_IsNumber(id_item) || cJSON_IsString(id_item)))
+	if (id_item && !(cJSON_IsNumber(id_item) || cJSON_IsString(id_item)))
 	{
 		invalid_request(NULL);
 		cJSON_Delete(json);
 		return;
 	}
-
-	// FIXME: not always int but can be string too
-	id = id_item->valueint;
+	if (id_item)
+	{
+		// FIXME: not always int but can be string too
+		id = id_item->valueint;
+	}
 
     cJSON *method_item = cJSON_GetObjectItem(json, "method");
     if (!method_item || !cJSON_IsString(method_item))

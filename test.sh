@@ -125,7 +125,7 @@ response=$(send_lsp_message "$JSON")
 check_response "$response" "2" 0 0
 
 # 7️⃣ Exit notification
-JSON='{"jsonrpc":"2.0","id":99,"method":"exit"}'
+JSON='{"jsonrpc":"2.0","method":"exit"}'
 echo
 echo "=== Test exit notification ==="
 response=$(send_lsp_message "$JSON")
