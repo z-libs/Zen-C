@@ -21,14 +21,20 @@ jobs:
       run: make
     - name: make test
       run: make test
+
+  build-ape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    
     - name: APE dependencies
-      if: matrix.os == 'self-hosted'
       run: |
         sudo apt-get update
         sudo apt-get install -y zip wget
 
     - name: Setup cosmocc
-      if: matrix.os == 'self-hosted'
       run: |
         wget https://cosmo.zip/pub/cosmocc/cosmocc.zip
         mkdir -p $HOME/cosmocc
@@ -36,7 +42,6 @@ jobs:
         echo "$HOME/cosmocc/bin" >> $GITHUB_PATH
 
     - name: Build APE
-      if: matrix.os == 'self-hosted'
       run: |
         # Ensure PATH is updated and build with tag-aware versioning
         export PATH="$HOME/cosmocc/bin:$PATH"
@@ -44,21 +49,19 @@ jobs:
         make ape
 
     - name: Upload zc.com Artifact
-      if: matrix.os == 'self-hosted'
       uses: actions/upload-artifact@v4
       with:
         name: zc-portable
         path: out/bin/zc.com
 
     - name: Upload zc-boot.com Artifact
-      if: matrix.os == 'self-hosted'
       uses: actions/upload-artifact@v4
       with:
         name: zc-boot-portable
         path: out/bin/zc-boot.com
 
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'self-hosted'
+      if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v2
       with:
         files: |
