@@ -56,7 +56,7 @@ void lsp_on_error(void *data, Token t, const char *msg)
     }
 }
 
-void lsp_check_file(const char *uri, const char *json_src, int id)
+void lsp_check_file(const char *uri, const char *json_src)
 {
     if (!g_project)
     {
@@ -93,7 +93,6 @@ void lsp_check_file(const char *uri, const char *json_src, int id)
     // Construct JSON Response (publishDiagnostics)
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "jsonrpc", "2.0");
-    cJSON_AddNumberToObject(root, "id", id);
     cJSON_AddStringToObject(root, "method", "textDocument/publishDiagnostics");
 
     cJSON *params = cJSON_CreateObject();

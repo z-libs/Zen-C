@@ -43,6 +43,7 @@ SRCS = src/main.c \
        src/lexer/token.c \
        src/analysis/typecheck.c \
        src/lsp/json_rpc.c \
+       src/lsp/json_rpc_error.c \
        src/lsp/lsp_main.c \
        src/lsp/lsp_analysis.c \
        src/lsp/lsp_index.c \
@@ -192,6 +193,7 @@ test: $(TARGET) $(PLUGINS)
 	./tests/run_tests.sh
 	./tests/run_codegen_tests.sh
 	./tests/run_example_transpile.sh
+	./tests/run_lsp_tests.sh
 
 # Build with alternative compilers
 zig:
