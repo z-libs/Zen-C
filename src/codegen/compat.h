@@ -1,6 +1,6 @@
 
-#ifndef ZC_COMPAT_H
-#define ZC_COMPAT_H
+#ifndef ZC_CODEGEN_COMPAT_H
+#define ZC_CODEGEN_COMPAT_H
 
 #ifdef __cplusplus
 /* C++ mode */
