@@ -193,6 +193,7 @@ test: $(TARGET) $(PLUGINS)
 	./tests/run_tests.sh
 	./tests/run_codegen_tests.sh
 	./tests/run_example_transpile.sh
+	./tests/run_lsp_tests.sh
 
 # Build with alternative compilers
 zig:

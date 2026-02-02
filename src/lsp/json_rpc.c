@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-void lsp_check_file(const char *uri, const char *src, int id);
+void lsp_check_file(const char *uri, const char *src);
 void lsp_goto_definition(const char *uri, int line, int col, int id);
 void lsp_hover(const char *uri, int line, int col, int id);
 void lsp_completion(const char *uri, int line, int col, int id);
@@ -192,6 +192,61 @@ void handle_exit(void)
     exit(0);
 }
 
+void handle_did_open(const cJSON *json)
+{
+	cJSON *params = cJSON_GetObjectItem(json, "params");
+	if (!params)
+	{
+		return;
+	}
+	cJSON *doc = cJSON_GetObjectItem(params, "textDocument");
+	if (!doc)
+	{
+		return;
+	}
+	cJSON *uri = cJSON_GetObjectItem(doc, "uri");
+	if (!uri || !cJSON_IsString(uri))
+	{
+		return;
+	}
+	cJSON *text = cJSON_GetObjectItem(doc, "text");
+	if (!text || !cJSON_IsString(text))
+	{
+		return;
+	}
+	lsp_check_file(uri->valuestring, text->valuestring);
+}
+
+void handle_did_change(const cJSON *json)
+{
+	cJSON *params = cJSON_GetObjectItem(json, "params");
+	if (!params)
+	{
+		return;
+	}
+	cJSON *changes = cJSON_GetObjectItem(params, "contentChanges");
+	if (!changes)
+	{
+		return;
+	}
+	cJSON *doc = cJSON_GetObjectItem(params, "textDocument");
+	if (!doc)
+	{
+		return;
+	}
+	cJSON *uri = cJSON_GetObjectItem(doc, "uri");
+	if (!uri || !cJSON_IsString(uri))
+	{
+		return;
+	}
+	cJSON *text = cJSON_GetObjectItem(changes, "text");
+	if (!text || !cJSON_IsString(text))
+	{
+		return;
+	}
+	lsp_check_file(uri->valuestring, text->valuestring);
+}
+
 void handle_request(const char *json_str)
 {
     cJSON *json = cJSON_Parse(json_str);
@@ -227,35 +282,14 @@ void handle_request(const char *json_str)
     {
         handle_initialize(json, id_item);
     }
-    else if (strcmp(method, "textDocument/didOpen") == 0 ||
-             strcmp(method, "textDocument/didChange") == 0)
-    {
-        cJSON *params = cJSON_GetObjectItem(json, "params");
-        if (params)
-        {
-            cJSON *doc = cJSON_GetObjectItem(params, "textDocument");
-            if (doc)
-            {
-                cJSON *uri = cJSON_GetObjectItem(doc, "uri");
-                cJSON *text = cJSON_GetObjectItem(doc, "text");
-                // For didChange, text is inside contentChanges
-                if (!text && strcmp(method, "textDocument/didChange") == 0)
-                {
-                    cJSON *changes = cJSON_GetObjectItem(params, "contentChanges");
-                    if (changes && cJSON_GetArraySize(changes) > 0)
-                    {
-                        cJSON *change = cJSON_GetArrayItem(changes, 0);
-                        text = cJSON_GetObjectItem(change, "text");
-                    }
-                }
-
-                if (uri && uri->valuestring && text && text->valuestring)
-                {
-                    lsp_check_file(uri->valuestring, text->valuestring, id);
-                }
-            }
-        }
-    }
+    else if (strcmp(method, "textDocument/didOpen") == 0)
+	{
+		handle_did_open(json);
+	}
+    else if (strcmp(method, "textDocument/didChange") == 0)
+	{
+		handle_did_change(json);
+	}
     else if (strcmp(method, "textDocument/definition") == 0)
     {
         char *uri = NULL;
