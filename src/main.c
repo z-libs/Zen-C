@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     if (z_is_windows())
     {
         strcpy(g_config.cc, "gcc.exe");
-        strcat(g_link_flags, " -lws2_32");
+        strcat(g_config.gcc_flags, " -lws2_32");
     }
     else
     {

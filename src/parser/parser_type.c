@@ -1201,6 +1201,14 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
         target_type = parse_type_formal(ctx, l);
     }
 
+    char *embedpath = NULL;
+    if (find_path(fn, &embedpath))
+    {
+        snprintf(fn, sizeof(fn), "%s", embedpath);
+        free(embedpath);
+        embedpath = NULL;
+    }
+
     FILE *f = fopen(fn, "rb");
     if (!f)
     {

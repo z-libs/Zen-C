@@ -109,6 +109,8 @@ def main():
     if not zc_path:
         print(f"{RED}Error: 'zc' binary not found.{RESET}")
         sys.exit(1)
+    else:
+        zc_path = zc_path.absolute()
 
     test_dir = Path(args.dir)
     # Sorting ensures the submission order is deterministic

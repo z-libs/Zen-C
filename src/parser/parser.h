@@ -964,4 +964,6 @@ char *patch_self_args(const char *args, const char *struct_name);
  */
 ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l);
 
+bool find_path(const char *fn, char **out_path);
+
 #endif // PARSER_H

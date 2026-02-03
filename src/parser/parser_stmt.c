@@ -28,7 +28,7 @@ extern char *g_current_filename;
  * @param out_path Pointer to store the resolved path if found.
  * @return true if the file was found, false otherwise.
  */
-static bool find_path(const char *fn, char **out_path) {
+bool find_path(const char *fn, char **out_path) {
     // 1. Always check the Working Directory FIRST
     if (zc_access(fn, ZC_R_OK) == 0) {
         *out_path = zc_strdup(fn);
@@ -3513,10 +3513,10 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
 #else
         sprintf(bin, "%s.bin", filename);
 #endif
-    sprintf(cmd, "%s %s -o %s", g_config.cc, filename, bin);
+    sprintf(cmd, "%s %s -o %s %s", g_config.cc, filename, bin, g_config.gcc_flags);
     if (!g_config.verbose)
     {
-        strcat(cmd, " > /dev/null 2>&1");
+        //strcat(cmd, " > /dev/null 2>&1");
     }
     int res = system(cmd);
     if (res != 0)

@@ -50,6 +50,7 @@ extern "C" {
 #   include <semaphore.h>
 #   include <sys/stat.h>
 #   include <time.h>
+#   include <dirent.h>
 
 #   include <dlfcn.h>
 #   include <fcntl.h>
