@@ -49,6 +49,9 @@ def run_test(test_path: Path, zc_path: Path, extra_args: list):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
+        
+        shutil.copytree("std", tmp_path / "std")
+        shutil.copy("std.zc", tmp_path / "std.zc")
 
         # 1. Improved Copy Logic
         for item in orig_dir.iterdir():
@@ -56,8 +59,7 @@ def run_test(test_path: Path, zc_path: Path, extra_args: list):
             if item.is_file():
                 # ONLY copy .zc files and non-build artifacts
                 # This prevents Test B from trying to copy Test A's output
-                if item.suffix == ".zc" or item.suffix not in [".c", ".exe", ".o", ".obj"]:
-                    safe_copy(item, dest)
+                safe_copy(item, dest)
             elif item.is_dir():
                 # Avoid copying build folders if they exist inside tests
                 if item.name not in ["build", "bin", "obj"]:
