@@ -84,15 +84,15 @@ def run_test(test_path: Path, zc_path: Path, extra_args: list):
 
             # 3. SUCCESS - If you want the .c file for debugging, 
             # copy it back AFTER the test is done.
-            # final_dest = orig_dir / (test_path.name + ".c")
-            # shutil.copy2(tmp_output_c, final_dest)
+            final_dest = orig_dir / (test_path.name + ".c")
+            shutil.copy2(tmp_output_c, final_dest)
 
             return test_name, True, output
         except Exception as e:
             return test_name, False, f"Exception: {str(e)}"
 
 def find_zc_binary():
-    build_dirs = [Path("./build/Debug"), Path("./build"), Path(".")]
+    build_dirs = [Path("."), Path("./build"), Path("./build/Debug"), Path("./build/Release")]
     name = "zc.exe" if os.name == "nt" else "zc"
     for d in build_dirs:
         if (d / name).is_file(): return d / name
@@ -165,7 +165,7 @@ def main():
     # Summary Generation
     summary = (
         "\n" + "-"*50 + 
-        f"\nSummary:\n  Passed: {passed_count}\n  Failed: {len(failed_tests)}\n" + 
+        f"\nSummary {args.cc}:\n  Passed: {passed_count}\n  Failed: {len(failed_tests)}\n" + 
         "-"*50 + "\n"
     )
     
