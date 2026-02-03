@@ -1,5 +1,6 @@
 #include "lsp_project.h"
-#include <dirent.h>
+//#include <dirent.h>
+#include "compat/compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,37 +73,33 @@ static void scan_file(const char *path)
 
 static void scan_dir(const char *dir_path)
 {
-    DIR *d = opendir(dir_path);
+    ZCDir *d = zc_opendir(dir_path);
     if (!d)
     {
         return;
     }
 
-    struct dirent *dir;
-    while ((dir = readdir(d)) != NULL)
+    const ZCDirEnt *dir;
+    while ((dir = zc_readdir(d)) != NULL)
     {
-        if (dir->d_name[0] == '.')
+        if (dir->name[0] == '.')
         {
             continue;
         }
 
         char path[1024];
-        snprintf(path, sizeof(path), "%s/%s", dir_path, dir->d_name);
+        snprintf(path, sizeof(path), "%s/%s", dir_path, dir->name);
 
-        struct stat st;
-        if (stat(path, &st) == 0)
+        if (zc_is_dir(path))
         {
-            if (S_ISDIR(st.st_mode))
-            {
-                scan_dir(path);
-            }
-            else if (S_ISREG(st.st_mode))
-            {
-                scan_file(path);
-            }
+            scan_dir(path);
+        }
+        else
+        {
+            scan_file(path);
         }
     }
-    closedir(d);
+    zc_closedir(d);
 }
 
 ProjectFile *lsp_project_get_file(const char *uri)

@@ -42,7 +42,7 @@ void lsp_on_error(void *data, Token t, const char *msg)
     Diagnostic *d = calloc(1, sizeof(Diagnostic));
     d->line = t.line > 0 ? t.line - 1 : 0;
     d->col = t.col > 0 ? t.col - 1 : 0;
-    d->message = strdup(msg);
+    d->message = zc_strdup(msg);
     d->next = NULL;
 
     if (!list->head)
@@ -63,7 +63,7 @@ void lsp_check_file(const char *uri, const char *json_src, int id)
     {
         // Fallback or lazy init? current dir
         char cwd[1024];
-        if (getcwd(cwd, sizeof(cwd)))
+        if (zc_getcwd(cwd, sizeof(cwd)))
         {
             lsp_project_init(cwd);
         }

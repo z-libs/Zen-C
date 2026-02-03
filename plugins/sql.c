@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#define ZC_COMPAT_IMPLEMENTATION
+#include "compat/compat.h"
 typedef struct Col
 {
     char name[32];
@@ -115,7 +116,7 @@ static void skip_whitespace(const char **p)
 static int match_kw(const char **p, const char *kw)
 {
     size_t len = strlen(kw);
-    if (strncasecmp(*p, kw, len) == 0 && !isalnum((*p)[len]) && (*p)[len] != '_')
+    if (zc_strncasecmp(*p, kw, len) == 0 && !isalnum((*p)[len]) && (*p)[len] != '_')
     {
         *p += len;
         return 1;
@@ -184,8 +185,8 @@ static void parse_create_table(const char **p, const ZApi *api)
         char ctype[32] = "int";
         char store_type[32] = "int";
 
-        if (type_len > 0 && (strncasecmp(type_start, "TEXT", type_len) == 0 ||
-                             strncasecmp(type_start, "STRING", type_len) == 0))
+        if (type_len > 0 && (zc_strncasecmp(type_start, "TEXT", type_len) == 0 ||
+                             zc_strncasecmp(type_start, "STRING", type_len) == 0))
         {
             strcpy(ctype, "const char*");
             strcpy(store_type, "char*");

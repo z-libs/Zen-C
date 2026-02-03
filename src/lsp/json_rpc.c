@@ -28,7 +28,7 @@ static void get_params(cJSON *root, char **uri, int *line, int *col)
         cJSON *u = cJSON_GetObjectItem(doc, "uri");
         if (u && u->valuestring)
         {
-            *uri = strdup(u->valuestring);
+            *uri = zc_strdup(u->valuestring);
         }
     }
 
@@ -80,21 +80,21 @@ void handle_request(const char *json_str)
             cJSON *rp = cJSON_GetObjectItem(params, "rootPath");
             if (rp && rp->valuestring)
             {
-                root = strdup(rp->valuestring);
+                root = zc_strdup(rp->valuestring);
             }
             else
             {
                 cJSON *ru = cJSON_GetObjectItem(params, "rootUri");
                 if (ru && ru->valuestring)
                 {
-                    root = strdup(ru->valuestring);
+                    root = zc_strdup(ru->valuestring);
                 }
             }
         }
 
         if (root && strncmp(root, "file://", 7) == 0)
         {
-            char *clean = strdup(root + 7);
+            char *clean = zc_strdup(root + 7);
             free(root);
             root = clean;
         }

@@ -47,7 +47,7 @@ static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t
 {
     ZenSymbol *s = malloc(sizeof(ZenSymbol));
     memset(s, 0, sizeof(ZenSymbol));
-    s->name = strdup(name);
+    s->name = zc_strdup(name);
     s->type_info = type;
     s->decl_token = t;
     s->next = tc->current_scope->symbols;

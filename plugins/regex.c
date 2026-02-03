@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define ZC_COMPAT_IMPLEMENTATION
+#include "compat/compat.h"
 
 static void emit_match_logic(const char *pattern, FILE *out);
 
@@ -18,7 +20,7 @@ void regex_transpile(const char *input_body, const ZApi *api)
     {
         p++;
     }
-    char *pattern = strdup(p);
+    char *pattern = zc_strdup(p);
     int len = strlen(pattern);
     while (len > 0 && isspace(pattern[len - 1]))
     {

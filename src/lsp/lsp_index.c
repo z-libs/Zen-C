@@ -57,7 +57,7 @@ void lsp_index_add_def(LSPIndex *idx, Token t, const char *hover, ASTNode *node)
     r->end_col = t.col - 1 + t.len;
     if (hover)
     {
-        r->hover_text = strdup(hover);
+        r->hover_text = zc_strdup(hover);
     }
     r->node = node;
 

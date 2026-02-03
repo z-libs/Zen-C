@@ -358,7 +358,7 @@ void register_generic(ParserContext *ctx, char *name)
             return;
         }
     }
-    ctx->known_generics[ctx->known_generics_count++] = strdup(name);
+    ctx->known_generics[ctx->known_generics_count++] = zc_strdup(name);
 }
 
 int is_known_generic(ParserContext *ctx, char *name)
@@ -483,7 +483,7 @@ void register_builtins(ParserContext *ctx)
     add_symbol(ctx, "free", "void", void_t);
 
     // Register common libc functions to avoid warnings
-    add_symbol(ctx, "strdup", "string", type_new(TYPE_STRING));
+    add_symbol(ctx, "zc_strdup", "string", type_new(TYPE_STRING));
     add_symbol(ctx, "malloc", "void*", type_new_ptr(void_t));
     add_symbol(ctx, "realloc", "void*", type_new_ptr(void_t));
     add_symbol(ctx, "calloc", "void*", type_new_ptr(void_t));

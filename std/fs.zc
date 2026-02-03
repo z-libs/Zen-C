@@ -15,7 +15,7 @@ include <stdlib.h>
 include <stdio.h>
 
 // Direct externs for simple functions with const char* parameters
-extern fn access(pathname: const char*, mode: c_int) -> c_int;
+extern fn zc_access(pathname: const char*, mode: c_int) -> c_int;
 extern fn unlink(pathname: const char*) -> c_int;
 extern fn rmdir(pathname: const char*) -> c_int;
 extern fn malloc(size: usize) -> void*;
@@ -192,7 +192,7 @@ impl File {
 
     fn exists(path: char*) -> bool {
         let zero: c_int = 0;
-        return access(path, Z_F_OK) == zero;
+        return zc_access(path, Z_F_OK) == zero;
     }
 
     fn metadata(path: char*) -> Result<Metadata> {

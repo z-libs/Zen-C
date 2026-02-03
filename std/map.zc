@@ -131,7 +131,7 @@ impl Map<V> {
                 if (!self.occupied[idx]) self.len = self.len + 1;
                 
                 if (!self.occupied[idx] || self.deleted[idx]) {
-                    self.keys[idx] = strdup(key);
+                    self.keys[idx] = zc_strdup(key);
                 }
                 
                 self.vals[idx] = val;

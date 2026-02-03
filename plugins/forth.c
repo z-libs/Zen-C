@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define ZC_COMPAT_IMPLEMENTATION
+#include "compat/compat.h"
 
 static long stack[256];
 static int sp = 0;
@@ -57,7 +59,7 @@ static double fpeek()
 // String utilities
 static char *xstrdup(const char *s)
 {
-    return s ? strdup(s) : NULL;
+    return s ? zc_strdup(s) : NULL;
 }
 static void *xmalloc(size_t n)
 {

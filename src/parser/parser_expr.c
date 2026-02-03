@@ -1,4 +1,5 @@
 #include "../codegen/codegen.h"
+#include "compat/compat.h"
 
 int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 {
@@ -41,7 +42,6 @@ int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 #include "../zen/zen_facts.h"
 #include "parser.h"
 #include <ctype.h>
-#include <libgen.h>
 #include <stdio.h>
 
 #include <stdlib.h>

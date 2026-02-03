@@ -45,7 +45,7 @@ static void auto_import_std_mem(ParserContext *ctx)
         {
             *last_slash = 0;
             snprintf(resolved_path, sizeof(resolved_path), "%s/std/mem.zc", current_dir);
-            if (access(resolved_path, R_OK) == 0)
+            if (zc_access(resolved_path, ZC_R_OK) == 0)
             {
                 found = 1;
             }
@@ -58,7 +58,7 @@ static void auto_import_std_mem(ParserContext *ctx)
     {
         for (int i = 0; std_paths[i] && !found; i++)
         {
-            if (access(std_paths[i], R_OK) == 0)
+            if (zc_access(std_paths[i], ZC_R_OK) == 0)
             {
                 strncpy(resolved_path, std_paths[i], sizeof(resolved_path) - 1);
                 resolved_path[sizeof(resolved_path) - 1] = '\0';
@@ -73,7 +73,7 @@ static void auto_import_std_mem(ParserContext *ctx)
         for (int i = 0; system_paths[i] && !found; i++)
         {
             snprintf(resolved_path, sizeof(resolved_path), "%s/std/mem.zc", system_paths[i]);
-            if (access(resolved_path, R_OK) == 0)
+            if (zc_access(resolved_path, ZC_R_OK) == 0)
             {
                 found = 1;
             }
@@ -489,7 +489,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
         }
         else
         {
-            free(full_target_name); // It was strdup/ref. Wait, xstrdup needs free.
+            free(full_target_name); // It was zc_strdup/ref. Wait, xstrdup needs free.
         }
 
         ctx->current_impl_struct = NULL; // Restore context

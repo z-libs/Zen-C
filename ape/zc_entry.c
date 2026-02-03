@@ -195,7 +195,7 @@ static bool out_exists(const char *out)
     char buf[4096];
     if (snprintf(buf, sizeof(buf), "%s.dbg", out) < (int)sizeof(buf))
     {
-        if (access(buf, F_OK) != -1)
+        if (zc_access(buf, ZC_F_OK) != -1)
         {
             return true;
         }
@@ -211,7 +211,7 @@ static bool out_exists(const char *out)
             base[n - 4] = 0;
             if (snprintf(buf, sizeof(buf), "%s.aarch64.elf", base) < (int)sizeof(buf))
             {
-                if (access(buf, F_OK) != -1)
+                if (zc_access(buf, ZC_F_OK) != -1)
                 {
                     return true;
                 }

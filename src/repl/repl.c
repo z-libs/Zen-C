@@ -529,7 +529,7 @@ static char *repl_complete(const char *buf, int pos)
 
     if (match_count == 1)
     {
-        return strdup(match + len);
+        return zc_strdup(match + len);
     }
 
     return NULL;
@@ -604,13 +604,13 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
                             {
                                 free(saved_current_line);
                             }
-                            saved_current_line = strdup(buf);
+                            saved_current_line = zc_strdup(buf);
                         }
                         history_idx--;
                         if (history_idx >= 0 && history_idx < history_len)
                         {
                             free(buf);
-                            buf = strdup(history[history_idx]);
+                            buf = zc_strdup(history[history_idx]);
                             buf_size = strlen(buf) + 1;
                             len = strlen(buf);
                             pos = len;
@@ -627,16 +627,16 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
                         {
                             if (saved_current_line)
                             {
-                                buf = strdup(saved_current_line);
+                                buf = zc_strdup(saved_current_line);
                             }
                             else
                             {
-                                buf = strdup("");
+                                buf = zc_strdup("");
                             }
                         }
                         else
                         {
-                            buf = strdup(history[history_idx]);
+                            buf = zc_strdup(history[history_idx]);
                         }
                         buf_size = strlen(buf) + 1;
                         len = strlen(buf);
@@ -690,7 +690,7 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
                 free(saved_current_line);
             }
             disable_raw_mode();
-            return strdup("");
+            return zc_strdup("");
         }
         else if (c == 4)
         {
@@ -751,7 +751,7 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
             {
                 search_match_idx = found;
                 free(buf);
-                buf = strdup(history[found]);
+                buf = zc_strdup(history[found]);
                 buf_size = strlen(buf) + 1;
                 len = strlen(buf);
                 pos = len;
@@ -780,7 +780,7 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
                     {
                         search_match_idx = found;
                         free(buf);
-                        buf = strdup(history[found]);
+                        buf = zc_strdup(history[found]);
                         buf_size = strlen(buf) + 1;
                         len = strlen(buf);
                         pos = len;
@@ -796,7 +796,7 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
                 {
                     // Abort
                     free(buf);
-                    buf = strdup("");
+                    buf = zc_strdup("");
                     len = 0;
                     pos = 0;
                     printf("^C\r\n");
@@ -833,7 +833,7 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
                     {
                         search_match_idx = found;
                         free(buf);
-                        buf = strdup(history[found]);
+                        buf = zc_strdup(history[found]);
                         buf_size = strlen(buf) + 1;
                         len = strlen(buf);
                         pos = len;
@@ -877,7 +877,7 @@ static char *repl_readline(const char *prompt, char **history, int history_len, 
                 free(saved_current_line);
             }
             disable_raw_mode();
-            return strdup(":reset");
+            return zc_strdup(":reset");
         }
         else if (!iscntrl(c))
         {
@@ -1022,7 +1022,7 @@ void run_repl(const char *self_path)
                     history_cap *= 2;
                     history = realloc(history, history_cap * sizeof(char *));
                 }
-                history[history_len++] = strdup(buf);
+                history[history_len++] = zc_strdup(buf);
             }
             fclose(hf);
             if (history_len > 0)
@@ -1073,7 +1073,7 @@ void run_repl(const char *self_path)
                     history_cap *= 2;
                     history = realloc(history, history_cap * sizeof(char *));
                 }
-                history[history_len++] = strdup(p);
+                history[history_len++] = zc_strdup(p);
                 init_count++;
             }
             fclose(init_f);
@@ -1095,7 +1095,7 @@ void run_repl(const char *self_path)
     {
         char cwd[1024];
         char prompt_text[1280];
-        if (getcwd(cwd, sizeof(cwd)))
+        if (zc_getcwd(cwd, sizeof(cwd)))
         {
             char *base = strrchr(cwd, '/');
             if (base)
@@ -1417,7 +1417,7 @@ void run_repl(const char *self_path)
                                             history =
                                                 realloc(history, history_cap * sizeof(char *));
                                         }
-                                        history[history_len++] = strdup(buffer);
+                                        history[history_len++] = zc_strdup(buffer);
                                     }
                                     else
                                     {
@@ -1447,7 +1447,7 @@ void run_repl(const char *self_path)
                     {
                         if (watches_len < 16)
                         {
-                            watches[watches_len++] = strdup(expr);
+                            watches[watches_len++] = zc_strdup(expr);
                             printf("Watching: %s\n", expr);
                         }
                         else
@@ -1547,7 +1547,7 @@ void run_repl(const char *self_path)
                                 history_cap *= 2;
                                 history = realloc(history, history_cap * sizeof(char *));
                             }
-                            history[history_len++] = strdup(buf);
+                            history[history_len++] = zc_strdup(buf);
                             count++;
                         }
                         fclose(f);
@@ -1820,7 +1820,7 @@ void run_repl(const char *self_path)
                         char cmd[2048];
                         sprintf(cmd, "%s run -q %s 2>&1", self_path, tmp_path);
 
-                        FILE *p = popen(cmd, "r");
+                        FILE *p = zc_popen(cmd, "r");
                         if (p)
                         {
                             char buf[1024];
@@ -1875,7 +1875,7 @@ void run_repl(const char *self_path)
                                     }
                                 }
                             }
-                            pclose(p);
+                            zc_pclose(p);
                             if (!found)
                             {
                                 printf("Type: <unknown>\n");
@@ -2156,7 +2156,7 @@ void run_repl(const char *self_path)
                                    "Finds first occurrence of needle. Returns pointer or NULL."},
                         {"strchr", "char *strchr(const char *s, int c)\n  Finds first occurrence "
                                    "of char c. Returns pointer or NULL."},
-                        {"strdup", "char *strdup(const char *s)\n  Duplicates string. Caller must "
+                        {"zc_strdup", "char *zc_strdup(const char *s)\n  Duplicates string. Caller must "
                                    "free the result."},
                         {"printf", "int printf(const char *fmt, ...)\n  Prints formatted output to "
                                    "stdout. Returns chars written."},
@@ -2211,7 +2211,7 @@ void run_repl(const char *self_path)
                                 "man 3 %s 2>/dev/null | sed -n '/^SYNOPSIS/,/^[A-Z]/p' | "
                                 "head -10",
                                 sym);
-                        FILE *mp = popen(man_cmd, "r");
+                        FILE *mp = zc_popen(man_cmd, "r");
                         if (mp)
                         {
                             char buf[256];
@@ -2221,7 +2221,7 @@ void run_repl(const char *self_path)
                                 printf("%s", buf);
                                 lines++;
                             }
-                            int status = pclose(mp);
+                            int status = zc_pclose(mp);
                             if (0 == status && lines > 0)
                             {
                                 found = 1;
@@ -2315,7 +2315,7 @@ void run_repl(const char *self_path)
             history_cap *= 2;
             history = realloc(history, history_cap * sizeof(char *));
         }
-        history[history_len++] = strdup(input_buffer);
+        history[history_len++] = zc_strdup(input_buffer);
 
         free(input_buffer);
         input_buffer = NULL;
@@ -2404,7 +2404,7 @@ void run_repl(const char *self_path)
                     char p_cmd[2048];
                     sprintf(p_cmd, "%s run -q %s 2>&1", self_path, p_path);
 
-                    FILE *pp = popen(p_cmd, "r");
+                    FILE *pp = zc_popen(p_cmd, "r");
                     int is_void = 0;
                     if (pp)
                     {
@@ -2416,7 +2416,7 @@ void run_repl(const char *self_path)
                                 is_void = 1;
                             }
                         }
-                        pclose(pp);
+                        zc_pclose(pp);
                     }
 
                     if (!is_void)

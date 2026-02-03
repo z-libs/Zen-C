@@ -8,7 +8,7 @@ fn main() {
     let counts = Map<int>::new();
     defer counts.free();
 
-    let temp = strdup(text);
+    let temp = zc_strdup(text);
     defer free(temp);
     
     let token = strtok(temp, delim);

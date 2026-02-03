@@ -770,7 +770,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 char *libs = directive + 11;
                 char cmd[4096];
                 sprintf(cmd, "pkg-config --cflags %s", libs);
-                FILE *fp = popen(cmd, "r");
+                FILE *fp = zc_popen(cmd, "r");
                 if (fp)
                 {
                     char buf[1024];
@@ -787,11 +787,11 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                         }
                         strcat(g_cflags, buf);
                     }
-                    pclose(fp);
+                    zc_pclose(fp);
                 }
 
                 sprintf(cmd, "pkg-config --libs %s", libs);
-                fp = popen(cmd, "r");
+                fp = zc_popen(cmd, "r");
                 if (fp)
                 {
                     char buf[1024];
@@ -808,7 +808,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                         }
                         strcat(g_link_flags, buf);
                     }
-                    pclose(fp);
+                    zc_pclose(fp);
                 }
             }
             else

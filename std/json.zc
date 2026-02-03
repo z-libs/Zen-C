@@ -61,7 +61,7 @@ raw {
         }
         if (**p == '"') (*p)++;
         buf[len] = '\0';
-        return strdup(buf);
+        return zc_strdup(buf);
     }
     
     static struct JsonValue* _json_parse_value(const char** p);
@@ -189,7 +189,7 @@ impl JsonValue {
     }
     
     fn string(s: char*) -> JsonValue {
-        return JsonValue { kind: JsonType::JSON_STRING(), string_val: strdup(s), number_val: 0, bool_val: false, array_val: 0, object_val: 0 };
+        return JsonValue { kind: JsonType::JSON_STRING(), string_val: zc_strdup(s), number_val: 0, bool_val: false, array_val: 0, object_val: 0 };
     }
     
     fn array() -> JsonValue {

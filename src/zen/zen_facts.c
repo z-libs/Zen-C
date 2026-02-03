@@ -2,7 +2,6 @@
 #include "zen_facts.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 //#include <unistd.h>
 #include "compat/compat.h"
 
@@ -362,8 +361,8 @@ static int has_triggered = 0;
 
 void zen_init(void)
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    zc_timespec ts;
+    zc_clock_gettime(ZC_CLOCK_REALTIME, &ts);
     srand(ts.tv_nsec ^ zc_getpid());
 }
 
@@ -462,7 +461,7 @@ void zen_trigger_global(void)
     {
         return;
     }
-    if (!isatty(STDERR_FILENO))
+    if (!zc_isatty(ZC_STDERR_FILENO))
     {
         return;
     }

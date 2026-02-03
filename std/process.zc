@@ -12,14 +12,14 @@ include <stdlib.h>
 extern fn system(command: const char*) -> c_int;
 
 // Minimal raw block: only for opaque FILE* types
-// popen/pclose/fgets use FILE* which conflicts with void*
+// zc_popen/zc_pclose/fgets use FILE* which conflicts with void*
 raw {
     void *_z_popen(const char *command, const char *type) {
-        return (void *)popen(command, type);
+        return (void *)zc_popen(command, type);
     }
     
     int _z_pclose(void *stream) {
-        return pclose((FILE *)stream);
+        return zc_pclose((FILE *)stream);
     }
     
     char *_z_fgets(char *s, int size, void *stream) {
