@@ -21,69 +21,6 @@ extern char *g_current_filename;
 
 
 /**
- * @brief Searches for a file in the working directory and in paths specified
- *        by the ZC_LIBRARY_PATH environment variable.
- *
- * @param fn The filename to search for.
- * @param out_path Pointer to store the resolved path if found.
- * @return true if the file was found, false otherwise.
- */
-bool find_path(const char *fn, char **out_path) {
-    // 1. Always check the Working Directory FIRST
-    if (zc_access(fn, ZC_R_OK) == 0) {
-        *out_path = zc_strdup(fn);
-        return true;
-    }
-
-    // 2. Check the Environment Variable
-    const char *env_std_path = getenv("ZC_LIBRARY_PATHS");
-    if (!env_std_path) {
-        return false;
-    }
-
-    // Duplicate env string so we can mutate it with strtok
-    char *paths = zc_strdup(env_std_path);
-    if (!paths) return false;
-
-    // Normalize delimiters: treat both : and ; as separators on POSIX
-#ifdef ZC_ON_POSIX
-    for (char *p = paths; *p; ++p) {
-        if (*p == ':') *p = ';';
-    }
-#endif
-
-    bool found = false;
-    char *path = strtok(paths, ";");
-    
-    while (path != NULL) {
-        zc_normalize_path(path);
-
-        // Calculate required size to avoid 1024 buffer overflow
-        // path length + separator + fn length + null terminator
-        size_t needed = strlen(path) + 1 + strlen(fn) + 1;
-        char *test_path = (char *)malloc(needed);
-        
-        if (test_path) {
-            // Build the path safely
-            snprintf(test_path, needed, "%s%c%s", path, ZC_PATHSEP, fn);
-
-            if (zc_access(test_path, ZC_R_OK) == 0) {
-                *out_path = test_path; // Hand off ownership to caller
-                found = true;
-                break; 
-            }
-            free(test_path);
-        }
-        
-        path = strtok(NULL, ";");
-    }
-
-    free(paths); // Clean up our temporary copy of the env string
-    
-    return found;
-}
-
-/**
  * @brief Generates a unique temporary filename for comptime code.
  *
  * The filename is based on the process ID, a timestamp, and a unique counter
@@ -127,7 +64,7 @@ static void auto_import_std_slice(ParserContext *ctx)
 
     // Try to find and import std/slice.zc
     char* resolved_path = NULL;
-    if (find_path("std/slice.zc", &resolved_path))
+    if (zc_find_path("std/slice.zc", &resolved_path))
     {
         // Found in working directory or ZC_LIBRARY_PATH
         // Handled below
@@ -3205,7 +3142,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     {
         char *resolved = NULL;
 
-        if (find_path(fn, &resolved)) {
+        if (zc_find_path(fn, &resolved)) {
             free(fn); 
             fn = resolved; // Update your working pointer to the new path
         } else {

@@ -146,6 +146,7 @@ int    zc_pclose(FILE* stream);
 char** zc_split_paths(const char* paths); // Caller must free array and strings
 void   zc_free_split_paths(char** paths);
 void   zc_normalize_path(char *path);
+bool   zc_find_path(const char *fn, char **out_path);
 char*  zc_getcwd(char *buf, size_t size);
 
 bool zc_is_path_absolute(const char* path);
@@ -512,6 +513,70 @@ void zc_normalize_path(char *path) {
         *dst++ = '.'; // Empty relative path becomes "."
     }
     *dst = '\0';
+}
+
+
+/**
+ * @brief Searches for a file in the working directory and in paths specified
+ *        by the ZC_LIBRARY_PATH environment variable.
+ *
+ * @param fn The filename to search for.
+ * @param out_path Pointer to store the resolved path if found.
+ * @return true if the file was found, false otherwise.
+ */
+bool zc_find_path(const char *fn, char **out_path) {
+    // 1. Always check the Working Directory FIRST
+    if (zc_access(fn, ZC_R_OK) == 0) {
+        *out_path = zc_strdup(fn);
+        return true;
+    }
+
+    // 2. Check the Environment Variable
+    const char *env_std_path = zc_getenv("ZC_LIBRARY_PATHS");
+    if (!env_std_path) {
+        return false;
+    }
+
+    // Duplicate env string so we can mutate it with strtok
+    char *paths = zc_strdup(env_std_path);
+    if (!paths) return false;
+
+    // Normalize delimiters: treat both : and ; as separators on POSIX
+#ifdef ZC_ON_POSIX
+    for (char *p = paths; *p; ++p) {
+        if (*p == ':') *p = ';';
+    }
+#endif
+
+    bool found = false;
+    char *path = strtok(paths, ";");
+    
+    while (path != NULL) {
+        zc_normalize_path(path);
+
+        // Calculate required size to avoid 1024 buffer overflow
+        // path length + separator + fn length + null terminator
+        size_t needed = strlen(path) + 1 + strlen(fn) + 1;
+        char *test_path = (char *)malloc(needed);
+        
+        if (test_path) {
+            // Build the path safely
+            snprintf(test_path, needed, "%s%c%s", path, ZC_PATHSEP, fn);
+
+            if (zc_access(test_path, ZC_R_OK) == 0) {
+                *out_path = test_path; // Hand off ownership to caller
+                found = true;
+                break; 
+            }
+            free(test_path);
+        }
+        
+        path = strtok(NULL, ";");
+    }
+
+    free(paths); // Clean up our temporary copy of the env string
+    
+    return found;
 }
 
 
