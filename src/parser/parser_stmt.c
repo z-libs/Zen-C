@@ -3396,7 +3396,9 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     free(wrapped_code);
 
     char filename[64];
-    sprintf(filename, "_tmp_comptime_%d.c", rand());
+    char tmpname[L_tmpnam];
+    tmpnam(tmpname);
+    sprintf(filename, "_tmp_comptime_%s.c", tmpname);
     FILE *f = fopen(filename, "w");
     if (!f)
     {
