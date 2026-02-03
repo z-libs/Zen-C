@@ -60,7 +60,6 @@ int main(int argc, char **argv)
     char* _executable_path = zc_path_get_executable_path();
     char* _executable_dir = (char*)malloc(strlen(_executable_path) + 1);
     zc_path_get_parent(_executable_path, _executable_dir, strlen(_executable_path) + 1);
-    fprintf(stderr, "Zen C Compiler location %s\n", _executable_dir);
 #ifdef ZC_ON_WINDOWS
     const char _lib_path_postfix[] = "./;C:/Zen-C";//what should the defaults be?
     size_t newlen = strlen(_executable_dir) + strlen(_lib_path_postfix) + 2;
