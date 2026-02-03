@@ -364,6 +364,7 @@ typedef struct
 
     // GCC Flags accumulator.
     char gcc_flags[4096]; ///< Flags passed to the backend compiler.
+    char linker_flags[4096]; ///< Linker flags passed to the backend compiler.
 
     // C Compiler selection (default: gcc)
     char cc[64]; ///< Backend compiler command (e.g. "gcc", "clang").

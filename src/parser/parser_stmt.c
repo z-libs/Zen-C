@@ -3450,7 +3450,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
 #else
         sprintf(bin, "%s.bin", filename);
 #endif
-    sprintf(cmd, "%s %s -o %s %s", g_config.cc, filename, bin, g_config.gcc_flags);
+    sprintf(cmd, "%s %s -o %s %s", g_config.cc, filename, bin, g_config.linker_flags);
     if (!g_config.verbose)
     {
         //strcat(cmd, " > /dev/null 2>&1");

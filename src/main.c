@@ -86,15 +86,12 @@ int main(int argc, char **argv)
 
 
     memset(&g_config, 0, sizeof(g_config));
-    if (z_is_windows())
-    {
+#ifdef ZC_ON_WINDOWS
         strcpy(g_config.cc, "gcc.exe");
-        strcat(g_config.gcc_flags, " -lws2_32");
-    }
-    else
-    {
+        strcat(g_config.linker_flags, " -lws2_32");
+#else
         strcpy(g_config.cc, "gcc");
-    }
+#endif
 
     if (argc < 2)
     {
@@ -384,7 +381,7 @@ int main(int argc, char **argv)
 
     // Compile C
     char cmd[8192];
-    char *outfile = g_config.output_file ? g_config.output_file : "a.out";
+    char *outfile = g_config.output_file ? g_config.output_file : "a" ZC_BINARY_EXT;
 
     const char *thread_flag = g_parser_ctx->has_async ? "-lpthread" : "";
     const char *math_flag = "-lm";
@@ -401,10 +398,10 @@ int main(int argc, char **argv)
 
     // If using cosmocc, it handles these usually, but keeping them is okay for Linux targets
 
-    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s %s %s %s -I./src %s", g_config.cc,
+    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s %s %s %s -I./src %s %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "",
              g_config.quiet ? "-w" : "", outfile, temp_source_file, math_flag, thread_flag,
-             g_link_flags);
+             g_link_flags, g_config.linker_flags);
 
     if (g_config.verbose)
     {
