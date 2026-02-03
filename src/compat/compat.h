@@ -761,7 +761,6 @@ bool zc_path_find(const char *filename, char **out_path) {
     while (path != NULL) {
         char* joined = zc_path_join_alloc(path, filename);
         if (joined) {
-            fprintf(stderr, "Checking path: %s for %s AS %s\n", joined, filename,zc_path_resolve_alloc(joined));
             // Check existence FIRST before doing the heavy resolve
             if (zc_access(joined, ZC_R_OK) == 0) {
                 *out_path = zc_path_resolve_alloc(joined);
