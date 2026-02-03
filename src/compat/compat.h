@@ -545,59 +545,65 @@ struct ZCDir
 
 ZCDir *zc_opendir(const char *path)
 {
-#if defined(ZC_ON_WINDOWS)
+    if (!path) return NULL;
     ZCDir *d = (ZCDir *)zc_xcalloc(1, sizeof(ZCDir));
-    snprintf(d->pattern, sizeof(d->pattern), "%s\\*", path);
-    wchar_t wpattern[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, d->pattern, -1, wpattern, MAX_PATH);
+
+#if defined(ZC_ON_WINDOWS)
+    // 1. Build the pattern string (path + "\*")
+    size_t path_len = strlen(path);
+    char *pattern = (char*)malloc(path_len + 3);
+    if (!pattern) { free(d); return NULL; }
+    
+    sprintf(pattern, "%s\\*", path);
+
+    // 2. Convert pattern to Wide
+    wchar_t* wpattern = zc_internal_to_w(pattern);
+    free(pattern); // Don't need the UTF-8 pattern anymore
+    
+    if (!wpattern) { free(d); return NULL; }
+
+    // 3. Start the find operation
     d->h_find = FindFirstFileW(wpattern, &d->find_data);
-    d->first = 1;
+    free(wpattern); // Clean up the wide pattern immediately
+
     if (d->h_find == INVALID_HANDLE_VALUE)
     {
-        // Arena: no need to free
+        free(d);
         return NULL;
     }
+    d->first = 1;
     return d;
 #else
-    ZCDir *d = (ZCDir *)zc_xcalloc(1, sizeof(ZCDir));
     d->dir = opendir(path);
-    if (!d->dir)
-    {
-        // Arena: no need to free
-        return NULL;
-    }
+    if (!d->dir) { free(d); return NULL; }
     return d;
 #endif
 }
 
 const ZCDirEnt *zc_readdir(ZCDir *d)
 {
-    if (!d)
-    {
-        return NULL;
-    }
+    if (!d) return NULL;
+
 #if defined(ZC_ON_WINDOWS)
     WIN32_FIND_DATAW *fd = &d->find_data;
-    BOOL found;
-    if (d->first)
-    {
-        d->first = 0;
-        found = TRUE;
-    }
-    else
-    {
-        found = FindNextFileW(d->h_find, fd);
-    }
+    BOOL found = d->first ? (d->first = 0, TRUE) : FindNextFileW(d->h_find, fd);
+
     while (found)
     {
-        char name_utf8[256];
-        WideCharToMultiByte(CP_UTF8, 0, fd->cFileName, -1, name_utf8, sizeof(name_utf8), NULL, NULL);
+        // Convert Wide filename back to UTF-8
+        char* name_utf8 = zc_internal_from_w(fd->cFileName);
+        if (!name_utf8) return NULL;
+
+        // Skip "." and ".."
         if (strcmp(name_utf8, ".") != 0 && strcmp(name_utf8, "..") != 0)
         {
-            strncpy(d->ent.name, name_utf8, sizeof(d->ent.name) - 1);
-            d->ent.name[sizeof(d->ent.name) - 1] = '\0';
+            // Safely copy to our entry structure
+            snprintf(d->ent.name, sizeof(d->ent.name), "%s", name_utf8);
+            free(name_utf8);
             return &d->ent;
         }
+        
+        free(name_utf8);
         found = FindNextFileW(d->h_find, fd);
     }
     return NULL;
@@ -607,8 +613,7 @@ const ZCDirEnt *zc_readdir(ZCDir *d)
     {
         if (strcmp(dent->d_name, ".") != 0 && strcmp(dent->d_name, "..") != 0)
         {
-            strncpy(d->ent.name, dent->d_name, sizeof(d->ent.name) - 1);
-            d->ent.name[sizeof(d->ent.name) - 1] = '\0';
+            snprintf(d->ent.name, sizeof(d->ent.name), "%s", dent->d_name);
             return &d->ent;
         }
     }
@@ -618,23 +623,24 @@ const ZCDirEnt *zc_readdir(ZCDir *d)
 
 void zc_closedir(ZCDir *d)
 {
-    if (!d)
-    {
-        return;
-    }
+    if (!d) return;
+
 #if defined(ZC_ON_WINDOWS)
     if (d->h_find != INVALID_HANDLE_VALUE)
     {
+        // Tell Windows to stop the search and free the kernel handle
         FindClose(d->h_find);
+        d->h_find = INVALID_HANDLE_VALUE;
     }
-    // Arena: no need to free
 #else
     if (d->dir)
     {
+        // Tell POSIX to close the directory stream
         closedir(d->dir);
+        d->dir = NULL;
     }
-    // Arena: no need to free
 #endif
+    free(d);
 }
 
 
@@ -911,7 +917,16 @@ int zc_dup2(int oldfd, int newfd) {
 
 int zc_open(const char* pathname, int flags) {
 #ifdef ZC_ON_WINDOWS
-    return _open(pathname, flags);
+    wchar_t* w = zc_internal_to_w(pathname);
+    if (!w) return -1;
+
+    // Use _wopen to support UTF-8 paths translated to Wide
+    // We also force _O_BINARY if not specified, 
+    // because compilers should usually read files raw.
+    int res = _wopen(w, flags | _O_BINARY); 
+    
+    free(w); // Clean up immediately after the call
+    return res;
 #else
     return open(pathname, flags);
 #endif

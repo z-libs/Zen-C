@@ -131,6 +131,7 @@ static void auto_import_std_slice(ParserContext *ctx)
     {
         // Found in working directory or ZC_LIBRARY_PATH
         // Handled below
+        // note... resolved_path is currently never freed!!
     }
     else
     {

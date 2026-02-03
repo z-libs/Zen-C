@@ -68,7 +68,7 @@ set(SRCS
     src/lsp/lsp_analysis.c
     src/lsp/lsp_index.c
     src/zen/zen_facts.c
-    #src/repl/repl.c //temp remove because noop on windows compatability
+    #src/repl/repl.c #temp remove because noop on windows compatability
     src/plugins/plugin_manager.c
 )
 
