@@ -6,6 +6,8 @@
 #include "zprep.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <string.h>
 //#include <unistd.h>
 #define ZC_COMPAT_IMPLEMENTATION
@@ -53,6 +55,32 @@ void print_usage()
     printf("  -c              Compile only (produce .o)\n");
     printf("  --cpp           Use C++ mode.\n");
     printf("  --cuda          Use CUDA mode (requires nvcc).\n");
+}
+
+
+//maybe this belongs somewhere else?
+bool build_cmd(char *buf, size_t bufsz, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    
+    // vsnprintf returns the needed size (excluding null terminator)
+    int n = vsnprintf(buf, bufsz, fmt, args);
+    
+    va_end(args);
+
+    if (n < 0) {
+        // Encoding error
+        if (bufsz > 0) buf[0] = '\0';
+        return false;
+    }
+    if ((size_t)n >= bufsz) {
+        // Truncation occurred: n is the size needed
+        fprintf(stderr, "Error: Buffer too small. Needed %d, had %zu\n", n + 1, bufsz);
+        if (bufsz > 0) buf[0] = '\0';
+        return false;
+    }
+
+    return true;
 }
 
 int main(int argc, char **argv)
@@ -360,7 +388,7 @@ int main(int argc, char **argv)
     codegen_node(&ctx, root, out);
     fclose(out);
 
-    if (g_config.mode_transpile || g_config.mode_run)
+    if (g_config.mode_transpile)
     {
         if (g_config.output_file)
         {
@@ -387,38 +415,26 @@ int main(int argc, char **argv)
         return 0;
     }
 
-
-#define SAFE_SNPRINTF(buf, bufsz, fmt, ...)                                  \
-    do                                                                      \
-    {                                                                       \
-        int _n = snprintf(NULL, 0, fmt, __VA_ARGS__);                       \
-        if (_n < 0 || _n >= (int)(bufsz))                                   \
-        {                                                                   \
-            fprintf(stderr, "Error: SAFE_SNPRINTF: buffer '%s' too small "  \
-                            "(needed %d, have %zu)\n", #buf, _n + 1, (size_t)(bufsz)); \
-        }                                                                   \
-        else                                                                \
-        {                                                                   \
-            snprintf(buf, bufsz, fmt, __VA_ARGS__);                         \
-        }                                                                   \
-    } while (0)
-
-
-
     // Compile C
     char cmd[MAX_CMD_SIZE];
-    cmd[0] = '\0';
+
     char *outfile = g_config.output_file ? g_config.output_file : "a" ZC_BINARY_EXT;
+    char *freestanding_flag = g_config.is_freestanding ? "-ffreestanding" : "";
+    char *quiet_flag = g_config.quiet ? "-w" : "";
 
     // If using cosmocc, it handles these usually, but keeping them is okay for Linux targets
-    char * fstring = "%s %s %s %s %s -o %s %s -I./src %s %s";
+    char * fstring = "%s %s %s %s %s -o %s %s -I./src %s";
+    bool success = build_cmd(cmd, sizeof(cmd), fstring,
+                g_config.cc,
+                g_config.gcc_flags,
+                g_cflags,
+                freestanding_flag,
+                quiet_flag,
+                outfile,
+                temp_source_file,
+                g_config.linker_flags);
 
-    SAFE_SNPRINTF(cmd, sizeof(cmd), fstring,
-                                g_config.cc, g_config.gcc_flags, g_cflags,
-                                g_config.is_freestanding ? "-ffreestanding" : "",
-                                g_config.quiet ? "-w" : "", outfile, temp_source_file,
-                                g_config.linker_flags);
-    if (cmd[0] == '\0') {
+    if (!success) {
         fprintf(stderr, "Error: Command string construction failed.\n");
         return 1;
     }
