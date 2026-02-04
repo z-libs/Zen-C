@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-
 #include "../ast/ast.h"
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"

@@ -55,7 +55,8 @@ void emit_preamble(ParserContext *ctx, FILE *out)
               "<stddef.h>\n#include <string.h>\n",
               out);
         fputs("#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n", out);
-        fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
+        fputs("#ifndef _WIN32\n#include <unistd.h>\n#include <fcntl.h>\n#else\n#define STDOUT_FILENO 1\n#define O_WRONLY 00000001\n#endif\n", out); // POSIX functions
+        fputs("#ifdef __TINYC__\n#define __auto_type __typeof__\n#endif\n", out);
 
         // C++ compatibility
         if (g_config.use_cpp)
@@ -103,8 +104,8 @@ void emit_preamble(ParserContext *ctx, FILE *out)
         fputs("typedef size_t usize;\ntypedef char* string;\n", out);
         if (ctx->has_async)
         {
-            fputs("#include <pthread.h>\n", out);
-            fputs("typedef struct { pthread_t thread; void *result; } Async;\n", out);
+            fputs("#ifndef _WIN32\n#include <pthread.h>\n", out);
+            fputs("typedef struct { pthread_t thread; void *result; } Async;\n#endif\n", out);
         }
         fputs("typedef struct { void *func; void *ctx; } z_closure_T;\n", out);
         fputs("typedef void U0;\ntypedef int8_t I8;\ntypedef uint8_t U8;\ntypedef "

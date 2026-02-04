@@ -6,9 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#else
 #include <termios.h>
 #include <unistd.h>
 #include <ctype.h>
+#endif
 
 ASTNode *parse_program(ParserContext *ctx, Lexer *l);
 
@@ -73,21 +78,24 @@ static void repl_error_callback(void *data, Token t, const char *msg)
     (void)t;
     fprintf(stderr, "\033[1;31merror:\033[0m %s\n", msg);
 }
-
+#ifndef _WIN32
 static struct termios orig_termios;
 static int raw_mode_enabled = 0;
-
+#endif
 static void disable_raw_mode()
 {
+#ifndef _WIN32
     if (raw_mode_enabled)
     {
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
         raw_mode_enabled = 0;
     }
+#endif
 }
 
 static void enable_raw_mode()
 {
+#ifndef _WIN32    
     if (!raw_mode_enabled)
     {
         tcgetattr(STDIN_FILENO, &orig_termios);
@@ -102,6 +110,7 @@ static void enable_raw_mode()
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
         raw_mode_enabled = 1;
     }
+#endif
 }
 
 static const char *KEYWORDS[] = {

@@ -7,10 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-
+#ifdef _WIN32
+#define DEFAULT_OUTPUT_FILE "a.exe"
+#define PATH_SEPARATOR "\\"
+#else
+#define DEFAULT_OUTPUT_FILE "a.out"
+#define PATH_SEPARATOR "/"
+#endif
+#ifndef _WIN32
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
+#endif
 
 void print_search_paths()
 {
@@ -75,12 +82,14 @@ int main(int argc, char **argv)
     // Parse command
     char *command = argv[1];
     int arg_start = 2;
-
+#ifndef _WIN32
     if (strcmp(command, "lsp") == 0)
     {
         return lsp_main(argc, argv);
     }
-    else if (strcmp(command, "repl") == 0)
+    else 
+#endif    
+    if (strcmp(command, "repl") == 0)
     {
         run_repl(argv[0]); // Pass self path for recursive calls
         return 0;
@@ -357,7 +366,7 @@ int main(int argc, char **argv)
 
     // Compile C
     char cmd[8192];
-    char *outfile = g_config.output_file ? g_config.output_file : "a.out";
+    char *outfile = g_config.output_file ? g_config.output_file : DEFAULT_OUTPUT_FILE;
 
     const char *thread_flag = g_parser_ctx->has_async ? "-lpthread" : "";
     const char *math_flag = "-lm";
@@ -372,12 +381,19 @@ int main(int argc, char **argv)
         }
     }
 
-    // If using cosmocc, it handles these usually, but keeping them is okay for Linux targets
+    if (z_is_windows() && (strcmp(g_config.cc, "cc") == 0 || strcmp(g_config.cc, "cl") == 0))
+    {
+        snprintf(cmd, sizeof(cmd), "cl -nologo %s %s -Fe:%s %s -I./src %s",
+             g_config.gcc_flags, g_cflags,
+             outfile, temp_source_file, g_link_flags);
+    } else {
+        // If using cosmocc, it handles these usually, but keeping them is okay for Linux targets
 
-    snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s %s %s %s -I./src %s", g_config.cc,
+        snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s %s %s %s -I./src %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "",
              g_config.quiet ? "-w" : "", outfile, temp_source_file, math_flag, thread_flag,
              g_link_flags);
+    }
 
     if (g_config.verbose)
     {

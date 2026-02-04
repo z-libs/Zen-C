@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-
 #include "../ast/ast.h"
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
@@ -1612,7 +1610,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
     int saved_silent = ctx->silent_warnings;
     ctx->silent_warnings = !check_symbols;
     char *gen = xmalloc(8192);
-    strcpy(gen, "({ ");
+    strcpy(gen, "");
 
     char *s = xstrdup(content);
     char *cur = s;
@@ -1972,7 +1970,7 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
         strcat(gen, "fflush(stdout); ");
     }
 
-    strcat(gen, "0; })");
+    strcat(gen, "");
 
     free(s);
     ctx->silent_warnings = saved_silent;
