@@ -3992,10 +3992,56 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         }
         else
         {
-            // Awaiting a variable - harder to determine underlying type
-            // Fallback to void* for now (could be improved with metadata)
+            // Awaiting a variable - look up its type and extract T from Async<T>
+            if (operand->type == NODE_EXPR_VAR)
+            {
+                ZenSymbol *sym = find_symbol_entry(ctx, operand->var_ref.name);
+                if (sym)
+                {
+                    char *var_type = sym->type_name;
+                    if (!var_type && sym->type_info)
+                    {
+                        var_type = type_to_string(sym->type_info);
+                    }
+                    if (var_type)
+                    {
+                        // Extract T from Async<T>
+                        char *start = strchr(var_type, '<');
+                        if (start)
+                        {
+                            start++; // Skip <
+                            char *end = strrchr(var_type, '>');
+                            if (end && end > start)
+                            {
+                                int len = end - start;
+                                char *inner_type = xmalloc(len + 1);
+                                strncpy(inner_type, start, len);
+                                inner_type[len] = 0;
+                                lhs->resolved_type = inner_type;
+                                // Try to create proper type_info
+                                if (strcmp(inner_type, "string") == 0)
+                                {
+                                    lhs->type_info = type_new(TYPE_STRING);
+                                }
+                                else if (strcmp(inner_type, "int") == 0)
+                                {
+                                    lhs->type_info = type_new(TYPE_INT);
+                                }
+                                else
+                                {
+                                    lhs->type_info = type_new(TYPE_STRUCT);
+                                    lhs->type_info->name = xstrdup(inner_type);
+                                }
+                                goto await_done;
+                            }
+                        }
+                    }
+                }
+            }
+            // Fallback to void* if we couldn't determine the type
             lhs->type_info = type_new_ptr(type_new(TYPE_VOID));
             lhs->resolved_type = xstrdup("void*");
+        await_done:;
         }
 
         goto after_unary;
