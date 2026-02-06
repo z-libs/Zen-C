@@ -1,0 +1,90 @@
+// Basic CPU inference example for llama.cpp integration
+// Run: zc run basic_inference.zc
+
+//> include: ./llama_lib/include
+//> lib: ./llama_lib/lib
+//> link: -lllama -lm -lpthread -lstdc++
+//> rpath: ./llama_lib/lib
+
+import "../../std/llama.zc"
+
+fn main() -> int {
+    // Hardcoded configuration - modify these as needed
+    var model_path = "models/tinyllama.gguf";
+    var prompt = "The quick brown fox";
+
+    println "=== Zen-C LLaMA Basic Inference ==="
+    println ""
+
+    // Initialize llama backend
+    llama_init();
+
+    // Load model (CPU only)
+    println "Loading model: {model_path}"
+    var model_res = LlamaModel::load_cpu(model_path);
+    if (model_res.is_err()) {
+        !"Error: {model_res.err}"
+        llama_cleanup();
+        return 1;
+    }
+    var model = model_res.unwrap();
+    println "Model loaded successfully!"
+    println ""
+
+    // Print model info
+    var info = model.info();
+    println "Model Info:"
+    println "  Vocab size: {info.vocab_size}"
+    println "  Context length: {info.context_length}"
+    println "  Layers: {info.n_layers}"
+    println "  Attention heads: {info.n_heads}"
+    println "  Embedding dim: {info.embedding_dim}"
+    println ""
+
+    // Create context
+    var ctx_params = LlamaContextParams::defaults();
+    ctx_params.n_ctx = 512;  // Use smaller context for demo
+
+    var ctx_res = LlamaContext::new(&model, ctx_params);
+    if (ctx_res.is_err()) {
+        !"Error creating context: {ctx_res.err}"
+        model.free();
+        llama_cleanup();
+        return 1;
+    }
+    var ctx = ctx_res.unwrap();
+
+    // Create sampler with default settings
+    var sampler = LlamaSampler::defaults(&model, 42);
+
+    // Generate text
+    println "Prompt: \"{prompt}\""
+    println ""
+    println "Generating..."
+    println "---"
+
+    var result_res = llama_generate(&ctx, &sampler, prompt, 128);
+    if (result_res.is_err()) {
+        !"Error generating: {result_res.err}"
+    } else {
+        var result = result_res.unwrap();
+        print "{prompt}"
+        result.text.print();
+        println ""
+        println "---"
+        println ""
+        println "Tokens generated: {result.tokens_generated}"
+        println "Stopped by EOS: {result.stopped_by_eos}"
+        result.free();
+    }
+
+    // Cleanup
+    sampler.free();
+    ctx.free();
+    model.free();
+    llama_cleanup();
+
+    println ""
+    println "Done!"
+    return 0;
+}

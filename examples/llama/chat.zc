@@ -1,0 +1,298 @@
+// Interactive chat mode example
+// Run: zc run chat.zc
+
+//> include: ./llama_lib/include
+//> lib: ./llama_lib/lib
+//> link: -lllama -lm -lpthread -lstdc++
+//> rpath: ./llama_lib/lib
+
+import "../../std/llama.zc"
+import "../../std/string.zc"
+import "../../std/vec.zc"
+
+// Chat message structure
+struct ChatMessage {
+    role: String;      // "user" or "assistant"
+    content: String;
+}
+
+impl ChatMessage {
+    fn new(role: char*, content: char*) -> ChatMessage {
+        var r = String::new(role);
+        var c = String::new(content);
+        var msg = ChatMessage { role: r, content: c };
+        r.forget();
+        c.forget();
+        return msg;
+    }
+
+    fn free(self) {
+        self.role.free();
+        self.content.free();
+    }
+}
+
+// Build chat prompt from history (simple format for TinyLlama/Llama-style)
+fn build_chat_prompt(history: Vec<ChatMessage>*, new_message: char*) -> String {
+    var prompt = String::new("");
+
+    // System prompt
+    var sys = String::new("<|system|>\nYou are a helpful AI assistant.\n</s>\n");
+    prompt.append(&sys);
+    sys.free();
+
+    // Add history
+    var hist_len = (*history).len;
+    var i: usize = 0;
+    while (i < hist_len) {
+        var msg = &(*history).data[i];
+        if (strcmp((*msg).role.c_str(), "user") == 0) {
+            var user_start = String::new("<|user|>\n");
+            prompt.append(&user_start);
+            user_start.free();
+
+            prompt.append(&(*msg).content);
+
+            var user_end = String::new("\n</s>\n");
+            prompt.append(&user_end);
+            user_end.free();
+        } else {
+            var asst_start = String::new("<|assistant|>\n");
+            prompt.append(&asst_start);
+            asst_start.free();
+
+            prompt.append(&(*msg).content);
+
+            var asst_end = String::new("\n</s>\n");
+            prompt.append(&asst_end);
+            asst_end.free();
+        }
+        i = i + 1;
+    }
+
+    // Add new user message
+    var user_start = String::new("<|user|>\n");
+    prompt.append(&user_start);
+    user_start.free();
+
+    var new_msg = String::new(new_message);
+    prompt.append(&new_msg);
+    new_msg.free();
+
+    var user_end = String::new("\n</s>\n<|assistant|>\n");
+    prompt.append(&user_end);
+    user_end.free();
+
+    return prompt;
+}
+
+// Read a line from stdin
+fn read_line(buffer: char*, max_len: int) -> bool {
+    if (fgets(buffer, max_len, stdin) == NULL) {
+        return false;
+    }
+    // Remove newline
+    var len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '\n') {
+        buffer[len - 1] = 0;
+    }
+    return true;
+}
+
+// Token printer callback
+fn print_token(token_str: char*) -> bool {
+    printf("%s", token_str);
+    fflush(stdout);
+    return true;
+}
+
+fn main() -> int {
+    // Hardcoded configuration - modify these as needed
+    var model_path = "models/tinyllama.gguf";
+    var gpu_layers = 0;  // 0 = CPU only, -1 = all layers on GPU
+
+    println "=== Zen-C LLaMA Chat ==="
+    println ""
+
+    // Initialize
+    llama_init();
+
+    // Load model
+    println "Loading model: {model_path}"
+    if (gpu_layers != 0) {
+        println "GPU layers: {gpu_layers}"
+    }
+
+    var model_params = LlamaModelParams::gpu(gpu_layers);
+    var model_res = LlamaModel::load(model_path, model_params);
+    if (model_res.is_err()) {
+        !"Error: {model_res.err}"
+        llama_cleanup();
+        return 1;
+    }
+    var model = model_res.unwrap();
+    println "Model loaded!"
+    println ""
+
+    // Create context
+    var ctx_params = LlamaContextParams::defaults();
+    ctx_params.n_ctx = 4096;
+
+    var ctx_res = LlamaContext::new(&model, ctx_params);
+    if (ctx_res.is_err()) {
+        !"Error: {ctx_res.err}"
+        model.free();
+        llama_cleanup();
+        return 1;
+    }
+    var ctx = ctx_res.unwrap();
+
+    // Create sampler
+    var sampler = LlamaSampler::defaults(&model, 42);
+
+    // Chat history
+    var history = Vec<ChatMessage>::new();
+
+    println "Type 'help' for commands. Type 'quit' to exit."
+    println ""
+
+    // Input buffer
+    var input_buf = alloc_n<char>(4096);
+
+    // Chat loop
+    while (true) {
+        print "You: "
+        fflush(stdout);
+
+        if (!read_line(input_buf, 4096)) {
+            break;
+        }
+
+        // Check for empty input
+        if (strlen(input_buf) == 0) {
+            continue;
+        }
+
+        // Check commands
+        if (strcmp(input_buf, "quit") == 0 || strcmp(input_buf, "exit") == 0) {
+            println "Goodbye!"
+            break;
+        }
+
+        if (strcmp(input_buf, "help") == 0) {
+            println ""
+            println "Commands:"
+            println "  quit, exit  - Exit the chat"
+            println "  clear       - Clear conversation history"
+            println "  help        - Show this help"
+            println ""
+            continue;
+        }
+
+        if (strcmp(input_buf, "clear") == 0) {
+            // Free old history
+            for (var i: usize = 0; i < history.len; i = i + 1) {
+                history.data[i].free();
+            }
+            history.clear();
+
+            // Clear KV cache
+            ctx.clear_kv_cache();
+            sampler.reset();
+
+            println "Conversation cleared."
+            println ""
+            continue;
+        }
+
+        // Build prompt
+        var prompt = build_chat_prompt(&history, input_buf);
+
+        // Clear context for fresh generation
+        ctx.clear_kv_cache();
+        sampler.reset();
+
+        // Generate response
+        print " Zenith Zen-C Assistant: "
+        fflush(stdout);
+
+        var response = String::new("");
+
+        // Tokenize and decode prompt
+        var tokens = model.tokenize(prompt.c_str(), true);
+        var decode_res = ctx.decode(&tokens);
+        tokens.free();
+
+        if (decode_res.is_err()) {
+            println "[Error generating response]"
+            prompt.free();
+            continue;
+        }
+
+        // Generate tokens
+        var eos = model.eos_token();
+        var max_tokens = 512;
+        var generated = 0;
+
+        while (generated < max_tokens) {
+            var token = sampler.sample(&ctx);
+
+            if (token == eos) {
+                break;
+            }
+
+            var piece = model.token_to_string(token);
+
+            // Check for end of turn markers
+            if (strstr(piece.c_str(), "</s>") != NULL ||
+                strstr(piece.c_str(), "<|") != NULL) {
+                piece.free();
+                break;
+            }
+
+            printf("%s", piece.c_str());
+            fflush(stdout);
+
+            response.append(&piece);
+            piece.free();
+
+            var tok_res = ctx.decode_token(token);
+            if (tok_res.is_err()) {
+                break;
+            }
+
+            generated++;
+        }
+
+        println ""
+        println ""
+
+        // Add to history
+        var user_msg = ChatMessage::new("user", input_buf);
+        history.push(user_msg);
+        user_msg.role.forget();
+        user_msg.content.forget();
+
+        var asst_msg = ChatMessage::new("assistant", response.c_str());
+        history.push(asst_msg);
+        asst_msg.role.forget();
+        asst_msg.content.forget();
+
+        prompt.free();
+        response.free();
+    }
+
+    // Cleanup
+    free(input_buf);
+    for (var i: usize = 0; i < history.len; i = i + 1) {
+        history.data[i].free();
+    }
+    history.free();
+
+    sampler.free();
+    ctx.free();
+    model.free();
+    llama_cleanup();
+
+    return 0;
+}
