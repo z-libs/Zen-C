@@ -52,84 +52,45 @@ Participe das discussões, compartilhe demos, pergunte, ou reporte bugs no servi
 
 ## Índice
 
-- [Visão Geral](#visão-geral)
-- [Comunidade](#comunidade)
-- [Início Rápido](#início-rápido)
-    - [Instalação](#instalação)
-    - [Build Portátil (APE)](#build-portátil-ape)
-    - [Uso](#uso)
-    - [Variáveis de Ambiente](#variáveis-de-ambiente)
-- [Referência da Linguagem](#referência-da-linguagem)
-    - [1. Variáveis e Constantes](#1-variáveis-e-constantes)
-    - [2. Tipos Primitivos](#2-tipos-primitivos)
-    - [3. Tipos Agregados](#3-tipos-agregados)
-        - [Arrays](#arrays)
-        - [Tuplas](#tuplas)
-        - [Structs](#structs)
-        - [Structs Opacos](#structs-opacos)
-        - [Enums](#enums)
-        - [Unions](#unions)
-        - [Aliases de Tipos](#aliases-de-tipos)
-        - [Aliases Opacos de Tipos](#aliases-opacos-de-tipos)
-    - [4. Funções & Lambdas](#4-funções--lambdas)
-        - [Funções](#funções)
-        - [Argumentos Const](#argumentos-const)
-        - [Argumentos Padrão](#argumentos-padrão)
-        - [Lambdas (Fechamentos)](#lambdas-fechamentos)
-        - [Ponteiros de Função Brutos](#ponteiros-de-função-brutos)
-        - [Funções Variádicas](#funções-variádicas)
-    - [5. Fluxo de Controle](#5-fluxo-de-controle)
-        - [Condicionais](#condicionais)
-        - [Correspondência de Padrões](#correspondência-de-padrões)
-        - [Loops](#loops)
-        - [Controle Avançado](#controle-avançado)
-    - [6. Operadores](#6-operadores)
-        - [Operadores Sobrecarregáveis](#operadores-sobrecarregáveis)
-        - [Açúcar Sintático](#açúcar-sintático)
-    - [7. Print e Interpolação de Strings](#7-print-e-interpolação-de-strings)
-        - [Palavras-Chave](#palavras-chave)
-        - [Abreviações](#abreviações)
-        - [Interpolação de Strings (F-strings)](#interpolação-de-strings-f-strings)
-        - [Prompts de Input (`?`)](#prompts-de-input-)
-    - [8. Gerenciamento de Memória](#8-gerenciamento-de-memória)
-        - [Defer](#defer)
-        - [Autofree](#autofree)
-        - [Semântica de Recursos (Move por Padrão)](#semântica-de-recursos-move-por-padrão)
-        - [RAII / Drop Trait](#raii--drop-trait)
-    - [9. Programação Orientada a Objetos](#9-programação-orientada-a-objetos)
-        - [Métodos](#métodos)
-        - [Traits](#traits)
-        - [Traits Padrão](#traits-padrão)
-        - [Composição](#composição)
-    - [10. Genéricos](#10-genéricos)
-    - [11. Concorrência (Async/Await)](#11-concorrência-asyncawait)
-    - [12. Metaprogramação](#12-metaprogramação)
-        - [Comptime](#comptime)
-        - [Embed](#embed)
-        - [Plugins](#plugins)
-        - [Macros Genéricos de C](#macros-genéricos-de-c)
-    - [13. Atributos](#13-atributos)
-    - [Atributos Customizados](#atributos-customizados)
-    - [Smart Derives](#smart-derives)
-    - [14. Assembly Inline](#14-assembly-inline)
-        - [Uso Básico](#uso-básico)
-        - [Volatile](#volatile)
-        - [Restrições Nomeadas](#restrições-nomeadas)
-    - [15. Diretivas de Build](#15-diretivas-de-build)
-    - [16. Palavras-chave](#16-palavras-chave)
-- [Biblioteca Padrão](#biblioteca-padrão)
-- [Ferramentas](#ferramentas)
-    - [Language Server (LSP)](#language-server-lsp)
-    - [REPL](#repl)
-- [Suporte de Compiladores & Compatibilidade](#suporte-de-compiladores--compatibilidade)
-    - [Status da Suíte de Testes](#status-da-suíte-de-testes)
-    - [Build com Zig](#build-com-zig)
-    - [Interoperabilidade C++](#interoperabilidade-c)
-    - [Interoperabilidade CUDA](#interoperabilidade-cuda)
-    - [Interoperabilidade Objective-C](#interoperabilidade-objective-c)
-    - [Suporte C23](#suporte-c23)
-- [Contribuindo](#contribuindo)
-- [Atribuições](#atribuições)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Geral</h3>
+      <ul>
+        <li><a href="#visão-geral">Visão Geral</a></li>
+        <li><a href="#comunidade">Comunidade</a></li>
+        <li><a href="#início-rápido">Início Rápido</a></li>
+        <li><a href="#biblioteca-padrão">Biblioteca Padrão</a></li>
+        <li><a href="#ferramentas">Ferramentas</a></li>
+        <li><a href="#suporte-de-compiladores--compatibilidade">Suporte de Compiladores</a></li>
+        <li><a href="#contribuindo">Contribuindo</a></li>
+        <li><a href="#atribuições">Atribuições</a></li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Referência da Linguagem</h3>
+      <ul>
+        <li><a href="#1-variáveis-e-constantes">1. Variáveis e Constantes</a></li>
+        <li><a href="#2-tipos-primitivos">2. Tipos Primitivos</a></li>
+        <li><a href="#3-tipos-agregados">3. Tipos Agregados</a></li>
+        <li><a href="#4-funções--lambdas">4. Funções & Lambdas</a></li>
+        <li><a href="#5-fluxo-de-controle">5. Fluxo de Controle</a></li>
+        <li><a href="#6-operadores">6. Operadores</a></li>
+        <li><a href="#7-print-e-interpolação-de-strings">7. Print e Interpolação</a></li>
+        <li><a href="#8-gerenciamento-de-memória">8. Gerenciamento de Memória</a></li>
+        <li><a href="#9-programação-orientada-a-objetos">9. POO</a></li>
+        <li><a href="#10-genéricos">10. Genéricos</a></li>
+        <li><a href="#11-concorrência-asyncawait">11. Concorrência</a></li>
+        <li><a href="#12-metaprogramação">12. Metaprogramação</a></li>
+        <li><a href="#13-atributos">13. Atributos</a></li>
+        <li><a href="#14-assembly-inline">14. Assembly Inline</a></li>
+        <li><a href="#15-diretivas-de-build">15. Diretivas de Build</a></li>
+        <li><a href="#16-palavras-chave">16. Palavras-chave</a></li>
+        <li><a href="#17-interoperabilidade-c">17. Interoperabilidade C</a></li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ---
 

@@ -52,84 +52,45 @@ Join the discussion, share demos, ask questions, or report bugs in the official 
 
 ## Index
 
-- [Overview](#overview)
-- [Community](#community)
-- [Quick Start](#quick-start)
-    - [Installation](#installation)
-    - [Usage](#usage)
-    - [Environment Variables](#environment-variables)
-- [Language Reference](#language-reference)
-    - [1. Variables and Constants](#1-variables-and-constants)
-    - [2. Primitive Types](#2-primitive-types)
-    - [3. Aggregate Types](#3-aggregate-types)
-        - [Arrays](#arrays)
-        - [Tuples](#tuples)
-        - [Structs](#structs)
-        - [Opaque Structs](#opaque-structs)
-        - [Enums](#enums)
-        - [Unions](#unions)
-        - [Type Aliases](#type-aliases)
-        - [Opaque Type Aliases](#opaque-type-aliases)
-    - [4. Functions & Lambdas](#4-functions--lambdas)
-        - [Functions](#functions)
-        - [Const Arguments](#const-arguments)
-        - [Default Arguments](#default-arguments)
-        - [Lambdas (Closures)](#lambdas-closures)
-        - [Raw Function Pointers](#raw-function-pointers)
-        - [Variadic Functions](#variadic-functions)
-    - [5. Control Flow](#5-control-flow)
-        - [Conditionals](#conditionals)
-        - [Pattern Matching](#pattern-matching)
-        - [Loops](#loops)
-        - [Advanced Control](#advanced-control)
-    - [6. Operators](#6-operators)
-        - [Overloadable Operators](#overloadable-operators)
-        - [Syntactic Sugar](#syntactic-sugar)
-    - [7. Printing and String Interpolation](#7-printing-and-string-interpolation)
-        - [Keywords](#keywords)
-        - [Shorthands](#shorthands)
-        - [String Interpolation (F-strings)](#string-interpolation-f-strings)
-        - [Input Prompts (`?`)](#input-prompts-)
-    - [8. Memory Management](#8-memory-management)
-        - [Defer](#defer)
-        - [Autofree](#autofree)
-        - [Resource Semantics (Move by Default)](#resource-semantics-move-by-default)
-        - [RAII / Drop Trait](#raii--drop-trait)
-    - [9. Object Oriented Programming](#9-object-oriented-programming)
-        - [Methods](#methods)
-        - [Traits](#traits)
-        - [Standard Traits](#standard-traits)
-        - [Composition](#composition)
-    - [10. Generics](#10-generics)
-    - [11. Concurrency (Async/Await)](#11-concurrency-asyncawait)
-    - [12. Metaprogramming](#12-metaprogramming)
-        - [Comptime](#comptime)
-        - [Embed](#embed)
-        - [Plugins](#plugins)
-        - [Generic C Macros](#generic-c-macros)
-    - [13. Attributes](#13-attributes)
-    - [Custom Attributes](#custom-attributes)
-    - [Smart Derives](#smart-derives)
-    - [14. Inline Assembly](#14-inline-assembly)
-        - [Basic Usage](#basic-usage)
-        - [Volatile](#volatile)
-        - [Named Constraints](#named-constraints)
-    - [15. Build Directives](#15-build-directives)
-    - [16. Keywords](#16-keywords)
-    - [17. C Interoperability](#17-c-interoperability)
-- [Standard Library](#standard-library)
-- [Tooling](#tooling)
-    - [Language Server (LSP)](#language-server-lsp)
-    - [REPL](#repl)
-- [Compiler Support & Compatibility](#compiler-support--compatibility)
-    - [Test Suite Status](#test-suite-status)
-    - [Building with Zig](#building-with-zig)
-    - [C++ Interop](#c-interop)
-    - [CUDA Interop](#cuda-interop)
-    - [Objective-C Interop](#objective-c-interop)
-    - [C23 Support](#c23-support)
-- [Contributing](#contributing)
-- [Attributions](#attributions)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>General</h3>
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#community">Community</a></li>
+        <li><a href="#quick-start">Quick Start</a></li>
+        <li><a href="#standard-library">Standard Library</a></li>
+        <li><a href="#tooling">Tooling</a></li>
+        <li><a href="#compiler-support--compatibility">Compiler Support & Compatibility</a></li>
+        <li><a href="#contributing">Contributing</a></li>
+        <li><a href="#attributions">Attributions</a></li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Language Reference</h3>
+      <ul>
+        <li><a href="#1-variables-and-constants">1. Variables & Constants</a></li>
+        <li><a href="#2-primitive-types">2. Primitive Types</a></li>
+        <li><a href="#3-aggregate-types">3. Aggregate Types</a></li>
+        <li><a href="#4-functions--lambdas">4. Functions & Lambdas</a></li>
+        <li><a href="#5-control-flow">5. Control Flow</a></li>
+        <li><a href="#6-operators">6. Operators</a></li>
+        <li><a href="#7-printing-and-string-interpolation">7. Printing & Interpolation</a></li>
+        <li><a href="#8-memory-management">8. Memory Management</a></li>
+        <li><a href="#9-object-oriented-programming">9. Object Oriented Programming</a></li>
+        <li><a href="#10-generics">10. Generics</a></li>
+        <li><a href="#11-concurrency-asyncawait">11. Concurrency</a></li>
+        <li><a href="#12-metaprogramming">12. Metaprogramming</a></li>
+        <li><a href="#13-attributes">13. Attributes</a></li>
+        <li><a href="#14-inline-assembly">14. Inline Assembly</a></li>
+        <li><a href="#15-build-directives">15. Build Directives</a></li>
+        <li><a href="#16-keywords">16. Keywords</a></li>
+        <li><a href="#17-c-interoperability">17. C Interoperability</a></li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ---
 

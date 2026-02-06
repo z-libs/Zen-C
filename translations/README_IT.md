@@ -52,85 +52,45 @@ Unisciti alla conversazione, condividi delle demo, fai domande o segnala dei bug
 
 ## Indice
 
-- [Panoramica](#panoramica)
-- [Community](#community)
-- [Guida Rapida](#guida-rapida)
-    - [Installazione](#installazione)
-    - [Utilizzo](#utilizzo)
-    - [Variabili d'ambiente](#variabili-d-ambiente)
-- [Riferimenti Del Linguaggio](#riferimenti-del-linguaggio)
-    - [1. Variabili e Costanti](#1-variabili-e-costanti)
-    - [2. Tipi Primitivi](#2-tipi-primitivi)
-    - [3. Tipi Aggregati](#3-tipi-aggregati)
-        - [Array](#array)
-        - [Tuple](#tuple)
-        - [Struct](#struct)
-        - [Struct Opachi](#struct-opachi)
-        - [Enum](#enum)
-        - [Unioni](#unioni)
-        - [Alias del tipo](#alias-del-tipo)
-        - [Alias del tipo opachi](#alias-del-tipo-opachi)
-    - [4. Funzioni e Lambda](#4-funzioni-e-lambda)
-        - [Funzioni](#funzioni)
-        - [Argomenti Costanti](#argomenti-costanti)
-        - [Argomenti di default](#argomenti-di-default)
-        - [Lambda (Closure)](#lambda-closure)
-        - [Puntatori-Funzione Grezzi](#puntatori-funzione-grezzi)
-        - [Argomenti Variadici](#argomenti-variadici)
-    - [5. Controllo di Flusso](#5-controllo-di-flusso)
-        - [Condizionali](#condizionali)
-        - [Pattern Matching](#pattern-matching)
-        - [Loop](#loop)
-        - [Controllo Avanzato](#controllo-avanzato)
-    - [6. Operatori](#6-operatori)
-        - [Operatori Overload-abili](#operatori-overload-abili)
-        - [Zucchero Sintattico](#zucchero-sintattico)
-    - [7. Stampaggio e Interpolazione delle Stringhe](#7-stampaggio-e-interpolazione-delle-stringhe)
-        - [Keyword](#keyword)
-        - [Scorciatoie](#scorciatoie)
-        - [Interpolazione delle Stringhe (F-strings)](#interpolazione-delle-stringhe-f-strings)
-        - [Prompt di Input (`?`)](#prompt-di-input)
-    - [8. Gestione della memoria](#8-gestione-della-memoria)
-        - [Rimando](#rimando)
-        - [Liberazione-automatica](#liberazione-automatica)
-        - [Semantiche delle risorse (Muovi di default)](#semantiche-delle-risorse-muovi-di-default)
-        - [RAII / Rilascio Tratti](#raii--rilascio-tratti)
-    - [9. Programmazione Orientata a Oggetti](#9-programmazione-orientata-a-oggetti)
-        - [Metodi](#metodi)
-        - [Tratti](#tratti)
-        - [Tratti Standard](#tratti-standard)
-        - [Composizione](#composizione)
-    - [10. Generici](#10-generici)
-    - [11. Concorrenza Asincrona (Async/Await)](#11-concorrenza-asincrona-asyncawait)
-    - [12. Metaprogramming](#12-metaprogramming)
-        - [Comptime](#comptime)
-        - [Incorporati](#incorporati)
-        - [Plugin](#plugin)
-        - [Macro C Generiche](#macro-c-generiche)
-    - [13. Attributi](#13-attributi)
-    - [Attributi Personalizzati](#attributi-personalizzati)
-    - [Mappatura della Sintassi](#mappatura-della-sintassi)
-    - [Derivazioni Intelligenti](#derivazioni-intelligenti)
-    - [14. Assembly Inline](#14-assembly-inline)
-        - [Utilizzo Base](#utilizzo-base)
-        - [Volatile](#volatile)
-        - [Vincoli Nominati](#vincoli-nominati)
-    - [15. Direttive della Buil](#15-direttive-della-build)
-    - [16. Keyword](#16-keyword)
-    - [17. Interoperabilità C](#17-interoperabilità-c)
-- [Libreria Standard](#liberia-standard)
-- [Tooling](#tooling)
-    - [Language Server (LSP)](#language-server-lsp)
-    - [REPL](#repl)
-- [Supporto del Compilatore e Compatibilità](#supporto-del-compilatore-e-compatibilità)
-    - [Stato della suite di test](#stato-della-suite-di-test)
-    - [Buildare con Zig](#buildare-con-zig)
-    - [Interop C++](#interop-c)
-    - [Interop CUDA](#interop-cuda)
-    - [Interop Objective-C](#interop-objective-c)
-    - [Supporto ISO C23](#supporto-iso-c23)
-- [Contribuisci](#contribuisci)
-- [Attribuzioni](#attribuzioni)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Generale</h3>
+      <ul>
+        <li><a href="#panoramica">Panoramica</a></li>
+        <li><a href="#community">Community</a></li>
+        <li><a href="#guida-rapida">Guida Rapida</a></li>
+        <li><a href="#libreria-standard">Libreria Standard</a></li>
+        <li><a href="#tooling">Tooling</a></li>
+        <li><a href="#supporto-del-compilatore-e-compatibilità">Supporto del Compilatore</a></li>
+        <li><a href="#contribuisci">Contribuisci</a></li>
+        <li><a href="#attribuzioni">Attribuzioni</a></li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>Riferimenti del Linguaggio</h3>
+      <ul>
+        <li><a href="#1-variabili-e-costanti">1. Variabili e Costanti</a></li>
+        <li><a href="#2-tipi-primitivi">2. Tipi Primitivi</a></li>
+        <li><a href="#3-tipi-aggregati">3. Tipi Aggregati</a></li>
+        <li><a href="#4-funzioni-e-lambda">4. Funzioni e Lambda</a></li>
+        <li><a href="#5-controllo-di-flusso">5. Controllo di Flusso</a></li>
+        <li><a href="#6-operatori">6. Operatori</a></li>
+        <li><a href="#7-stampaggio-e-interpolazione-delle-stringhe">7. Stampaggio e Interpolazione</a></li>
+        <li><a href="#8-gestione-della-memoria">8. Gestione della memoria</a></li>
+        <li><a href="#9-programmazione-orientata-a-oggetti">9. Programmazione Orientata a Oggetti</a></li>
+        <li><a href="#10-generici">10. Generici</a></li>
+        <li><a href="#11-concorrenza-asincrona-asyncawait">11. Concorrenza</a></li>
+        <li><a href="#12-metaprogramming">12. Metaprogramming</a></li>
+        <li><a href="#13-attributi">13. Attributi</a></li>
+        <li><a href="#14-assembly-inline">14. Assembly Inline</a></li>
+        <li><a href="#15-direttive-della-build">15. Direttive della Build</a></li>
+        <li><a href="#16-keyword">16. Keyword</a></li>
+        <li><a href="#17-interoperabilità-c">17. Interoperabilità C</a></li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ---
 
