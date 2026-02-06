@@ -1,0 +1,209 @@
+// TUI Event - Non-blocking keyboard and resize event polling
+// No dependencies (uses POSIX directly)
+
+include <stdlib.h>
+include <string.h>
+include <stdio.h>
+include <unistd.h>
+
+// Key codes
+def KEY_NONE = 0;
+def KEY_CHAR = 1;
+def KEY_ENTER = 2;
+def KEY_ESC = 3;
+def KEY_TAB = 4;
+def KEY_BACKSPACE = 5;
+def KEY_UP = 6;
+def KEY_DOWN = 7;
+def KEY_LEFT = 8;
+def KEY_RIGHT = 9;
+def KEY_DELETE = 10;
+def KEY_HOME = 11;
+def KEY_END = 12;
+def KEY_PAGEUP = 13;
+def KEY_PAGEDOWN = 14;
+def KEY_F1 = 15;
+def KEY_F2 = 16;
+def KEY_F3 = 17;
+def KEY_F4 = 18;
+def KEY_F5 = 19;
+def KEY_F6 = 20;
+def KEY_F7 = 21;
+def KEY_F8 = 22;
+def KEY_F9 = 23;
+def KEY_F10 = 24;
+def KEY_F11 = 25;
+def KEY_F12 = 26;
+
+// Key modifiers
+def KMOD_NONE = 0;
+def KMOD_CTRL = 1;
+def KMOD_ALT = 2;
+def KMOD_SHIFT = 4;
+
+// Event types
+def EVT_NONE = 0;
+def EVT_KEY = 1;
+def EVT_RESIZE = 2;
+def EVT_TICK = 3;
+
+struct KeyEvent {
+    code: int;
+    ch: char;
+    modifier: int;
+}
+
+impl Copy for KeyEvent {}
+
+struct Event {
+    kind: int;
+    key: KeyEvent;
+    width: int;
+    height: int;
+}
+
+impl Copy for Event {}
+
+// Raw block for select() which uses fd_set C type
+raw {
+    #include <sys/select.h>
+
+    int _tui_poll_stdin(int timeout_ms) {
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(STDIN_FILENO, &fds);
+
+        struct timeval tv;
+        tv.tv_sec = timeout_ms / 1000;
+        tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+        return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
+    }
+
+    int _tui_read_byte(void) {
+        unsigned char c;
+        if (read(STDIN_FILENO, &c, 1) == 1) {
+            return (int)c;
+        }
+        return -1;
+    }
+}
+
+extern fn _tui_poll_stdin(timeout_ms: int) -> int;
+extern fn _tui_read_byte() -> int;
+
+impl Event {
+    fn none() -> Event {
+        return Event {
+            kind: EVT_NONE,
+            key: KeyEvent { code: KEY_NONE, ch: 0, modifier: KMOD_NONE },
+            width: 0,
+            height: 0
+        };
+    }
+
+    fn tick() -> Event {
+        return Event {
+            kind: EVT_TICK,
+            key: KeyEvent { code: KEY_NONE, ch: 0, modifier: KMOD_NONE },
+            width: 0,
+            height: 0
+        };
+    }
+
+    fn key_event(code: int, ch: char, modifier: int) -> Event {
+        return Event {
+            kind: EVT_KEY,
+            key: KeyEvent { code: code, ch: ch, modifier: modifier },
+            width: 0,
+            height: 0
+        };
+    }
+
+    fn poll(timeout_ms: int) -> bool {
+        return _tui_poll_stdin(timeout_ms) > 0;
+    }
+
+    fn read() -> Event {
+        let c = _tui_read_byte();
+        if (c == -1) return Event::tick();
+
+        // Escape sequence
+        if (c == 27) {
+            let c2 = _tui_read_byte();
+            if (c2 == -1) return Event::key_event(KEY_ESC, 0, KMOD_NONE);
+
+            if (c2 == '[') {
+                let c3 = _tui_read_byte();
+                if (c3 == -1) return Event::key_event(KEY_ESC, 0, KMOD_NONE);
+
+                // Arrow keys
+                if (c3 == 'A') return Event::key_event(KEY_UP, 0, KMOD_NONE);
+                if (c3 == 'B') return Event::key_event(KEY_DOWN, 0, KMOD_NONE);
+                if (c3 == 'C') return Event::key_event(KEY_RIGHT, 0, KMOD_NONE);
+                if (c3 == 'D') return Event::key_event(KEY_LEFT, 0, KMOD_NONE);
+                if (c3 == 'H') return Event::key_event(KEY_HOME, 0, KMOD_NONE);
+                if (c3 == 'F') return Event::key_event(KEY_END, 0, KMOD_NONE);
+
+                // Extended sequences like ESC[1~ ESC[3~ etc
+                if (c3 >= '0' && c3 <= '9') {
+                    let c4 = _tui_read_byte();
+                    if (c4 == '~') {
+                        if (c3 == '1') return Event::key_event(KEY_HOME, 0, KMOD_NONE);
+                        if (c3 == '3') return Event::key_event(KEY_DELETE, 0, KMOD_NONE);
+                        if (c3 == '4') return Event::key_event(KEY_END, 0, KMOD_NONE);
+                        if (c3 == '5') return Event::key_event(KEY_PAGEUP, 0, KMOD_NONE);
+                        if (c3 == '6') return Event::key_event(KEY_PAGEDOWN, 0, KMOD_NONE);
+                    }
+                    // Function keys ESC[11~ through ESC[24~
+                    if (c3 == '1') {
+                        let c5 = _tui_read_byte();
+                        if (c4 == '1' && c5 == '~') return Event::key_event(KEY_F1, 0, KMOD_NONE);
+                        if (c4 == '2' && c5 == '~') return Event::key_event(KEY_F2, 0, KMOD_NONE);
+                        if (c4 == '3' && c5 == '~') return Event::key_event(KEY_F3, 0, KMOD_NONE);
+                        if (c4 == '4' && c5 == '~') return Event::key_event(KEY_F4, 0, KMOD_NONE);
+                        if (c4 == '5' && c5 == '~') return Event::key_event(KEY_F5, 0, KMOD_NONE);
+                        if (c4 == '7' && c5 == '~') return Event::key_event(KEY_F6, 0, KMOD_NONE);
+                        if (c4 == '8' && c5 == '~') return Event::key_event(KEY_F7, 0, KMOD_NONE);
+                        if (c4 == '9' && c5 == '~') return Event::key_event(KEY_F8, 0, KMOD_NONE);
+                    }
+                    if (c3 == '2') {
+                        let c5 = _tui_read_byte();
+                        if (c4 == '0' && c5 == '~') return Event::key_event(KEY_F9, 0, KMOD_NONE);
+                        if (c4 == '1' && c5 == '~') return Event::key_event(KEY_F10, 0, KMOD_NONE);
+                        if (c4 == '3' && c5 == '~') return Event::key_event(KEY_F11, 0, KMOD_NONE);
+                        if (c4 == '4' && c5 == '~') return Event::key_event(KEY_F12, 0, KMOD_NONE);
+                    }
+                }
+
+                // ESC[O sequences for F1-F4
+                return Event::key_event(KEY_ESC, 0, KMOD_NONE);
+            }
+
+            if (c2 == 'O') {
+                let c3 = _tui_read_byte();
+                if (c3 == 'P') return Event::key_event(KEY_F1, 0, KMOD_NONE);
+                if (c3 == 'Q') return Event::key_event(KEY_F2, 0, KMOD_NONE);
+                if (c3 == 'R') return Event::key_event(KEY_F3, 0, KMOD_NONE);
+                if (c3 == 'S') return Event::key_event(KEY_F4, 0, KMOD_NONE);
+                return Event::key_event(KEY_ESC, 0, KMOD_NONE);
+            }
+
+            // Alt+key
+            return Event::key_event(KEY_CHAR, (char)c2, KMOD_ALT);
+        }
+
+        // Control characters
+        if (c == 13 || c == 10) return Event::key_event(KEY_ENTER, 0, KMOD_NONE);
+        if (c == 9) return Event::key_event(KEY_TAB, 0, KMOD_NONE);
+        if (c == 127 || c == 8) return Event::key_event(KEY_BACKSPACE, 0, KMOD_NONE);
+
+        // Ctrl+A through Ctrl+Z
+        if (c >= 1 && c <= 26) {
+            return Event::key_event(KEY_CHAR, (char)(c + 96), KMOD_CTRL);
+        }
+
+        // Regular character
+        return Event::key_event(KEY_CHAR, (char)c, KMOD_NONE);
+    }
+}

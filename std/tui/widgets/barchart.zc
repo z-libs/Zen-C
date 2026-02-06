@@ -1,0 +1,176 @@
+// TUI BarChart Widget - Vertical bar chart
+// Depends on: style.zc, buffer.zc, layout.zc, block.zc
+
+import "../style.zc"
+import "../buffer.zc"
+import "../layout.zc"
+import "./block.zc"
+
+include <string.h>
+include <stdio.h>
+
+struct BarGroup {
+    label: char*;
+    value: int;
+}
+
+impl Copy for BarGroup {}
+
+struct BarChart {
+    data: BarGroup*;
+    count: int;
+    bar_width: int;
+    bar_gap: int;
+    bar_style: Style;
+    label_style: Style;
+    value_style: Style;
+    block: Block;
+    has_block: bool;
+    max_val: int;
+}
+
+impl BarChart {
+    fn new(data: BarGroup*, count: int) -> BarChart {
+        // Find max value
+        let max_v = 0;
+        let i = 0;
+        while (i < count) {
+            if (data[i].value > max_v) max_v = data[i].value;
+            i = i + 1;
+        }
+        return BarChart {
+            data: data,
+            count: count,
+            bar_width: 3,
+            bar_gap: 1,
+            bar_style: Style::fg(Color::green()),
+            label_style: Style::new(),
+            value_style: Style::bold(),
+            block: Block::new(),
+            has_block: false,
+            max_val: max_v
+        };
+    }
+
+    fn set_bar_width(self, w: int) -> BarChart {
+        return BarChart {
+            data: self.data, count: self.count,
+            bar_width: w, bar_gap: self.bar_gap,
+            bar_style: self.bar_style, label_style: self.label_style,
+            value_style: self.value_style,
+            block: self.block, has_block: self.has_block,
+            max_val: self.max_val
+        };
+    }
+
+    fn set_bar_gap(self, g: int) -> BarChart {
+        return BarChart {
+            data: self.data, count: self.count,
+            bar_width: self.bar_width, bar_gap: g,
+            bar_style: self.bar_style, label_style: self.label_style,
+            value_style: self.value_style,
+            block: self.block, has_block: self.has_block,
+            max_val: self.max_val
+        };
+    }
+
+    fn set_bar_style(self, s: Style) -> BarChart {
+        return BarChart {
+            data: self.data, count: self.count,
+            bar_width: self.bar_width, bar_gap: self.bar_gap,
+            bar_style: s, label_style: self.label_style,
+            value_style: self.value_style,
+            block: self.block, has_block: self.has_block,
+            max_val: self.max_val
+        };
+    }
+
+    fn set_block(self, b: Block) -> BarChart {
+        return BarChart {
+            data: self.data, count: self.count,
+            bar_width: self.bar_width, bar_gap: self.bar_gap,
+            bar_style: self.bar_style, label_style: self.label_style,
+            value_style: self.value_style,
+            block: b, has_block: true,
+            max_val: self.max_val
+        };
+    }
+
+    fn set_max(self, m: int) -> BarChart {
+        return BarChart {
+            data: self.data, count: self.count,
+            bar_width: self.bar_width, bar_gap: self.bar_gap,
+            bar_style: self.bar_style, label_style: self.label_style,
+            value_style: self.value_style,
+            block: self.block, has_block: self.has_block,
+            max_val: m
+        };
+    }
+
+    fn render(self, area: Rect, buf: Buffer*) {
+        if (area.width == 0 || area.height == 0) return;
+
+        let inner = area;
+        if (self.has_block) {
+            self.block.render(area, buf);
+            inner = self.block.inner(area);
+        }
+
+        if (inner.width == 0 || inner.height < 3) return;
+
+        let max_v = self.max_val;
+        if (max_v <= 0) max_v = 1;
+
+        // Reserve 2 rows: one for values, one for labels
+        let bar_area_height = inner.height - 2;
+        if (bar_area_height < 1) bar_area_height = 1;
+
+        let bx = inner.x;
+        let i = 0;
+        while (i < self.count && bx + self.bar_width <= inner.x + inner.width) {
+            let bar = &self.data[i];
+            let bar_height = bar.value * bar_area_height / max_v;
+            if (bar_height < 0) bar_height = 0;
+            if (bar_height > bar_area_height) bar_height = bar_area_height;
+
+            // Draw bar (from bottom up)
+            let by = inner.y + bar_area_height - 1;
+            let filled = 0;
+            while (by >= inner.y && filled < bar_height) {
+                let bxi = 0;
+                while (bxi < self.bar_width) {
+                    buf.set_char(bx + bxi, by, ' ', self.bar_style.add_modifier(MOD_REVERSE));
+                    bxi = bxi + 1;
+                }
+                by = by - 1;
+                filled = filled + 1;
+            }
+
+            // Draw value above bar
+            let val_buf: char[16];
+            let val_len = sprintf(val_buf, "%d", bar.value);
+            let val_x = bx + (self.bar_width - val_len) / 2;
+            if (val_x < bx) val_x = bx;
+            let vi = 0;
+            while (vi < val_len && val_x + vi < inner.x + inner.width) {
+                buf.set_char(val_x + vi, inner.y + bar_area_height, val_buf[vi], self.value_style);
+                vi = vi + 1;
+            }
+
+            // Draw label below value
+            if (bar.label != NULL) {
+                let label_len = (int)strlen(bar.label);
+                let label_x = bx + (self.bar_width - label_len) / 2;
+                if (label_x < bx) label_x = bx;
+                let li = 0;
+                while (li < label_len && li < self.bar_width && label_x + li < inner.x + inner.width) {
+                    buf.set_char(label_x + li, inner.y + bar_area_height + 1, bar.label[li], self.label_style);
+                    li = li + 1;
+                }
+            }
+
+            bx = bx + self.bar_width + self.bar_gap;
+            i = i + 1;
+        }
+    }
+}

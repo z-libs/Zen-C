@@ -1,0 +1,216 @@
+// TUI Layout - Constraint-based rect splitting
+// No dependencies
+
+include <stdlib.h>
+
+def DIR_HORIZONTAL = 0;
+def DIR_VERTICAL = 1;
+
+def CONSTRAINT_LENGTH = 0;
+def CONSTRAINT_PERCENTAGE = 1;
+def CONSTRAINT_MIN = 2;
+def CONSTRAINT_MAX = 3;
+def CONSTRAINT_RATIO = 4;
+
+struct Rect {
+    x: int;
+    y: int;
+    width: int;
+    height: int;
+}
+
+impl Copy for Rect {}
+
+impl Rect {
+    fn new(x: int, y: int, w: int, h: int) -> Rect {
+        return Rect { x: x, y: y, width: w, height: h };
+    }
+
+    fn inner(self, margin: int) -> Rect {
+        let x = self.x + margin;
+        let y = self.y + margin;
+        let w = self.width - margin * 2;
+        let h = self.height - margin * 2;
+        if (w < 0) w = 0;
+        if (h < 0) h = 0;
+        return Rect { x: x, y: y, width: w, height: h };
+    }
+
+    fn area(self) -> int {
+        return self.width * self.height;
+    }
+
+    fn left(self) -> int { return self.x; }
+    fn right(self) -> int { return self.x + self.width; }
+    fn top(self) -> int { return self.y; }
+    fn bottom(self) -> int { return self.y + self.height; }
+}
+
+struct Constraint {
+    kind: int;
+    value: int;
+    value2: int;
+}
+
+impl Copy for Constraint {}
+
+impl Constraint {
+    fn length(n: int) -> Constraint {
+        return Constraint { kind: CONSTRAINT_LENGTH, value: n, value2: 0 };
+    }
+
+    fn percentage(p: int) -> Constraint {
+        return Constraint { kind: CONSTRAINT_PERCENTAGE, value: p, value2: 0 };
+    }
+
+    fn min(n: int) -> Constraint {
+        return Constraint { kind: CONSTRAINT_MIN, value: n, value2: 0 };
+    }
+
+    fn max(n: int) -> Constraint {
+        return Constraint { kind: CONSTRAINT_MAX, value: n, value2: 0 };
+    }
+
+    fn ratio(num: int, den: int) -> Constraint {
+        return Constraint { kind: CONSTRAINT_RATIO, value: num, value2: den };
+    }
+}
+
+struct Layout {
+    direction: int;
+    constraints: Constraint*;
+    constraint_count: int;
+    margin_val: int;
+}
+
+impl Layout {
+    fn horizontal() -> Layout {
+        return Layout {
+            direction: DIR_HORIZONTAL,
+            constraints: NULL,
+            constraint_count: 0,
+            margin_val: 0
+        };
+    }
+
+    fn vertical() -> Layout {
+        return Layout {
+            direction: DIR_VERTICAL,
+            constraints: NULL,
+            constraint_count: 0,
+            margin_val: 0
+        };
+    }
+
+    fn set_constraints(self, c: Constraint*, count: int) -> Layout {
+        return Layout {
+            direction: self.direction,
+            constraints: c,
+            constraint_count: count,
+            margin_val: self.margin_val
+        };
+    }
+
+    fn margin(self, m: int) -> Layout {
+        return Layout {
+            direction: self.direction,
+            constraints: self.constraints,
+            constraint_count: self.constraint_count,
+            margin_val: m
+        };
+    }
+
+    // Split an area into sub-rects based on constraints
+    // Returns a malloc'd array of Rects (caller must free)
+    fn split(self, area: Rect) -> Rect* {
+        let inner = area.inner(self.margin_val);
+        let count = self.constraint_count;
+        if (count == 0) return NULL;
+
+        let rects: Rect* = (Rect*)malloc(sizeof(Rect) * (usize)count);
+        let sizes: int* = (int*)malloc(sizeof(int) * (usize)count);
+
+        let total = 0;
+        if (self.direction == DIR_HORIZONTAL) {
+            total = inner.width;
+        } else {
+            total = inner.height;
+        }
+
+        // First pass: calculate sizes
+        let remaining = total;
+        let flex_count = 0;
+        let i = 0;
+
+        while (i < count) {
+            let c = &self.constraints[i];
+            if (c.kind == CONSTRAINT_LENGTH) {
+                sizes[i] = c.value;
+                if (sizes[i] > remaining) sizes[i] = remaining;
+                remaining = remaining - sizes[i];
+            } else if (c.kind == CONSTRAINT_PERCENTAGE) {
+                sizes[i] = total * c.value / 100;
+                if (sizes[i] > remaining) sizes[i] = remaining;
+                remaining = remaining - sizes[i];
+            } else if (c.kind == CONSTRAINT_RATIO) {
+                if (c.value2 > 0) {
+                    sizes[i] = total * c.value / c.value2;
+                } else {
+                    sizes[i] = 0;
+                }
+                if (sizes[i] > remaining) sizes[i] = remaining;
+                remaining = remaining - sizes[i];
+            } else if (c.kind == CONSTRAINT_MIN) {
+                sizes[i] = c.value;
+                flex_count = flex_count + 1;
+            } else if (c.kind == CONSTRAINT_MAX) {
+                sizes[i] = c.value;
+                flex_count = flex_count + 1;
+            } else {
+                sizes[i] = 0;
+                flex_count = flex_count + 1;
+            }
+            i = i + 1;
+        }
+
+        // Distribute remaining space to min/max constraints
+        if (remaining > 0 && flex_count > 0) {
+            let extra = remaining / flex_count;
+            i = 0;
+            while (i < count) {
+                let c = &self.constraints[i];
+                if (c.kind == CONSTRAINT_MIN) {
+                    sizes[i] = sizes[i] + extra;
+                    if (sizes[i] < c.value) sizes[i] = c.value;
+                } else if (c.kind == CONSTRAINT_MAX) {
+                    sizes[i] = sizes[i] + extra;
+                    if (sizes[i] > c.value) sizes[i] = c.value;
+                }
+                i = i + 1;
+            }
+        }
+
+        // Ensure non-negative sizes
+        i = 0;
+        while (i < count) {
+            if (sizes[i] < 0) sizes[i] = 0;
+            i = i + 1;
+        }
+
+        // Second pass: build rects
+        let offset = 0;
+        i = 0;
+        while (i < count) {
+            if (self.direction == DIR_HORIZONTAL) {
+                rects[i] = Rect::new(inner.x + offset, inner.y, sizes[i], inner.height);
+            } else {
+                rects[i] = Rect::new(inner.x, inner.y + offset, inner.width, sizes[i]);
+            }
+            offset = offset + sizes[i];
+            i = i + 1;
+        }
+
+        free(sizes);
+        return rects;
+    }
+}

@@ -1,0 +1,152 @@
+// TUI Terminal - Raw terminal control using POSIX termios + ANSI escape sequences
+// Depends on: style.zc
+
+import "./style.zc"
+
+include <stdlib.h>
+include <string.h>
+include <stdio.h>
+include <unistd.h>
+
+// Raw block for termios and ioctl which use C structs not expressible in Zen-C
+raw {
+    #include <termios.h>
+    #include <sys/ioctl.h>
+
+    static struct termios _tui_orig_termios;
+    static int _tui_raw_mode = 0;
+
+    void _tui_save_termios(void) {
+        tcgetattr(STDIN_FILENO, &_tui_orig_termios);
+    }
+
+    void _tui_enter_raw_mode(void) {
+        struct termios raw;
+        tcgetattr(STDIN_FILENO, &raw);
+        raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+        raw.c_oflag &= ~(OPOST);
+        raw.c_cflag |= (CS8);
+        raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+        raw.c_cc[VMIN] = 0;
+        raw.c_cc[VTIME] = 1;
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+        _tui_raw_mode = 1;
+    }
+
+    void _tui_restore_termios(void) {
+        if (_tui_raw_mode) {
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, &_tui_orig_termios);
+            _tui_raw_mode = 0;
+        }
+    }
+
+    int _tui_get_terminal_width(void) {
+        struct winsize ws;
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) return 80;
+        return ws.ws_col;
+    }
+
+    int _tui_get_terminal_height(void) {
+        struct winsize ws;
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) return 24;
+        return ws.ws_row;
+    }
+}
+
+extern fn _tui_save_termios();
+extern fn _tui_enter_raw_mode();
+extern fn _tui_restore_termios();
+extern fn _tui_get_terminal_width() -> int;
+extern fn _tui_get_terminal_height() -> int;
+
+// Use wrapper to avoid conflicting declaration with system write()
+raw {
+    static void _tui_write(const char* buf, size_t len) {
+        write(STDOUT_FILENO, buf, len);
+    }
+}
+
+extern fn _tui_write(buf: const char*, len: usize);
+
+struct Terminal {
+    width: int;
+    height: int;
+}
+
+impl Terminal {
+    fn new() -> Terminal {
+        _tui_save_termios();
+        _tui_enter_raw_mode();
+
+        let w = _tui_get_terminal_width();
+        let h = _tui_get_terminal_height();
+
+        // Enter alternate screen
+        let seq = "\x1b[?1049h";
+        _tui_write(seq, strlen(seq));
+
+        // Hide cursor
+        let hide = "\x1b[?25l";
+        _tui_write(hide, strlen(hide));
+
+        return Terminal { width: w, height: h };
+    }
+
+    fn drop(self) {
+        // Show cursor
+        let show = "\x1b[?25h";
+        _tui_write(show, strlen(show));
+
+        // Leave alternate screen
+        let seq = "\x1b[?1049l";
+        _tui_write(seq, strlen(seq));
+
+        _tui_restore_termios();
+        fflush(stdout);
+    }
+
+    fn size(self) -> Terminal {
+        self.width = _tui_get_terminal_width();
+        self.height = _tui_get_terminal_height();
+        return Terminal { width: self.width, height: self.height };
+    }
+
+    fn flush(self) {
+        fflush(stdout);
+    }
+
+    fn clear(self) {
+        let seq = "\x1b[2J\x1b[H";
+        _tui_write(seq, strlen(seq));
+    }
+
+    fn move_cursor(self, x: int, y: int) {
+        let buf: char[32];
+        let len = sprintf(buf, "\x1b[%d;%dH", y + 1, x + 1);
+        _tui_write(buf, (usize)len);
+    }
+
+    fn hide_cursor(self) {
+        let seq = "\x1b[?25l";
+        _tui_write(seq, strlen(seq));
+    }
+
+    fn show_cursor(self) {
+        let seq = "\x1b[?25h";
+        _tui_write(seq, strlen(seq));
+    }
+
+    fn write_str(self, s: char*) {
+        _tui_write(s, strlen(s));
+    }
+
+    fn write_styled(self, x: int, y: int, s: char*, style: Style*) {
+        let buf: char[128];
+        self.move_cursor(x, y);
+        let len = style_to_ansi(style, buf);
+        _tui_write(buf, (usize)len);
+        _tui_write(s, strlen(s));
+        len = style_reset_ansi(buf);
+        _tui_write(buf, (usize)len);
+    }
+}

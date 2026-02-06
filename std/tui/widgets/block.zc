@@ -1,0 +1,265 @@
+// TUI Block Widget - Borders + title container
+// Depends on: style.zc, buffer.zc, layout.zc
+
+import "../style.zc"
+import "../buffer.zc"
+import "../layout.zc"
+
+include <string.h>
+
+// Border sides (bitmask)
+def BORDER_NONE = 0;
+def BORDER_TOP = 1;
+def BORDER_RIGHT = 2;
+def BORDER_BOTTOM = 4;
+def BORDER_LEFT = 8;
+def BORDER_ALL = 15;
+
+// Border types
+def BORDER_PLAIN = 0;
+def BORDER_ROUNDED = 1;
+def BORDER_DOUBLE = 2;
+def BORDER_THICK = 3;
+
+// Box drawing characters for each border type
+// Plain: ─│┌┐└┘
+// Rounded: ─│╭╮╰╯
+// Double: ═║╔╗╚╝
+// Thick: ━┃┏┓┗┛
+
+struct BorderChars {
+    horizontal: char*;
+    vertical: char*;
+    top_left: char*;
+    top_right: char*;
+    bottom_left: char*;
+    bottom_right: char*;
+}
+
+impl Copy for BorderChars {}
+
+fn get_border_chars(border_type: int) -> BorderChars {
+    if (border_type == BORDER_ROUNDED) {
+        return BorderChars {
+            horizontal: "\xe2\x94\x80",
+            vertical: "\xe2\x94\x82",
+            top_left: "\xe2\x95\xad",
+            top_right: "\xe2\x95\xae",
+            bottom_left: "\xe2\x95\xb0",
+            bottom_right: "\xe2\x95\xaf"
+        };
+    }
+    if (border_type == BORDER_DOUBLE) {
+        return BorderChars {
+            horizontal: "\xe2\x95\x90",
+            vertical: "\xe2\x95\x91",
+            top_left: "\xe2\x95\x94",
+            top_right: "\xe2\x95\x97",
+            bottom_left: "\xe2\x95\x9a",
+            bottom_right: "\xe2\x95\x9d"
+        };
+    }
+    if (border_type == BORDER_THICK) {
+        return BorderChars {
+            horizontal: "\xe2\x94\x81",
+            vertical: "\xe2\x94\x83",
+            top_left: "\xe2\x94\x8f",
+            top_right: "\xe2\x94\x93",
+            bottom_left: "\xe2\x94\x97",
+            bottom_right: "\xe2\x94\x9b"
+        };
+    }
+    // Plain (default)
+    return BorderChars {
+        horizontal: "\xe2\x94\x80",
+        vertical: "\xe2\x94\x82",
+        top_left: "\xe2\x94\x8c",
+        top_right: "\xe2\x94\x90",
+        bottom_left: "\xe2\x94\x94",
+        bottom_right: "\xe2\x94\x98"
+    };
+}
+
+struct Block {
+    title: char*;
+    title_style: Style;
+    border_style: Style;
+    border_type: int;
+    borders: int;
+}
+
+impl Copy for Block {}
+
+impl Block {
+    fn new() -> Block {
+        return Block {
+            title: NULL,
+            title_style: Style::new(),
+            border_style: Style::new(),
+            border_type: BORDER_PLAIN,
+            borders: BORDER_NONE
+        };
+    }
+
+    fn bordered() -> Block {
+        return Block {
+            title: NULL,
+            title_style: Style::new(),
+            border_style: Style::new(),
+            border_type: BORDER_PLAIN,
+            borders: BORDER_ALL
+        };
+    }
+
+    fn set_title(self, t: char*) -> Block {
+        return Block {
+            title: t,
+            title_style: self.title_style,
+            border_style: self.border_style,
+            border_type: self.border_type,
+            borders: self.borders
+        };
+    }
+
+    fn set_title_style(self, s: Style) -> Block {
+        return Block {
+            title: self.title,
+            title_style: s,
+            border_style: self.border_style,
+            border_type: self.border_type,
+            borders: self.borders
+        };
+    }
+
+    fn set_borders(self, b: int) -> Block {
+        return Block {
+            title: self.title,
+            title_style: self.title_style,
+            border_style: self.border_style,
+            border_type: self.border_type,
+            borders: b
+        };
+    }
+
+    fn set_border_type(self, bt: int) -> Block {
+        return Block {
+            title: self.title,
+            title_style: self.title_style,
+            border_style: self.border_style,
+            border_type: bt,
+            borders: self.borders
+        };
+    }
+
+    fn set_border_style(self, s: Style) -> Block {
+        return Block {
+            title: self.title,
+            title_style: self.title_style,
+            border_style: s,
+            border_type: self.border_type,
+            borders: self.borders
+        };
+    }
+
+    // Get the inner area (area minus borders)
+    fn inner(self, area: Rect) -> Rect {
+        let x = area.x;
+        let y = area.y;
+        let w = area.width;
+        let h = area.height;
+
+        if (self.borders & BORDER_LEFT) { x = x + 1; w = w - 1; }
+        if (self.borders & BORDER_TOP) { y = y + 1; h = h - 1; }
+        if (self.borders & BORDER_RIGHT) { w = w - 1; }
+        if (self.borders & BORDER_BOTTOM) { h = h - 1; }
+
+        if (w < 0) w = 0;
+        if (h < 0) h = 0;
+
+        return Rect::new(x, y, w, h);
+    }
+
+    // Render the block (borders + title) into a buffer
+    fn render(self, area: Rect, buf: Buffer*) {
+        if (area.width < 2 || area.height < 2) return;
+        if (self.borders == BORDER_NONE && self.title == NULL) return;
+
+        let chars = get_border_chars(self.border_type);
+        let style = self.border_style;
+
+        // Draw top border
+        if (self.borders & BORDER_TOP) {
+            let x = area.x;
+            // Top-left corner
+            if (self.borders & BORDER_LEFT) {
+                buf.set(x, area.y, chars.top_left, style);
+                x = x + 1;
+            }
+            // Top line
+            while (x < area.x + area.width - 1) {
+                buf.set(x, area.y, chars.horizontal, style);
+                x = x + 1;
+            }
+            // Top-right corner
+            if (self.borders & BORDER_RIGHT) {
+                buf.set(x, area.y, chars.top_right, style);
+            }
+        }
+
+        // Draw bottom border
+        if (self.borders & BORDER_BOTTOM) {
+            let by = area.y + area.height - 1;
+            let x = area.x;
+            // Bottom-left corner
+            if (self.borders & BORDER_LEFT) {
+                buf.set(x, by, chars.bottom_left, style);
+                x = x + 1;
+            }
+            // Bottom line
+            while (x < area.x + area.width - 1) {
+                buf.set(x, by, chars.horizontal, style);
+                x = x + 1;
+            }
+            // Bottom-right corner
+            if (self.borders & BORDER_RIGHT) {
+                buf.set(x, by, chars.bottom_right, style);
+            }
+        }
+
+        // Draw left border
+        if (self.borders & BORDER_LEFT) {
+            let y = area.y + 1;
+            while (y < area.y + area.height - 1) {
+                buf.set(area.x, y, chars.vertical, style);
+                y = y + 1;
+            }
+        }
+
+        // Draw right border
+        if (self.borders & BORDER_RIGHT) {
+            let rx = area.x + area.width - 1;
+            let y = area.y + 1;
+            while (y < area.y + area.height - 1) {
+                buf.set(rx, y, chars.vertical, style);
+                y = y + 1;
+            }
+        }
+
+        // Draw title
+        if (self.title != NULL) {
+            let tx = area.x + 2;
+            if (self.borders & BORDER_LEFT) tx = area.x + 2;
+            let max_width = area.width - 4;
+            if (max_width <= 0) return;
+
+            let title_len = (int)strlen(self.title);
+            if (title_len > max_width) title_len = max_width;
+
+            let i = 0;
+            while (i < title_len) {
+                buf.set_char(tx + i, area.y, self.title[i], self.title_style);
+                i = i + 1;
+            }
+        }
+    }
+}

@@ -1,0 +1,149 @@
+// TUI Gauge Widget - Progress bar
+// Depends on: style.zc, buffer.zc, layout.zc, block.zc
+
+import "../style.zc"
+import "../buffer.zc"
+import "../layout.zc"
+import "./block.zc"
+
+include <string.h>
+include <stdio.h>
+
+struct Gauge {
+    ratio: float;
+    label: char*;
+    style: Style;
+    gauge_style: Style;
+    block: Block;
+    has_block: bool;
+}
+
+impl Gauge {
+    fn new() -> Gauge {
+        return Gauge {
+            ratio: 0.0,
+            label: NULL,
+            style: Style::new(),
+            gauge_style: Style::fg(Color::green()),
+            block: Block::new(),
+            has_block: false
+        };
+    }
+
+    fn set_ratio(self, r: float) -> Gauge {
+        let clamped = r;
+        if (clamped < 0.0) clamped = 0.0;
+        if (clamped > 1.0) clamped = 1.0;
+        return Gauge {
+            ratio: clamped,
+            label: self.label,
+            style: self.style,
+            gauge_style: self.gauge_style,
+            block: self.block,
+            has_block: self.has_block
+        };
+    }
+
+    fn set_percent(self, p: int) -> Gauge {
+        return self.set_ratio((float)p / 100.0);
+    }
+
+    fn set_label(self, l: char*) -> Gauge {
+        return Gauge {
+            ratio: self.ratio,
+            label: l,
+            style: self.style,
+            gauge_style: self.gauge_style,
+            block: self.block,
+            has_block: self.has_block
+        };
+    }
+
+    fn set_style(self, s: Style) -> Gauge {
+        return Gauge {
+            ratio: self.ratio,
+            label: self.label,
+            style: s,
+            gauge_style: self.gauge_style,
+            block: self.block,
+            has_block: self.has_block
+        };
+    }
+
+    fn set_gauge_style(self, s: Style) -> Gauge {
+        return Gauge {
+            ratio: self.ratio,
+            label: self.label,
+            style: self.style,
+            gauge_style: s,
+            block: self.block,
+            has_block: self.has_block
+        };
+    }
+
+    fn set_block(self, b: Block) -> Gauge {
+        return Gauge {
+            ratio: self.ratio,
+            label: self.label,
+            style: self.style,
+            gauge_style: self.gauge_style,
+            block: b,
+            has_block: true
+        };
+    }
+
+    fn render(self, area: Rect, buf: Buffer*) {
+        if (area.width == 0 || area.height == 0) return;
+
+        let inner = area;
+        if (self.has_block) {
+            self.block.render(area, buf);
+            inner = self.block.inner(area);
+        }
+
+        if (inner.width == 0 || inner.height == 0) return;
+
+        let filled = (int)((float)inner.width * self.ratio);
+        if (filled > inner.width) filled = inner.width;
+
+        // Draw gauge bar
+        let y = inner.y;
+        while (y < inner.y + inner.height) {
+            let x = inner.x;
+            while (x < inner.x + inner.width) {
+                if (x - inner.x < filled) {
+                    buf.set_char(x, y, ' ', self.gauge_style.add_modifier(MOD_REVERSE));
+                } else {
+                    buf.set_char(x, y, ' ', self.style);
+                }
+                x = x + 1;
+            }
+            y = y + 1;
+        }
+
+        // Draw label centered
+        let label_buf: char[32];
+        let label_text: char* = self.label;
+        if (label_text == NULL) {
+            let pct = (int)(self.ratio * 100.0);
+            sprintf(label_buf, "%d%%", pct);
+            label_text = (char*)label_buf;
+        }
+
+        let label_len = (int)strlen(label_text);
+        let label_x = inner.x + (inner.width - label_len) / 2;
+        let label_y = inner.y + inner.height / 2;
+
+        if (label_x < inner.x) label_x = inner.x;
+
+        let li = 0;
+        while (li < label_len && label_x + li < inner.x + inner.width) {
+            let style = self.style;
+            if (label_x + li - inner.x < filled) {
+                style = self.gauge_style.add_modifier(MOD_REVERSE);
+            }
+            buf.set_char(label_x + li, label_y, label_text[li], style);
+            li = li + 1;
+        }
+    }
+}

@@ -1,0 +1,195 @@
+// TUI Buffer - Double-buffered cell grid
+// Depends on: style.zc, terminal.zc
+
+import "./style.zc"
+import "./text.zc"
+import "./terminal.zc"
+
+include <stdlib.h>
+include <string.h>
+include <stdio.h>
+
+struct Cell {
+    ch: char[8];
+    style: Style;
+}
+
+impl Cell {
+    fn empty() -> Cell {
+        let c: Cell;
+        c.ch[0] = ' ';
+        c.ch[1] = 0;
+        c.style = Style::new();
+        return c;
+    }
+
+    fn equals(self, other: Cell*) -> bool {
+        if (self.style.fg.kind != other.style.fg.kind) return false;
+        if (self.style.bg.kind != other.style.bg.kind) return false;
+        if (self.style.modifiers != other.style.modifiers) return false;
+        if (self.style.fg.kind == COLOR_RGB) {
+            if (self.style.fg.r != other.style.fg.r) return false;
+            if (self.style.fg.g != other.style.fg.g) return false;
+            if (self.style.fg.b != other.style.fg.b) return false;
+        }
+        if (self.style.bg.kind == COLOR_RGB) {
+            if (self.style.bg.r != other.style.bg.r) return false;
+            if (self.style.bg.g != other.style.bg.g) return false;
+            if (self.style.bg.b != other.style.bg.b) return false;
+        }
+        if (strcmp(self.ch, other.ch) != 0) return false;
+        return true;
+    }
+}
+
+struct Buffer {
+    cells: Cell*;
+    width: int;
+    height: int;
+}
+
+impl Buffer {
+    fn new(w: int, h: int) -> Buffer {
+        let count = w * h;
+        let cells: Cell* = (Cell*)malloc(sizeof(Cell) * (usize)count);
+        let i = 0;
+        while (i < count) {
+            cells[i] = Cell::empty();
+            i = i + 1;
+        }
+        return Buffer { cells: cells, width: w, height: h };
+    }
+
+    fn free(self) {
+        if (self.cells != NULL) {
+            free(self.cells);
+            self.cells = NULL;
+        }
+    }
+
+    fn index(self, x: int, y: int) -> int {
+        return y * self.width + x;
+    }
+
+    fn get(self, x: int, y: int) -> Cell* {
+        if (x < 0 || x >= self.width || y < 0 || y >= self.height) return NULL;
+        return &self.cells[self.index(x, y)];
+    }
+
+    fn set(self, x: int, y: int, ch: char*, style: Style) {
+        if (x < 0 || x >= self.width || y < 0 || y >= self.height) return;
+        let idx = self.index(x, y);
+        let i: usize = 0;
+        while (ch[i] != 0 && i < 7) {
+            self.cells[idx].ch[i] = ch[i];
+            i = i + 1;
+        }
+        self.cells[idx].ch[i] = 0;
+        self.cells[idx].style = style;
+    }
+
+    fn set_char(self, x: int, y: int, ch: char, style: Style) {
+        if (x < 0 || x >= self.width || y < 0 || y >= self.height) return;
+        let idx = self.index(x, y);
+        self.cells[idx].ch[0] = ch;
+        self.cells[idx].ch[1] = 0;
+        self.cells[idx].style = style;
+    }
+
+    fn set_string(self, x: int, y: int, s: char*, style: Style) -> int {
+        let cx = x;
+        let i: usize = 0;
+        while (s[i] != 0 && cx < self.width) {
+            self.set_char(cx, y, s[i], style);
+            cx = cx + 1;
+            i = i + 1;
+        }
+        return cx - x;
+    }
+
+    fn set_spans(self, x: int, y: int, spans: Span*, span_count: int) -> int {
+        let cx = x;
+        let si = 0;
+        while (si < span_count && cx < self.width) {
+            let span = &spans[si];
+            if (span.content != NULL) {
+                let j: usize = 0;
+                while (span.content[j] != 0 && cx < self.width) {
+                    self.set_char(cx, y, span.content[j], span.style);
+                    cx = cx + 1;
+                    j = j + 1;
+                }
+            }
+            si = si + 1;
+        }
+        return cx - x;
+    }
+
+    fn clear(self) {
+        let count = self.width * self.height;
+        let i = 0;
+        while (i < count) {
+            self.cells[i] = Cell::empty();
+            i = i + 1;
+        }
+    }
+
+    fn resize(self, w: int, h: int) {
+        self.free();
+        let count = w * h;
+        self.cells = (Cell*)malloc(sizeof(Cell) * (usize)count);
+        self.width = w;
+        self.height = h;
+        self.clear();
+    }
+
+    // Render the entire buffer to terminal (full redraw)
+    fn render(self, term: Terminal*) {
+        let ansi_buf: char[128];
+        let y = 0;
+        while (y < self.height) {
+            term.move_cursor(0, y);
+            let x = 0;
+            while (x < self.width) {
+                let cell = &self.cells[self.index(x, y)];
+                style_to_ansi(&cell.style, ansi_buf);
+                _tui_write(ansi_buf, strlen(ansi_buf));
+                _tui_write(cell.ch, strlen(cell.ch));
+                x = x + 1;
+            }
+            y = y + 1;
+        }
+        style_reset_ansi(ansi_buf);
+        _tui_write(ansi_buf, strlen(ansi_buf));
+    }
+
+    // Diff render: only write cells that differ from previous buffer
+    fn diff(self, prev: Buffer*, term: Terminal*) {
+        let ansi_buf: char[128];
+        let y = 0;
+        while (y < self.height) {
+            let x = 0;
+            while (x < self.width) {
+                let idx = self.index(x, y);
+                let curr = &self.cells[idx];
+                let old = &prev.cells[idx];
+                if (!curr.equals(old)) {
+                    term.move_cursor(x, y);
+                    style_to_ansi(&curr.style, ansi_buf);
+                    _tui_write(ansi_buf, strlen(ansi_buf));
+                    _tui_write(curr.ch, strlen(curr.ch));
+                }
+                x = x + 1;
+            }
+            y = y + 1;
+        }
+        style_reset_ansi(ansi_buf);
+        _tui_write(ansi_buf, strlen(ansi_buf));
+    }
+
+    // Copy contents to another buffer
+    fn copy_to(self, dest: Buffer*) {
+        let count = self.width * self.height;
+        memcpy(dest.cells, self.cells, sizeof(Cell) * (usize)count);
+    }
+}

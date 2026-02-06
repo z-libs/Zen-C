@@ -1,0 +1,93 @@
+// TUI Widget - Widget trait and app runner loop
+// Depends on: layout.zc, buffer.zc, terminal.zc, event.zc, style.zc
+
+import "./style.zc"
+import "./terminal.zc"
+import "./buffer.zc"
+import "./layout.zc"
+import "./event.zc"
+
+include <string.h>
+
+struct Frame {
+    buffer: Buffer*;
+    area: Rect;
+}
+
+impl Frame {
+    fn new(buf: Buffer*, area: Rect) -> Frame {
+        return Frame { buffer: buf, area: area };
+    }
+
+    fn size(self) -> Rect {
+        return self.area;
+    }
+
+    fn set_string(self, x: int, y: int, s: char*, style: Style) {
+        self.buffer.set_string(x, y, s, style);
+    }
+
+    fn set_char(self, x: int, y: int, ch: char, style: Style) {
+        self.buffer.set_char(x, y, ch, style);
+    }
+
+    fn set_spans(self, x: int, y: int, spans: Span*, count: int) {
+        self.buffer.set_spans(x, y, spans, count);
+    }
+}
+
+// App runner: manages the double-buffered render loop
+// draw_fn: called each frame with a Frame* to render widgets into
+// event_fn: called with each Event, return 0 to quit
+fn tui_run(draw_fn: fn(Frame*), event_fn: fn(Event) -> int) {
+    let term = Terminal::new();
+    let sz = term.size();
+
+    let front = Buffer::new(sz.width, sz.height);
+    let back = Buffer::new(sz.width, sz.height);
+
+    let running = true;
+    let first_frame = true;
+
+    while (running) {
+        // Update terminal size
+        sz = term.size();
+        if (sz.width != back.width || sz.height != back.height) {
+            back.resize(sz.width, sz.height);
+            front.resize(sz.width, sz.height);
+            first_frame = true;
+        }
+
+        // Clear the back buffer
+        back.clear();
+
+        // Create frame and call draw function
+        let area = Rect::new(0, 0, back.width, back.height);
+        let frame = Frame::new(&back, area);
+        draw_fn(&frame);
+
+        // Render: diff against front buffer
+        if (first_frame) {
+            back.render(&term);
+            first_frame = false;
+        } else {
+            back.diff(&front, &term);
+        }
+
+        // Swap buffers
+        back.copy_to(&front);
+        term.flush();
+
+        // Poll for events
+        if (Event::poll(50)) {
+            let evt = Event::read();
+            if (event_fn(evt) == 0) {
+                running = false;
+            }
+        }
+    }
+
+    front.free();
+    back.free();
+    term.drop();
+}

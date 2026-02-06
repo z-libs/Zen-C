@@ -1,0 +1,257 @@
+// TUI Table Widget - Column-aligned table with header
+// Depends on: style.zc, text.zc, buffer.zc, layout.zc, block.zc
+
+import "../style.zc"
+import "../text.zc"
+import "../buffer.zc"
+import "../layout.zc"
+import "./block.zc"
+
+include <string.h>
+include <stdlib.h>
+
+struct Row {
+    cells: char**;
+    cell_count: int;
+    style: Style;
+}
+
+impl Copy for Row {}
+
+impl Row {
+    fn new(cells: char**, count: int) -> Row {
+        return Row { cells: cells, cell_count: count, style: Style::new() };
+    }
+
+    fn set_style(self, s: Style) -> Row {
+        return Row { cells: self.cells, cell_count: self.cell_count, style: s };
+    }
+}
+
+struct TableState {
+    selected: int;
+    offset: int;
+}
+
+impl Copy for TableState {}
+
+impl TableState {
+    fn new() -> TableState {
+        return TableState { selected: 0, offset: 0 };
+    }
+
+    fn next(self, count: int) {
+        if (count == 0) return;
+        self.selected = self.selected + 1;
+        if (self.selected >= count) self.selected = 0;
+    }
+
+    fn previous(self, count: int) {
+        if (count == 0) return;
+        if (self.selected <= 0) {
+            self.selected = count - 1;
+        } else {
+            self.selected = self.selected - 1;
+        }
+    }
+}
+
+struct Table {
+    rows: Row*;
+    row_count: int;
+    header: Row;
+    has_header: bool;
+    widths: int*;
+    col_count: int;
+    block: Block;
+    has_block: bool;
+    style: Style;
+    highlight_style: Style;
+    header_style: Style;
+}
+
+impl Table {
+    fn new(rows: Row*, count: int) -> Table {
+        return Table {
+            rows: rows,
+            row_count: count,
+            header: Row { cells: NULL, cell_count: 0, style: Style::new() },
+            has_header: false,
+            widths: NULL,
+            col_count: 0,
+            block: Block::new(),
+            has_block: false,
+            style: Style::new(),
+            highlight_style: Style::fg(Color::yellow()).add_modifier(MOD_BOLD),
+            header_style: Style::bold()
+        };
+    }
+
+    fn set_header(self, h: Row) -> Table {
+        return Table {
+            rows: self.rows,
+            row_count: self.row_count,
+            header: h,
+            has_header: true,
+            widths: self.widths,
+            col_count: self.col_count,
+            block: self.block,
+            has_block: self.has_block,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            header_style: self.header_style
+        };
+    }
+
+    fn set_widths(self, w: int*, count: int) -> Table {
+        return Table {
+            rows: self.rows,
+            row_count: self.row_count,
+            header: self.header,
+            has_header: self.has_header,
+            widths: w,
+            col_count: count,
+            block: self.block,
+            has_block: self.has_block,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            header_style: self.header_style
+        };
+    }
+
+    fn set_block(self, b: Block) -> Table {
+        return Table {
+            rows: self.rows,
+            row_count: self.row_count,
+            header: self.header,
+            has_header: self.has_header,
+            widths: self.widths,
+            col_count: self.col_count,
+            block: b,
+            has_block: true,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            header_style: self.header_style
+        };
+    }
+
+    fn set_highlight_style(self, s: Style) -> Table {
+        return Table {
+            rows: self.rows,
+            row_count: self.row_count,
+            header: self.header,
+            has_header: self.has_header,
+            widths: self.widths,
+            col_count: self.col_count,
+            block: self.block,
+            has_block: self.has_block,
+            style: self.style,
+            highlight_style: s,
+            header_style: self.header_style
+        };
+    }
+
+    fn set_header_style(self, s: Style) -> Table {
+        return Table {
+            rows: self.rows,
+            row_count: self.row_count,
+            header: self.header,
+            has_header: self.has_header,
+            widths: self.widths,
+            col_count: self.col_count,
+            block: self.block,
+            has_block: self.has_block,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            header_style: s
+        };
+    }
+
+    fn render_row(self, row: Row*, y: int, inner: Rect, buf: Buffer*, style: Style) {
+        let cx = inner.x;
+        let col = 0;
+        while (col < row.cell_count && cx < inner.x + inner.width) {
+            let col_width = 10; // default
+            if (self.widths != NULL && col < self.col_count) {
+                col_width = self.widths[col];
+            }
+
+            if (col < row.cell_count && row.cells[col] != NULL) {
+                let text = row.cells[col];
+                let len = (int)strlen(text);
+                if (len > col_width) len = col_width;
+                let i = 0;
+                while (i < len && cx + i < inner.x + inner.width) {
+                    buf.set_char(cx + i, y, text[i], style);
+                    i = i + 1;
+                }
+                // Pad remaining width
+                while (i < col_width && cx + i < inner.x + inner.width) {
+                    buf.set_char(cx + i, y, ' ', style);
+                    i = i + 1;
+                }
+            }
+
+            cx = cx + col_width + 1; // +1 for column gap
+            col = col + 1;
+        }
+        // Fill rest of line
+        while (cx < inner.x + inner.width) {
+            buf.set_char(cx, y, ' ', style);
+            cx = cx + 1;
+        }
+    }
+
+    fn render_stateful(self, area: Rect, buf: Buffer*, state: TableState*) {
+        if (area.width == 0 || area.height == 0) return;
+
+        let inner = area;
+        if (self.has_block) {
+            self.block.render(area, buf);
+            inner = self.block.inner(area);
+        }
+
+        if (inner.width == 0 || inner.height == 0) return;
+
+        let y = inner.y;
+
+        // Render header
+        if (self.has_header) {
+            self.render_row(&self.header, y, inner, buf, self.header_style);
+            y = y + 1;
+
+            // Draw separator line
+            if (y < inner.y + inner.height) {
+                let sx = inner.x;
+                let sep_style = self.style;
+                while (sx < inner.x + inner.width) {
+                    buf.set_char(sx, y, '-', sep_style);
+                    sx = sx + 1;
+                }
+                y = y + 1;
+            }
+        }
+
+        // Adjust scroll offset
+        let visible = inner.y + inner.height - y;
+        if (state.selected < state.offset) {
+            state.offset = state.selected;
+        }
+        if (state.selected >= state.offset + visible) {
+            state.offset = state.selected - visible + 1;
+        }
+
+        // Render rows
+        let idx = state.offset;
+        while (idx < self.row_count && y < inner.y + inner.height) {
+            let row = &self.rows[idx];
+            let style = row.style;
+            if (idx == state.selected) {
+                style = self.highlight_style;
+            }
+            self.render_row(row, y, inner, buf, style);
+            y = y + 1;
+            idx = idx + 1;
+        }
+    }
+}

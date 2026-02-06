@@ -1,0 +1,142 @@
+// TUI Paragraph Widget - Multi-line styled text with wrapping
+// Depends on: style.zc, text.zc, buffer.zc, layout.zc, block.zc
+
+import "../style.zc"
+import "../text.zc"
+import "../buffer.zc"
+import "../layout.zc"
+import "./block.zc"
+
+include <string.h>
+
+struct Paragraph {
+    text: Text;
+    block: Block;
+    has_block: bool;
+    wrap: bool;
+    scroll_offset: int;
+    style: Style;
+}
+
+impl Paragraph {
+    fn new(text: Text) -> Paragraph {
+        return Paragraph {
+            text: text,
+            block: Block::new(),
+            has_block: false,
+            wrap: false,
+            scroll_offset: 0,
+            style: Style::new()
+        };
+    }
+
+    fn set_block(self, b: Block) -> Paragraph {
+        return Paragraph {
+            text: self.text,
+            block: b,
+            has_block: true,
+            wrap: self.wrap,
+            scroll_offset: self.scroll_offset,
+            style: self.style
+        };
+    }
+
+    fn set_wrap(self, w: bool) -> Paragraph {
+        return Paragraph {
+            text: self.text,
+            block: self.block,
+            has_block: self.has_block,
+            wrap: w,
+            scroll_offset: self.scroll_offset,
+            style: self.style
+        };
+    }
+
+    fn set_scroll(self, s: int) -> Paragraph {
+        return Paragraph {
+            text: self.text,
+            block: self.block,
+            has_block: self.has_block,
+            wrap: self.wrap,
+            scroll_offset: s,
+            style: self.style
+        };
+    }
+
+    fn set_style(self, s: Style) -> Paragraph {
+        return Paragraph {
+            text: self.text,
+            block: self.block,
+            has_block: self.has_block,
+            wrap: self.wrap,
+            scroll_offset: self.scroll_offset,
+            style: s
+        };
+    }
+
+    fn render(self, area: Rect, buf: Buffer*) {
+        if (area.width == 0 || area.height == 0) return;
+
+        // Render block if present
+        let inner = area;
+        if (self.has_block) {
+            self.block.render(area, buf);
+            inner = self.block.inner(area);
+        }
+
+        if (inner.width == 0 || inner.height == 0) return;
+
+        // Fill background with style
+        let y = inner.y;
+        while (y < inner.y + inner.height) {
+            let x = inner.x;
+            while (x < inner.x + inner.width) {
+                buf.set_char(x, y, ' ', self.style);
+                x = x + 1;
+            }
+            y = y + 1;
+        }
+
+        // Render text lines
+        let line_idx = self.scroll_offset;
+        let render_y = inner.y;
+
+        while (line_idx < self.text.line_count && render_y < inner.y + inner.height) {
+            if (line_idx < 0) {
+                line_idx = line_idx + 1;
+                continue;
+            }
+
+            let line = &self.text.lines[line_idx];
+
+            if (self.wrap) {
+                // Word wrapping
+                let si = 0;
+                let cx = inner.x;
+                while (si < line.span_count && render_y < inner.y + inner.height) {
+                    let span = &line.spans[si];
+                    if (span.content != NULL) {
+                        let ci: usize = 0;
+                        while (span.content[ci] != 0 && render_y < inner.y + inner.height) {
+                            if (cx >= inner.x + inner.width) {
+                                cx = inner.x;
+                                render_y = render_y + 1;
+                                if (render_y >= inner.y + inner.height) break;
+                            }
+                            buf.set_char(cx, render_y, span.content[ci], span.style);
+                            cx = cx + 1;
+                            ci = ci + 1;
+                        }
+                    }
+                    si = si + 1;
+                }
+            } else {
+                // No wrapping - render spans left to right
+                buf.set_spans(inner.x, render_y, line.spans, line.span_count);
+            }
+
+            render_y = render_y + 1;
+            line_idx = line_idx + 1;
+        }
+    }
+}

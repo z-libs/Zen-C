@@ -1,0 +1,147 @@
+// TUI Input Widget - Single-line text input with cursor
+// Depends on: style.zc, buffer.zc, layout.zc, event.zc, block.zc
+
+import "../style.zc"
+import "../buffer.zc"
+import "../layout.zc"
+import "../event.zc"
+import "./block.zc"
+
+include <string.h>
+
+struct Input {
+    text: char[1024];
+    cursor: int;
+    len: int;
+    style: Style;
+    cursor_style: Style;
+    block: Block;
+    has_block: bool;
+}
+
+impl Input {
+    fn new() -> Input {
+        let inp: Input;
+        inp.text[0] = 0;
+        inp.cursor = 0;
+        inp.len = 0;
+        inp.style = Style::new();
+        inp.cursor_style = Style::new().add_modifier(MOD_REVERSE);
+        inp.block = Block::new();
+        inp.has_block = false;
+        return inp;
+    }
+
+    fn set_style(self, s: Style) -> Input {
+        self.style = s;
+        return *self;
+    }
+
+    fn set_block(self, b: Block) -> Input {
+        self.block = b;
+        self.has_block = true;
+        return *self;
+    }
+
+    fn value(self) -> char* {
+        return self.text;
+    }
+
+    fn handle_key(self, ev: KeyEvent) {
+        if (ev.code == KEY_CHAR && ev.modifier == KMOD_NONE) {
+            if (self.len < 1022) {
+                // Insert character at cursor position
+                let i = self.len;
+                while (i > self.cursor) {
+                    self.text[i] = self.text[i - 1];
+                    i = i - 1;
+                }
+                self.text[self.cursor] = ev.ch;
+                self.cursor = self.cursor + 1;
+                self.len = self.len + 1;
+                self.text[self.len] = 0;
+            }
+        } else if (ev.code == KEY_BACKSPACE) {
+            if (self.cursor > 0) {
+                let i = self.cursor - 1;
+                while (i < self.len - 1) {
+                    self.text[i] = self.text[i + 1];
+                    i = i + 1;
+                }
+                self.cursor = self.cursor - 1;
+                self.len = self.len - 1;
+                self.text[self.len] = 0;
+            }
+        } else if (ev.code == KEY_DELETE) {
+            if (self.cursor < self.len) {
+                let i = self.cursor;
+                while (i < self.len - 1) {
+                    self.text[i] = self.text[i + 1];
+                    i = i + 1;
+                }
+                self.len = self.len - 1;
+                self.text[self.len] = 0;
+            }
+        } else if (ev.code == KEY_LEFT) {
+            if (self.cursor > 0) self.cursor = self.cursor - 1;
+        } else if (ev.code == KEY_RIGHT) {
+            if (self.cursor < self.len) self.cursor = self.cursor + 1;
+        } else if (ev.code == KEY_HOME) {
+            self.cursor = 0;
+        } else if (ev.code == KEY_END) {
+            self.cursor = self.len;
+        }
+    }
+
+    fn clear(self) {
+        self.text[0] = 0;
+        self.cursor = 0;
+        self.len = 0;
+    }
+
+    fn set_text(self, s: char*) {
+        let slen = (int)strlen(s);
+        if (slen > 1022) slen = 1022;
+        memcpy(self.text, s, (usize)slen);
+        self.text[slen] = 0;
+        self.len = slen;
+        self.cursor = slen;
+    }
+
+    fn render(self, area: Rect, buf: Buffer*) {
+        if (area.width == 0 || area.height == 0) return;
+
+        let inner = area;
+        if (self.has_block) {
+            self.block.render(area, buf);
+            inner = self.block.inner(area);
+        }
+
+        if (inner.width == 0 || inner.height == 0) return;
+
+        // Calculate visible range based on cursor position
+        let visible_width = inner.width;
+        let view_start = 0;
+        if (self.cursor >= visible_width) {
+            view_start = self.cursor - visible_width + 1;
+        }
+
+        // Render text
+        let x = inner.x;
+        let i = view_start;
+        while (i < self.len && x < inner.x + inner.width) {
+            let style = self.style;
+            if (i == self.cursor) {
+                style = self.cursor_style;
+            }
+            buf.set_char(x, inner.y, self.text[i], style);
+            x = x + 1;
+            i = i + 1;
+        }
+
+        // Draw cursor at end if at the end of text
+        if (self.cursor >= self.len && x < inner.x + inner.width) {
+            buf.set_char(x, inner.y, ' ', self.cursor_style);
+        }
+    }
+}

@@ -1,0 +1,149 @@
+// TUI Text - Styled text primitives (Span, Line, Text)
+// Depends on: style.zc
+
+import "./style.zc"
+
+include <string.h>
+include <stdlib.h>
+
+struct Span {
+    content: char*;
+    style: Style;
+}
+
+impl Copy for Span {}
+
+impl Span {
+    fn raw(s: char*) -> Span {
+        return Span { content: s, style: Style::new() };
+    }
+
+    fn styled(s: char*, style: Style) -> Span {
+        return Span { content: s, style: style };
+    }
+
+    fn width(self) -> int {
+        if (self.content == NULL) return 0;
+        return (int)strlen(self.content);
+    }
+}
+
+struct Line {
+    spans: Span*;
+    span_count: int;
+}
+
+impl Copy for Line {}
+
+impl Line {
+    fn from(s: char*) -> Line {
+        let spans: Span* = (Span*)malloc(sizeof(Span));
+        spans[0] = Span::raw(s);
+        return Line { spans: spans, span_count: 1 };
+    }
+
+    fn from_spans(spans: Span*, count: int) -> Line {
+        let new_spans: Span* = (Span*)malloc(sizeof(Span) * (usize)count);
+        let i = 0;
+        while (i < count) {
+            new_spans[i] = spans[i];
+            i = i + 1;
+        }
+        return Line { spans: new_spans, span_count: count };
+    }
+
+    fn styled(s: char*, style: Style) -> Line {
+        let spans: Span* = (Span*)malloc(sizeof(Span));
+        spans[0] = Span::styled(s, style);
+        return Line { spans: spans, span_count: 1 };
+    }
+
+    fn width(self) -> int {
+        let w = 0;
+        let i = 0;
+        while (i < self.span_count) {
+            w = w + self.spans[i].width();
+            i = i + 1;
+        }
+        return w;
+    }
+
+    fn free(self) {
+        if (self.spans != NULL) {
+            free(self.spans);
+        }
+    }
+}
+
+struct Text {
+    lines: Line*;
+    line_count: int;
+}
+
+impl Copy for Text {}
+
+impl Text {
+    fn raw(s: char*) -> Text {
+        // Count newlines
+        let count = 1;
+        let i: usize = 0;
+        while (s[i] != 0) {
+            if (s[i] == '\n') count = count + 1;
+            i = i + 1;
+        }
+
+        let lines: Line* = (Line*)malloc(sizeof(Line) * (usize)count);
+        let line_idx = 0;
+        let start: usize = 0;
+        i = 0;
+
+        while (s[i] != 0) {
+            if (s[i] == '\n') {
+                let len = i - start;
+                let buf: char* = (char*)malloc(len + 1);
+                memcpy(buf, s + start, len);
+                buf[len] = 0;
+                lines[line_idx] = Line::from(buf);
+                line_idx = line_idx + 1;
+                start = i + 1;
+            }
+            i = i + 1;
+        }
+
+        // Last line (after final newline or whole string if no newlines)
+        let len = i - start;
+        let buf: char* = (char*)malloc(len + 1);
+        memcpy(buf, s + start, len);
+        buf[len] = 0;
+        lines[line_idx] = Line::from(buf);
+
+        return Text { lines: lines, line_count: count };
+    }
+
+    fn from_lines(lines: Line*, count: int) -> Text {
+        let new_lines: Line* = (Line*)malloc(sizeof(Line) * (usize)count);
+        let i = 0;
+        while (i < count) {
+            new_lines[i] = lines[i];
+            i = i + 1;
+        }
+        return Text { lines: new_lines, line_count: count };
+    }
+
+    fn styled(s: char*, style: Style) -> Text {
+        let lines: Line* = (Line*)malloc(sizeof(Line));
+        lines[0] = Line::styled(s, style);
+        return Text { lines: lines, line_count: 1 };
+    }
+
+    fn free(self) {
+        if (self.lines != NULL) {
+            let i = 0;
+            while (i < self.line_count) {
+                self.lines[i].free();
+                i = i + 1;
+            }
+            free(self.lines);
+        }
+    }
+}

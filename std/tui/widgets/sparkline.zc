@@ -1,0 +1,134 @@
+// TUI Sparkline Widget - Inline sparkline chart
+// Depends on: style.zc, buffer.zc, layout.zc, block.zc
+
+import "../style.zc"
+import "../buffer.zc"
+import "../layout.zc"
+import "./block.zc"
+
+include <string.h>
+
+// Unicode block elements for sparkline (8 levels)
+// ▁▂▃▄▅▆▇█
+
+struct Sparkline {
+    data: int*;
+    count: int;
+    max_val: int;
+    style: Style;
+    block: Block;
+    has_block: bool;
+}
+
+fn _spark_char(level: int) -> char* {
+    if (level <= 0) return " ";
+    if (level == 1) return "\xe2\x96\x81"; // ▁
+    if (level == 2) return "\xe2\x96\x82"; // ▂
+    if (level == 3) return "\xe2\x96\x83"; // ▃
+    if (level == 4) return "\xe2\x96\x84"; // ▄
+    if (level == 5) return "\xe2\x96\x85"; // ▅
+    if (level == 6) return "\xe2\x96\x86"; // ▆
+    if (level == 7) return "\xe2\x96\x87"; // ▇
+    return "\xe2\x96\x88"; // █
+}
+
+impl Sparkline {
+    fn new(data: int*, count: int) -> Sparkline {
+        // Calculate max if not set
+        let max_v = 0;
+        let i = 0;
+        while (i < count) {
+            if (data[i] > max_v) max_v = data[i];
+            i = i + 1;
+        }
+        return Sparkline {
+            data: data,
+            count: count,
+            max_val: max_v,
+            style: Style::fg(Color::green()),
+            block: Block::new(),
+            has_block: false
+        };
+    }
+
+    fn set_max(self, m: int) -> Sparkline {
+        return Sparkline {
+            data: self.data,
+            count: self.count,
+            max_val: m,
+            style: self.style,
+            block: self.block,
+            has_block: self.has_block
+        };
+    }
+
+    fn set_style(self, s: Style) -> Sparkline {
+        return Sparkline {
+            data: self.data,
+            count: self.count,
+            max_val: self.max_val,
+            style: s,
+            block: self.block,
+            has_block: self.has_block
+        };
+    }
+
+    fn set_block(self, b: Block) -> Sparkline {
+        return Sparkline {
+            data: self.data,
+            count: self.count,
+            max_val: self.max_val,
+            style: self.style,
+            block: b,
+            has_block: true
+        };
+    }
+
+    fn render(self, area: Rect, buf: Buffer*) {
+        if (area.width == 0 || area.height == 0) return;
+
+        let inner = area;
+        if (self.has_block) {
+            self.block.render(area, buf);
+            inner = self.block.inner(area);
+        }
+
+        if (inner.width == 0 || inner.height == 0) return;
+
+        let max_v = self.max_val;
+        if (max_v <= 0) max_v = 1;
+
+        // Determine how many data points to show (from the right)
+        let start = 0;
+        if (self.count > inner.width) {
+            start = self.count - inner.width;
+        }
+
+        let x = inner.x;
+        let di = start;
+        while (di < self.count && x < inner.x + inner.width) {
+            let val = self.data[di];
+            if (val < 0) val = 0;
+            if (val > max_v) val = max_v;
+
+            // Map to 0-8 levels per row from bottom
+            let y = inner.y + inner.height - 1;
+            while (y >= inner.y) {
+                let row_from_bottom = inner.y + inner.height - 1 - y;
+                let full_level = val * inner.height * 8 / max_v;
+                let row_level = full_level - row_from_bottom * 8;
+
+                if (row_level <= 0) {
+                    buf.set_char(x, y, ' ', self.style);
+                } else {
+                    if (row_level > 8) row_level = 8;
+                    buf.set(x, y, _spark_char(row_level), self.style);
+                }
+                y = y - 1;
+            }
+
+            x = x + 1;
+            di = di + 1;
+        }
+    }
+}

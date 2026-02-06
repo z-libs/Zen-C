@@ -1,0 +1,195 @@
+// TUI List Widget - Scrollable selectable list
+// Depends on: style.zc, text.zc, buffer.zc, layout.zc, block.zc
+
+import "../style.zc"
+import "../text.zc"
+import "../buffer.zc"
+import "../layout.zc"
+import "./block.zc"
+
+include <string.h>
+
+struct ListItem {
+    content: char*;
+    style: Style;
+}
+
+impl Copy for ListItem {}
+
+impl ListItem {
+    fn new(s: char*) -> ListItem {
+        return ListItem { content: s, style: Style::new() };
+    }
+
+    fn styled(s: char*, style: Style) -> ListItem {
+        return ListItem { content: s, style: style };
+    }
+}
+
+struct ListState {
+    selected: int;
+    offset: int;
+}
+
+impl Copy for ListState {}
+
+impl ListState {
+    fn new() -> ListState {
+        return ListState { selected: 0, offset: 0 };
+    }
+
+    fn select(self, idx: int) {
+        self.selected = idx;
+    }
+
+    fn next(self, count: int) {
+        if (count == 0) return;
+        self.selected = self.selected + 1;
+        if (self.selected >= count) self.selected = 0;
+    }
+
+    fn previous(self, count: int) {
+        if (count == 0) return;
+        if (self.selected <= 0) {
+            self.selected = count - 1;
+        } else {
+            self.selected = self.selected - 1;
+        }
+    }
+}
+
+struct List {
+    items: ListItem*;
+    count: int;
+    block: Block;
+    has_block: bool;
+    style: Style;
+    highlight_style: Style;
+    highlight_symbol: char*;
+}
+
+impl List {
+    fn new(items: ListItem*, count: int) -> List {
+        return List {
+            items: items,
+            count: count,
+            block: Block::new(),
+            has_block: false,
+            style: Style::new(),
+            highlight_style: Style::fg(Color::yellow()).add_modifier(MOD_BOLD),
+            highlight_symbol: "> "
+        };
+    }
+
+    fn set_block(self, b: Block) -> List {
+        return List {
+            items: self.items,
+            count: self.count,
+            block: b,
+            has_block: true,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            highlight_symbol: self.highlight_symbol
+        };
+    }
+
+    fn set_style(self, s: Style) -> List {
+        return List {
+            items: self.items,
+            count: self.count,
+            block: self.block,
+            has_block: self.has_block,
+            style: s,
+            highlight_style: self.highlight_style,
+            highlight_symbol: self.highlight_symbol
+        };
+    }
+
+    fn set_highlight_style(self, s: Style) -> List {
+        return List {
+            items: self.items,
+            count: self.count,
+            block: self.block,
+            has_block: self.has_block,
+            style: self.style,
+            highlight_style: s,
+            highlight_symbol: self.highlight_symbol
+        };
+    }
+
+    fn set_highlight_symbol(self, s: char*) -> List {
+        return List {
+            items: self.items,
+            count: self.count,
+            block: self.block,
+            has_block: self.has_block,
+            style: self.style,
+            highlight_style: self.highlight_style,
+            highlight_symbol: s
+        };
+    }
+
+    fn render_stateful(self, area: Rect, buf: Buffer*, state: ListState*) {
+        if (area.width == 0 || area.height == 0) return;
+
+        let inner = area;
+        if (self.has_block) {
+            self.block.render(area, buf);
+            inner = self.block.inner(area);
+        }
+
+        if (inner.width == 0 || inner.height == 0) return;
+
+        // Adjust scroll offset
+        let visible = inner.height;
+        if (state.selected < state.offset) {
+            state.offset = state.selected;
+        }
+        if (state.selected >= state.offset + visible) {
+            state.offset = state.selected - visible + 1;
+        }
+
+        let sym_len = 0;
+        if (self.highlight_symbol != NULL) {
+            sym_len = (int)strlen(self.highlight_symbol);
+        }
+
+        // Render items
+        let y = inner.y;
+        let idx = state.offset;
+        while (idx < self.count && y < inner.y + inner.height) {
+            let item = &self.items[idx];
+            let is_selected = (idx == state.selected);
+
+            let style = item.style;
+            if (is_selected) {
+                style = self.highlight_style;
+            }
+
+            // Fill line with style
+            let fx = inner.x;
+            while (fx < inner.x + inner.width) {
+                buf.set_char(fx, y, ' ', style);
+                fx = fx + 1;
+            }
+
+            let cx = inner.x;
+
+            // Draw highlight symbol
+            if (is_selected && self.highlight_symbol != NULL) {
+                buf.set_string(cx, y, self.highlight_symbol, style);
+                cx = cx + sym_len;
+            } else {
+                cx = cx + sym_len;
+            }
+
+            // Draw item text
+            if (item.content != NULL) {
+                buf.set_string(cx, y, item.content, style);
+            }
+
+            y = y + 1;
+            idx = idx + 1;
+        }
+    }
+}

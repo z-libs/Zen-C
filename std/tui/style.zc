@@ -1,0 +1,191 @@
+// TUI Style - Colors and text styling
+// No dependencies
+
+include <string.h>
+include <stdio.h>
+
+// Color constants (enum-like using def)
+def COLOR_DEFAULT = 0;
+def COLOR_BLACK = 1;
+def COLOR_RED = 2;
+def COLOR_GREEN = 3;
+def COLOR_YELLOW = 4;
+def COLOR_BLUE = 5;
+def COLOR_MAGENTA = 6;
+def COLOR_CYAN = 7;
+def COLOR_WHITE = 8;
+def COLOR_RGB = 9;
+
+// Modifier flags (bitmask)
+def MOD_BOLD = 1;
+def MOD_DIM = 2;
+def MOD_ITALIC = 4;
+def MOD_UNDERLINE = 8;
+def MOD_BLINK = 16;
+def MOD_REVERSE = 32;
+def MOD_HIDDEN = 64;
+def MOD_STRIKETHROUGH = 128;
+
+struct Color {
+    kind: int;
+    r: int;
+    g: int;
+    b: int;
+}
+
+impl Copy for Color {}
+
+impl Color {
+    fn default_color() -> Color {
+        return Color { kind: COLOR_DEFAULT, r: 0, g: 0, b: 0 };
+    }
+
+    fn black() -> Color { return Color { kind: COLOR_BLACK, r: 0, g: 0, b: 0 }; }
+    fn red() -> Color { return Color { kind: COLOR_RED, r: 0, g: 0, b: 0 }; }
+    fn green() -> Color { return Color { kind: COLOR_GREEN, r: 0, g: 0, b: 0 }; }
+    fn yellow() -> Color { return Color { kind: COLOR_YELLOW, r: 0, g: 0, b: 0 }; }
+    fn blue() -> Color { return Color { kind: COLOR_BLUE, r: 0, g: 0, b: 0 }; }
+    fn magenta() -> Color { return Color { kind: COLOR_MAGENTA, r: 0, g: 0, b: 0 }; }
+    fn cyan() -> Color { return Color { kind: COLOR_CYAN, r: 0, g: 0, b: 0 }; }
+    fn white() -> Color { return Color { kind: COLOR_WHITE, r: 0, g: 0, b: 0 }; }
+
+    fn rgb(r: int, g: int, b: int) -> Color {
+        return Color { kind: COLOR_RGB, r: r, g: g, b: b };
+    }
+}
+
+struct Style {
+    fg: Color;
+    bg: Color;
+    modifiers: int;
+}
+
+impl Copy for Style {}
+
+impl Style {
+    fn new() -> Style {
+        return Style {
+            fg: Color::default_color(),
+            bg: Color::default_color(),
+            modifiers: 0
+        };
+    }
+
+    fn fg(color: Color) -> Style {
+        return Style {
+            fg: color,
+            bg: Color::default_color(),
+            modifiers: 0
+        };
+    }
+
+    fn bg(color: Color) -> Style {
+        return Style {
+            fg: Color::default_color(),
+            bg: color,
+            modifiers: 0
+        };
+    }
+
+    fn bold() -> Style {
+        return Style {
+            fg: Color::default_color(),
+            bg: Color::default_color(),
+            modifiers: MOD_BOLD
+        };
+    }
+
+    fn italic() -> Style {
+        return Style {
+            fg: Color::default_color(),
+            bg: Color::default_color(),
+            modifiers: MOD_ITALIC
+        };
+    }
+
+    fn set_fg(self, color: Color) -> Style {
+        return Style { fg: color, bg: self.bg, modifiers: self.modifiers };
+    }
+
+    fn set_bg(self, color: Color) -> Style {
+        return Style { fg: self.fg, bg: color, modifiers: self.modifiers };
+    }
+
+    fn add_modifier(self, m: int) -> Style {
+        return Style { fg: self.fg, bg: self.bg, modifiers: self.modifiers | m };
+    }
+
+    fn remove_modifier(self, m: int) -> Style {
+        return Style { fg: self.fg, bg: self.bg, modifiers: self.modifiers & (~m) };
+    }
+}
+
+// Write ANSI SGR sequence for a color (foreground or background)
+// is_fg: 1 for foreground, 0 for background
+// Returns number of bytes written
+fn _color_to_ansi(c: Color*, buf: char*, is_fg: int) -> int {
+    let base = 30;
+    if (is_fg == 0) base = 40;
+
+    if (c.kind == COLOR_DEFAULT) {
+        return sprintf(buf, "%d;", base + 9);
+    }
+    if (c.kind == COLOR_BLACK) { return sprintf(buf, "%d;", base + 0); }
+    if (c.kind == COLOR_RED) { return sprintf(buf, "%d;", base + 1); }
+    if (c.kind == COLOR_GREEN) { return sprintf(buf, "%d;", base + 2); }
+    if (c.kind == COLOR_YELLOW) { return sprintf(buf, "%d;", base + 3); }
+    if (c.kind == COLOR_BLUE) { return sprintf(buf, "%d;", base + 4); }
+    if (c.kind == COLOR_MAGENTA) { return sprintf(buf, "%d;", base + 5); }
+    if (c.kind == COLOR_CYAN) { return sprintf(buf, "%d;", base + 6); }
+    if (c.kind == COLOR_WHITE) { return sprintf(buf, "%d;", base + 7); }
+    if (c.kind == COLOR_RGB) {
+        if (is_fg == 1) {
+            return sprintf(buf, "38;2;%d;%d;%d;", c.r, c.g, c.b);
+        } else {
+            return sprintf(buf, "48;2;%d;%d;%d;", c.r, c.g, c.b);
+        }
+    }
+    return 0;
+}
+
+// Write full ANSI SGR escape sequence for a style into buf
+// Returns number of bytes written
+fn style_to_ansi(s: Style*, buf: char*) -> int {
+    let pos = 0;
+    buf[0] = 0;
+
+    // Start escape sequence
+    pos = pos + sprintf(buf + pos, "\x1b[");
+
+    // Reset first
+    pos = pos + sprintf(buf + pos, "0;");
+
+    // Modifiers
+    if (s.modifiers & MOD_BOLD) { pos = pos + sprintf(buf + pos, "1;"); }
+    if (s.modifiers & MOD_DIM) { pos = pos + sprintf(buf + pos, "2;"); }
+    if (s.modifiers & MOD_ITALIC) { pos = pos + sprintf(buf + pos, "3;"); }
+    if (s.modifiers & MOD_UNDERLINE) { pos = pos + sprintf(buf + pos, "4;"); }
+    if (s.modifiers & MOD_BLINK) { pos = pos + sprintf(buf + pos, "5;"); }
+    if (s.modifiers & MOD_REVERSE) { pos = pos + sprintf(buf + pos, "7;"); }
+    if (s.modifiers & MOD_HIDDEN) { pos = pos + sprintf(buf + pos, "8;"); }
+    if (s.modifiers & MOD_STRIKETHROUGH) { pos = pos + sprintf(buf + pos, "9;"); }
+
+    // Foreground color
+    pos = pos + _color_to_ansi(&s.fg, buf + pos, 1);
+
+    // Background color
+    pos = pos + _color_to_ansi(&s.bg, buf + pos, 0);
+
+    // Replace trailing semicolon with 'm'
+    if (pos > 2 && buf[pos - 1] == ';') {
+        buf[pos - 1] = 'm';
+    } else {
+        pos = pos + sprintf(buf + pos, "m");
+    }
+
+    return pos;
+}
+
+fn style_reset_ansi(buf: char*) -> int {
+    return sprintf(buf, "\x1b[0m");
+}

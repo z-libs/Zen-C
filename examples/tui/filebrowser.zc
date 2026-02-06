@@ -1,0 +1,283 @@
+// TUI File Browser Example - Two-pane file browser
+// Uses the standard library (std/fs.zc) for all file I/O
+// Showcases: List, Paragraph, Input, Block, Layout
+
+import "std/core.zc"
+import "std/vec.zc"
+import "std/string.zc"
+import "std/mem.zc"
+import "std/result.zc"
+import "std/option.zc"
+import "std/fs.zc"
+import "std/tui/style.zc"
+import "std/tui/text.zc"
+import "std/tui/terminal.zc"
+import "std/tui/buffer.zc"
+import "std/tui/layout.zc"
+import "std/tui/event.zc"
+import "std/tui/widget.zc"
+import "std/tui/widgets/block.zc"
+import "std/tui/widgets/list.zc"
+import "std/tui/widgets/paragraph.zc"
+import "std/tui/widgets/input.zc"
+
+include <stdlib.h>
+include <string.h>
+include <stdio.h>
+
+// Only raw block needed: getcwd is not in the std library yet
+raw {
+    void _fb_getcwd(char* buf, int size) {
+        getcwd(buf, size);
+    }
+}
+extern fn _fb_getcwd(buf: char*, size: int);
+
+// Entry stored in our flat array for rendering
+struct FBItem {
+    name: char[256];
+    is_dir: bool;
+}
+
+impl Copy for FBItem {}
+
+// Global state
+def MAX_ENTRIES = 256;
+let g_items: FBItem[256];
+let g_item_count = 0;
+let g_list_state: ListState;
+let g_current_path: char[1024];
+let g_preview_buf: char[4096];
+let g_preview_len = 0;
+let g_input: Input;
+let g_input_active = false;
+
+fn load_directory(path: char*) {
+    g_item_count = 0;
+    g_list_state = ListState::new();
+    g_preview_buf[0] = 0;
+    g_preview_len = 0;
+    strcpy(g_current_path, path);
+
+    // Always add ".." entry first
+    strcpy(g_items[0].name, "..");
+    g_items[0].is_dir = true;
+    g_item_count = 1;
+
+    // Use std library File::read_dir
+    let res = File::read_dir(path);
+    if (res.is_err()) return;
+
+    let entries = res.unwrap();
+    let i: usize = 0;
+    while (i < entries.len && g_item_count < MAX_ENTRIES) {
+        let ent = &entries.data[i];
+        let name_str = ent.name.c_str();
+        strncpy(g_items[g_item_count].name, name_str, 255);
+        g_items[g_item_count].name[255] = 0;
+        g_items[g_item_count].is_dir = ent.is_dir;
+        g_item_count = g_item_count + 1;
+        i = i + 1;
+    }
+
+    // Free the Vec<DirEntry>
+    i = 0;
+    while (i < entries.len) {
+        entries.data[i].name.free();
+        i = i + 1;
+    }
+    entries.free();
+}
+
+fn load_preview() {
+    if (g_item_count == 0) return;
+    let idx = g_list_state.selected;
+    if (idx < 0 || idx >= g_item_count) return;
+
+    let item = &g_items[idx];
+    if (item.is_dir) {
+        strcpy(g_preview_buf, "[Directory]");
+        g_preview_len = (int)strlen(g_preview_buf);
+        return;
+    }
+
+    // Build full path
+    let fullpath: char[2048];
+    sprintf(fullpath, "%s/%s", g_current_path, item.name);
+
+    // Use std library File::read_all
+    let res = File::read_all(fullpath);
+    if (res.is_err()) {
+        strcpy(g_preview_buf, "[Cannot read file]");
+        g_preview_len = (int)strlen(g_preview_buf);
+        return;
+    }
+
+    let content = res.unwrap();
+    let cstr = content.c_str();
+    let len = content.length();
+    if (len > 4095) len = 4095;
+    memcpy(g_preview_buf, cstr, len);
+    g_preview_buf[len] = 0;
+    g_preview_len = (int)len;
+    content.free();
+}
+
+fn enter_directory() {
+    if (g_item_count == 0) return;
+    let idx = g_list_state.selected;
+    if (idx < 0 || idx >= g_item_count) return;
+
+    let item = &g_items[idx];
+    if (!item.is_dir) return;
+
+    if (strcmp(item.name, "..") == 0) {
+        // Go up one directory
+        let len = (int)strlen(g_current_path);
+        let i = len - 1;
+        while (i > 0 && g_current_path[i] != '/') {
+            i = i - 1;
+        }
+        if (i == 0) {
+            g_current_path[0] = '/';
+            g_current_path[1] = 0;
+        } else {
+            g_current_path[i] = 0;
+        }
+    } else {
+        let new_path: char[2048];
+        if (g_current_path[strlen(g_current_path) - 1] == '/') {
+            sprintf(new_path, "%s%s", g_current_path, item.name);
+        } else {
+            sprintf(new_path, "%s/%s", g_current_path, item.name);
+        }
+        strcpy(g_current_path, new_path);
+    }
+
+    load_directory(g_current_path);
+    load_preview();
+}
+
+fn draw(f: Frame*) {
+    let area = f.size();
+
+    // Main layout: path bar + content + input bar
+    let main_constraints: Constraint[3];
+    main_constraints[0] = Constraint::length(3);
+    main_constraints[1] = Constraint::min(5);
+    main_constraints[2] = Constraint::length(3);
+    let main_layout = Layout::vertical().set_constraints(main_constraints, 3);
+    let main_rects = main_layout.split(area);
+
+    // Path display
+    let path_text = Text::raw(g_current_path);
+    let path_para = Paragraph::new(path_text)
+        .set_block(Block::bordered().set_title("Path").set_border_style(Style::fg(Color::cyan())));
+    path_para.render(main_rects[0], f.buffer);
+
+    // Content: left file list + right preview
+    let h_constraints: Constraint[2];
+    h_constraints[0] = Constraint::percentage(40);
+    h_constraints[1] = Constraint::percentage(60);
+    let h_layout = Layout::horizontal().set_constraints(h_constraints, 2);
+    let h_rects = h_layout.split(main_rects[1]);
+
+    // File list
+    let items: ListItem[256];
+    let i = 0;
+    while (i < g_item_count && i < MAX_ENTRIES) {
+        let style = Style::new();
+        if (g_items[i].is_dir) {
+            style = Style::fg(Color::blue()).add_modifier(MOD_BOLD);
+        }
+        items[i] = ListItem::styled(g_items[i].name, style);
+        i = i + 1;
+    }
+
+    let list = List::new(items, g_item_count)
+        .set_block(Block::bordered().set_title("Files").set_border_type(BORDER_ROUNDED))
+        .set_highlight_style(Style::fg(Color::black()).set_bg(Color::cyan()))
+        .set_highlight_symbol("> ");
+    list.render_stateful(h_rects[0], f.buffer, &g_list_state);
+
+    // Preview
+    let preview_title: char[300];
+    if (g_item_count > 0 && g_list_state.selected < g_item_count) {
+        sprintf(preview_title, "Preview: %.255s", g_items[g_list_state.selected].name);
+    } else {
+        strcpy(preview_title, "Preview");
+    }
+
+    let preview_text = Text::raw(g_preview_buf);
+    let preview = Paragraph::new(preview_text)
+        .set_block(Block::bordered().set_title(preview_title).set_border_type(BORDER_ROUNDED))
+        .set_wrap(true);
+    preview.render(h_rects[1], f.buffer);
+
+    // Input bar
+    let input_block = Block::bordered().set_title("Go to path (press /)");
+    if (g_input_active) {
+        input_block = input_block.set_border_style(Style::fg(Color::yellow()));
+    }
+    g_input.has_block = true;
+    g_input.block = input_block;
+    g_input.render(main_rects[2], f.buffer);
+
+    free(h_rects);
+    free(main_rects);
+}
+
+fn handle_event(evt: Event) -> int {
+    if (evt.kind != EVT_KEY) return 1;
+
+    if (g_input_active) {
+        if (evt.key.code == KEY_ESC) {
+            g_input_active = false;
+            return 1;
+        }
+        if (evt.key.code == KEY_ENTER) {
+            g_input_active = false;
+            let path = g_input.value();
+            if (strlen(path) > 0) {
+                load_directory(path);
+                load_preview();
+            }
+            return 1;
+        }
+        g_input.handle_key(evt.key);
+        return 1;
+    }
+
+    if (evt.key.code == KEY_CHAR && evt.key.ch == 'q') return 0;
+
+    if (evt.key.code == KEY_CHAR && evt.key.ch == '/') {
+        g_input_active = true;
+        g_input.clear();
+        g_input.set_text(g_current_path);
+        return 1;
+    }
+
+    if (evt.key.code == KEY_DOWN) {
+        g_list_state.next(g_item_count);
+        load_preview();
+    }
+    if (evt.key.code == KEY_UP) {
+        g_list_state.previous(g_item_count);
+        load_preview();
+    }
+    if (evt.key.code == KEY_ENTER) {
+        enter_directory();
+    }
+
+    return 1;
+}
+
+fn main() {
+    g_input = Input::new();
+    _fb_getcwd(g_current_path, 1024);
+    load_directory(g_current_path);
+    load_preview();
+    let draw_fn = fn(f: Frame*) { draw(f); };
+    let event_fn = fn(e: Event) -> int { return handle_event(e); };
+    tui_run(draw_fn, event_fn);
+}
