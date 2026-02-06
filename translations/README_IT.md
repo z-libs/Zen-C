@@ -211,6 +211,7 @@ let y: const int = 10;  // Sola lettura (Tipo qualificato)
 | `c_short`, `c_ushort` | `short`, `unsigned short` | C short (Interop) |
 | `c_int`, `c_uint` | `int`, `unsigned int` | C int (Interop) |
 | `c_long`, `c_ulong` | `long`, `unsigned long` | C long (Interop) |
+| `c_long_long`, `c_ulong_long` | `long long`, `unsigned long long` | C long long / unsigned long long (Interop) |
 | `I8` .. `I128` or `i8` .. `i128` | `int8_t` .. `__int128_t` | Interi a grandezza fissa con segno |
 | `U8` .. `U128` or `u8` .. `u128` | `uint8_t` .. `__uint128_t` | Interi a grandezza fissa senza segno |
 | `isize`, `usize` | `ptrdiff_t`, `size_t` | Interi con grandezza di un puntatore |
@@ -226,7 +227,7 @@ let y: const int = 10;  // Sola lettura (Tipo qualificato)
 > **Best Practice per Codice Portabile**
 >
 > - Usa **Tipi Portabili** (`int`, `uint`, `i64`, `u8`, ecc.) per tutta la logica Zen C pura. `int` è garantito essere a 32-bit con segno su tutte le architetture.
-> - Usa **Tipi di Interop C** (`c_int`, `c_char`, `c_long`) **solo** quando interagisci con librerie C (FFI). La loro dimensione varia in base alla piattaforma e al compilatore C.
+> - Usa **Tipi di Interop C** (`c_int`, `c_char`, `c_long`, ``c_ulong``, ``c_long_long``, ``c_ulong_long``) **solo** quando interagisci con librerie C (FFI). La loro dimensione varia in base alla piattaforma e al compilatore C.
 > - Usa `isize` e `usize` per indicizzazione di array e aritmetica dei puntatori.
 
 ### 3. Tipi Aggregati

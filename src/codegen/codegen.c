@@ -1309,6 +1309,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             mapped = "unsigned long";
         }
+        else if (strcmp(t, "c_long_long") == 0)
+        {
+            mapped = "long long";
+        }
+        else if (strcmp(t, "c_ulong_long") == 0)
+        {
+            mapped = "unsigned long long";
+        }
         else if (strcmp(t, "c_short") == 0)
         {
             mapped = "short";
@@ -1360,6 +1368,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             else if (strcmp(t, "c_ulong") == 0)
             {
                 mapped = "unsigned long";
+            }
+            else if (strcmp(t, "c_long_long") == 0)
+            {
+                mapped = "long long";
+            }
+            else if (strcmp(t, "c_ulong_long") == 0)
+            {
+                mapped = "unsigned long long";
             }
             else if (strcmp(t, "c_short") == 0)
             {

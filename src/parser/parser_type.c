@@ -483,6 +483,16 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             free(name);
             return type_new(TYPE_C_ULONG);
         }
+        if (strcmp(name, "c_long_long") == 0)
+        {
+            free(name);
+            return type_new(TYPE_C_LONG_LONG);
+        }
+        if (strcmp(name, "c_ulong_long") == 0)
+        {
+            free(name);
+            return type_new(TYPE_C_ULONG_LONG);
+        }
         if (strcmp(name, "c_short") == 0)
         {
             free(name);

@@ -209,6 +209,7 @@ let y: const int = 10;  // Solo lectura (Calificado por tipo)
 | `c_short`, `c_ushort` | `short`, `unsigned short` | C short (Interoperabilidad) |
 | `c_int`, `c_uint` | `int`, `unsigned int` | C int (Interoperabilidad) |
 | `c_long`, `c_ulong` | `long`, `unsigned long` | C long (Interoperabilidad) |
+| `c_long_long`, `c_ulong_long` | `long long`, `unsigned long long` | C long long / unsigned long long (Interoperabilidad) |
 | `I8` .. `I128` o `i8` .. `i128` | `int8_t` .. `__int128_t` | Enteros con signo de ancho fijo |
 | `U8` .. `U128` o `u8` .. `u128` | `uint8_t` .. `__uint128_t` | Enteros sin signo de ancho fijo |
 | `isize`, `usize` | `ptrdiff_t`, `size_t` | Enteros del tamaño de un puntero |
@@ -224,7 +225,7 @@ let y: const int = 10;  // Solo lectura (Calificado por tipo)
 > **Mejores Prácticas para Código Portable**
 >
 > - Usa **Tipos Portables** (`int`, `uint`, `i64`, `u8`, etc.) para toda la lógica pura de Zen C. `int` garantiza ser 32-bits con signo en todas las arquitecturas.
-> - Usa **Tipos de Interoperabilidad C** (`c_int`, `c_char`, `c_long`) **sólo** al interactuar con bibliotecas C (FFI). Su tamaño varía según la plataforma y el compilador C.
+> - Usa **Tipos de Interoperabilidad C** (`c_int`, `c_char`, `c_long`, ``c_ulong``, ``c_long_long``, ``c_ulong_long``) **sólo** al interactuar con bibliotecas C (FFI). Su tamaño varía según la plataforma y el compilador C.
 > - Usa `isize` y `usize` para indexado de arrays y aritmética de punteros.
 
 ### 3. Tipos Agregados

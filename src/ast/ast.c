@@ -108,6 +108,7 @@ int is_integer_type(Type *t)
             t->kind == TYPE_UINT || t->kind == TYPE_I128 || t->kind == TYPE_U128 ||
             t->kind == TYPE_BITINT || t->kind == TYPE_UBITINT || t->kind == TYPE_C_INT ||
             t->kind == TYPE_C_UINT || t->kind == TYPE_C_LONG || t->kind == TYPE_C_ULONG ||
+            t->kind == TYPE_C_LONG_LONG || t->kind == TYPE_C_ULONG_LONG ||
             t->kind == TYPE_C_SHORT || t->kind == TYPE_C_USHORT || t->kind == TYPE_C_CHAR ||
             t->kind == TYPE_C_UCHAR ||
             (t->kind == TYPE_STRUCT && t->name &&
@@ -278,6 +279,10 @@ static char *type_to_string_impl(Type *t)
         return xstrdup("c_long");
     case TYPE_C_ULONG:
         return xstrdup("c_ulong");
+    case TYPE_C_LONG_LONG:
+        return xstrdup("c_long_long");
+    case TYPE_C_ULONG_LONG:
+        return xstrdup("c_ulong_long");
     case TYPE_C_SHORT:
         return xstrdup("c_short");
     case TYPE_C_USHORT:
@@ -499,6 +504,10 @@ static char *type_to_c_string_impl(Type *t)
         return xstrdup("long");
     case TYPE_C_ULONG:
         return xstrdup("unsigned long");
+    case TYPE_C_LONG_LONG:
+        return xstrdup("long long");
+    case TYPE_C_ULONG_LONG:
+        return xstrdup("unsigned long long");
     case TYPE_C_SHORT:
         return xstrdup("short");
     case TYPE_C_USHORT:

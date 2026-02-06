@@ -57,6 +57,8 @@ typedef enum
     TYPE_C_UINT,   ///< `c_uint` (unsigned int).
     TYPE_C_LONG,   ///< `c_long` (long).
     TYPE_C_ULONG,  ///< `c_ulong` (unsigned long).
+    TYPE_C_LONG_LONG,   ///< `c_long_long` (long long).
+    TYPE_C_ULONG_LONG,  ///< `c_ulong_long` (unsigned long long).
     TYPE_C_SHORT,  ///< `c_short` (short).
     TYPE_C_USHORT, ///< `c_ushort` (unsigned short).
     TYPE_C_CHAR,   ///< `c_char` (char).

@@ -5,6 +5,7 @@ import "std/io.zc";
 
 extern fn abs(x: c_int) -> c_int;
 extern fn labs(x: c_long) -> c_long;
+extern fn llabs(x: c_long_long) -> c_long_long;
 
 fn main() -> int {
     // Portable types
@@ -21,6 +22,7 @@ fn main() -> int {
     // C Types
     let ca: c_int = -10;
     let cb: c_long = -20;
+    let cbll: c_long_long = -30;
     let cc: c_short = -5;
     let cd: c_char = 65; // 'A'
     
@@ -33,13 +35,17 @@ fn main() -> int {
     let expected_labs: c_long = 20;
     if (labs_val != expected_labs) return 6;
 
+    let labs_valLongLong = llabs(cbll);
+    let expected_labs_long_long: c_long_long = 30;
+    if (labs_valLongLong != expected_labs_long_long) return 7;
+
     // Size checks (these are platform dependent but we can check relations)
     // sizeof(c_char) is always 1
-    if (sizeof(c_char) != 1) return 7;
+    if (sizeof(c_char) != 1) return 8;
     
     // sizeof(c_short) <= sizeof(c_int) <= sizeof(c_long)
-    if (sizeof(c_short) > sizeof(c_int)) return 8;
-    if (sizeof(c_int) > sizeof(c_long)) return 9;
+    if (sizeof(c_short) > sizeof(c_int)) return 9;
+    if (sizeof(c_int) > sizeof(c_long)) return 10;
 
     printf("Portable types test passed.\n");
     return 0;
