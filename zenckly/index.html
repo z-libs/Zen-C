@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zenckly — Visual Block Programming for Zen-C</title>
+  <link rel="stylesheet" href="css/zenckly.css">
+  <script src="js/blockly.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Toolbar -->
+    <header id="toolbar">
+      <div class="toolbar-left">
+        <span id="logo">ZENCKLY</span>
+        <span id="subtitle">Visual Zen-C</span>
+      </div>
+      <div class="toolbar-center">
+        <label for="target-select">Target:</label>
+        <select id="target-select">
+          <option value="linux">Linux</option>
+        </select>
+        <button id="btn-compile" title="Compile">&#9654; Compile</button>
+        <button id="btn-run" title="Compile &amp; Run">&#9655; Run</button>
+        <button id="btn-save" title="Save workspace">Save</button>
+        <button id="btn-load" title="Load workspace">Load</button>
+        <button id="btn-examples" title="Example projects">Examples</button>
+      </div>
+      <div class="toolbar-right">
+        <button id="btn-copy" title="Copy generated code">Copy Code</button>
+      </div>
+    </header>
+
+    <!-- Main panels -->
+    <div id="main">
+      <div id="blockly-area">
+        <div id="blockly-div"></div>
+      </div>
+      <div id="divider"></div>
+      <div id="code-panel">
+        <div id="code-header">Zen-C Code Preview</div>
+        <pre id="code-output"><code id="code-text">// Drag blocks to generate Zen-C code</code></pre>
+      </div>
+    </div>
+
+    <!-- Output panel -->
+    <div id="output-panel" class="hidden">
+      <div id="output-header">
+        <span>Output</span>
+        <button id="output-close" class="modal-close">&times;</button>
+      </div>
+      <pre id="output-text"></pre>
+    </div>
+
+    <!-- Status bar -->
+    <footer id="statusbar">
+      <span id="status-text">Ready</span>
+    </footer>
+
+    <!-- Examples modal -->
+    <div id="examples-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span>Example Projects</span>
+          <button class="modal-close" id="examples-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="example-category">Basics</div>
+          <button class="example-btn" data-example="hello_world">Hello World</button>
+          <button class="example-btn" data-example="fibonacci">Fibonacci</button>
+          <button class="example-btn" data-example="struct_example">Struct Example</button>
+          <button class="example-btn" data-example="file_io">File I/O</button>
+          <div class="example-category">Block Tutorials</div>
+          <button class="example-btn" data-example="blocks_variables">Variables &amp; Math</button>
+          <button class="example-btn" data-example="blocks_logic">Logic &amp; Loops</button>
+          <button class="example-btn" data-example="blocks_functions">Functions &amp; Calls</button>
+          <button class="example-btn" data-example="blocks_structs">Structs &amp; Methods</button>
+          <button class="example-btn" data-example="blocks_memory">Memory &amp; Pointers</button>
+          <button class="example-btn" data-example="blocks_collections">Vec &amp; Collections</button>
+          <button class="example-btn" data-example="blocks_match">Match &amp; Cases</button>
+          <button class="example-btn" data-example="blocks_advanced">Advanced Blocks</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/generators/zenc_generator.js"></script>
+  <script src="js/generators/variables.js"></script>
+  <script src="js/generators/math.js"></script>
+  <script src="js/generators/logic.js"></script>
+  <script src="js/generators/functions.js"></script>
+  <script src="js/generators/text.js"></script>
+  <script src="js/generators/structs.js"></script>
+  <script src="js/generators/memory.js"></script>
+  <script src="js/generators/errors.js"></script>
+  <script src="js/generators/files.js"></script>
+  <script src="js/generators/build.js"></script>
+  <script src="js/generators/advanced.js"></script>
+  <script src="js/toolbox.js"></script>
+  <script src="js/zenckly.js"></script>
+  <script>
+    // Electron detection — if preload bridge is available, enable native compile/run
+    if (window.zenckly) {
+      document.body.classList.add('electron');
+    }
+  </script>
+</body>
+</html>
