@@ -1569,6 +1569,41 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         }
         new_node->func.args = tmp_args;
 
+        if (n->func.defaults && n->func.arg_count > 0)
+        {
+            new_node->func.defaults = xmalloc(sizeof(char *) * n->func.arg_count);
+            for (int i = 0; i < n->func.arg_count; i++)
+            {
+                if (n->func.defaults[i])
+                {
+                    char *d1 = replace_in_string(n->func.defaults[i], p, c);
+                    if (os && ns)
+                    {
+                        char *d2 = replace_in_string(d1, os, ns);
+                        free(d1);
+                        d1 = d2;
+                    }
+                    if (p && c)
+                    {
+                        char *clean_c = sanitize_mangled_name(c);
+                        char *d3 = replace_mangled_part(d1, p, clean_c);
+                        free(clean_c);
+                        free(d1);
+                        d1 = d3;
+                    }
+                    new_node->func.defaults[i] = d1;
+                }
+                else
+                {
+                    new_node->func.defaults[i] = NULL;
+                }
+            }
+        }
+        else
+        {
+            new_node->func.defaults = NULL;
+        }
+
         new_node->func.ret_type_info = replace_type_formal(n->func.ret_type_info, p, c, os, ns);
         if (n->func.arg_types)
         {
