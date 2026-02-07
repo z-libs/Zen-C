@@ -1,0 +1,233 @@
+// HTTP Client Tests
+// Tests the HTTP client functionality with @derive(ToJson) support
+//> link: -lcurl
+
+import "std/http/client.zc"
+import "std/json.zc"
+
+// ============================================
+// Test Request Structs with @derive(ToJson)
+// ============================================
+
+@derive(ToJson)
+struct TestPayload {
+    name: char*;
+    value: int;
+}
+
+@derive(ToJson)
+struct TestRequest {
+    action: char*;
+    data: char*;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+fn assert_true(cond: bool, msg: char*) {
+    if !cond {
+        !"FAIL: {msg}";
+        exit(1);
+    }
+}
+
+fn assert_eq(a: int, b: int, msg: char*) {
+    if a != b {
+        !"FAIL: {msg} - expected {a}, got {b}";
+        exit(1);
+    }
+}
+
+// ============================================
+// Tests
+// ============================================
+
+test "HttpClient Creation" {
+    "Testing HttpClient creation...";
+
+    let client = HttpClient::new();
+
+    // Check default values
+    assert_eq(client.timeout_ms, 30000, "default timeout");
+    assert_true(client.follow_redirects, "default follow_redirects");
+    assert_true(client.verify_ssl, "default verify_ssl");
+
+    "  Default timeout: {client.timeout_ms}ms";
+    "  Follow redirects: {client.follow_redirects}";
+    "  Verify SSL: {client.verify_ssl}";
+
+    "PASS: HttpClient Creation";
+}
+
+test "HttpClient Configuration" {
+    "Testing HttpClient configuration...";
+
+    let client = HttpClient::new();
+
+    // Test set_timeout
+    client.set_timeout(5000);
+    assert_eq(client.timeout_ms, 5000, "set_timeout");
+    "  set_timeout(5000) - OK";
+
+    // Test set_follow_redirects
+    client.set_follow_redirects(false);
+    assert_true(!client.follow_redirects, "set_follow_redirects false");
+    "  set_follow_redirects(false) - OK";
+
+    client.set_follow_redirects(true);
+    assert_true(client.follow_redirects, "set_follow_redirects true");
+    "  set_follow_redirects(true) - OK";
+
+    // Test set_verify_ssl
+    client.set_verify_ssl(false);
+    assert_true(!client.verify_ssl, "set_verify_ssl false");
+    "  set_verify_ssl(false) - OK";
+
+    // Test set_user_agent
+    client.set_user_agent("TestAgent/1.0");
+    "  set_user_agent('TestAgent/1.0') - OK";
+
+    "PASS: HttpClient Configuration";
+}
+
+test "HttpResponse Structure" {
+    "Testing HttpResponse structure...";
+
+    // Create an empty response (simulating what would come back)
+    let resp = HttpResponse {
+        status_code: 200,
+        body: "test body",
+        body_len: 9,
+        headers: "Content-Type: text/plain",
+        headers_len: 24,
+        error: NULL
+    };
+
+    assert_eq(resp.status_code, 200, "status_code");
+    assert_eq((int)resp.body_len, 9, "body_len");
+    assert_true(resp.error == NULL, "no error");
+    assert_true(resp.ok(), "ok() returns true for 200");
+
+    "  status_code: {resp.status_code}";
+    "  body_len: {resp.body_len}";
+    "  ok(): true";
+
+    // Test error response
+    let err_resp = HttpResponse {
+        status_code: 0,
+        body: NULL,
+        body_len: 0,
+        headers: NULL,
+        headers_len: 0,
+        error: "Connection failed"
+    };
+
+    assert_true(!err_resp.ok(), "ok() returns false for error");
+    "  Error response ok(): false";
+
+    "PASS: HttpResponse Structure";
+}
+
+test "JsonValue Stringify for HTTP" {
+    "Testing JsonValue stringify for HTTP payloads...";
+
+    // Create a payload struct
+    let payload = TestPayload { name: "test", value: 42 };
+
+    // Convert to JsonValue
+    let json = payload.to_json();
+    assert_true(json.kind.tag != 0, "json created");
+
+    // Stringify for HTTP request
+    let str = json.stringify();
+    assert_true(str != NULL, "stringify not null");
+    "  Payload JSON: {str}";
+
+    // Verify it contains expected fields
+    assert_true(strstr(str, "name") != NULL, "contains name");
+    assert_true(strstr(str, "test") != NULL, "contains test value");
+    assert_true(strstr(str, "value") != NULL, "contains value");
+    assert_true(strstr(str, "42") != NULL, "contains 42");
+
+    // Clean up
+    free(str);
+    json.free();
+
+    "PASS: JsonValue Stringify for HTTP";
+}
+
+test "Multiple Payloads with @derive(ToJson)" {
+    "Testing multiple payloads...";
+
+    // First payload
+    let p1 = TestPayload { name: "first", value: 1 };
+    let j1 = p1.to_json();
+    let s1 = j1.stringify();
+    "  Payload 1: {s1}";
+    free(s1);
+    j1.free();
+
+    // Second payload
+    let p2 = TestRequest { action: "create", data: "item" };
+    let j2 = p2.to_json();
+    let s2 = j2.stringify();
+    "  Payload 2: {s2}";
+    free(s2);
+    j2.free();
+
+    "PASS: Multiple Payloads";
+}
+
+// Note: Network tests are commented out as they require external connectivity
+// Uncomment to test with actual network requests
+
+/*
+test "HTTP GET Request (Network)" {
+    "Testing HTTP GET request...";
+
+    let client = HttpClient::new();
+    client.set_timeout(10000);
+
+    let resp = client.get("https://httpbin.org/get");
+
+    if resp.ok() {
+        "  Status: {resp.status_code}";
+        assert_eq(resp.status_code, 200, "GET status");
+        assert_true(resp.body != NULL, "body not null");
+        "  Body length: {resp.body_len}";
+    } else {
+        "  Error: {resp.error}";
+        "  (Network test skipped - no connectivity)";
+    }
+
+    resp.free();
+    "PASS: HTTP GET Request";
+}
+
+test "HTTP POST JSON Request (Network)" {
+    "Testing HTTP POST JSON request...";
+
+    let client = HttpClient::new();
+    client.set_timeout(10000);
+
+    let payload = TestPayload { name: "test", value: 123 };
+    let json_val = payload.to_json();
+    let json = json_val.stringify();
+
+    let resp = client.post_json("https://httpbin.org/post", json);
+
+    if resp.ok() {
+        "  Status: {resp.status_code}";
+        assert_eq(resp.status_code, 200, "POST status");
+    } else {
+        "  Error: {resp.error}";
+        "  (Network test skipped - no connectivity)";
+    }
+
+    free(json);
+    json_val.free();
+    resp.free();
+    "PASS: HTTP POST JSON Request";
+}
+*/

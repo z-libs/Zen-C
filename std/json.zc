@@ -173,6 +173,110 @@ raw {
         const char* ptr = json;
         return _json_parse_value(&ptr);
     }
+
+    // JSON Stringification
+    static void _json_stringify_value(struct JsonValue* v, char** buf, int* len, int* cap);
+
+    static void _json_str_grow(char** buf, int* len, int* cap, int needed) {
+        if (*len + needed >= *cap) {
+            int new_cap = *cap * 2;
+            while (new_cap < *len + needed) new_cap *= 2;
+            char* new_buf = malloc(new_cap);
+            memcpy(new_buf, *buf, *len);
+            free(*buf);
+            *buf = new_buf;
+            *cap = new_cap;
+        }
+    }
+
+    static void _json_str_append(char** buf, int* len, int* cap, const char* s) {
+        int slen = strlen(s);
+        _json_str_grow(buf, len, cap, slen + 1);
+        memcpy(*buf + *len, s, slen);
+        *len += slen;
+    }
+
+    static void _json_str_append_escaped(char** buf, int* len, int* cap, const char* s) {
+        _json_str_grow(buf, len, cap, 1);
+        (*buf)[(*len)++] = '"';
+        while (*s) {
+            char c = *s++;
+            if (c == '"' || c == '\\') {
+                _json_str_grow(buf, len, cap, 2);
+                (*buf)[(*len)++] = '\\';
+                (*buf)[(*len)++] = c;
+            } else if (c == '\n') {
+                _json_str_grow(buf, len, cap, 2);
+                (*buf)[(*len)++] = '\\';
+                (*buf)[(*len)++] = 'n';
+            } else if (c == '\r') {
+                _json_str_grow(buf, len, cap, 2);
+                (*buf)[(*len)++] = '\\';
+                (*buf)[(*len)++] = 'r';
+            } else if (c == '\t') {
+                _json_str_grow(buf, len, cap, 2);
+                (*buf)[(*len)++] = '\\';
+                (*buf)[(*len)++] = 't';
+            } else {
+                _json_str_grow(buf, len, cap, 1);
+                (*buf)[(*len)++] = c;
+            }
+        }
+        _json_str_grow(buf, len, cap, 1);
+        (*buf)[(*len)++] = '"';
+    }
+
+    static void _json_stringify_value(struct JsonValue* v, char** buf, int* len, int* cap) {
+        if (!v) { _json_str_append(buf, len, cap, "null"); return; }
+
+        if (v->kind.tag == JsonType_JSON_NULL().tag) {
+            _json_str_append(buf, len, cap, "null");
+        } else if (v->kind.tag == JsonType_JSON_BOOL().tag) {
+            _json_str_append(buf, len, cap, v->bool_val ? "true" : "false");
+        } else if (v->kind.tag == JsonType_JSON_NUMBER().tag) {
+            char num_buf[64];
+            double d = v->number_val;
+            if (d == (int)d) {
+                sprintf(num_buf, "%d", (int)d);
+            } else {
+                sprintf(num_buf, "%g", d);
+            }
+            _json_str_append(buf, len, cap, num_buf);
+        } else if (v->kind.tag == JsonType_JSON_STRING().tag) {
+            _json_str_append_escaped(buf, len, cap, v->string_val ? v->string_val : "");
+        } else if (v->kind.tag == JsonType_JSON_ARRAY().tag) {
+            _json_str_append(buf, len, cap, "[");
+            Vec_JsonValuePtr* arr = v->array_val;
+            for (size_t i = 0; i < arr->len; i++) {
+                if (i > 0) _json_str_append(buf, len, cap, ",");
+                _json_stringify_value(arr->data[i], buf, len, cap);
+            }
+            _json_str_append(buf, len, cap, "]");
+        } else if (v->kind.tag == JsonType_JSON_OBJECT().tag) {
+            _json_str_append(buf, len, cap, "{");
+            Map_JsonValuePtr* obj = v->object_val;
+            int first = 1;
+            for (size_t i = 0; i < obj->cap; i++) {
+                if (obj->occupied[i] && !obj->deleted[i]) {
+                    if (!first) _json_str_append(buf, len, cap, ",");
+                    first = 0;
+                    _json_str_append_escaped(buf, len, cap, obj->keys[i]);
+                    _json_str_append(buf, len, cap, ":");
+                    _json_stringify_value(obj->vals[i], buf, len, cap);
+                }
+            }
+            _json_str_append(buf, len, cap, "}");
+        }
+    }
+
+    char* _json_stringify(struct JsonValue* v) {
+        int cap = 256;
+        int len = 0;
+        char* buf = malloc(cap);
+        _json_stringify_value(v, &buf, &len, &cap);
+        buf[len] = '\0';
+        return buf;
+    }
 }
 
 impl JsonValue {
@@ -422,6 +526,14 @@ impl JsonValue {
             return self.object_val.length();
         }
         return 0;
+    }
+
+    // ============================================
+    // Serialization
+    // ============================================
+
+    fn stringify(self) -> char* {
+        return _json_stringify(self);
     }
 
     fn free(self) {

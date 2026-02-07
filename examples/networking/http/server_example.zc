@@ -1,0 +1,53 @@
+// HTTP Server Example
+// Simple REST API
+//> link: -lmicrohttpd
+
+import "std/http/server.zc"
+
+@derive(ToJson)
+struct Message {
+    message: char*;
+    status: char*;
+}
+
+@derive(ToJson)
+struct User {
+    id: int;
+    name: char*;
+    email: char*;
+}
+
+// =========
+// Handlers
+// =========
+
+fn handle_home(req: Request) -> Response {
+    return Response::html("<h1>Zen-C Http Server</h1><p>Try /api/hello or /api/user/1</p>");
+}
+
+fn handle_hello(req: Request) -> Response {
+    let msg = Message { message: "Hello from Zen-C!", status: "ok" };
+    return Response::json_value(msg.to_json());
+}
+
+fn handle_user(req: Request) -> Response {
+    let id = req.param("id");
+    if id == NULL { return Response::bad_request(); }
+
+    let user = User { id: atoi(id), name: "John Doe", email: "john@example.com" };
+    return Response::json_value(user.to_json());
+}
+
+fn main() {
+    "Zen-C HTTP Server \n";
+
+    let server = HttpServer::new(8080);
+
+    server.get("/", handle_home)
+          .get("/api/hello", handle_hello)
+          .get("/api/user/:id", handle_user);
+
+    "Server running at http://localhost:8080\n";
+    server.run();
+    server.free();
+}
