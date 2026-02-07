@@ -2302,7 +2302,18 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
             {
                 // Empty struct init often conflicts with block start (e.g. if x == y {})
                 // We allow it only if we verify 'acc' is a struct name.
-                if (find_struct_def(ctx, acc))
+                if (find_struct_def(ctx, acc) || find_type_alias(ctx, acc) ||
+                    (strcmp(acc, "int") == 0 || strcmp(acc, "i32") == 0 ||
+                     strcmp(acc, "int32_t") == 0 || strcmp(acc, "bool") == 0 ||
+                     strcmp(acc, "float") == 0 || strcmp(acc, "double") == 0 ||
+                     strcmp(acc, "char") == 0 || strcmp(acc, "byte") == 0 ||
+                     strcmp(acc, "i8") == 0 || strcmp(acc, "u8") == 0 || strcmp(acc, "i16") == 0 ||
+                     strcmp(acc, "u16") == 0 || strcmp(acc, "u32") == 0 ||
+                     strcmp(acc, "uint32_t") == 0 || strcmp(acc, "i64") == 0 ||
+                     strcmp(acc, "int64_t") == 0 || strcmp(acc, "u64") == 0 ||
+                     strcmp(acc, "uint64_t") == 0 || strcmp(acc, "f32") == 0 ||
+                     strcmp(acc, "f64") == 0 || strcmp(acc, "usize") == 0 ||
+                     strcmp(acc, "isize") == 0 || strcmp(acc, "void") == 0))
                 {
                     is_struct_init = 1;
                 }
