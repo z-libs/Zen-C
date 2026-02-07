@@ -11,6 +11,9 @@
 
 # Configuration
 ZC="./zc"
+if [ ! -f "$ZC" ]; then
+    ZC="./build/zc"
+fi
 TEST_DIR="tests"
 PASSED=0
 FAILED=0
