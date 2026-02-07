@@ -1,0 +1,52 @@
+
+import "std/python.zc"
+
+fn main() {
+    Py::init();
+    println "Python + NumPy interop demo";
+    println "===========================\n";
+
+    // Check numpy is available
+    let np = Py::import("numpy");
+    if (np.is_none()) {
+        println "ERROR: numpy not found. Install with: sudo apt install python3-numpy";
+        Py::err_clear();
+        Py::finalize();
+        return 1;
+    }
+
+    // --- Array basics with inline Python ---
+    raw python {
+        import numpy as np
+        arr = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        print(f"Array: {repr(arr)}")
+        print(f"Mean:  {arr.mean()}")
+        print(f"Sum:   {arr.sum()}")
+        print(f"Std:   {arr.std()}")
+    }
+
+    // --- Pull values into Zen-C ---
+    let mean = Py::eval("float(arr.mean())");
+    println "\nZen-C got mean = {mean.as_f64()}";
+
+    // --- Matrix operations ---
+    println "\nMatrix operations:";
+    raw python {
+        A = np.array([[1, 2], [3, 4]])
+        B = np.array([[5, 6], [7, 8]])
+        print(f"A @ B =\n{A @ B}")
+        print(f"\ndet(A)   = {np.linalg.det(A):.1f}")
+        print(f"trace(A) = {np.trace(A)}")
+    }
+
+    // --- Linspace + reshape ---
+    println "\nLinspace + reshape:";
+    raw python {
+        grid = np.linspace(0, 1, 6).reshape(2, 3)
+        print(f"grid =\n{repr(grid)}")
+    }
+
+    Py::finalize();
+    println "\nDone!";
+    return 0;
+}

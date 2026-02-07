@@ -1,0 +1,340 @@
+
+//> pkg-config: python3-embed
+
+import "./core.zc"
+import "./mem.zc"
+
+raw {
+    #include <Python.h>
+
+    static void _z_py_init() { Py_Initialize(); }
+    static void _z_py_finalize() { Py_Finalize(); }
+    static int  _z_py_is_init() { return Py_IsInitialized(); }
+
+    // Import
+    static void* _z_py_import(char *name) {
+        return (void*)PyImport_ImportModule(name);
+    }
+
+    // Attribute access
+    static void* _z_py_getattr(void *obj, char *name) {
+        return (void*)PyObject_GetAttrString((PyObject*)obj, name);
+    }
+
+    // Call with no args
+    static void* _z_py_call0(void *callable) {
+        return (void*)PyObject_CallNoArgs((PyObject*)callable);
+    }
+
+    // Call with tuple args
+    static void* _z_py_call(void *callable, void *args) {
+        return (void*)PyObject_CallObject((PyObject*)callable, (PyObject*)args);
+    }
+
+    // Conversions: Zen-C -> Python
+    static void* _z_py_from_int(long v) { return (void*)PyLong_FromLong(v); }
+    static void* _z_py_from_f64(double v) { return (void*)PyFloat_FromDouble(v); }
+    static void* _z_py_from_str(char *s) { return (void*)PyUnicode_FromString(s); }
+    static void* _z_py_from_bool(int v) { return (void*)PyBool_FromLong(v); }
+    static void* _z_py_none() { Py_RETURN_NONE; }
+
+    // Conversions: Python -> Zen-C
+    static long   _z_py_to_int(void *o) { return PyLong_AsLong((PyObject*)o); }
+    static double _z_py_to_f64(void *o) { return PyFloat_AsDouble((PyObject*)o); }
+    static char* _z_py_to_str(void *o) { return (char*)PyUnicode_AsUTF8((PyObject*)o); }
+    static int    _z_py_to_bool(void *o) { return PyObject_IsTrue((PyObject*)o); }
+
+    // Tuple construction
+    static void* _z_py_tuple_new(int n) { return (void*)PyTuple_New(n); }
+    static void  _z_py_tuple_set(void *t, int i, void *v) {
+        Py_INCREF((PyObject*)v);
+        PyTuple_SetItem((PyObject*)t, i, (PyObject*)v);
+    }
+
+    // List construction
+    static void* _z_py_list_new(int n) { return (void*)PyList_New(n); }
+    static void  _z_py_list_set(void *l, int i, void *v) {
+        Py_INCREF((PyObject*)v);
+        PyList_SetItem((PyObject*)l, i, (PyObject*)v);
+    }
+    static int   _z_py_list_len(void *l) { return (int)PyList_Size((PyObject*)l); }
+    static void* _z_py_list_get(void *l, int i) { return (void*)PyList_GetItem((PyObject*)l, i); }
+
+    // Dict construction
+    static void* _z_py_dict_new() { return (void*)PyDict_New(); }
+    static void  _z_py_dict_set(void *d, void *k, void *v) {
+        PyDict_SetItem((PyObject*)d, (PyObject*)k, (PyObject*)v);
+    }
+    static void* _z_py_dict_get(void *d, void *k) {
+        return (void*)PyDict_GetItem((PyObject*)d, (PyObject*)k);
+    }
+
+    // Reference counting
+    static void _z_py_incref(void *o) { if(o) Py_INCREF((PyObject*)o); }
+    static void _z_py_decref(void *o) { if(o && Py_IsInitialized()) Py_DECREF((PyObject*)o); }
+
+    // Error handling
+    static int   _z_py_err_occurred() { return PyErr_Occurred() != NULL; }
+    static void  _z_py_err_print() { PyErr_Print(); }
+    static void  _z_py_err_clear() { PyErr_Clear(); }
+
+    // String representation
+    static char* _z_py_repr(void *o) {
+        PyObject *r = PyObject_Repr((PyObject*)o);
+        if (!r) return "<error>";
+        return (char*)PyUnicode_AsUTF8(r);
+    }
+
+    // Type checks
+    static int _z_py_is_none(void *o) { return o == NULL || (PyObject*)o == Py_None; }
+    static int _z_py_is_int(void *o) { return PyLong_Check((PyObject*)o); }
+    static int _z_py_is_float(void *o) { return PyFloat_Check((PyObject*)o); }
+    static int _z_py_is_str(void *o) { return PyUnicode_Check((PyObject*)o); }
+    static int _z_py_is_list(void *o) { return PyList_Check((PyObject*)o); }
+    static int _z_py_is_dict(void *o) { return PyDict_Check((PyObject*)o); }
+
+    // Run string as Python code
+    static int _z_py_run(char *code) {
+        return PyRun_SimpleString(code);
+    }
+
+    // Eval expression and return result
+    static void* _z_py_eval(char *expr) {
+        PyObject *main = PyImport_AddModule("__main__");
+        PyObject *globals = PyModule_GetDict(main);
+        return (void*)PyRun_String(expr, Py_eval_input, globals, globals);
+    }
+}
+
+// Extern declarations for raw C functions
+extern fn _z_py_init();
+extern fn _z_py_finalize();
+extern fn _z_py_is_init() -> int;
+extern fn _z_py_import(name: char*) -> void*;
+extern fn _z_py_getattr(obj: void*, name: char*) -> void*;
+extern fn _z_py_call0(callable: void*) -> void*;
+extern fn _z_py_call(callable: void*, args: void*) -> void*;
+extern fn _z_py_from_int(v: i64) -> void*;
+extern fn _z_py_from_f64(v: f64) -> void*;
+extern fn _z_py_from_str(s: char*) -> void*;
+extern fn _z_py_from_bool(v: int) -> void*;
+extern fn _z_py_none() -> void*;
+extern fn _z_py_to_int(o: void*) -> i64;
+extern fn _z_py_to_f64(o: void*) -> f64;
+extern fn _z_py_to_str(o: void*) -> char*;
+extern fn _z_py_to_bool(o: void*) -> int;
+extern fn _z_py_tuple_new(n: int) -> void*;
+extern fn _z_py_tuple_set(t: void*, i: int, v: void*);
+extern fn _z_py_list_new(n: int) -> void*;
+extern fn _z_py_list_set(l: void*, i: int, v: void*);
+extern fn _z_py_list_len(l: void*) -> int;
+extern fn _z_py_list_get(l: void*, i: int) -> void*;
+extern fn _z_py_dict_new() -> void*;
+extern fn _z_py_dict_set(d: void*, k: void*, v: void*);
+extern fn _z_py_dict_get(d: void*, k: void*) -> void*;
+extern fn _z_py_incref(o: void*);
+extern fn _z_py_decref(o: void*);
+extern fn _z_py_err_occurred() -> int;
+extern fn _z_py_err_print();
+extern fn _z_py_err_clear();
+extern fn _z_py_repr(o: void*) -> char*;
+extern fn _z_py_is_none(o: void*) -> int;
+extern fn _z_py_is_int(o: void*) -> int;
+extern fn _z_py_is_float(o: void*) -> int;
+extern fn _z_py_is_str(o: void*) -> int;
+extern fn _z_py_is_list(o: void*) -> int;
+extern fn _z_py_is_dict(o: void*) -> int;
+extern fn _z_py_run(code: char*) -> int;
+extern fn _z_py_eval(expr: char*) -> void*;
+
+// PyObj: Opaque wrapper around a Python object pointer.
+struct PyObj {
+    ptr: void*;
+}
+
+impl PyObj {
+    fn from_int(v: i64) -> PyObj {
+        return PyObj { ptr: _z_py_from_int(v) };
+    }
+
+    fn from_f64(v: f64) -> PyObj {
+        return PyObj { ptr: _z_py_from_f64(v) };
+    }
+
+    fn from_str(s: char*) -> PyObj {
+        return PyObj { ptr: _z_py_from_str(s) };
+    }
+
+    fn from_bool(v: bool) -> PyObj {
+        return PyObj { ptr: _z_py_from_bool((int)v) };
+    }
+
+    fn none() -> PyObj {
+        return PyObj { ptr: _z_py_none() };
+    }
+
+    fn as_int(self) -> i64 {
+        return _z_py_to_int(self.ptr);
+    }
+
+    fn as_f64(self) -> f64 {
+        return _z_py_to_f64(self.ptr);
+    }
+
+    fn as_str(self) -> char* {
+        return _z_py_to_str(self.ptr);
+    }
+
+    fn as_bool(self) -> bool {
+        return _z_py_to_bool(self.ptr) != 0;
+    }
+
+    fn attr(self, name: char*) -> PyObj {
+        return PyObj { ptr: _z_py_getattr(self.ptr, name) };
+    }
+
+    fn call0(self) -> PyObj {
+        return PyObj { ptr: _z_py_call0(self.ptr) };
+    }
+
+    fn call1(self, a: PyObj) -> PyObj {
+        let args = _z_py_tuple_new(1);
+        _z_py_tuple_set(args, 0, a.ptr);
+        let result = PyObj { ptr: _z_py_call(self.ptr, args) };
+        _z_py_decref(args);
+        return result;
+    }
+
+    fn call2(self, a: PyObj, b: PyObj) -> PyObj {
+        let args = _z_py_tuple_new(2);
+        _z_py_tuple_set(args, 0, a.ptr);
+        _z_py_tuple_set(args, 1, b.ptr);
+        let result = PyObj { ptr: _z_py_call(self.ptr, args) };
+        _z_py_decref(args);
+        return result;
+    }
+
+    fn call3(self, a: PyObj, b: PyObj, c: PyObj) -> PyObj {
+        let args = _z_py_tuple_new(3);
+        _z_py_tuple_set(args, 0, a.ptr);
+        _z_py_tuple_set(args, 1, b.ptr);
+        _z_py_tuple_set(args, 2, c.ptr);
+        let result = PyObj { ptr: _z_py_call(self.ptr, args) };
+        _z_py_decref(args);
+        return result;
+    }
+
+    // Collection: dict set/get by string key (most common case)
+    fn set(self, key: char*, val: PyObj) {
+        _z_py_dict_set(self.ptr, _z_py_from_str(key), val.ptr);
+    }
+
+    fn get(self, key: char*) -> PyObj {
+        let r = _z_py_dict_get(self.ptr, _z_py_from_str(key));
+        if (r != NULL) _z_py_incref(r);
+        return PyObj { ptr: r };
+    }
+
+    fn set_obj(self, key: PyObj, val: PyObj) {
+        _z_py_dict_set(self.ptr, key.ptr, val.ptr);
+    }
+
+    fn get_obj(self, key: PyObj) -> PyObj {
+        let r = _z_py_dict_get(self.ptr, key.ptr);
+        if (r != NULL) _z_py_incref(r);
+        return PyObj { ptr: r };
+    }
+
+    // Collection: list access
+    fn len(self) -> int {
+        return _z_py_list_len(self.ptr);
+    }
+
+    fn item(self, i: int) -> PyObj {
+        let r = _z_py_list_get(self.ptr, i);
+        if (r != NULL) _z_py_incref(r);
+        return PyObj { ptr: r };
+    }
+
+    fn set_item(self, i: int, v: PyObj) {
+        _z_py_list_set(self.ptr, i, v.ptr);
+    }
+
+    // Inspection
+    fn is_none(self) -> bool {
+        return _z_py_is_none(self.ptr) != 0;
+    }
+
+    fn is_err(self) -> bool {
+        return _z_py_err_occurred() != 0;
+    }
+
+    fn repr(self) -> char* {
+        return _z_py_repr(self.ptr);
+    }
+
+    fn decref(self) {
+        _z_py_decref(self.ptr);
+    }
+}
+
+impl Drop for PyObj {
+    fn drop(self) {
+        _z_py_decref(self.ptr);
+    }
+}
+
+// Py: Static interface for Python interpreter operations.
+struct Py {
+    _unused: int;
+}
+
+impl Py {
+    fn init() {
+        _z_py_init();
+    }
+
+    fn finalize() {
+        _z_py_finalize();
+    }
+
+    fn import(name: char*) -> PyObj {
+        return PyObj { ptr: _z_py_import(name) };
+    }
+
+    fn run(code: char*) -> int {
+        return _z_py_run(code);
+    }
+
+    fn eval(expr: char*) -> PyObj {
+        return PyObj { ptr: _z_py_eval(expr) };
+    }
+
+    fn tuple(args: PyObj*, count: int) -> PyObj {
+        let t = _z_py_tuple_new(count);
+        for (let i = 0; i < count; i = i + 1) {
+            _z_py_tuple_set(t, i, args[i].ptr);
+        }
+        return PyObj { ptr: t };
+    }
+
+    fn list(args: PyObj*, count: int) -> PyObj {
+        let l = _z_py_list_new(count);
+        for (let i = 0; i < count; i = i + 1) {
+            _z_py_list_set(l, i, args[i].ptr);
+        }
+        return PyObj { ptr: l };
+    }
+
+    fn dict() -> PyObj {
+        return PyObj { ptr: _z_py_dict_new() };
+    }
+
+    fn err_print() {
+        _z_py_err_print();
+    }
+
+    fn err_clear() {
+        _z_py_err_clear();
+    }
+}

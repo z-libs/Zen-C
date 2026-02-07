@@ -1,0 +1,199 @@
+
+import "std/python.zc"
+
+fn test_init() {
+    println "Testing Python init...";
+    if (_z_py_is_init() == 0) {
+        println "-> Failed: Python not initialized";
+        exit(1);
+    }
+    println "-> Success!";
+}
+
+fn test_import_math() {
+    println "Testing Python math import...";
+
+    let math = Py::import("math");
+    if (math.is_none()) {
+        println "-> Failed: could not import math";
+        exit(1);
+    }
+
+    let sqrt = math.attr("sqrt");
+    let result = sqrt.call1(PyObj::from_f64(25.0));
+    let val = result.as_f64();
+
+    if (val < 4.99 || val > 5.01) {
+        println "-> Failed: math.sqrt(25.0) = {val}, expected 5.0";
+        exit(1);
+    }
+
+    println "-> Success! math.sqrt(25.0) = {val}";
+}
+
+fn test_from_to_int() {
+    println "Testing int round-trip...";
+
+    let obj = PyObj::from_int(42);
+    let val = obj.as_int();
+
+    if (val != 42) {
+        println "-> Failed: expected 42, got {val}";
+        exit(1);
+    }
+
+    println "-> Success! round-trip: 42 -> {val}";
+}
+
+fn test_from_to_str() {
+    println "Testing string round-trip...";
+
+    let obj = PyObj::from_str("hello");
+    let val = obj.as_str();
+
+    if (strcmp(val, "hello") != 0) {
+        println "-> Failed: expected 'hello', got '{val}'";
+        exit(1);
+    }
+
+    println "-> Success! round-trip: 'hello' -> '{val}'";
+}
+
+fn test_from_to_f64() {
+    println "Testing float round-trip...";
+
+    let obj = PyObj::from_f64(3.14);
+    let val = obj.as_f64();
+
+    if (val < 3.13 || val > 3.15) {
+        println "-> Failed: expected 3.14, got {val}";
+        exit(1);
+    }
+
+    println "-> Success! round-trip: 3.14 -> {val}";
+}
+
+fn test_raw_python_block() {
+    println "Testing raw python block...";
+
+    raw python {
+        _test_val = 7 * 6
+    }
+
+    let result = Py::eval("_test_val");
+    let val = result.as_int();
+
+    if (val != 42) {
+        println "-> Failed: expected 42, got {val}";
+        exit(1);
+    }
+
+    println "-> Success! raw python block computed _test_val = {val}";
+}
+
+fn test_py_run() {
+    println "Testing Py::run...";
+
+    let ret = Py::run("x = 1 + 2");
+    if (ret != 0) {
+        println "-> Failed: Py::run returned {ret}";
+        exit(1);
+    }
+
+    println "-> Success! Py::run executed code";
+}
+
+fn test_py_eval() {
+    println "Testing Py::eval...";
+
+    let result = Py::eval("2 + 3");
+    let val = result.as_int();
+
+    if (val != 5) {
+        println "-> Failed: expected 5, got {val}";
+        exit(1);
+    }
+
+    println "-> Success! Py::eval('2 + 3') = {val}";
+}
+
+fn test_list_ops() {
+    println "Testing list operations...";
+
+    let items: PyObj[3];
+    items[0] = PyObj::from_int(10);
+    items[1] = PyObj::from_int(20);
+    items[2] = PyObj::from_int(30);
+    let lst = Py::list(&items[0], 3);
+
+    if (lst.len() != 3) {
+        println "-> Failed: expected len 3, got {lst.len()}";
+        exit(1);
+    }
+
+    let val = lst.item(1).as_int();
+    if (val != 20) {
+        println "-> Failed: expected list[1]=20, got {val}";
+        exit(1);
+    }
+
+    println "-> Success! list len=3, list[1]=20";
+}
+
+fn test_dict_ops() {
+    println "Testing dict operations...";
+
+    let d = Py::dict();
+    d.set("answer", PyObj::from_int(42));
+
+    let val = d.get("answer").as_int();
+    if (val != 42) {
+        println "-> Failed: expected dict['answer']=42, got {val}";
+        exit(1);
+    }
+
+    println "-> Success! dict['answer'] = 42";
+}
+
+fn test_error_handling() {
+    println "Testing error handling...";
+
+    let bad = Py::import("nonexistent_module_xyz_abc");
+    if (!bad.is_none()) {
+        println "-> Failed: expected None for bad import";
+        exit(1);
+    }
+
+    if (_z_py_err_occurred() == 0) {
+        println "-> Failed: expected error to be set";
+        exit(1);
+    }
+
+    Py::err_clear();
+
+    if (_z_py_err_occurred() != 0) {
+        println "-> Failed: error not cleared";
+        exit(1);
+    }
+
+    println "-> Success! error detected and cleared";
+}
+
+test "python_interop" {
+    Py::init();
+
+    test_init();
+    test_import_math();
+    test_from_to_int();
+    test_from_to_str();
+    test_from_to_f64();
+    test_raw_python_block();
+    test_py_run();
+    test_py_eval();
+    test_list_ops();
+    test_dict_ops();
+    test_error_handling();
+
+    Py::finalize();
+    println "\nAll Python interop tests passed!";
+}

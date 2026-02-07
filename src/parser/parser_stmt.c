@@ -2315,6 +2315,18 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
         if (strncmp(tk.start, "raw", 3) == 0 && tk.len == 3)
         {
             lexer_next(l); // eat raw
+
+            // Check for optional language qualifier (e.g., raw python { })
+            char *language = NULL;
+            Token next = lexer_peek(l);
+            if (next.type == TOK_IDENT && next.type != TOK_LBRACE)
+            {
+                language = xmalloc(next.len + 1);
+                memcpy(language, next.start, next.len);
+                language[next.len] = 0;
+                lexer_next(l); // eat language name
+            }
+
             if (lexer_peek(l).type != TOK_LBRACE)
             {
                 zpanic_at(lexer_peek(l), "Expected { after raw");
@@ -2348,6 +2360,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
 
             ASTNode *s = ast_create(NODE_RAW_STMT);
             s->raw_stmt.content = content;
+            s->raw_stmt.language = language;
             return s;
         }
 
@@ -3292,6 +3305,9 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
             zpanic_at(t, "Not found: %s", fn);
         }
     }
+
+    // Scan build directives from imported files (e.g. //> link: -lpython3)
+    scan_build_directives(ctx, src);
 
     Lexer i;
     lexer_init(&i, src);
