@@ -1,0 +1,35 @@
+import "std/mem.zc"
+
+struct Handle<T> {
+    data: T*
+}
+
+impl Handle<T> {
+    fn new(value: T = T{}) -> Handle<T> {
+        let b = Handle<T>{};
+        b.data = malloc(sizeof(T));
+        if (b.data) {
+            *b.data = value;
+        }
+        return b;
+    }
+}
+
+fn main() -> int {
+    // This previously failed to compile because T{} was not substituted
+    // with int32_t{} (or equivalent zero-initializer)
+    let h = Handle<int>::new();
+    
+    // Cleanup to be nice
+    if (h.data) {
+        free(h.data);
+    }
+    
+    // Initializing with explicit value should also work (not part of the bug, but good to test)
+    let h2 = Handle<int>::new(42);
+    if (h2.data) {
+        free(h2.data);
+    }
+
+    return 0;
+}
