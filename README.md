@@ -103,6 +103,7 @@ Join the discussion, share demos, ask questions, or report bugs in the official 
 ```bash
 git clone https://github.com/z-libs/Zen-C.git
 cd Zen-C
+make clean
 make
 sudo make install
 ```
