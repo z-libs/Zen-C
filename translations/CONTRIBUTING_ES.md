@@ -17,6 +17,17 @@ El flujo de trabajo general para contribuir es:
 4.  **Verifica**: Asegúrate de que tus cambios funcionen como se espera y no rompan la funcionalidad existente (ver [Ejecutando Pruebas](#ejecutando-pruebas)).
 5.  **Envía un Pull Request**: Empuja tu rama a tu fork y envía un Pull Request (PR) al repositorio principal de Zen C.
 
+## Problemas (Issues) y Solicitudes de Extracción (Pull Requests)
+
+Usamos GitHub Issues y Pull Requests para rastrear errores y características. Para ayudarnos a mantener la calidad:
+
+-   **Use Plantillas**: Al abrir un Issue o PR, use las plantillas proporcionadas.
+    -   **Reporte de Error**: Para reportar errores.
+    -   **Solicitud de Función**: Para sugerir nuevas características.
+    -   **Solicitud de Extracción**: Para enviar cambios de código.
+-   **Sea Descriptivo**: Proporcione tantos detalles como sea posible.
+    -   **Comprobaciones Automatizadas**: Tenemos un flujo de trabajo automatizado que verifica la longitud de la descripción de nuevos Issues y PRs. Si la descripción es demasiado corta (< 50 caracteres), se cerrará automáticamente. Esto es para asegurar que tenemos suficiente información para ayudarle.
+
 ## Guías de Desarrollo
 
 ### Estilo de Código

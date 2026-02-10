@@ -17,6 +17,17 @@ O fluxo de trabalho geral para contribuir é:
 4.  **Verifique**: Garanta que suas mudanças funcionem como esperado e não quebrem funcionalidades existentes (veja [Executando Testes](#executando-testes)).
 5.  **Submeta um Pull Request**: Dê push do seu branch para seu fork e submeta um Pull Request (PR) para o repositório principal do Zen C.
 
+## Problemas (Issues) e Pull Requests
+
+Usamos GitHub Issues e Pull Requests para rastrear bugs e recursos. Para nos ajudar a manter a qualidade:
+
+-   **Use Templates**: Ao abrir uma Issue ou PR, use os templates fornecidos.
+    -   **Relatório de Bug**: Para reportar erros.
+    -   **Solicitação de Recurso**: Para sugerir novos recursos.
+    -   **Pull Request**: Para enviar alterações de código.
+-   **Seja Descritivo**: Forneça o máximo de detalhes possível.
+    -   **Verificações Automatizadas**: Temos um fluxo de trabalho automatizado que verifica o comprimento da descrição de novas Issues e PRs. Se a descrição for muito curta (< 50 caracteres), ela será fechada automaticamente. Isso é para garantir que tenhamos informações suficientes para ajudá-lo.
+
 ## Diretrizes de Desenvolvimento
 
 ### Estilo de Código

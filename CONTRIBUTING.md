@@ -17,6 +17,17 @@ The general workflow for contributing is:
 4.  **Verify**: Ensure your changes work as expected and don't break existing functionality (see [Running Tests](#running-tests)).
 5.  **Submit a Pull Request**: Push your branch to your fork and submit a Pull Request (PR) to the main Zen C repository.
 
+## Issues and Pull Requests
+
+We use GitHub Issues and Pull Requests to track bugs and features. To help us maintain quality:
+
+-   **Use Templates**: When opening an Issue or PR, please use the provided templates.
+    -   **Bug Report**: For reporting bugs.
+    -   **Feature Request**: For suggesting new features.
+    -   **Pull Request**: For submitting code changes.
+-   **Be Descriptive**: Please provide as much detail as possible.
+    -   **Automated Checks**: We have an automated workflow that checks the description length of new Issues and PRs. If the description is too short (< 50 characters), it will be automatically closed. This is to ensure we have enough information to help you.
+
 ## Development Guidelines
 
 ### Code Style
