@@ -858,7 +858,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque)
     {
         skip_comments(l);
         Token t = lexer_peek(l);
-        // printf("DEBUG: parse_struct loop seeing '%.*s'\n", t.len, t.start);
+
         if (t.type == TOK_RBRACE)
         {
             lexer_next(l);

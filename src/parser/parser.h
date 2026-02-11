@@ -618,6 +618,25 @@ void scan_build_directives(struct ParserContext *ctx, const char *src);
 void try_parse_macro_const(struct ParserContext *ctx, const char *content);
 
 /**
+ * @brief Scan a C header line for function prototypes.
+ * Registers discovered function names as extern symbols.
+ */
+void try_parse_c_function_decl(struct ParserContext *ctx, const char *line);
+
+/**
+ * @brief Scan a C header line for struct/union declarations.
+ * Registers discovered type names as opaque type aliases.
+ */
+void try_parse_c_struct_decl(struct ParserContext *ctx, const char *line);
+
+/**
+ * @brief Recursively scan a C header file for declarations.
+ * Follows nested #include "..." directives and extracts macros,
+ * function prototypes, and struct/union declarations.
+ */
+void scan_c_header_contents(struct ParserContext *ctx, const char *path, int depth);
+
+/**
  * @brief Checks if a file has been imported.
  */
 int is_file_imported(ParserContext *ctx, const char *path);

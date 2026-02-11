@@ -1,0 +1,18 @@
+name: Welcome New Contributors
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-message: |
+            Welcome to the Zen C community!
+
+            Thanks for your first Pull Request! Please make sure you have read our [Contributing Guidelines](https://github.com/z-libs/Zen-C/blob/main/CONTRIBUTING.md).
+            One of our maintainers will review your changes shortly.

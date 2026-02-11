@@ -39,6 +39,7 @@ int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 }
 
 #include "../zen/zen_facts.h"
+#include "../constants.h"
 #include "parser.h"
 #include <ctype.h>
 
@@ -4160,13 +4161,51 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                                 inner_type[len] = 0;
                                 lhs->resolved_type = inner_type;
                                 // Try to create proper type_info
-                                if (strcmp(inner_type, "string") == 0)
+                                if (is_primitive_type_name(inner_type))
                                 {
-                                    lhs->type_info = type_new(TYPE_STRING);
-                                }
-                                else if (strcmp(inner_type, "int") == 0)
-                                {
-                                    lhs->type_info = type_new(TYPE_INT);
+                                    if (strcmp(inner_type, "string") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_STRING);
+                                    }
+                                    else if (strcmp(inner_type, "int") == 0 ||
+                                             strcmp(inner_type, "i32") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_INT);
+                                    }
+                                    else if (strcmp(inner_type, "bool") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_BOOL);
+                                    }
+                                    else if (strcmp(inner_type, "float") == 0 ||
+                                             strcmp(inner_type, "f32") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_F32);
+                                    }
+                                    else if (strcmp(inner_type, "double") == 0 ||
+                                             strcmp(inner_type, "f64") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_F64);
+                                    }
+                                    else if (strcmp(inner_type, "char") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_CHAR);
+                                    }
+                                    else if (strcmp(inner_type, "void") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_VOID);
+                                    }
+                                    else if (strcmp(inner_type, "usize") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_USIZE);
+                                    }
+                                    else if (strcmp(inner_type, "isize") == 0)
+                                    {
+                                        lhs->type_info = type_new(TYPE_ISIZE);
+                                    }
+                                    else
+                                    {
+                                        lhs->type_info = type_new(TYPE_INT);
+                                    }
                                 }
                                 else
                                 {
@@ -4415,6 +4454,12 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
     while (1)
     {
         Token op = lexer_peek(l);
+
+        if (op.line > l->line && op.type == TOK_OP &&
+            (is_token(op, "*") || is_token(op, "&") || is_token(op, "+") || is_token(op, "-")))
+        {
+            break;
+        }
 
         Precedence prec = get_token_precedence(op);
 
@@ -6124,22 +6169,36 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                                               (t2 && strstr(t2, "*") != NULL));
                             int lhs_is_int =
                                 (lhs->type_info->kind == TYPE_INT ||
+                                 lhs->type_info->kind == TYPE_I8 ||
+                                 lhs->type_info->kind == TYPE_U8 ||
+                                 lhs->type_info->kind == TYPE_I16 ||
+                                 lhs->type_info->kind == TYPE_U16 ||
                                  lhs->type_info->kind == TYPE_I32 ||
+                                 lhs->type_info->kind == TYPE_U32 ||
                                  lhs->type_info->kind == TYPE_I64 ||
+                                 lhs->type_info->kind == TYPE_U64 ||
                                  lhs->type_info->kind == TYPE_ISIZE ||
                                  lhs->type_info->kind == TYPE_USIZE ||
-                                 (t1 && (strcmp(t1, "int") == 0 || strcmp(t1, "isize") == 0 ||
-                                         strcmp(t1, "usize") == 0 || strcmp(t1, "size_t") == 0 ||
-                                         strcmp(t1, "ptrdiff_t") == 0)));
+                                 lhs->type_info->kind == TYPE_UINT ||
+                                 lhs->type_info->kind == TYPE_BYTE ||
+                                 lhs->type_info->kind == TYPE_RUNE || (t1 && IS_INT_TYPE(t1)) ||
+                                 (t1 && IS_USIZE_TYPE(t1)) || (t1 && IS_ISIZE_TYPE(t1)));
                             int rhs_is_int =
                                 (rhs->type_info->kind == TYPE_INT ||
+                                 rhs->type_info->kind == TYPE_I8 ||
+                                 rhs->type_info->kind == TYPE_U8 ||
+                                 rhs->type_info->kind == TYPE_I16 ||
+                                 rhs->type_info->kind == TYPE_U16 ||
                                  rhs->type_info->kind == TYPE_I32 ||
+                                 rhs->type_info->kind == TYPE_U32 ||
                                  rhs->type_info->kind == TYPE_I64 ||
+                                 rhs->type_info->kind == TYPE_U64 ||
                                  rhs->type_info->kind == TYPE_ISIZE ||
                                  rhs->type_info->kind == TYPE_USIZE ||
-                                 (t2 && (strcmp(t2, "int") == 0 || strcmp(t2, "isize") == 0 ||
-                                         strcmp(t2, "usize") == 0 || strcmp(t2, "size_t") == 0 ||
-                                         strcmp(t2, "ptrdiff_t") == 0)));
+                                 rhs->type_info->kind == TYPE_UINT ||
+                                 rhs->type_info->kind == TYPE_BYTE ||
+                                 rhs->type_info->kind == TYPE_RUNE || (t2 && IS_INT_TYPE(t2)) ||
+                                 (t2 && IS_USIZE_TYPE(t2)) || (t2 && IS_ISIZE_TYPE(t2)));
 
                             if ((lhs_is_ptr && rhs_is_int) || (lhs_is_int && rhs_is_ptr))
                             {
@@ -6343,7 +6402,6 @@ ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_nam
         {
             if (param_name[0] == 'x')
             {
-                // fprintf(stderr, "DEBUG: Updating return type to %d\n", ret_val->type_info->kind);
             }
             // Update return type
             if (t->inner)

@@ -40,6 +40,7 @@ SRCS = src/main.c \
        src/codegen/codegen_main.c \
        src/codegen/codegen_utils.c \
        src/utils/utils.c \
+       src/utils/config.c \
        src/diagnostics/diagnostics.c \
        src/lexer/token.c \
        src/analysis/typecheck.c \
@@ -149,6 +150,7 @@ install: $(TARGET)
 	# Install facts
 	$(INSTALL) -m 644 src/zen/facts.json $(SHAREDIR)/facts.json
 	$(INSTALL) -m 644 src/repl/docs.json $(SHAREDIR)/docs.json
+	$(INSTALL) -m 644 src/misc/zenc.json $(SHAREDIR)/zenc.json
 	
 	# Install plugin headers
 	$(INSTALL) -d $(INCLUDEDIR)

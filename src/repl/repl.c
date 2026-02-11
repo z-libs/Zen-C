@@ -1771,19 +1771,51 @@ void run_repl(const char *self_path)
 
                                     if (s->var_decl.type_str)
                                     {
-                                        if (strcmp(t, "int") == 0 || strcmp(t, "i32") == 0)
+                                        if (strcmp(t, "int") == 0 || strcmp(t, "i32") == 0 ||
+                                            strcmp(t, "I32") == 0 || strcmp(t, "int32_t") == 0 ||
+                                            strcmp(t, "i16") == 0 || strcmp(t, "I16") == 0 ||
+                                            strcmp(t, "int16_t") == 0 || strcmp(t, "i8") == 0 ||
+                                            strcmp(t, "I8") == 0 || strcmp(t, "int8_t") == 0 ||
+                                            strcmp(t, "short") == 0 || strcmp(t, "rune") == 0)
                                         {
                                             strcpy(fmt, "%d");
                                             strcpy(val_expr, s->var_decl.name);
                                         }
-                                        else if (strcmp(t, "i64") == 0)
+                                        else if (strcmp(t, "uint") == 0 || strcmp(t, "u32") == 0 ||
+                                                 strcmp(t, "U32") == 0 ||
+                                                 strcmp(t, "uint32_t") == 0 ||
+                                                 strcmp(t, "u16") == 0 || strcmp(t, "U16") == 0 ||
+                                                 strcmp(t, "uint16_t") == 0 ||
+                                                 strcmp(t, "u8") == 0 || strcmp(t, "U8") == 0 ||
+                                                 strcmp(t, "uint8_t") == 0 ||
+                                                 strcmp(t, "byte") == 0 || strcmp(t, "ushort") == 0)
+                                        {
+                                            strcpy(fmt, "%u");
+                                            strcpy(val_expr, s->var_decl.name);
+                                        }
+                                        else if (strcmp(t, "i64") == 0 || strcmp(t, "I64") == 0 ||
+                                                 strcmp(t, "int64_t") == 0 ||
+                                                 strcmp(t, "long") == 0 ||
+                                                 strcmp(t, "isize") == 0 ||
+                                                 strcmp(t, "ptrdiff_t") == 0)
                                         {
                                             strcpy(fmt, "%ld");
                                             sprintf(val_expr, "(long)%s", s->var_decl.name);
                                         }
+                                        else if (strcmp(t, "u64") == 0 || strcmp(t, "U64") == 0 ||
+                                                 strcmp(t, "uint64_t") == 0 ||
+                                                 strcmp(t, "ulong") == 0 ||
+                                                 strcmp(t, "usize") == 0 ||
+                                                 strcmp(t, "size_t") == 0)
+                                        {
+                                            strcpy(fmt, "%lu");
+                                            sprintf(val_expr, "(unsigned long)%s",
+                                                    s->var_decl.name);
+                                        }
                                         else if (strcmp(t, "float") == 0 ||
                                                  strcmp(t, "double") == 0 ||
-                                                 strcmp(t, "f32") == 0 || strcmp(t, "f64") == 0)
+                                                 strcmp(t, "f32") == 0 || strcmp(t, "f64") == 0 ||
+                                                 strcmp(t, "F32") == 0 || strcmp(t, "F64") == 0)
                                         {
                                             strcpy(fmt, "%f");
                                             strcpy(val_expr, s->var_decl.name);

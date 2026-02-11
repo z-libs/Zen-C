@@ -1,0 +1,43 @@
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'docs/**'
+      - 'translations/**'
+
+standard-library:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'std/**'
+      - 'std.zc'
+
+compiler-parser:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/parser/**'
+      - 'src/lexer/**'
+      - 'src/ast/**'
+
+compiler-codegen:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/codegen/**'
+
+compiler-analysis:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/analysis/**'
+      - 'src/zen/**'
+
+build-system:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Makefile'
+      - '.github/**'
+      - 'flake.nix'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/**'

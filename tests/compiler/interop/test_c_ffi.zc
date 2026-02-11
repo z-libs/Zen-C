@@ -1,0 +1,40 @@
+
+include "tests/compiler/interop/test_ffi_helper.h"
+
+test "test_ffi_function_scanning" {
+    let result = ffi_add(10, 20);
+    if result == 30 {
+        println "PASS: ffi_add scanned from header";
+    } else {
+        println "FAIL: ffi_add returned unexpected value";
+        exit(1);
+    }
+
+    let product = ffi_multiply(3.0, 4.0);
+    if product == 12.0 {
+        println "PASS: ffi_multiply scanned from header";
+    } else {
+        println "FAIL: ffi_multiply returned unexpected value";
+        exit(1);
+    }
+
+    ffi_noop();
+    println "PASS: ffi_noop scanned from header";
+}
+
+test "test_ffi_nested_header_scanning" {
+    let result = ffi_nested_add(100, 200);
+    if result == 300 {
+        println "PASS: ffi_nested_add scanned from nested header";
+    } else {
+        println "FAIL: ffi_nested_add returned unexpected value";
+        exit(1);
+    }
+}
+
+extern struct ExplicitStruct;
+extern union ExplicitUnion;
+
+test "test_extern_struct_union" {
+    println "PASS: extern struct/union declarations accepted";
+}

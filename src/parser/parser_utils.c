@@ -4,6 +4,8 @@
 #include "parser.h"
 #include "analysis/const_fold.h"
 
+static int is_unmangle_primitive(const char *base);
+
 void try_parse_macro_const(ParserContext *ctx, const char *content)
 {
     Lexer l;
@@ -169,7 +171,7 @@ int is_primitive_type_name(const char *name)
     {
         return 0;
     }
-    // TODO: Add more types (it's late, I will do it tomorrow).
+
     return strcmp(name, "int") == 0 || strcmp(name, "i32") == 0 || strcmp(name, "u8") == 0 ||
            strcmp(name, "i8") == 0 || strcmp(name, "i16") == 0 || strcmp(name, "u16") == 0 ||
            strcmp(name, "u32") == 0 || strcmp(name, "i64") == 0 || strcmp(name, "u64") == 0 ||
@@ -367,7 +369,7 @@ void skip_comments(Lexer *l)
 }
 
 // C reserved words that conflict with C when used as identifiers.
-// TODO: We gotta work on these.
+
 static const char *C_RESERVED_WORDS[] = {
     // C types that could be used as names
     "double", "float", "signed", "unsigned", "short", "long", "auto", "register",
@@ -750,7 +752,7 @@ TypeAlias *find_type_alias_node(ParserContext *ctx, const char *alias)
     {
         if (strcmp(ta->alias, alias) == 0)
         {
-            // printf("DEBUG: Found Alias '%s' (Opaque: %d)\n", alias, ta->is_opaque);
+
             return ta;
         }
         ta = ta->next;
@@ -1398,6 +1400,53 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
         }
     }
 
+    size_t len = strlen(src);
+    if (len > 0 && src[len - 1] == ']')
+    {
+        int depth = 0;
+        int bracket_idx = -1;
+        for (int i = len - 1; i >= 0; i--)
+        {
+            if (src[i] == ']')
+            {
+                depth++;
+            }
+            else if (src[i] == '[')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    bracket_idx = i;
+                    break;
+                }
+            }
+        }
+
+        if (bracket_idx > 0)
+        {
+            char *base = xmalloc(bracket_idx + 1);
+            strncpy(base, src, bracket_idx);
+            base[bracket_idx] = 0;
+
+            char *new_base = replace_type_str(base, param, concrete, old_struct, new_struct);
+
+            if (new_base && strcmp(new_base, base) != 0)
+            {
+                char *suffix = (char *)src + bracket_idx;
+                char *res = xmalloc(strlen(new_base) + strlen(suffix) + 1);
+                sprintf(res, "%s%s", new_base, suffix);
+                free(base);
+                free(new_base);
+                return res;
+            }
+            free(base);
+            if (new_base)
+            {
+                free(new_base);
+            }
+        }
+    }
+
     if (param && strcmp(src, param) == 0)
     {
 
@@ -1467,7 +1516,7 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
         }
     }
 
-    size_t len = strlen(src);
+    len = strlen(src);
     if (len > 1 && src[len - 1] == '*')
     {
         char *base = xmalloc(len);
@@ -1618,10 +1667,7 @@ Type *type_from_string_helper(const char *c)
     {
         return type_new(TYPE_UINT);
     }
-    if (strcmp(c, "double") == 0)
-    {
-        return type_new(TYPE_F64);
-    }
+
     if (strcmp(c, "byte") == 0)
     {
         return type_new(TYPE_BYTE);
@@ -2536,14 +2582,7 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
                         base[alen - 3] = '\0';
                         free(unmangled);
                         unmangled = xmalloc(strlen(base) + 16);
-                        if (strcmp(base, "int") == 0 || strcmp(base, "char") == 0 ||
-                            strcmp(base, "float") == 0 || strcmp(base, "double") == 0 ||
-                            strcmp(base, "bool") == 0 || strcmp(base, "void") == 0 ||
-                            strcmp(base, "size_t") == 0 || strcmp(base, "usize") == 0 ||
-                            strncmp(base, "int8", 4) == 0 || strncmp(base, "int16", 5) == 0 ||
-                            strncmp(base, "int32", 5) == 0 || strncmp(base, "int64", 5) == 0 ||
-                            strncmp(base, "uint8", 5) == 0 || strncmp(base, "uint16", 6) == 0 ||
-                            strncmp(base, "uint32", 6) == 0 || strncmp(base, "uint64", 6) == 0)
+                        if (is_unmangle_primitive(base))
                         {
                             sprintf(unmangled, "%s*", base);
                         }
@@ -2756,6 +2795,21 @@ int check_impl(ParserContext *ctx, const char *trait, const char *strct)
     return 0;
 }
 
+static int is_unmangle_primitive(const char *base)
+{
+    return (strcmp(base, "int") == 0 || strcmp(base, "uint") == 0 || strcmp(base, "char") == 0 ||
+            strcmp(base, "bool") == 0 || strcmp(base, "void") == 0 || strcmp(base, "byte") == 0 ||
+            strcmp(base, "rune") == 0 || strcmp(base, "float") == 0 ||
+            strcmp(base, "double") == 0 || strcmp(base, "f32") == 0 || strcmp(base, "f64") == 0 ||
+            strcmp(base, "size_t") == 0 || strcmp(base, "usize") == 0 ||
+            strcmp(base, "isize") == 0 || strcmp(base, "ptrdiff_t") == 0 ||
+            strncmp(base, "i8", 2) == 0 || strncmp(base, "u8", 2) == 0 ||
+            strncmp(base, "int8", 4) == 0 || strncmp(base, "int16", 5) == 0 ||
+            strncmp(base, "int32", 5) == 0 || strncmp(base, "int64", 5) == 0 ||
+            strncmp(base, "uint8", 5) == 0 || strncmp(base, "uint16", 6) == 0 ||
+            strncmp(base, "uint32", 6) == 0 || strncmp(base, "uint64", 6) == 0);
+}
+
 void register_template(ParserContext *ctx, const char *name, ASTNode *node)
 {
     GenericTemplate *t = xmalloc(sizeof(GenericTemplate));
@@ -2954,14 +3008,7 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
                         free(unmangled_arg);
                         unmangled_arg = xmalloc(strlen(base) + 16);
                         // Check if base is a primitive type
-                        if (strcmp(base, "int") == 0 || strcmp(base, "char") == 0 ||
-                            strcmp(base, "float") == 0 || strcmp(base, "double") == 0 ||
-                            strcmp(base, "bool") == 0 || strcmp(base, "void") == 0 ||
-                            strcmp(base, "size_t") == 0 || strcmp(base, "usize") == 0 ||
-                            strncmp(base, "int8", 4) == 0 || strncmp(base, "int16", 5) == 0 ||
-                            strncmp(base, "int32", 5) == 0 || strncmp(base, "int64", 5) == 0 ||
-                            strncmp(base, "uint8", 5) == 0 || strncmp(base, "uint16", 6) == 0 ||
-                            strncmp(base, "uint32", 6) == 0 || strncmp(base, "uint64", 6) == 0)
+                        if (is_unmangle_primitive(base))
                         {
                             sprintf(unmangled_arg, "%s*", base);
                         }
@@ -3038,7 +3085,7 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
                                       : xstrdup(arg); // Fallback to arg if unmangled is generic
     ni->struct_node = NULL;                           // Placeholder to break cycles
     ni->next = ctx->instantiations;
-    ni->struct_node = NULL; // Duplicate assignment, ignore.
+
     ctx->instantiations = ni;
 
     ASTNode *struct_node_copy = NULL;
@@ -3878,28 +3925,93 @@ char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
                 {
                     Type *st = NULL;
                     // Check for primitives to avoid creating struct int*
-                    if (strcmp(ctx->current_impl_struct, "int") == 0 ||
-                        strcmp(ctx->current_impl_struct, "int32_t") == 0)
+                    const char *is = ctx->current_impl_struct;
+                    if (strcmp(is, "int") == 0 || strcmp(is, "int32_t") == 0 ||
+                        strcmp(is, "i32") == 0 || strcmp(is, "I32") == 0)
                     {
                         st = type_new(TYPE_INT);
                     }
-                    else if (strcmp(ctx->current_impl_struct, "float") == 0)
+                    else if (strcmp(is, "uint") == 0 || strcmp(is, "uint32_t") == 0 ||
+                             strcmp(is, "u32") == 0 || strcmp(is, "U32") == 0)
+                    {
+                        st = type_new(TYPE_U32);
+                    }
+                    else if (strcmp(is, "float") == 0 || strcmp(is, "f32") == 0 ||
+                             strcmp(is, "F32") == 0)
                     {
                         st = type_new(TYPE_F32);
                     }
-                    else if (strcmp(ctx->current_impl_struct, "char") == 0)
+                    else if (strcmp(is, "double") == 0 || strcmp(is, "f64") == 0 ||
+                             strcmp(is, "F64") == 0)
+                    {
+                        st = type_new(TYPE_F64);
+                    }
+                    else if (strcmp(is, "char") == 0)
                     {
                         st = type_new(TYPE_CHAR);
                     }
-                    else if (strcmp(ctx->current_impl_struct, "bool") == 0)
+                    else if (strcmp(is, "bool") == 0)
                     {
                         st = type_new(TYPE_BOOL);
                     }
-                    else if (strcmp(ctx->current_impl_struct, "string") == 0)
+                    else if (strcmp(is, "string") == 0)
                     {
                         st = type_new(TYPE_STRING);
                     }
-                    // Add other primitives as needed
+                    else if (strcmp(is, "void") == 0)
+                    {
+                        st = type_new(TYPE_VOID);
+                    }
+                    else if (strcmp(is, "usize") == 0 || strcmp(is, "size_t") == 0)
+                    {
+                        st = type_new(TYPE_USIZE);
+                    }
+                    else if (strcmp(is, "isize") == 0 || strcmp(is, "ptrdiff_t") == 0)
+                    {
+                        st = type_new(TYPE_ISIZE);
+                    }
+                    else if (strcmp(is, "byte") == 0 || strcmp(is, "u8") == 0 ||
+                             strcmp(is, "U8") == 0 || strcmp(is, "uint8_t") == 0)
+                    {
+                        st = type_new(TYPE_U8);
+                    }
+                    else if (strcmp(is, "i8") == 0 || strcmp(is, "I8") == 0 ||
+                             strcmp(is, "int8_t") == 0)
+                    {
+                        st = type_new(TYPE_I8);
+                    }
+                    else if (strcmp(is, "i16") == 0 || strcmp(is, "I16") == 0 ||
+                             strcmp(is, "int16_t") == 0)
+                    {
+                        st = type_new(TYPE_I16);
+                    }
+                    else if (strcmp(is, "u16") == 0 || strcmp(is, "U16") == 0 ||
+                             strcmp(is, "uint16_t") == 0)
+                    {
+                        st = type_new(TYPE_U16);
+                    }
+                    else if (strcmp(is, "i64") == 0 || strcmp(is, "I64") == 0 ||
+                             strcmp(is, "int64_t") == 0 || strcmp(is, "long") == 0)
+                    {
+                        st = type_new(TYPE_I64);
+                    }
+                    else if (strcmp(is, "u64") == 0 || strcmp(is, "U64") == 0 ||
+                             strcmp(is, "uint64_t") == 0 || strcmp(is, "ulong") == 0)
+                    {
+                        st = type_new(TYPE_U64);
+                    }
+                    else if (strcmp(is, "i128") == 0 || strcmp(is, "I128") == 0)
+                    {
+                        st = type_new(TYPE_I128);
+                    }
+                    else if (strcmp(is, "u128") == 0 || strcmp(is, "U128") == 0)
+                    {
+                        st = type_new(TYPE_U128);
+                    }
+                    else if (strcmp(is, "rune") == 0)
+                    {
+                        st = type_new(TYPE_RUNE);
+                    }
                     else
                     {
                         st = type_new(TYPE_STRUCT);
@@ -4236,6 +4348,30 @@ const char *normalize_type_name(const char *name)
     if (strcmp(name, "usize") == 0)
     {
         return "size_t";
+    }
+    if (strcmp(name, "isize") == 0)
+    {
+        return "ptrdiff_t";
+    }
+    if (strcmp(name, "byte") == 0)
+    {
+        return "uint8_t";
+    }
+    if (strcmp(name, "rune") == 0)
+    {
+        return "int32_t";
+    }
+    if (strcmp(name, "i128") == 0 || strcmp(name, "I128") == 0)
+    {
+        return "__int128";
+    }
+    if (strcmp(name, "u128") == 0 || strcmp(name, "U128") == 0)
+    {
+        return "unsigned __int128";
+    }
+    if (strcmp(name, "u0") == 0 || strcmp(name, "U0") == 0)
+    {
+        return "void";
     }
     if (strcmp(name, "string") == 0)
     {

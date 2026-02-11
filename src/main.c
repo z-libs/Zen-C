@@ -277,6 +277,9 @@ int main(int argc, char **argv)
     // Initialize Plugin Manager
     zptr_plugin_mgr_init();
 
+    // Load all configurations (system, hidden project, visible project)
+    load_all_configs();
+
     // Parse context init
     ParserContext ctx;
     memset(&ctx, 0, sizeof(ctx));

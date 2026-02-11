@@ -1861,25 +1861,53 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
                     format_spec = "%s";
                     is_bool = 1;
                 }
-                else if (strcmp(inferred_type, "int") == 0 || strcmp(inferred_type, "i32") == 0)
+                else if (strcmp(inferred_type, "int") == 0 || strcmp(inferred_type, "i32") == 0 ||
+                         strcmp(inferred_type, "I32") == 0 ||
+                         strcmp(inferred_type, "int32_t") == 0 ||
+                         strcmp(inferred_type, "i16") == 0 || strcmp(inferred_type, "I16") == 0 ||
+                         strcmp(inferred_type, "int16_t") == 0 ||
+                         strcmp(inferred_type, "i8") == 0 || strcmp(inferred_type, "I8") == 0 ||
+                         strcmp(inferred_type, "int8_t") == 0 ||
+                         strcmp(inferred_type, "short") == 0 ||
+                         strcmp(inferred_type, "ushort") == 0 || strcmp(inferred_type, "rune") == 0)
                 {
                     format_spec = "%d";
                 }
+                else if (strcmp(inferred_type, "uint") == 0 || strcmp(inferred_type, "u32") == 0 ||
+                         strcmp(inferred_type, "U32") == 0 ||
+                         strcmp(inferred_type, "uint32_t") == 0 ||
+                         strcmp(inferred_type, "u16") == 0 || strcmp(inferred_type, "U16") == 0 ||
+                         strcmp(inferred_type, "uint16_t") == 0 ||
+                         strcmp(inferred_type, "u8") == 0 || strcmp(inferred_type, "U8") == 0 ||
+                         strcmp(inferred_type, "uint8_t") == 0 ||
+                         strcmp(inferred_type, "byte") == 0)
+                {
+                    format_spec = "%u";
+                }
                 else if (strcmp(inferred_type, "long") == 0 || strcmp(inferred_type, "i64") == 0 ||
-                         strcmp(inferred_type, "isize") == 0)
+                         strcmp(inferred_type, "I64") == 0 ||
+                         strcmp(inferred_type, "int64_t") == 0 ||
+                         strcmp(inferred_type, "isize") == 0 ||
+                         strcmp(inferred_type, "ptrdiff_t") == 0)
                 {
                     format_spec = "%lld";
                 }
-                else if (strcmp(inferred_type, "usize") == 0 || strcmp(inferred_type, "u64") == 0)
+                else if (strcmp(inferred_type, "usize") == 0 || strcmp(inferred_type, "u64") == 0 ||
+                         strcmp(inferred_type, "U64") == 0 ||
+                         strcmp(inferred_type, "uint64_t") == 0 ||
+                         strcmp(inferred_type, "size_t") == 0 ||
+                         strcmp(inferred_type, "ulong") == 0)
                 {
                     format_spec = "%llu";
                 }
                 else if (strcmp(inferred_type, "float") == 0 || strcmp(inferred_type, "f32") == 0 ||
-                         strcmp(inferred_type, "double") == 0)
+                         strcmp(inferred_type, "F32") == 0 ||
+                         strcmp(inferred_type, "double") == 0 ||
+                         strcmp(inferred_type, "f64") == 0 || strcmp(inferred_type, "F64") == 0)
                 {
                     format_spec = "%f";
                 }
-                else if (strcmp(inferred_type, "char") == 0 || strcmp(inferred_type, "byte") == 0)
+                else if (strcmp(inferred_type, "char") == 0)
                 {
                     format_spec = "%c";
                 }
@@ -2947,6 +2975,391 @@ ASTNode *parse_block(ParserContext *ctx, Lexer *l)
     return b;
 }
 
+void try_parse_c_function_decl(ParserContext *ctx, const char *line)
+{
+    const char *p = line;
+    while (*p && isspace(*p))
+    {
+        p++;
+    }
+
+    // Skip lines we don't want to parse as function declarations
+    if (*p == '#' || *p == '/' || *p == '*' || *p == '\0')
+    {
+        return;
+    }
+    if (strncmp(p, "typedef", 7) == 0 && !isalnum(p[7]) && p[7] != '_')
+    {
+        return;
+    }
+    if (strncmp(p, "static", 6) == 0 && !isalnum(p[6]) && p[6] != '_')
+    {
+        return;
+    }
+    if (strncmp(p, "struct", 6) == 0 && !isalnum(p[6]) && p[6] != '_')
+    {
+        return;
+    }
+    if (strncmp(p, "union", 5) == 0 && !isalnum(p[5]) && p[5] != '_')
+    {
+        return;
+    }
+    if (strncmp(p, "enum", 4) == 0 && !isalnum(p[4]) && p[4] != '_')
+    {
+        return;
+    }
+
+    // Must contain '(' and end with ';' (prototype, not definition body)
+    const char *lparen = strchr(p, '(');
+    if (!lparen)
+    {
+        return;
+    }
+
+    // Check that the line ends with ';' (skip trailing whitespace)
+    const char *end = p + strlen(p) - 1;
+    while (end > p && isspace(*end))
+    {
+        end--;
+    }
+    if (*end != ';')
+    {
+        return; // Likely a function definition (has body) or multi-line
+    }
+
+    // Must not contain '{' — that would be a function body
+    if (strchr(p, '{'))
+    {
+        return;
+    }
+
+    // Walk backwards from '(' to find the function name
+    const char *name_end = lparen;
+    while (name_end > p && isspace(*(name_end - 1)))
+    {
+        name_end--;
+    }
+
+    // name_end now points just past the last char of the function name
+    const char *name_start = name_end;
+    while (name_start > p && (isalnum(*(name_start - 1)) || *(name_start - 1) == '_'))
+    {
+        name_start--;
+    }
+
+    int name_len = (int)(name_end - name_start);
+    if (name_len <= 0)
+    {
+        return;
+    }
+
+    // Reject names that are C keywords commonly seen in headers
+    if ((name_len == 6 && strncmp(name_start, "return", 6) == 0) ||
+        (name_len == 2 && strncmp(name_start, "if", 2) == 0) ||
+        (name_len == 3 && strncmp(name_start, "for", 3) == 0) ||
+        (name_len == 5 && strncmp(name_start, "while", 5) == 0))
+    {
+        return;
+    }
+
+    // There must be a return type before the name (at least one identifier/keyword)
+    if (name_start == p)
+    {
+        return; // No return type
+    }
+
+    char *name = xmalloc(name_len + 1);
+    strncpy(name, name_start, name_len);
+    name[name_len] = '\0';
+
+    register_extern_symbol(ctx, name);
+    free(name);
+}
+
+/**
+ * @brief Try to parse a C struct/union declaration from a header line.
+ *
+ * Detects patterns like:
+ *   - typedef struct <tag> { ... (open brace on same line)
+ *   - typedef struct <tag> <alias>;
+ *   - struct <name> {
+ *   - } <name>;  (closing typedef)
+ *
+ * Registers detected names as opaque type aliases so Zen C code can
+ * reference them (e.g. as pointer types) without needing raw {} blocks.
+ */
+void try_parse_c_struct_decl(ParserContext *ctx, const char *line)
+{
+    const char *p = line;
+    while (*p && isspace(*p))
+    {
+        p++;
+    }
+
+    if (*p == '#' || *p == '/' || *p == '*' || *p == '\0')
+    {
+        return;
+    }
+
+    int is_typedef = 0;
+    int is_union = 0;
+
+    // Check for typedef prefix
+    if (strncmp(p, "typedef", 7) == 0 && !isalnum(p[7]) && p[7] != '_')
+    {
+        is_typedef = 1;
+        p += 7;
+        while (*p && isspace(*p))
+        {
+            p++;
+        }
+    }
+
+    // Check for struct/union keyword
+    if (strncmp(p, "struct", 6) == 0 && !isalnum(p[6]) && p[6] != '_')
+    {
+        p += 6;
+    }
+    else if (strncmp(p, "union", 5) == 0 && !isalnum(p[5]) && p[5] != '_')
+    {
+        p += 5;
+        is_union = 1;
+    }
+    else if (is_typedef)
+    {
+        return; // typedef of something else (e.g. typedef int foo_t;)
+    }
+    else
+    {
+        // Check for closing typedef: } Name;
+        if (*p == '}')
+        {
+            p++;
+            while (*p && isspace(*p))
+            {
+                p++;
+            }
+            // Extract name before ';'
+            const char *name_start = p;
+            while (*p && (isalnum(*p) || *p == '_'))
+            {
+                p++;
+            }
+            int name_len = (int)(p - name_start);
+            while (*p && isspace(*p))
+            {
+                p++;
+            }
+            if (name_len > 0 && *p == ';')
+            {
+                char *name = xmalloc(name_len + 1);
+                strncpy(name, name_start, name_len);
+                name[name_len] = '\0';
+                register_type_alias(ctx, name, name, 1, NULL);
+                register_extern_symbol(ctx, name);
+                free(name);
+            }
+        }
+        return;
+    }
+
+    // Skip whitespace after struct/union keyword
+    while (*p && isspace(*p))
+    {
+        p++;
+    }
+
+    // Extract tag name (the name right after struct/union)
+    const char *tag_start = p;
+    while (*p && (isalnum(*p) || *p == '_'))
+    {
+        p++;
+    }
+    int tag_len = (int)(p - tag_start);
+
+    if (tag_len <= 0)
+    {
+        return; // Anonymous struct/union
+    }
+
+    // Register the tag name as an opaque type
+    char *tag_name = xmalloc(tag_len + 1);
+    strncpy(tag_name, tag_start, tag_len);
+    tag_name[tag_len] = '\0';
+
+    // Skip whitespace
+    while (*p && isspace(*p))
+    {
+        p++;
+    }
+
+    // Only register if this looks like a real declaration (has '{' or ';')
+    if (*p == '{' || *p == ';')
+    {
+        const char *c_keyword = is_union ? "union" : "struct";
+        char *c_type = xmalloc(strlen(c_keyword) + 1 + tag_len + 1);
+        sprintf(c_type, "%s %s", c_keyword, tag_name);
+        register_type_alias(ctx, tag_name, c_type, 1, NULL);
+        register_extern_symbol(ctx, tag_name);
+        free(c_type);
+    }
+
+    // If typedef: also check for alias after '}'
+    // (handled by the '}' branch on subsequent lines)
+
+    free(tag_name);
+}
+
+/**
+ * @brief Recursively scan a C header file for declarations.
+ *
+ * Scans the given header file for:
+ *   - #define macros (via try_parse_macro_const)
+ *   - Function prototypes (via try_parse_c_function_decl)
+ *   - Struct/union declarations (via try_parse_c_struct_decl)
+ *   - Nested #include "..." directives (recursively scanned)
+ *
+ * System includes (#include <...>) are skipped.
+ * Already-scanned files are tracked to prevent infinite cycles.
+ *
+ * @param ctx     Parser context
+ * @param path    Path to the header file
+ * @param depth   Current recursion depth (capped at 16)
+ */
+void scan_c_header_contents(ParserContext *ctx, const char *path, int depth)
+{
+    // Safety: cap recursion depth
+    if (depth > 16)
+    {
+        return;
+    }
+
+    // Prevent re-scanning the same header (handles include guards / cycles)
+    if (is_file_imported(ctx, path))
+    {
+        return;
+    }
+    mark_file_imported(ctx, path);
+
+    char *src = load_file(path);
+    if (!src)
+    {
+        return;
+    }
+
+    // Compute directory of the current header for resolving relative includes
+    char header_dir[1024];
+    header_dir[0] = 0;
+    const char *last_slash = strrchr(path, '/');
+    if (last_slash)
+    {
+        int dir_len = (int)(last_slash - path);
+        if (dir_len >= (int)sizeof(header_dir))
+        {
+            dir_len = (int)sizeof(header_dir) - 1;
+        }
+        strncpy(header_dir, path, dir_len);
+        header_dir[dir_len] = 0;
+    }
+
+    char *ptr = src;
+    while (*ptr)
+    {
+        char *line_start = ptr;
+        char *line_end = ptr;
+        while (*line_end)
+        {
+            if (*line_end == '\n')
+            {
+                // Check for line continuation (simplistic)
+                if (line_end > line_start && *(line_end - 1) == '\\')
+                {
+                    line_end++;
+                    continue;
+                }
+                break;
+            }
+            line_end++;
+        }
+
+        int len = line_end - line_start;
+        if (len > 0)
+        {
+            char *line_buf = xmalloc(len + 1);
+            strncpy(line_buf, line_start, len);
+            line_buf[len] = 0;
+
+            char *p = line_buf;
+            while (*p && isspace(*p))
+            {
+                p++;
+            }
+            if (*p == '#')
+            {
+                try_parse_macro_const(ctx, line_buf);
+
+                // Check for nested #include "..." directives
+                const char *inc = p + 1;
+                while (*inc && isspace(*inc))
+                {
+                    inc++;
+                }
+                if (strncmp(inc, "include", 7) == 0 && !isalnum(inc[7]) && inc[7] != '_')
+                {
+                    inc += 7;
+                    while (*inc && isspace(*inc))
+                    {
+                        inc++;
+                    }
+                    if (*inc == '"')
+                    {
+                        inc++; // skip opening quote
+                        const char *end_quote = strchr(inc, '"');
+                        if (end_quote && end_quote > inc)
+                        {
+                            int inc_len = (int)(end_quote - inc);
+                            if (inc_len > 255)
+                            {
+                                inc_len = 255; // Sanity limit for include paths
+                            }
+                            char inc_name[256];
+                            memcpy(inc_name, inc, inc_len);
+                            inc_name[inc_len] = '\0';
+
+                            char nested_path[1280];
+                            if (header_dir[0])
+                            {
+                                snprintf(nested_path, sizeof(nested_path), "%s/%s", header_dir,
+                                         inc_name);
+                            }
+                            else
+                            {
+                                snprintf(nested_path, sizeof(nested_path), "%s", inc_name);
+                            }
+
+                            // Recursively scan the nested header
+                            scan_c_header_contents(ctx, nested_path, depth + 1);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                try_parse_c_function_decl(ctx, line_buf);
+                try_parse_c_struct_decl(ctx, line_buf);
+            }
+            free(line_buf);
+        }
+
+        ptr = line_end;
+        if (*ptr == '\n')
+        {
+            ptr++;
+        }
+    }
+    free(src);
+}
+
 ASTNode *parse_include(ParserContext *ctx, Lexer *l)
 {
     lexer_next(l); // eat 'include'
@@ -2990,56 +3403,7 @@ ASTNode *parse_include(ParserContext *ctx, Lexer *l)
 
     if (!is_system && path)
     {
-        char *src = load_file(path);
-        if (src)
-        {
-            char *ptr = src;
-            while (*ptr)
-            {
-                char *line_start = ptr;
-                char *line_end = ptr;
-                while (*line_end)
-                {
-                    if (*line_end == '\n')
-                    {
-                        // Check for line continuation (simplistic)
-                        if (line_end > line_start && *(line_end - 1) == '\\')
-                        {
-                            line_end++;
-                            continue;
-                        }
-                        break;
-                    }
-                    line_end++;
-                }
-
-                int len = line_end - line_start;
-                if (len > 0)
-                {
-                    char *line_buf = xmalloc(len + 1);
-                    strncpy(line_buf, line_start, len);
-                    line_buf[len] = 0;
-
-                    char *p = line_buf;
-                    while (*p && isspace(*p))
-                    {
-                        p++;
-                    }
-                    if (*p == '#')
-                    {
-                        try_parse_macro_const(ctx, line_buf);
-                    }
-                    free(line_buf);
-                }
-
-                ptr = line_end;
-                if (*ptr == '\n')
-                {
-                    ptr++;
-                }
-            }
-            free(src);
-        }
+        scan_c_header_contents(ctx, path, 0);
     }
 
     return n;

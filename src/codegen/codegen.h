@@ -52,6 +52,7 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
 char *strip_template_suffix(const char *name);
 int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out);
 void codegen_expression_with_move(ParserContext *ctx, ASTNode *node, FILE *out);
+int is_struct_return_type(const char *ret_type);
 
 // Declaration emission  (codegen_decl.c).
 /**

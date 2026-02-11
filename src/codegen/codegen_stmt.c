@@ -72,7 +72,7 @@ static void emit_single_pattern_cond(const char *pat, int id, int is_ptr, FILE *
     }
     else
     {
-        // Numeric, Char literal (removed duplicate branch), or simple pattern
+        // Numeric, Char literal, or simple pattern
         if (is_ptr)
         {
             fprintf(out, "*_m_%d == %s", id, pat);
@@ -571,12 +571,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             char *rt = node->func.ret_type;
             if (strcmp(rt, "void") != 0 && strcmp(rt, "Async") != 0)
             {
-                if (strstr(rt, "*") == NULL && strcmp(rt, "string") != 0 &&
-                    strcmp(rt, "int") != 0 && strcmp(rt, "bool") != 0 && strcmp(rt, "char") != 0 &&
-                    strcmp(rt, "float") != 0 && strcmp(rt, "double") != 0 &&
-                    strcmp(rt, "long") != 0 && strcmp(rt, "usize") != 0 &&
-                    strcmp(rt, "isize") != 0 && strncmp(rt, "uint", 4) != 0 &&
-                    strncmp(rt, "int", 3) != 0)
+                if (is_struct_return_type(rt))
                 {
                     returns_struct = 1;
                 }
@@ -775,14 +770,6 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                         def->type_info->traits.has_drop)
                     {
                         has_drop = 1;
-                    }
-                    else if (def)
-                    {
-                        // No drop needed
-                    }
-                    else
-                    {
-                        // No struct def found
                     }
                 }
 
@@ -1660,11 +1647,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         if (strstr(ret_type, "*") == NULL && strcmp(ret_type, "string") != 0 &&
             strcmp(ret_type, "void") != 0 && strcmp(ret_type, "Async") != 0)
         {
-            if (strcmp(ret_type, "int") != 0 && strcmp(ret_type, "bool") != 0 &&
-                strcmp(ret_type, "char") != 0 && strcmp(ret_type, "float") != 0 &&
-                strcmp(ret_type, "double") != 0 && strcmp(ret_type, "long") != 0 &&
-                strcmp(ret_type, "usize") != 0 && strcmp(ret_type, "isize") != 0 &&
-                strncmp(ret_type, "uint", 4) != 0 && strncmp(ret_type, "int", 3) != 0)
+            if (is_struct_return_type(ret_type))
             {
                 returns_struct = 1;
             }

@@ -1,0 +1,14 @@
+name: Lint Code
+
+on: [push, pull_request]
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run clang-format style check
+      uses: jidicula/clang-format-action@v4.11.0
+      with:
+        clang-format-version: '15'
+        check-path: 'src'

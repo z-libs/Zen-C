@@ -431,6 +431,19 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 {
                     s = parse_function(ctx, l, 0);
                 }
+                else if (peek.type == TOK_IDENT && peek.len == 6 &&
+                         strncmp(peek.start, "struct", 6) == 0)
+                {
+                    // extern struct Name; -> opaque struct declaration
+                    s = parse_struct(ctx, l, 0, 1);
+                }
+                else if ((peek.type == TOK_IDENT && peek.len == 5 &&
+                          strncmp(peek.start, "union", 5) == 0) ||
+                         peek.type == TOK_UNION)
+                {
+                    // extern union Name; -> opaque union declaration
+                    s = parse_struct(ctx, l, 1, 1);
+                }
                 else
                 {
                     while (1)
@@ -793,7 +806,13 @@ static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char *
                     }
 
                     // Map types to appropriate get_* calls
-                    if (strcmp(ft, "int") == 0)
+                    int is_int_type = strcmp(ft, "int") == 0 || strcmp(ft, "int32_t") == 0 ||
+                                      strcmp(ft, "i32") == 0 || strcmp(ft, "i64") == 0 ||
+                                      strcmp(ft, "int64_t") == 0 || strcmp(ft, "u32") == 0 ||
+                                      strcmp(ft, "uint32_t") == 0 || strcmp(ft, "u64") == 0 ||
+                                      strcmp(ft, "uint64_t") == 0 || strcmp(ft, "usize") == 0 ||
+                                      strcmp(ft, "size_t") == 0;
+                    if (is_int_type)
                     {
                         sprintf(assign, "let _f_%s = (*j).get_int(\"%s\").unwrap_or(0);\n", fn, fn);
                     }
@@ -936,7 +955,13 @@ static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char *
                         continue;
                     }
 
-                    if (strcmp(ft, "int") == 0)
+                    int is_int_type = strcmp(ft, "int") == 0 || strcmp(ft, "int32_t") == 0 ||
+                                      strcmp(ft, "i32") == 0 || strcmp(ft, "i64") == 0 ||
+                                      strcmp(ft, "int64_t") == 0 || strcmp(ft, "u32") == 0 ||
+                                      strcmp(ft, "uint32_t") == 0 || strcmp(ft, "u64") == 0 ||
+                                      strcmp(ft, "uint64_t") == 0 || strcmp(ft, "usize") == 0 ||
+                                      strcmp(ft, "size_t") == 0;
+                    if (is_int_type)
                     {
                         sprintf(set_call, "_obj.set(\"%s\", JsonValue::number((double)self.%s));\n",
                                 fn, fn);

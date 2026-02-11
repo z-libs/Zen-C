@@ -243,6 +243,8 @@ typedef struct
 
     // C Compiler selection (default: gcc)
     char cc[64]; ///< Backend compiler command (e.g. "gcc", "clang").
+
+    char **c_function_whitelist; ///< List of C functions to suppress warnings for (from zenc.json).
 } CompilerConfig;
 
 extern CompilerConfig g_config;
@@ -254,7 +256,15 @@ struct ParserContext;
 /**
  * @brief Scan build directives.
  */
+/**
+ * @brief Scan build directives.
+ */
 void scan_build_directives(struct ParserContext *ctx, const char *src);
+
+/**
+ * @brief Load all configurations (system, hidden project, visible project).
+ */
+void load_all_configs(void);
 
 /**
  * @brief Get monotonic time in seconds (high precision).

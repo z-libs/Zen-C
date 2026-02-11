@@ -10,6 +10,27 @@
 #include "ast.h"
 #include "zprep_plugin.h"
 
+// Helper to suggest standard library imports for common missing functions
+static const char *get_missing_function_hint(const char *name)
+{
+    if (strcmp(name, "malloc") == 0 || strcmp(name, "free") == 0 || strcmp(name, "calloc") == 0 ||
+        strcmp(name, "realloc") == 0)
+    {
+        return "Include <stdlib.h> or use 'use std::mem'";
+    }
+    if (strcmp(name, "printf") == 0 || strcmp(name, "scanf") == 0 || strcmp(name, "fprintf") == 0 ||
+        strcmp(name, "sprintf") == 0 || strcmp(name, "snprintf") == 0)
+    {
+        return "Include <stdio.h> or use 'use std::io'";
+    }
+    if (strcmp(name, "memset") == 0 || strcmp(name, "memcpy") == 0 || strcmp(name, "strlen") == 0 ||
+        strcmp(name, "strcpy") == 0 || strcmp(name, "strcmp") == 0 || strcmp(name, "strncmp") == 0)
+    {
+        return "Include <string.h>";
+    }
+    return NULL;
+}
+
 // Emit literal expression (int, float, string, char)
 static void codegen_literal_expr(ASTNode *node, FILE *out)
 {
@@ -752,12 +773,42 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     // Skip internal runtime functions
                     int is_internal = strncmp(name, "_z_", 3) == 0 || strncmp(name, "_Z", 2) == 0;
 
-                    // Only warn if no C interop and not an internal function
-                    if (!has_c_interop && !is_internal)
+                    // Check if explicitly declared as extern (via `extern` or header scanning)
+                    int is_extern = is_extern_symbol(ctx, name);
+
+                    // Check whitelist
+                    int is_whitelisted = 0;
+                    if (g_config.c_function_whitelist)
+                    {
+                        char **w = g_config.c_function_whitelist;
+                        while (*w)
+                        {
+                            if (strcmp(*w, name) == 0)
+                            {
+                                is_whitelisted = 1;
+                                break;
+                            }
+                            w++;
+                        }
+                    }
+
+                    // Only warn if no C interop, not internal, not explicitly extern, and not
+                    // whitelisted
+                    if (!has_c_interop && !is_internal && !is_extern && !is_whitelisted)
                     {
                         Token t = node->call.callee->token;
-                        fprintf(stderr, "Warning at %s:%d:%d: Undefined function '%s'\n",
-                                g_current_filename, t.line, t.col, name);
+                        char msg[256];
+                        snprintf(msg, sizeof(msg), "Undefined function '%s'", name);
+                        const char *hint = get_missing_function_hint(name);
+
+                        if (hint)
+                        {
+                            zwarn_with_suggestion(t, msg, hint);
+                        }
+                        else
+                        {
+                            zwarn_at(t, msg);
+                        }
                     }
                 }
             }
@@ -1674,11 +1725,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         if (strstr(ret_type, "*") == NULL && strcmp(ret_type, "string") != 0 &&
             strcmp(ret_type, "void") != 0 && strcmp(ret_type, "Async") != 0)
         {
-            if (strcmp(ret_type, "int") != 0 && strcmp(ret_type, "bool") != 0 &&
-                strcmp(ret_type, "char") != 0 && strcmp(ret_type, "float") != 0 &&
-                strcmp(ret_type, "double") != 0 && strcmp(ret_type, "long") != 0 &&
-                strcmp(ret_type, "usize") != 0 && strcmp(ret_type, "isize") != 0 &&
-                strncmp(ret_type, "uint", 4) != 0 && strncmp(ret_type, "int", 3) != 0)
+            if (is_struct_return_type(ret_type))
             {
                 returns_struct = 1;
             }
