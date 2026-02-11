@@ -725,9 +725,11 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             zpanic_at(lexer_peek(l), "Expected ] in type");
         }
 
-        // Register Slice
         char *inner_str = type_to_string(inner);
-        register_slice(ctx, inner_str);
+        if (!is_known_generic(ctx, inner_str))
+        {
+            register_slice(ctx, inner_str);
+        }
 
         Type *arr = type_new(TYPE_ARRAY);
         arr->inner = inner;

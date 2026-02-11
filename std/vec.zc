@@ -190,6 +190,10 @@ impl Vec<T> {
         return self.data[idx];
     }
 
+    fn index(self, idx: usize) -> T {
+        return self.get(idx);
+    }
+
     fn get_ref(self, idx: usize) -> T* {
         if (idx >= self.len) {
             !"Panic: Index out of bounds";

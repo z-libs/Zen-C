@@ -2617,9 +2617,21 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
         return NULL;
     }
 
-    // Scan the function body for sizeof expressions and trigger instantiation
-    // of any generic structs or functions referenced there
     trigger_instantiations(ctx, new_fn->func.body);
+
+    if (new_fn->func.arg_types)
+    {
+        for (int i = 0; i < new_fn->func.arg_count; i++)
+        {
+            Type *at = new_fn->func.arg_types[i];
+            if (at && at->kind == TYPE_ARRAY && at->array_size == 0 && at->inner)
+            {
+                char *inner_str = type_to_string(at->inner);
+                register_slice(ctx, inner_str);
+                free(inner_str);
+            }
+        }
+    }
 
     free(new_fn->func.name);
     new_fn->func.name = xstrdup(mangled);
@@ -3118,6 +3130,18 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
         i->strct.fields = copy_fields_replacing(ctx, t->struct_node->strct.fields, gp, subst_arg);
         struct_node_copy = i;
         register_struct_def(ctx, m, i);
+
+        // Register slice types used in the instantiated struct's fields
+        ASTNode *fld = i->strct.fields;
+        while (fld)
+        {
+            if (fld->type == NODE_FIELD && fld->field.type &&
+                strncmp(fld->field.type, "Slice_", 6) == 0)
+            {
+                register_slice(ctx, fld->field.type + 6);
+            }
+            fld = fld->next;
+        }
     }
     else if (t->struct_node->type == NODE_ENUM)
     {

@@ -1113,6 +1113,61 @@ static void check_node(TypeChecker *tc, ASTNode *node)
     case NODE_EXPR_INDEX:
         check_node(tc, node->index.array);
         check_node(tc, node->index.index);
+
+        if (node->index.array->type_info)
+        {
+            Type *t = node->index.array->type_info;
+            int is_ptr = 0;
+            if (t->kind == TYPE_POINTER && t->inner && t->inner->kind == TYPE_STRUCT)
+            {
+                t = t->inner;
+                is_ptr = 1;
+            }
+
+            if (t->kind == TYPE_STRUCT && t->name)
+            {
+                char mangled_idx[256];
+                sprintf(mangled_idx, "%s__index", t->name);
+                char mangled_get[256];
+                sprintf(mangled_get, "%s__get", t->name);
+
+                FuncSig *sig = find_func(tc->pctx, mangled_idx);
+                char *method_name = NULL;
+                if (sig)
+                {
+                    method_name = "index";
+                }
+                else
+                {
+                    sig = find_func(tc->pctx, mangled_get);
+                    if (sig)
+                    {
+                        method_name = "get";
+                    }
+                }
+
+                if (method_name)
+                {
+                    ASTNode *array = node->index.array;
+                    ASTNode *idx = node->index.index;
+
+                    node->type = NODE_EXPR_CALL;
+                    memset(&node->call, 0, sizeof(node->call));
+
+                    ASTNode *callee = ast_create(NODE_EXPR_MEMBER);
+                    callee->member.target = array;
+                    callee->member.field = xstrdup(method_name);
+                    callee->member.is_pointer_access = is_ptr;
+
+                    node->call.callee = callee;
+                    node->call.args = idx;
+
+                    check_expr_call(tc, node);
+                    break;
+                }
+            }
+        }
+
         // Validate index is integer
         if (node->index.index && node->index.index->type_info)
         {
