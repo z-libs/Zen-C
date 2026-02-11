@@ -394,27 +394,58 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
                         strncpy(actual, current_scan, len);
                         actual[len] = 0;
 
-                        // Strict string comparison is too strict due to aliasing (int vs int32_t).
+                        // Check for type compatibility
                         int compatible = 0;
+
+                        // If we have actual Type objects, use type_eq for robust checking
+                        // We need a way to get Type* for the RHS element.
+                        // For now, let's improve the string-based matching which is what this
+                        // compiler mostly uses during parsing.
+
                         if (strcmp(types[idx], actual) == 0)
                         {
                             compatible = 1;
                         }
-                        else if (strcmp(types[idx], "int32_t") == 0 && strcmp(actual, "int") == 0)
+                        else
                         {
-                            compatible = 1;
-                        }
-                        else if (strcmp(types[idx], "int") == 0 && strcmp(actual, "int32_t") == 0)
-                        {
-                            compatible = 1;
-                        }
-                        else if (strcmp(types[idx], "string") == 0 && strcmp(actual, "char*") == 0)
-                        {
-                            compatible = 1;
-                        }
-                        else if (strcmp(types[idx], "char*") == 0 && strcmp(actual, "string") == 0)
-                        {
-                            compatible = 1;
+                            // Relaxed matching for integers
+                            int lhs_is_int = (strcmp(types[idx], "int") == 0 ||
+                                              strcmp(types[idx], "int32_t") == 0 ||
+                                              strcmp(types[idx], "uint8_t") == 0 ||
+                                              strcmp(types[idx], "int8_t") == 0 ||
+                                              strcmp(types[idx], "uint16_t") == 0 ||
+                                              strcmp(types[idx], "int16_t") == 0 ||
+                                              strcmp(types[idx], "uint32_t") == 0 ||
+                                              strcmp(types[idx], "size_t") == 0 ||
+                                              strcmp(types[idx], "uint64_t") == 0 ||
+                                              strcmp(types[idx], "int64_t") == 0);
+
+                            int rhs_is_int =
+                                (strcmp(actual, "int") == 0 || strcmp(actual, "int32_t") == 0 ||
+                                 strcmp(actual, "uint8_t") == 0 || strcmp(actual, "int8_t") == 0 ||
+                                 strcmp(actual, "uint16_t") == 0 ||
+                                 strcmp(actual, "int16_t") == 0 ||
+                                 strcmp(actual, "uint32_t") == 0 || strcmp(actual, "size_t") == 0 ||
+                                 strcmp(actual, "uint64_t") == 0 || strcmp(actual, "int64_t") == 0);
+
+                            if (lhs_is_int && rhs_is_int)
+                            {
+                                compatible = 1;
+                            }
+                            else if ((strcmp(types[idx], "string") == 0 &&
+                                      strcmp(actual, "char*") == 0) ||
+                                     (strcmp(types[idx], "char*") == 0 &&
+                                      strcmp(actual, "string") == 0))
+                            {
+                                compatible = 1;
+                            }
+                            else if ((strcmp(types[idx], "float") == 0 &&
+                                      strcmp(actual, "double") == 0) ||
+                                     (strcmp(types[idx], "double") == 0 &&
+                                      strcmp(actual, "float") == 0))
+                            {
+                                compatible = 1;
+                            }
                         }
 
                         if (!compatible)
