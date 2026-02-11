@@ -3130,6 +3130,18 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
         i->strct.fields = copy_fields_replacing(ctx, t->struct_node->strct.fields, gp, subst_arg);
         struct_node_copy = i;
         register_struct_def(ctx, m, i);
+
+        // Register slice types used in the instantiated struct's fields
+        ASTNode *fld = i->strct.fields;
+        while (fld)
+        {
+            if (fld->type == NODE_FIELD && fld->field.type &&
+                strncmp(fld->field.type, "Slice_", 6) == 0)
+            {
+                register_slice(ctx, fld->field.type + 6);
+            }
+            fld = fld->next;
+        }
     }
     else if (t->struct_node->type == NODE_ENUM)
     {

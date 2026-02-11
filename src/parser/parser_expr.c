@@ -2499,21 +2499,129 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 }
                 lexer_next(l);
                 node->struct_init.fields = head;
+
+                GenericTemplate *gtpl = ctx->templates;
+                while (gtpl)
+                {
+                    if (strcmp(gtpl->name, acc) == 0 || strcmp(gtpl->name, struct_name) == 0)
+                    {
+                        break;
+                    }
+                    gtpl = gtpl->next;
+                }
+                if (gtpl && gtpl->struct_node && gtpl->struct_node->type == NODE_STRUCT)
+                {
+                    const char *gen_param =
+                        (gtpl->struct_node->strct.generic_param_count > 0)
+                            ? gtpl->struct_node->strct.generic_params[0]
+                            : "T";
+
+                    char *inferred = NULL;
+                    ASTNode *init_field = head;
+                    while (init_field && !inferred)
+                    {
+                        if (init_field->var_decl.init_expr && init_field->var_decl.name)
+                        {
+                            ASTNode *tpl_field = gtpl->struct_node->strct.fields;
+                            while (tpl_field)
+                            {
+                                if (tpl_field->type == NODE_FIELD && tpl_field->field.name &&
+                                    strcmp(tpl_field->field.name, init_field->var_decl.name) == 0)
+                                {
+                                    break;
+                                }
+                                tpl_field = tpl_field->next;
+                            }
+
+                            if (tpl_field && tpl_field->field.type)
+                            {
+                                const char *ft = tpl_field->field.type;
+                                Type *val_type = init_field->var_decl.init_expr->type_info;
+
+                                if (strcmp(ft, gen_param) == 0 && val_type)
+                                {
+                                    inferred = type_to_string(val_type);
+                                }
+                                else if (val_type && strncmp(ft, "Slice_", 6) == 0 &&
+                                         strcmp(ft + 6, gen_param) == 0)
+                                {
+                                    if (val_type->kind == TYPE_ARRAY && val_type->inner)
+                                    {
+                                        inferred = type_to_string(val_type->inner);
+                                    }
+                                }
+                                else if (val_type && ft[0] == '[')
+                                {
+                                    size_t ftl = strlen(ft);
+                                    if (ftl >= 3 && ft[ftl - 1] == ']')
+                                    {
+                                        char inner_name[256];
+                                        size_t inner_len = ftl - 2;
+                                        if (inner_len < sizeof(inner_name))
+                                        {
+                                            memcpy(inner_name, ft + 1, inner_len);
+                                            inner_name[inner_len] = '\0';
+                                            if (strcmp(inner_name, gen_param) == 0 &&
+                                                val_type->kind == TYPE_ARRAY && val_type->inner)
+                                            {
+                                                inferred = type_to_string(val_type->inner);
+                                            }
+                                        }
+                                    }
+                                }
+                                else if (val_type)
+                                {
+                                    size_t ftl = strlen(ft);
+                                    if (ftl >= 2 && ft[ftl - 1] == '*')
+                                    {
+                                        char base_name[256];
+                                        size_t base_len = ftl - 1;
+                                        if (base_len < sizeof(base_name))
+                                        {
+                                            memcpy(base_name, ft, base_len);
+                                            base_name[base_len] = '\0';
+                                            if (strcmp(base_name, gen_param) == 0 &&
+                                                val_type->kind == TYPE_POINTER && val_type->inner)
+                                            {
+                                                inferred = type_to_string(val_type->inner);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        init_field = init_field->next;
+                    }
+
+                    if (inferred)
+                    {
+                        Token t_tok = lexer_peek(l);
+                        instantiate_generic(ctx, gtpl->name, inferred, inferred, t_tok);
+
+                        char *clean = sanitize_mangled_name(inferred);
+                        size_t mlen = strlen(gtpl->name) + 1 + strlen(clean) + 1;
+                        char *mangled = xmalloc(mlen);
+                        sprintf(mangled, "%s_%s", gtpl->name, clean);
+                        free(clean);
+
+                        node->struct_init.struct_name = mangled;
+                        struct_name = mangled;
+
+                        free(inferred);
+                    }
+                }
+
                 Type *st = type_new(TYPE_STRUCT);
                 st->name = xstrdup(struct_name);
                 node->type_info = st;
-                return node; // Struct init cannot be called/indexed usually, return
-                             // early
+                return node;
             }
         }
 
-        // E. readln(args...) Magic
         FuncSig *sig = find_func(ctx, acc);
         if (strcmp(acc, "readln") == 0 && lexer_peek(l).type == TOK_LPAREN)
         {
-            lexer_next(l); // eat (
-
-            // Parse args
+            lexer_next(l);
             ASTNode *args[16];
             int ac = 0;
             if (lexer_peek(l).type != TOK_RPAREN)
@@ -2538,7 +2646,6 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
 
             if (ac == 0)
             {
-                // readln() -> _z_readln_raw()
                 node = ast_create(NODE_EXPR_CALL);
                 ASTNode *callee = ast_create(NODE_EXPR_VAR);
                 callee->var_ref.name = xstrdup("_z_readln_raw");
@@ -2547,7 +2654,6 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
             }
             else
             {
-                // readln(vars...) -> _z_scan_helper("fmt", &vars...)
                 char fmt[256];
                 fmt[0] = 0;
                 for (int i = 0; i < ac; i++)
