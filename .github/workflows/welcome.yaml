@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/first-interaction@v1
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.FIRST_INTERACTION_TOKEN }}
           pr-message: |
             Welcome to the Zen C community!
 
