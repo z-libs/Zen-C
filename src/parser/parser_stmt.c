@@ -3835,8 +3835,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     fprintf(
         f,
         "size_t _z_check_bounds(size_t index, size_t size) { if (index >= size) { fprintf(stderr, "
-        "\"Index out of bounds: %%llu >= %%llu\\n\", (unsigned long long)index, (unsigned long "
-        "long)size); exit(1); } return index; }\n");
+        "\"Index out of bounds: %%zu >= %%zu\\n\", index, size); exit(1); } return index; }\n");
 
     // Comptime helper functions
     fprintf(f, "void yield(const char* s) { printf(\"%%s\", s); }\n");

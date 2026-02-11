@@ -132,7 +132,7 @@ void handle_request(const char *json_str)
         cJSON_AddNumberToObject(res_json, "id", id);
 
         char *str = cJSON_PrintUnformatted(res_json);
-        fprintf(stdout, "Content-Length: %llu\r\n\r\n%s", (unsigned long long)strlen(str), str);
+        fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
         fflush(stdout);
         free(str);
         cJSON_Delete(res_json);
@@ -260,8 +260,7 @@ void handle_request(const char *json_str)
                     free(resp);
 
                     char *str = cJSON_PrintUnformatted(res_json);
-                    fprintf(stdout, "Content-Length: %llu\r\n\r\n%s",
-                            (unsigned long long)strlen(str), str);
+                    fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
                     fflush(stdout);
                     free(str);
                     cJSON_Delete(res_json);
