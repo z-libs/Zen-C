@@ -1868,11 +1868,11 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
                 else if (strcmp(inferred_type, "long") == 0 || strcmp(inferred_type, "i64") == 0 ||
                          strcmp(inferred_type, "isize") == 0)
                 {
-                    format_spec = "%ld";
+                    format_spec = "%lld";
                 }
                 else if (strcmp(inferred_type, "usize") == 0 || strcmp(inferred_type, "u64") == 0)
                 {
-                    format_spec = "%lu";
+                    format_spec = "%llu";
                 }
                 else if (strcmp(inferred_type, "float") == 0 || strcmp(inferred_type, "f32") == 0 ||
                          strcmp(inferred_type, "double") == 0)
@@ -3236,7 +3236,9 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         for (size_t i = 0; i < system_paths_count && !found; i++)
         {
             if (!system_paths[i])
+            {
                 continue;
+            }
             snprintf(system_path, sizeof(system_path), "%s/%s", system_paths[i], fn);
             if (access(system_path, R_OK) == 0)
             {
@@ -3469,7 +3471,8 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     fprintf(
         f,
         "size_t _z_check_bounds(size_t index, size_t size) { if (index >= size) { fprintf(stderr, "
-        "\"Index out of bounds: %%zu >= %%zu\\n\", index, size); exit(1); } return index; }\n");
+        "\"Index out of bounds: %%llu >= %%llu\\n\", (unsigned long long)index, (unsigned long "
+        "long)size); exit(1); } return index; }\n");
 
     // Comptime helper functions
     fprintf(f, "void yield(const char* s) { printf(\"%%s\", s); }\n");

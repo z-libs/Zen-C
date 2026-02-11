@@ -8,14 +8,25 @@ We welcome all contributions, whether it's fixing bugs, adding documentation, pr
 
 The general workflow for contributing is:
 
-1.  **Fork the Repository**: Use the standard GitHub workflow to fork the repository to your own account.
-2.  **Create a Feature Branch**: Create a new branch for your feature or bugfix. This keeps your changes organized and separate from the main branch.
-    ```bash
-    git checkout -b feature/NewThing
-    ```
-3.  **Make Changes**: Write your code or documentation changes.
-4.  **Verify**: Ensure your changes work as expected and don't break existing functionality (see [Running Tests](#running-tests)).
-5.  **Submit a Pull Request**: Push your branch to your fork and submit a Pull Request (PR) to the main Zen C repository.
+1. **Fork the Repository**: Use the standard GitHub workflow to fork the repository to your own account.
+2. **Create a Feature Branch**: Create a new branch for your feature or bugfix. This keeps your changes organized and separate from the main branch.
+   ```bash
+   git checkout -b feature/NewThing
+   ```
+3. **Make Changes**: Write your code or documentation changes.
+4. **Verify**: Ensure your changes work as expected and don't break existing functionality (see [Running Tests](#running-tests)).
+5. **Submit a Pull Request**: Push your branch to your fork and submit a Pull Request (PR) to the main Zen C repository.
+
+## Issues and Pull Requests
+
+We use GitHub Issues and Pull Requests to track bugs and features. To help us maintain quality:
+
+- **Use Templates**: When opening an Issue or PR, please use the provided templates.
+  - **Bug Report**: For reporting bugs.
+  - **Feature Request**: For suggesting new features.
+  - **Pull Request**: For submitting code changes.
+- **Be Descriptive**: Please provide as much detail as possible.
+- **Automated Checks**: We have an automated workflow that checks the description length of new Issues and PRs. If the description is too short (< 50 characters), it will be automatically closed. This is to ensure we have enough information to help you.
 
 ## Development Guidelines
 

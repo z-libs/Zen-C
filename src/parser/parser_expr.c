@@ -41,7 +41,7 @@ int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 #include "../zen/zen_facts.h"
 #include "parser.h"
 #include <ctype.h>
-#include <libgen.h>
+
 #include <stdio.h>
 
 #include <stdlib.h>
@@ -3250,7 +3250,7 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     char buf[256];
                     if (elements[i]->literal.type_kind == LITERAL_INT) // int
                     {
-                        sprintf(buf, "%lld", elements[i]->literal.int_val);
+                        sprintf(buf, "%I64u", elements[i]->literal.int_val);
                     }
                     else if (elements[i]->literal.type_kind == LITERAL_FLOAT) // float
                     {

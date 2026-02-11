@@ -53,6 +53,12 @@ static void *arena_alloc_raw(size_t size)
 #include <process.h>
 #endif
 
+#ifdef _WIN32
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+#endif
+
 double z_get_monotonic_time(void)
 {
 #ifdef _WIN32

@@ -1,0 +1,2 @@
+C:\Users\saipr\OneDrive\Desktop\zen-c\Zen-C-cache-streyrx\build7.log:168:t.h:2663:3: error: 
+C:\Users\saipr\OneDrive\Desktop\zen-c\Zen-C-cache-streyrx\build7.log:205:23: error: 

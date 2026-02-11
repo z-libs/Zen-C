@@ -1,9 +1,33 @@
-
 #include "plugin_manager.h"
-#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+void zptr_plugin_mgr_init(void)
+{
+}
+void zptr_register_plugin(ZPlugin *plugin)
+{
+    (void)plugin;
+}
+ZPlugin *zptr_load_plugin(const char *path)
+{
+    (void)path;
+    fprintf(stderr, "Plugins not supported on Windows yet.\n");
+    return NULL;
+}
+ZPlugin *zptr_find_plugin(const char *name)
+{
+    (void)name;
+    return NULL;
+}
+void zptr_plugin_mgr_cleanup(void)
+{
+}
+#else
+
+#include <dlfcn.h>
 
 // Linked list node for plugins.
 typedef struct PluginNode
@@ -102,3 +126,4 @@ void zptr_plugin_mgr_cleanup(void)
     }
     head = NULL;
 }
+#endif

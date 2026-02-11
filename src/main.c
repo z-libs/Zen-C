@@ -23,6 +23,10 @@ void print_search_paths()
     printf("  /usr/share/zenc\n");
 }
 
+#ifndef ZEN_VERSION
+#define ZEN_VERSION "0.1.0"
+#endif
+
 void print_version()
 {
     printf("Zen C version %s\n", ZEN_VERSION);

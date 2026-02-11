@@ -1,0 +1,55 @@
+import "std/vec.zc"
+
+struct Bar<T> {
+  values: Vec<T>
+}
+
+impl Bar<T> {
+  fn new( v: Vec<T> ) -> Bar<T> {
+    let bar = Bar<T> { values: v }
+    return bar
+  }
+
+  fn get( self, i: int ) -> T {
+    return self.values[i]   //  <--------- Problematic!!!
+  }
+}
+
+fn main() {
+  let v = Vec<int>::new();
+  v.push(10);
+  v.push(20);
+  v.push(30);
+  let bar = Bar<int>::new( v.clone() )
+
+  for vv in bar.values { println "{vv}" }
+
+ // println "Third value = {bar.get(2)}" // The user called it directly or via method? The snippet has bar[2] in println? 
+ // Wait, the snippet says:
+ // fn get( self, i: int ) -> T { return self.values[i] }
+ // ...
+ // println "Third value = {bar[2]}"
+ 
+ // Wait, the user's snippet shows:
+ // println "Third value = {bar[2]}" 
+ // BUT `Bar` is the struct. Does Bar implement indexing? 
+ // The user's error message says:
+ // out.c: In function ‘Bar_int32_t__get’:
+ // out.c:227:24: error: subscripted value is neither array nor pointer nor vector
+ //   227 |     return self->values[i];
+ 
+ // So the error is INSIDE `get`.
+ // `self.values` is `Vec<T>`. `i` is int.
+ // `self.values[i]` becomes `self->values[i]`.
+ 
+ // In main, they call `bar[2]` in the text but `Bar` struct doesn't have index impl shown in the snippet?
+ // The user said: "This fails:" ... code ...
+ // And `println "Third value = {bar[2]}"`
+ // But the error log specifically points to `Bar_int32_t__get`.
+ // So likely the user meant `bar.get(2)` or `bar[2]` if they overload it.
+ // Let's stick to reproduction exactly as user provided, but fix the main call if it lacks the method or impl.
+ // Actually, if syntax allows `bar[2]`, maybe they expect it to work.
+ // But the C error is definitely inside `get`.
+ 
+ println "Third value = {bar.get(2)}"
+}

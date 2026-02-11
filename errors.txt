@@ -1,0 +1,3 @@
+C:\Users\saipr\OneDrive\Desktop\zen-c\Zen-C-cache-streyrx\build6.log:168:t.h:2663:3: error: 
+C:\Users\saipr\OneDrive\Desktop\zen-c\Zen-C-cache-streyrx\build6.log:205:23: error: 
+C:\Users\saipr\OneDrive\Desktop\zen-c\Zen-C-cache-streyrx\build6.log:225::15: error: 'ENABLE_V

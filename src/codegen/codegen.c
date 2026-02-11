@@ -939,24 +939,111 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else
         {
-            int fixed_size = -1;
-            if (node->index.array->type_info && node->index.array->type_info->kind == TYPE_ARRAY)
+            // Check if it's a struct that implements get/get_ref
+            int is_custom_struct_index = 0;
+            char *array_type = infer_type(ctx, node->index.array);
+
+            if (array_type && strcmp(array_type, "unknown") != 0 &&
+                !strchr(array_type, '*') &&            // Not a pointer
+                strncmp(array_type, "Slice_", 6) != 0) // Not a slice (handled above)
             {
-                fixed_size = node->index.array->type_info->array_size;
+                // Unpack type name if it's "struct Name"
+                char *type_name = array_type;
+                if (strncmp(type_name, "struct ", 7) == 0)
+                {
+                    type_name += 7;
+                }
+
+                // Handle Generic Types mangling (e.g. Vec<int> -> Vec_int32_t)
+                char mangled_type[256];
+                char *lt = strchr(type_name, '<');
+                if (lt)
+                {
+                    char *gt = strchr(lt, '>');
+                    if (gt)
+                    {
+                        int prefix_len = lt - type_name;
+                        int arg_len = gt - lt - 1;
+                        snprintf(mangled_type, 255, "%.*s_%.*s", prefix_len, type_name, arg_len,
+                                 lt + 1);
+                        // Normalize the inner type in the mangled name if needed (simple heuristic)
+                        // This is tricky without full type normalization logic, but let's try to
+                        // match existing logic or just rely on the fact that `infer_type` returns
+                        // the string rep.
+                    }
+                    else
+                    {
+                        strcpy(mangled_type, type_name);
+                    }
+                }
+                else
+                {
+                    strcpy(mangled_type, type_name);
+                }
+
+                // Construct method names
+                char get_ref_name[512];
+                char get_name[512];
+                snprintf(get_ref_name, sizeof(get_ref_name), "%s__get_ref", mangled_type);
+                snprintf(get_name, sizeof(get_name), "%s__get", mangled_type);
+
+                if (find_func(ctx, get_ref_name))
+                {
+                    fprintf(out, "(*%s(&", get_ref_name);
+                    codegen_expression(ctx, node->index.array, out);
+                    fprintf(out, ", ");
+                    codegen_expression(ctx, node->index.index, out);
+                    fprintf(out, "))");
+                    is_custom_struct_index = 1;
+                }
+                else if (find_func(ctx, get_name))
+                {
+                    fprintf(out, "%s(", get_name);
+                    // For `get`, we usually pass by value unless it's a large struct or the method
+                    // expects ptr. But in ZenC methods on structs (self) are passed by value for
+                    // `self` and ref for `&self`. We need to check the function signature or assume
+                    // a pattern. AST `impl` usually defines `self`. Let's assume passed by value
+                    // since `get(self, idx)` pattern in Vec. Wait, `Vec::get` in `std/vec.zc` is
+                    // `fn get(self, ...)` -> pass by value? `Vec` is a struct, so it is passed by
+                    // value (copy). This might be expensive for large structs but `Vec` is small
+                    // (ptr+len+cap).
+
+                    codegen_expression(ctx, node->index.array, out);
+                    fprintf(out, ", ");
+                    codegen_expression(ctx, node->index.index, out);
+                    fprintf(out, ")");
+                    is_custom_struct_index = 1;
+                }
+                // Fallback: Check for mixins/traits if not found directly?
+                // For now, simple direct lookup is a good first step.
+            }
+            if (array_type)
+            {
+                free(array_type);
             }
 
-            codegen_expression(ctx, node->index.array, out);
-            fprintf(out, "[");
-            if (fixed_size > 0)
+            if (!is_custom_struct_index)
             {
-                fprintf(out, "_z_check_bounds(");
+                int fixed_size = -1;
+                if (node->index.array->type_info &&
+                    node->index.array->type_info->kind == TYPE_ARRAY)
+                {
+                    fixed_size = node->index.array->type_info->array_size;
+                }
+
+                codegen_expression(ctx, node->index.array, out);
+                fprintf(out, "[");
+                if (fixed_size > 0)
+                {
+                    fprintf(out, "_z_check_bounds(");
+                }
+                codegen_expression(ctx, node->index.index, out);
+                if (fixed_size > 0)
+                {
+                    fprintf(out, ", %d)", fixed_size);
+                }
+                fprintf(out, "]");
             }
-            codegen_expression(ctx, node->index.index, out);
-            if (fixed_size > 0)
-            {
-                fprintf(out, ", %d)", fixed_size);
-            }
-            fprintf(out, "]");
         }
     }
     break;

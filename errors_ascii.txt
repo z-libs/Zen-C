@@ -1,0 +1,413 @@
+cmd : src/parser/pars
+er_expr.c: In 
+function 
+'parse_primary':
+At line:1 char:1
++ cmd /c gcc -fno-dia
+gnostics-color -Wall 
+-Wextra -g -I./src 
+-I./src/as ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (src/par   
+ ser/pars...parse    
+_primary'::Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+src/parser/parser_exp
+r.c:3253:41: 
+warning: unknown 
+conversion type 
+character 'l' in 
+format [-Wformat=]
+                     
+    sprintf(buf, 
+"%lld", elements[i]->
+literal.int_val);
+                     
+                    ^
+src/parser/parser_exp
+r.c:3253:38: 
+warning: too many 
+arguments for format 
+[-Wformat-extra-args]
+                     
+    sprintf(buf, 
+"%lld", elements[i]->
+literal.int_val);
+                     
+                 
+^~~~~~
+src/parser/parser_uti
+ls.c: In function 
+'ast_to_string':
+src/parser/parser_uti
+ls.c:208:29: 
+warning: unknown 
+conversion type 
+character 'l' in 
+format [-Wformat=]
+             
+sprintf(buf, "%llu", 
+node->literal.int_val
+);
+                     
+        ^
+src/parser/parser_uti
+ls.c:208:26: 
+warning: too many 
+arguments for format 
+[-Wformat-extra-args]
+             
+sprintf(buf, "%llu", 
+node->literal.int_val
+);
+                     
+     ^~~~~~
+src/codegen/codegen.c
+: In function 'codege
+n_literal_expr':
+src/codegen/codegen.c
+:32:29: warning: 
+unknown conversion 
+type character 'l' 
+in format [-Wformat=]
+             
+fprintf(out, 
+"%lluULL", (unsigned 
+long long)node->liter
+al.int_val);
+                     
+        ^
+src/codegen/codegen.c
+:32:26: warning: too 
+many arguments for 
+format 
+[-Wformat-extra-args]
+             
+fprintf(out, 
+"%lluULL", (unsigned 
+long long)node->liter
+al.int_val);
+                     
+     ^~~~~~~~~
+src/codegen/codegen.c
+:36:29: warning: 
+unknown conversion 
+type character 'l' 
+in format [-Wformat=]
+             
+fprintf(out, "%lld", 
+(long long)node->lite
+ral.int_val);
+                     
+        ^
+src/codegen/codegen.c
+:36:26: warning: too 
+many arguments for 
+format 
+[-Wformat-extra-args]
+             
+fprintf(out, "%lld", 
+(long long)node->lite
+ral.int_val);
+                     
+     ^~~~~~
+src/codegen/codegen_s
+tmt.c: In function 'e
+mit_pattern_condition
+':
+src/codegen/codegen_s
+tmt.c:97:22: 
+warning: implicit 
+declaration of 
+function 'strtok_r' [
+-Wimplicit-function-d
+eclaration]
+         char *part 
+= strtok_r(pattern_co
+py, "|", &saveptr);
+                     
+ ^~~~~~~~
+src/codegen/codegen_s
+tmt.c:97:22: 
+warning: 
+initialization makes 
+pointer from integer 
+without a cast 
+[-Wint-conversion]
+src/codegen/codegen_s
+tmt.c:125:18: 
+warning: assignment 
+makes pointer from 
+integer without a 
+cast 
+[-Wint-conversion]
+             part = 
+strtok_r(NULL, "|", 
+&saveptr);
+                  ^
+In file included 
+from c:\mingw\include
+\windef.h:269:0,
+                 
+from c:\mingw\include
+\windows.h:42,
+                 
+from 
+src/utils/utils.c:51:
+c:\mingw\include\winn
+t.h:2663:3: error: 
+'TokenType' 
+redeclared as 
+different kind of 
+symbol
+   TokenType,
+   ^~~~~~~~~
+In file included 
+from 
+./src/ast/ast.h:5:0,
+                 
+from ./src/parser/par
+ser.h:5,
+                 
+from 
+src/utils/utils.c:2:
+./src/zprep.h:108:3: 
+note: previous 
+declaration of 
+'TokenType' was here
+ } TokenType;
+   ^~~~~~~~~
+src/utils/utils.c: 
+In function 
+'z_get_time':
+src/utils/utils.c:86:
+5: warning: implicit 
+declaration of 
+function 
+'timespec_get' [-Wimp
+licit-function-declar
+ation]
+     
+timespec_get(&ts, 
+TIME_UTC);
+     ^~~~~~~~~~~~
+src/utils/utils.c:86:
+23: error: 
+'TIME_UTC' 
+undeclared (first 
+use in this function)
+     
+timespec_get(&ts, 
+TIME_UTC);
+                     
+  ^~~~~~~~
+src/utils/utils.c:86:
+23: note: each 
+undeclared 
+identifier is 
+reported only once 
+for each function it 
+appears in
+src/diagnostics/diagn
+ostics.c: In 
+function 'warn_intege
+r_overflow':
+src/diagnostics/diagn
+ostics.c:754:37: 
+warning: unknown 
+conversion type 
+character 'l' in 
+format [-Wformat=]
+     sprintf(msg, 
+"Integer literal 
+%lld overflows type 
+'%s'", value, 
+type_name);
+                     
+                ^
+src/diagnostics/diagn
+ostics.c:754:57: 
+warning: format '%s' 
+expects argument of 
+type 'char *', but 
+argument 3 has type 
+'long long int' 
+[-Wformat=]
+     sprintf(msg, 
+"Integer literal 
+%lld overflows type 
+'%s'", value, 
+type_name);
+                     
+                     
+               ^
+src/diagnostics/diagn
+ostics.c:754:18: 
+warning: too many 
+arguments for format 
+[-Wformat-extra-args]
+     sprintf(msg, 
+"Integer literal 
+%lld overflows type 
+'%s'", value, 
+type_name);
+                  ^~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
+src/analysis/const_fo
+ld.c: In function 'ev
+al_const_int_expr':
+src/analysis/const_fo
+ld.c:139:1: warning: 
+control reaches end 
+of non-void function 
+[-Wreturn-type]
+ }
+ ^
+src/lsp/json_rpc.c: 
+In function 
+'handle_request':
+src/lsp/json_rpc.c:13
+5:43: warning: 
+unknown conversion 
+type character 'z' 
+in format [-Wformat=]
+         
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+                     
+ ^
+src/lsp/json_rpc.c:13
+5:54: warning: 
+format '%s' expects 
+argument of type 
+'char *', but 
+argument 3 has type 
+'size_t {aka 
+unsigned int}' 
+[-Wformat=]
+         
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+                     
+            ^
+src/lsp/json_rpc.c:13
+5:25: warning: too 
+many arguments for 
+format 
+[-Wformat-extra-args]
+         
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+    ^~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+src/lsp/json_rpc.c:26
+3:55: warning: 
+unknown conversion 
+type character 'z' 
+in format [-Wformat=]
+                     
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+                     
+             ^
+src/lsp/json_rpc.c:26
+3:66: warning: 
+format '%s' expects 
+argument of type 
+'char *', but 
+argument 3 has type 
+'size_t {aka 
+unsigned int}' 
+[-Wformat=]
+                     
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+                     
+                     
+   ^
+src/lsp/json_rpc.c:26
+3:37: warning: too 
+many arguments for 
+format 
+[-Wformat-extra-args]
+                     
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+                ^~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+src/lsp/lsp_analysis.
+c: In function 
+'send_json_response':
+src/lsp/lsp_analysis.
+c:29:43: warning: 
+unknown conversion 
+type character 'z' 
+in format [-Wformat=]
+         
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+                     
+ ^
+src/lsp/lsp_analysis.
+c:29:54: warning: 
+format '%s' expects 
+argument of type 
+'char *', but 
+argument 3 has type 
+'size_t {aka 
+unsigned int}' 
+[-Wformat=]
+         
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+                     
+            ^
+src/lsp/lsp_analysis.
+c:29:25: warning: 
+too many arguments 
+for format 
+[-Wformat-extra-args]
+         
+fprintf(stdout, 
+"Content-Length: 
+%zu\r\n\r\n%s", 
+strlen(str), str);
+                     
+    ^~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
