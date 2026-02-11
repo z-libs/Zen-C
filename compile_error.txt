@@ -1,0 +1,8 @@
+[1m[1;32m   Compiling[0m repro_tuple.zc
+[1;31merror: [0m[1mType mismatch in tuple destructuring at index 0: expected 'int32_t', got 'int'[0m
+[1;34m  --> [0mrepro_tuple.zc:12:31
+[1;34m   |
+[0m[1;34m12 | [0m    let (x: int, y: string) = t;
+[1;34m   | [0m                              [1;31m^ here[0m
+[1;34m   |
+[0m

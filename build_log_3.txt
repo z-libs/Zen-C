@@ -1,0 +1,7 @@
+gcc -Wall -Wextra -g -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics -o zc.exe obj/src/main.o obj/src/parser/parser_core.o obj/src/parser/parser_expr.o obj/src/parser/parser_stmt.o obj/src/parser/parser_type.o obj/src/parser/parser_utils.o obj/src/parser/parser_decl.o obj/src/parser/parser_struct.o obj/src/ast/ast.o obj/src/codegen/codegen.o obj/src/codegen/codegen_stmt.o obj/src/codegen/codegen_decl.o obj/src/codegen/codegen_main.o obj/src/codegen/codegen_utils.o obj/src/utils/utils.o obj/src/diagnostics/diagnostics.o obj/src/lexer/token.o obj/src/analysis/typecheck.o obj/src/analysis/const_fold.o obj/src/lsp/json_rpc.o obj/src/lsp/lsp_main.o obj/src/lsp/lsp_analysis.o obj/src/lsp/lsp_semantic.o obj/src/lsp/lsp_index.o obj/src/lsp/lsp_project.o obj/src/lsp/cJSON.o obj/src/zen/zen_facts.o obj/src/repl/repl.o obj/src/repl/repl_os.o obj/src/plugins/plugin_manager.o 
+obj/src/codegen/codegen_stmt.o: In function `emit_pattern_condition':
+C:\Users\saipr\OneDrive\Desktop\zen-c\Zen-C-cache-streyrx/src/codegen/codegen_stmt.c:97: undefined reference to `strtok_r'
+C:\Users\saipr\OneDrive\Desktop\zen-c\Zen-C-cache-streyrx/src/codegen/codegen_stmt.c:125: undefined reference to `strtok_r'
+collect2.exe: error: ld returned 1 exit status
+Makefile:99: recipe for target 'zc.exe' failed
+mingw32-make: *** [zc.exe] Error 1

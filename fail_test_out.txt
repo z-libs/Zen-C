@@ -1,0 +1,8 @@
+[1m[1;32m   Compiling[0m test_tuple_typecheck_fail.zc
+[1;31merror: [0m[1mType mismatch in tuple destructuring at index 0: expected 'string', got 'int'[0m
+[1;34m  --> [0mtest_tuple_typecheck_fail.zc:4:31
+[1;34m   |
+[0m[1;34m4  | [0m    let (x: string, y: int) = t; 
+[1;34m   | [0m                              [1;31m^ here[0m
+[1;34m   |
+[0m

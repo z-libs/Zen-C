@@ -105,14 +105,14 @@ typedef enum
     TOK_COMMENT,    ///< Comment (usually skipped).
     TOK_OPAQUE,     ///< 'opaque' keyword.
     TOK_UNKNOWN     ///< Unknown token.
-} TokenType;
+} ZenTokenType;
 
 /**
  * @brief Represents a source token.
  */
 typedef struct
 {
-    TokenType type;    ///< Type of the token.
+    ZenTokenType type;    ///< Type of the token.
     const char *start; ///< Pointer to start of token in source buffer.
     int len;           ///< Length of the token text.
     int line;          ///< Line number (1-based).

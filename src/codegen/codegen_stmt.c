@@ -11,6 +11,10 @@
 #include "ast.h"
 #include "zprep_plugin.h"
 
+#ifdef _WIN32
+#define strtok_r strtok_s
+#endif
+
 char *g_current_func_ret_type = NULL;
 
 // Helper: emit a single pattern condition (either a value, or a range)

@@ -153,7 +153,7 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
                          const char *mangled_struct_name, const char *arg,
                          const char *unmangled_arg);
 
-Token expect(Lexer *l, TokenType type, const char *msg)
+Token expect(Lexer *l, ZenTokenType type, const char *msg)
 {
     Token t = lexer_next(l);
     if (t.type != type)
