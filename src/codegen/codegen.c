@@ -990,24 +990,74 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else
         {
-            int fixed_size = -1;
-            if (node->index.array->type_info && node->index.array->type_info->kind == TYPE_ARRAY)
+            char *base_type = infer_type(ctx, node->index.array);
+            char *struct_name = NULL;
+            char method_name[256] = {0};
+
+            if (base_type && !strchr(base_type, '*'))
             {
-                fixed_size = node->index.array->type_info->array_size;
+                char clean[256];
+                strncpy(clean, base_type, sizeof(clean) - 1);
+                clean[sizeof(clean) - 1] = '\0';
+                if (strncmp(clean, "struct ", 7) == 0)
+                {
+                    memmove(clean, clean + 7, strlen(clean + 7) + 1);
+                }
+
+                snprintf(method_name, sizeof(method_name), "%s__index", clean);
+                if (find_func(ctx, method_name))
+                {
+                    struct_name = xstrdup(clean);
+                }
+                else
+                {
+                    snprintf(method_name, sizeof(method_name), "%s__get", clean);
+                    if (find_func(ctx, method_name))
+                    {
+                        struct_name = xstrdup(clean);
+                    }
+                }
             }
 
-            codegen_expression(ctx, node->index.array, out);
-            fprintf(out, "[");
-            if (fixed_size > 0)
+            if (struct_name)
             {
-                fprintf(out, "_z_check_bounds(");
+                FuncSig *sig = find_func(ctx, method_name);
+                int needs_addr =
+                    (sig && sig->total_args > 0 && sig->arg_types[0]->kind == TYPE_POINTER);
+
+                fprintf(out, "%s(", method_name);
+                if (needs_addr)
+                {
+                    fprintf(out, "&");
+                }
+                codegen_expression(ctx, node->index.array, out);
+                fprintf(out, ", ");
+                codegen_expression(ctx, node->index.index, out);
+                fprintf(out, ")");
+                free(struct_name);
             }
-            codegen_expression(ctx, node->index.index, out);
-            if (fixed_size > 0)
+            else
             {
-                fprintf(out, ", %d)", fixed_size);
+                int fixed_size = -1;
+                if (node->index.array->type_info &&
+                    node->index.array->type_info->kind == TYPE_ARRAY)
+                {
+                    fixed_size = node->index.array->type_info->array_size;
+                }
+
+                codegen_expression(ctx, node->index.array, out);
+                fprintf(out, "[");
+                if (fixed_size > 0)
+                {
+                    fprintf(out, "_z_check_bounds(");
+                }
+                codegen_expression(ctx, node->index.index, out);
+                if (fixed_size > 0)
+                {
+                    fprintf(out, ", %d)", fixed_size);
+                }
+                fprintf(out, "]");
             }
-            fprintf(out, "]");
         }
     }
     break;
