@@ -56,9 +56,15 @@ jobs:
       with:
         version: master
 
-    - name: Install TCC
+    - name: Install TCC (Source)
       if: matrix.install_tcc
-      run: sudo apt-get update && sudo apt-get install -y tcc
+      run: |
+        sudo apt-get update && sudo apt-get install -y git make gcc
+        git clone -b mob https://github.com/TinyCC/tinycc.git
+        cd tinycc
+        ./configure
+        make
+        sudo make install
 
     - name: Build
       run: |
