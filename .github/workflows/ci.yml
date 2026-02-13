@@ -55,7 +55,7 @@ jobs:
     - name: Build
       run: |
         if [ "${{ matrix.cc }}" = "zig cc" ]; then
-           make CC="zig cc"
+           make  # Build zc with default CC (stable), but test zc using zig cc backend
         else
            make CC="${{ matrix.cc }}"
         fi
