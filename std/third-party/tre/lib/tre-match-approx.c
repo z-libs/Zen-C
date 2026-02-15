@@ -41,7 +41,7 @@ char *alloca ();
 #include <ctype.h>
 #endif /* !TRE_WCHAR */
 #ifdef HAVE_MALLOC_H
-#include <malloc.h>
+#include <stdlib.h>
 #endif /* HAVE_MALLOC_H */
 
 #include "tre-internal.h"
