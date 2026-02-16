@@ -1181,12 +1181,28 @@ SelectiveImport *find_selective_import(ParserContext *ctx, const char *name)
 char *extract_module_name(const char *path)
 {
     const char *slash = strrchr(path, '/');
+    const char *backslash = strrchr(path, '\\');
+    if (backslash && (!slash || backslash > slash))
+    {
+        slash = backslash;
+    }
+
     const char *base = slash ? slash + 1 : path;
     const char *dot = strrchr(base, '.');
     int len = dot ? (int)(dot - base) : (int)strlen(base);
     char *name = xmalloc(len + 1);
     strncpy(name, base, len);
     name[len] = 0;
+
+    // Sanitize to ensure valid C identifier
+    for (int i = 0; i < len; i++)
+    {
+        if (!isalnum(name[i]))
+        {
+            name[i] = '_';
+        }
+    }
+
     return name;
 }
 

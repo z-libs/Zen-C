@@ -6,9 +6,7 @@
 
 */
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif /* HAVE_CONFIG_H */
 
 /* AIX requires this to be the first thing in the file.	 */
 #ifdef TRE_USE_ALLOCA

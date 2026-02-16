@@ -12,9 +12,7 @@
    numbers of different characters as the pattern, and those
    characters must occur in the same order as they occur in pattern. */
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif /* HAVE_CONFIG_H */
 #include <stdio.h>
 #include "tre-internal.h"
 #include "tre-filter.h"

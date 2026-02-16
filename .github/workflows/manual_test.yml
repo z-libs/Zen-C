@@ -77,7 +77,7 @@ jobs:
           
           if [ -f "./zc.exe" ]; then
              ZC_BIN="./zc.exe"
-             TRE_FLAGS="-Istd/third-party/tre/include -Istd std/third-party/tre/lib/*.c -DHAVE_CONFIG_H"
+             TRE_FLAGS="-Istd/third-party/tre/include -Istd std/third-party/tre/lib/*.c"
           fi
           
           if [ "$TEST_TARGET" = "all" ]; then

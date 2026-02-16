@@ -13,7 +13,7 @@ set CFLAGS=-Wall -Wextra -g ^
  -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen ^
  -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics ^
  -I./std/third-party/tre/include ^
- -DZEN_VERSION=\"%ZEN_VERSION%\" -DZEN_SHARE_DIR=\".\" -DHAVE_CONFIG_H
+ -DZEN_VERSION=\"%ZEN_VERSION%\" -DZEN_SHARE_DIR=\".\"
 
 rem Source files
 set SRCS=src\main.c ^

@@ -23,9 +23,7 @@
 */
 
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif /* HAVE_CONFIG_H */
 
 #ifdef TRE_USE_ALLOCA
 /* AIX requires this to be the first thing in the file.	 */

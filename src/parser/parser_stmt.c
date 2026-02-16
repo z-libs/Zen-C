@@ -3949,7 +3949,15 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     {
         sprintf(bin, "%s.bin", filename);
     }
-    sprintf(cmd, "%s %s -o %s", g_config.cc, filename, bin);
+    sprintf(cmd, "%s %s -o %s -Istd -Istd/third-party/tre/include", g_config.cc, filename, bin);
+#ifdef _WIN32
+    // Ensure we link against TRE implementation if needed (or include it source-wise if not header-only)
+    // For now, let's assume source inclusion if 'regex' is used, or just add the include path.
+    // If std sources are included, they might need 'tre/lib/*.c' if not using a static lib.
+    // However, for simple comptime blocks, just flags might be enough.
+    // Let's also link against tre sources just in case, or relying on single-file compilation
+    strcat(cmd, " std/third-party/tre/lib/*.c"); 
+#endif
     if (!g_config.verbose)
     {
         strcat(cmd, " > /dev/null 2>&1");

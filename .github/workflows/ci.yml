@@ -83,7 +83,7 @@ jobs:
       shell: bash
       run: |
         if [ "${{ runner.os }}" = "Windows" ]; then
-          ./tests/scripts/run_tests.sh --cc "gcc" -Istd/third-party/tre/include -Istd std/third-party/tre/lib/*.c -DHAVE_CONFIG_H
+          ./tests/scripts/run_tests.sh --cc "gcc" -Istd/third-party/tre/include -Istd std/third-party/tre/lib/*.c
         else
           ./tests/scripts/run_tests.sh --cc "${{ matrix.cc }}" -Istd/third-party/tre/include -Istd obj/std/third-party/tre/lib/*.o
         fi
