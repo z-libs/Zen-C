@@ -521,10 +521,18 @@ int main(int argc, char **argv)
         strcat(extra_c_sources, g_config.c_files[i]);
     }
 
+    // Construct linker flags
+    char linker_flags[1024] = {0};
+    strcpy(linker_flags, g_link_flags);
+    if (z_is_windows())
+    {
+        strcat(linker_flags, " -lws2_32");
+    }
+
     snprintf(cmd, sizeof(cmd), "%s %s %s %s %s -o %s %s %s %s %s -I./src %s", g_config.cc,
              g_config.gcc_flags, g_cflags, g_config.is_freestanding ? "-ffreestanding" : "",
              g_config.quiet ? "-w" : "", outfile, temp_source_file, extra_c_sources, math_flag,
-             thread_flag, g_link_flags);
+             thread_flag, linker_flags);
 
     if (g_config.verbose)
     {
