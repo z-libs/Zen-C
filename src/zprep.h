@@ -2,109 +2,8 @@
 #ifndef ZPREP_H
 #define ZPREP_H
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#ifdef __COSMOPOLITAN__
-#include <cosmo.h>
-#define z_is_windows() IsWindows() ///< Check if running on Windows.
-#else
-#ifdef _WIN32
-#define z_is_windows() 1
-#else
-#define z_is_windows() 0
-#endif
-#endif
-
-#ifdef _WIN32
-#include <sys/types.h>
-#ifndef PATH_MAX
-#define PATH_MAX 260
-#endif
-#define realpath(N, R) _fullpath((R), (N), PATH_MAX) ///< Get absolute path.
-#endif
-
-// Path compatibility helpers
-static inline int z_is_abs_path(const char *p)
-{
-    if (!p)
-    {
-        return 0;
-    }
-    if (p[0] == '/')
-    {
-        return 1;
-    }
-#ifdef _WIN32
-    if (p[0] == '\\' || (isalpha(p[0]) && p[1] == ':'))
-    {
-        return 1;
-    }
-#endif
-    return 0;
-}
-
-static inline char *z_path_last_sep(const char *path)
-{
-    char *last_slash = strrchr(path, '/');
-#ifdef _WIN32
-    char *last_bs = strrchr(path, '\\');
-    if (last_bs > last_slash)
-    {
-        return last_bs;
-    }
-#endif
-    return last_slash;
-}
-
-static inline const char *z_get_exe_ext(void)
-{
-#ifdef _WIN32
-    return ".exe";
-#else
-    return ".bin";
-#endif
-}
-
-static inline const char *z_get_null_redirect(void)
-{
-#ifdef _WIN32
-    return " > NUL 2>&1";
-#else
-    return " > /dev/null 2>&1";
-#endif
-}
-
-static inline const char *z_get_comptime_link_flags(void)
-{
-#ifdef _WIN32
-    return " std/third-party/tre/lib/*.c";
-#else
-    return "";
-#endif
-}
-
-static inline const char *z_get_run_prefix(void)
-{
-#ifdef _WIN32
-    return "";
-#else
-    return "./";
-#endif
-}
-
-static inline const char *z_get_plugin_ext(void)
-{
-#ifdef _WIN32
-    return ".dll";
-#else
-    return ".so";
-#endif
-}
+#include "platform/lang.h"
+#include "platform/os.h"
 
 // **ZEN VERSION**
 #ifndef ZEN_VERSION
@@ -347,7 +246,5 @@ void scan_build_directives(struct ParserContext *ctx, const char *src);
  * @brief Load all configurations (system, hidden project, visible project).
  */
 void load_all_configs(void);
-
-#include "pal/pal.h"
 
 #endif

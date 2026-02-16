@@ -46,7 +46,7 @@ static void *arena_alloc_raw(size_t size)
 }
 
 #include <time.h>
-#include "../pal/pal.h"
+#include "../platform/os.h"
 
 void *xmalloc(size_t size)
 {

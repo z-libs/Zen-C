@@ -31,7 +31,7 @@ set SRCS=src\main.c ^
  src\codegen\codegen_main.c ^
  src\codegen\codegen_utils.c ^
  src\utils\utils.c ^
- src\pal\platform.c ^
+ src\platform\os.c ^
  src\utils\config.c ^
  src\diagnostics\diagnostics.c ^
  src\lexer\token.c ^
