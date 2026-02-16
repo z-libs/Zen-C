@@ -28,6 +28,39 @@
 #define realpath(N, R) _fullpath((R), (N), PATH_MAX) ///< Get absolute path.
 #endif
 
+// Path compatibility helpers
+static inline int z_is_abs_path(const char *p)
+{
+    if (!p)
+    {
+        return 0;
+    }
+    if (p[0] == '/')
+    {
+        return 1;
+    }
+#ifdef _WIN32
+    if (p[0] == '\\' || (isalpha(p[0]) && p[1] == ':'))
+    {
+        return 1;
+    }
+#endif
+    return 0;
+}
+
+static inline char *z_path_last_sep(const char *path)
+{
+    char *last_slash = strrchr(path, '/');
+#ifdef _WIN32
+    char *last_bs = strrchr(path, '\\');
+    if (last_bs > last_slash)
+    {
+        return last_bs;
+    }
+#endif
+    return last_slash;
+}
+
 // **ZEN VERSION**
 #ifndef ZEN_VERSION
 #define ZEN_VERSION "0.1.0" ///< Zen-C version.

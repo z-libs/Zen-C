@@ -47,7 +47,7 @@ static void auto_import_std_slice(ParserContext *ctx)
     if (g_current_filename)
     {
         char *current_dir = xstrdup(g_current_filename);
-        char *last_slash = strrchr(current_dir, '/');
+        char *last_slash = z_path_last_sep(current_dir);
         if (last_slash)
         {
             *last_slash = 0;
@@ -3250,7 +3250,7 @@ void scan_c_header_contents(ParserContext *ctx, const char *path, int depth)
     // Compute directory of the current header for resolving relative includes
     char header_dir[1024];
     header_dir[0] = 0;
-    const char *last_slash = strrchr(path, '/');
+    const char *last_slash = z_path_last_sep(path);
     if (last_slash)
     {
         int dir_len = (int)(last_slash - path);
@@ -3435,7 +3435,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
             (plugin_name[1] == '/' || (plugin_name[1] == '.' && plugin_name[2] == '/')))
         {
             char *current_dir = xstrdup(g_current_filename);
-            char *last_slash = strrchr(current_dir, '/');
+            char *last_slash = z_path_last_sep(current_dir);
             if (last_slash)
             {
                 *last_slash = 0;
@@ -3558,23 +3558,20 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     int is_explicit_relative = (fn[0] == '.' && (fn[1] == '/' || (fn[1] == '.' && fn[2] == '/')));
 
     // Try to resolve relative to current file if not absolute
-    if (fn[0] != '/')
+    // On Windows, absolute paths can start with drive letter (C:\) or backslash
+    int is_abs = z_is_abs_path(fn);
+
+    if (!is_abs)
     {
         char *current_dir = xstrdup(g_current_filename);
-        char *last_slash = strrchr(current_dir, '/');
+        char *last_slash = z_path_last_sep(current_dir);
+
         if (last_slash)
         {
             *last_slash = 0; // Truncate to directory
 
-            // Handle explicit relative differently?
-            // Existing logic enforced it. Let's try to verify existence first.
-
-            // Construct candidate path
-            const char *leaf = fn;
-            // Clean up ./ prefix for cleaner path construction if we want
-            // but keeping it is fine too, /path/to/./file works.
-
-            snprintf(resolved_path, sizeof(resolved_path), "%s/%s", current_dir, leaf);
+            // Handles explicit relative AND implicit relative lookups
+            snprintf(resolved_path, sizeof(resolved_path), "%s/%s", current_dir, fn);
 
             // If it's an explicit relative path, OR if the file exists at this relative location
             if (is_explicit_relative || access(resolved_path, R_OK) == 0)
@@ -3619,7 +3616,8 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     }
 
     // Canonicalize path to avoid duplicates (for example: "./std/io.zc" vs "std/io.zc")
-    // Only resolve if file exists! On Windows, realpath (_fullpath) resolves non-existent files to CWD.
+    // Only resolve if file exists! On Windows, realpath (_fullpath) resolves non-existent files to
+    // CWD.
     if (access(fn, R_OK) == 0)
     {
         char *real_fn = realpath(fn, NULL);
