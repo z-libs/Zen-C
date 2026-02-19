@@ -78,7 +78,8 @@ while read -r test_file; do
 
     echo -n "Testing $test_file... "
     
-    output=$($ZC run "$test_file" "$@" 2>&1)
+    # Add -w to suppress warnings as requested
+    output=$($ZC run "$test_file" -w "$@" 2>&1)
     exit_code=$?
     
     # Check for expected failure annotation
