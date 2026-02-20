@@ -29,5 +29,4 @@ test "HTTP Server and Client" {
     assert_true(!response.body.is_empty(), "Body not empty");
     assert_true(response.body.eq_str("Hello World"), "Body content match");
     
-    response.destroy();
 }

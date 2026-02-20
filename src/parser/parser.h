@@ -374,6 +374,12 @@ void register_type_usage(ParserContext *ctx, const char *name, Token t);
  */
 int validate_types(ParserContext *ctx);
 
+/**
+ * @brief Traverses all parsed structs and propagates `has_drop` from fields to their parent
+ * structs.
+ */
+void propagate_drop_traits(ParserContext *ctx);
+
 // Token helpers
 
 /**

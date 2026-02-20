@@ -110,12 +110,8 @@ impl Command {
 
 impl Drop for Command {
     fn drop(self) {
-        self.free();
-    }
-}
-
-impl Drop for Output {
-    fn drop(self) {
-        self.std_out.free();
+        for s in &self.args {
+            s.free();
+        }
     }
 }

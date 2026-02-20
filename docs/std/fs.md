@@ -16,7 +16,6 @@ fn main() {
         if (content.is_ok()) {
             let s = content.unwrap();
             println "{s.c_str()}";
-            s.free();
         }
         file.close();
     }

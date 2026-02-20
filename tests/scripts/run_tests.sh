@@ -79,8 +79,10 @@ while read -r test_file; do
     echo -n "Testing $test_file... "
     
     # Add -w to suppress warnings as requested
-    output=$($ZC run "$test_file" -w "$@" 2>&1)
+    tmp_out="test_out_$$.out"
+    output=$($ZC run "$test_file" -o "$tmp_out" -w "$@" 2>&1)
     exit_code=$?
+    rm -f "$tmp_out"
     
     # Check for expected failure annotation
     if grep -q "// EXPECT: FAIL" "$test_file"; then
@@ -113,10 +115,10 @@ echo "----------------------------------------"
 
 if [ $FAILED -ne 0 ]; then
     echo -e "Failed tests:$FAILED_TESTS"
-    rm -f a.out out.c
+    rm -f test_out_*.out out.c
     exit 1
 else
     echo "All tests passed!"
-    rm -f a.out out.c
+    rm -f test_out_*.out out.c
     exit 0
 fi

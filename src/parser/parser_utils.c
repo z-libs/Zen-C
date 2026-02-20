@@ -2820,6 +2820,35 @@ int check_impl(ParserContext *ctx, const char *trait, const char *strct)
         }
         r = r->next;
     }
+
+    char *base_strct = strdup(strct);
+    char *ptr = strchr(base_strct, '_');
+    if (ptr)
+    {
+        *ptr = 0;
+    }
+
+    r = ctx->registered_impls;
+    while (r)
+    {
+        char *base_reg = strdup(r->strct);
+        char *ptr2 = strchr(base_reg, '<');
+        if (ptr2)
+        {
+            *ptr2 = 0;
+        }
+
+        if (strcmp(r->trait, trait) == 0 && strcmp(base_reg, base_strct) == 0)
+        {
+            free(base_strct);
+            free(base_reg);
+            return 1;
+        }
+        free(base_reg);
+        r = r->next;
+    }
+    free(base_strct);
+
     return 0;
 }
 
@@ -4316,6 +4345,41 @@ int validate_types(ParserContext *ctx)
         u = u->next;
     }
     return errors == 0;
+}
+
+void propagate_drop_traits(ParserContext *ctx)
+{
+    int changed = 1;
+    while (changed)
+    {
+        changed = 0;
+        StructRef *ref = ctx->parsed_structs_list;
+        while (ref)
+        {
+            ASTNode *strct = ref->node;
+            if (strct && strct->type == NODE_STRUCT && strct->type_info &&
+                !strct->type_info->traits.has_drop)
+            {
+                ASTNode *field = strct->strct.fields;
+                while (field)
+                {
+                    Type *ft = field->type_info;
+                    if (ft && ft->kind == TYPE_STRUCT && ft->name)
+                    {
+                        ASTNode *fdef = find_struct_def(ctx, ft->name);
+                        if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
+                        {
+                            strct->type_info->traits.has_drop = 1;
+                            changed = 1;
+                            break;
+                        }
+                    }
+                    field = field->next;
+                }
+            }
+            ref = ref->next;
+        }
+    }
 }
 
 const char *normalize_type_name(const char *name)

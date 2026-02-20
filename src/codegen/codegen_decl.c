@@ -880,11 +880,6 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                 continue;
             }
 
-            if (strcmp(f->impl_trait.trait_name, "Drop") == 0)
-            {
-                fprintf(out, "void %s__Drop_glue(%s *self);\n", sname, sname);
-            }
-
             ASTNode *m = f->impl_trait.methods;
             while (m)
             {
@@ -902,12 +897,6 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                     fprintf(out, "%s %s(%s);\n", m->func.ret_type, m->func.name, m->func.args);
                 }
                 m = m->next;
-            }
-            // RAII: Emit glue prototype
-            if (strcmp(f->impl_trait.trait_name, "Drop") == 0)
-            {
-                char *tname = f->impl_trait.target_type;
-                fprintf(out, "void %s_Drop_glue(%s *self);\n", tname, tname);
             }
         }
         f = f->next;

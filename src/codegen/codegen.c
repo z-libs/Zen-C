@@ -1664,13 +1664,11 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 f->var_decl.init_expr->literal.type_kind == LITERAL_INT &&
                 f->var_decl.init_expr->literal.int_val == 0)
             {
-                // Universal zero initializer {0} works for both scalars and aggregates
-                // and fixes TCC issues with 0-init of structs.
                 fprintf(out, "{0}");
             }
             else
             {
-                codegen_expression(ctx, f->var_decl.init_expr, out);
+                codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
             }
             if (f->next)
             {

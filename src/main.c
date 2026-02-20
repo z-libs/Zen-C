@@ -508,6 +508,8 @@ int main(int argc, char **argv)
         }
     }
 
+    propagate_drop_traits(&ctx);
+
     if (!validate_types(&ctx))
     {
         // Type validation failed
@@ -546,19 +548,30 @@ int main(int argc, char **argv)
     }
 
     // Determine temporary filename based on mode
-    const char *temp_source_file = "out.c";
+    char temp_source_buf[1024];
+    const char *ext = ".c";
     if (g_config.use_cuda)
     {
-        temp_source_file = "out.cu";
+        ext = ".cu";
     }
     else if (g_config.use_cpp)
     {
-        temp_source_file = "out.cpp";
+        ext = ".cpp";
     }
     else if (g_config.use_objc)
     {
-        temp_source_file = "out.m";
+        ext = ".m";
     }
+
+    if (g_config.output_file)
+    {
+        snprintf(temp_source_buf, sizeof(temp_source_buf), "%s%s", g_config.output_file, ext);
+    }
+    else
+    {
+        snprintf(temp_source_buf, sizeof(temp_source_buf), "out%s", ext);
+    }
+    const char *temp_source_file = temp_source_buf;
 
     // Codegen to C/C++/CUDA
     FILE *out = fopen(temp_source_file, "w");

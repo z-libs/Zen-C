@@ -17,7 +17,6 @@ impl Url {
     fn parse(raw: String) -> Result<Url> {
         let u_str = raw.c_str();
         
-        // 1. Parse Scheme (http://)
         let scheme_end = strstr(u_str, "://");
         if (scheme_end == NULL) {
             return Result<Url>::Err("Missing scheme");
@@ -28,11 +27,9 @@ impl Url {
         
         let rest: char* = scheme_end + 3; // Skip ://
         
-        // 2. Default Ports
         let default_port = 80;
         if (scheme.eq_str("https")) default_port = 443;
         
-        // 3. Find end of host (slash or question mark or end of string)
         let host_end_slash = strchr(rest, '/');
         let host_end_q = strchr(rest, '?');
         
@@ -76,13 +73,10 @@ impl Url {
         
         // Free split parts
         // Clean up parts
-        for (let j = 0; j < parts.len; j = j + 1) {
-             parts.get(j).free();
-        }
+        // Memory cleanup for Vec (elements will leak currently without array drop but double free is avoided)
         parts.free();
         host_str.free();
         
-        // 4. Path
         let path = String::new("/");
         let query = String::new("");
         

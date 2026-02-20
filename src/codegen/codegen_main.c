@@ -295,6 +295,46 @@ static void free_emitted_list(EmittedContent *list)
     }
 }
 
+static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out)
+{
+    ASTNode *s = structs;
+    while (s)
+    {
+        if (s->type == NODE_STRUCT && s->type_info && s->type_info->traits.has_drop &&
+            !s->strct.is_template)
+        {
+            char *sname = s->strct.name;
+            fprintf(out, "// Auto-Generated RAII Glue for %s\n", sname);
+            fprintf(out, "void %s__Drop_glue(%s *self) {\n", sname, sname);
+
+            int has_manual_drop = check_impl(ctx, "Drop", sname);
+            if (has_manual_drop)
+            {
+                fprintf(out, "    %s__Drop_drop(self);\n", sname);
+            }
+
+            ASTNode *field = s->strct.fields;
+            while (field)
+            {
+                Type *ft = field->type_info;
+                if (ft && ft->kind == TYPE_STRUCT && ft->name)
+                {
+                    ASTNode *fdef = find_struct_def_codegen(ctx, ft->name);
+                    if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
+                    {
+                        fprintf(out, "    %s__Drop_glue(&self->%s);\n", ft->name,
+                                field->field.name);
+                    }
+                }
+                field = field->next;
+            }
+
+            fprintf(out, "}\n\n");
+        }
+        s = s->next;
+    }
+}
+
 // Main entry point for code generation.
 void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
 {
@@ -652,6 +692,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
         emit_protos(ctx, merged_funcs, out);
 
         emit_impl_vtables(ctx, out);
+        emit_auto_drop_glues(ctx, sorted, out);
 
         emit_lambda_defs(ctx, out);
 

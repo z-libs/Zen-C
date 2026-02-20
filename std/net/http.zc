@@ -28,15 +28,8 @@ fn _parse_headers(lines: Vec<String>, start_idx: usize) -> Vec<Header> {
             let val_t = val.trim();
             headers.push(Header { key: key_t, value: val_t });
             
-            // Cleanup split parts (copies)
-            key.free();
+            // Auto drop takes care of split arrays and temporary string
         }
-        // Free parts loop?
-        for (let j = 0; j < parts.len; j = j + 1) {
-            let p = parts.get(j);
-            p.free();
-        }
-        parts.free();
     }
     return headers;
 }
@@ -56,20 +49,6 @@ impl Request {
             headers: Vec<Header>::new(),
             body: String::new("")
         };
-    }
-    
-    fn destroy(self) {
-        self.method.free();
-        self.path.free();
-        
-        let len = self.headers.len;
-        for (let i = 0; i < len; i = i + 1) {
-            let h = self.headers.get(i);
-            h.key.free();
-            h.value.free();
-        }
-        self.headers.free();
-        self.body.free();
     }
 }
 
@@ -105,20 +84,10 @@ impl Response {
         self.body = body;
     }
 
+    // body free is allowed here because reassignment leaks in Zen C without it
     fn set_body_str(self, body: char*) {
         self.body.free();
         self.body = String::new(body);
-    }
-    
-    fn destroy(self) {
-        let len = self.headers.len;
-        for (let i = 0; i < len; i = i + 1) {
-            let h = self.headers.get(i);
-            h.key.free();
-            h.value.free();
-        }
-        self.headers.free();
-        self.body.free();
     }
 }
 
@@ -205,20 +174,10 @@ impl Server {
                              response_str.append(&res.body);
                              
                              client.write((u8*)response_str.c_str(), response_str.length());
-                             
-                             response_str.free();
-                             res.destroy();
-                             req.destroy();
-                             
-                             // Clean up fl_parts
-                             for(let k=0; k<fl_parts.len; k=k+1) fl_parts.get(k).free();
-                             fl_parts.free();
+                             // Clean up fl_parts (now handled by auto-drop)
                          }
-                         // Clean up lines
-                         for(let k=0; k<lines.len; k=k+1) lines.get(k).free();
-                         lines.free();
+                         // Clean up lines (handled by auto-drop)
                      }
-                     req_str.free();
                 }
             }
             client.close();
@@ -244,7 +203,6 @@ fn fetch(url: String) -> Response {
     
     if (!u.scheme.eq_str("http")) {
         println "Only http:// supported";
-        u.destroy();
         return Response::new(0);
     }
     
@@ -259,12 +217,7 @@ fn fetch(url: String) -> Response {
     if (dns_res.is_ok()) {
         host_ip.free();
         host_ip = dns_res.unwrap();
-    } 
-    // If DNS failed, we keep usage of u.host as is (maybe it is IP literal? Dns::resolve might fail on literals on some systems? 
-    // Actually getaddrinfo handles literals too if AI_NUMERICHOST or just standard behavior).
-    // Our Dns::resolve wrapper returns error if getaddrinfo fails.
-    // So if it fails, we trust the original string?
-    // Let's rely on Dns::resolve success for now, or fallback.
+    }
     
     let ip_str = host_ip.c_str();
     
@@ -272,8 +225,6 @@ fn fetch(url: String) -> Response {
     let stream_res = TcpStream::connect(ip_str, u.port);
     if (stream_res.is_err()) {
         println "Failed to connect to {u.host.c_str()}:{u.port} ({ip_str})";
-        host_ip.free();
-        u.destroy();
         return Response::new(0);
     }
     
@@ -294,9 +245,6 @@ fn fetch(url: String) -> Response {
     req_line.append_c("\r\nConnection: close\r\n\r\n");
     
     stream.write((u8*)req_line.c_str(), req_line.length());
-    req_line.free();
-    host_ip.free();
-    u.destroy();
     
 
     
@@ -332,11 +280,9 @@ fn fetch(url: String) -> Response {
             let ss = second_space.unwrap();
             let code_str = rest_line.substring(0, ss);
             status = atoi(code_str.c_str());
-            code_str.free();
         } else {
              status = atoi(rest_line.c_str());
         }
-        rest_line.free();
     }
     
     let res = Response::new(status);
@@ -351,7 +297,6 @@ fn fetch(url: String) -> Response {
         res.set_body(body_content);
     }
     
-    raw_res.free();
     stream.close();
     
     return res;

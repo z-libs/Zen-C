@@ -834,14 +834,6 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         g_current_impl_type = node->impl_trait.target_type;
         codegen_walker(ctx, node->impl_trait.methods, out);
 
-        if (strcmp(node->impl_trait.trait_name, "Drop") == 0)
-        {
-            char *tname = node->impl_trait.target_type;
-            fprintf(out, "\n// RAII Glue\n");
-            fprintf(out, "void %s__Drop_glue(%s *self) {\n", tname, tname);
-            fprintf(out, "    %s__Drop_drop(self);\n", tname);
-            fprintf(out, "}\n");
-        }
         g_current_impl_type = NULL;
         break;
     case NODE_DESTRUCT_VAR:

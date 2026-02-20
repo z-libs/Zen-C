@@ -1,4 +1,4 @@
-import "std/string.zc"
+import "std/string.zc";
 
 test "string_split_basic" {
     let s = String::from("a,b,c");
@@ -21,10 +21,6 @@ test "string_split_basic" {
     let t2 = String::from("c");
     if (!p2.eq(&t2)) exit(1);
     
-    for p in &parts {
-        p.free();
-    }
-    parts.free();
 }
 
 test "string_split_edge" {
@@ -39,8 +35,7 @@ test "string_split_edge" {
     let p0 = parts.get(0);
     if (!p0.eq(&s)) exit(1);
     
-    p0.free();
-    parts.free();
+
     
     let s2 = String::from("a,,b");
     let parts2 = s2.split(',');
@@ -52,6 +47,4 @@ test "string_split_edge" {
     let empty = parts2.get(1);
     if (!empty.is_empty()) exit(1);
     
-    for p in &parts2 { p.free(); }
-    parts2.free();
 }

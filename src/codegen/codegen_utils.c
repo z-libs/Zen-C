@@ -197,6 +197,47 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
     if (node->resolved_type && strcmp(node->resolved_type, "unknown") != 0 &&
         strcmp(node->resolved_type, "void*") != 0)
     {
+        if (strcmp(node->resolved_type, "c_int") == 0)
+        {
+            return "int";
+        }
+        if (strcmp(node->resolved_type, "c_uint") == 0)
+        {
+            return "unsigned int";
+        }
+        if (strcmp(node->resolved_type, "c_long") == 0)
+        {
+            return "long";
+        }
+        if (strcmp(node->resolved_type, "c_ulong") == 0)
+        {
+            return "unsigned long";
+        }
+        if (strcmp(node->resolved_type, "c_long_long") == 0)
+        {
+            return "long long";
+        }
+        if (strcmp(node->resolved_type, "c_ulong_long") == 0)
+        {
+            return "unsigned long long";
+        }
+        if (strcmp(node->resolved_type, "c_short") == 0)
+        {
+            return "short";
+        }
+        if (strcmp(node->resolved_type, "c_ushort") == 0)
+        {
+            return "unsigned short";
+        }
+        if (strcmp(node->resolved_type, "c_char") == 0)
+        {
+            return "char";
+        }
+        if (strcmp(node->resolved_type, "c_uchar") == 0)
+        {
+            return "unsigned char";
+        }
+
         return node->resolved_type;
     }
 
