@@ -28,6 +28,9 @@ typedef struct TypeChecker
 
     // Configuration
     int move_checks_only; ///< If true, only report move semantics violations (no type errors).
+
+    // Tracking
+    int is_assign_lhs; ///< If true, currently evaluating LHS of assignment.
 } TypeChecker;
 
 /**

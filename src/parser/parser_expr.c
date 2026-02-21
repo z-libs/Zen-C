@@ -1878,6 +1878,59 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
             }
         }
 
+        if (lexer_peek(l).type == TOK_COLON)
+        {
+            Lexer lookahead = *l;
+            lexer_next(&lookahead); // consume ':'
+
+            int found_arrow = 0;
+            Lexer arrow_scan = lookahead;
+            int angles = 0;
+            while (1)
+            {
+                Token tk = lexer_peek(&arrow_scan);
+                if (tk.type == TOK_EOF || tk.type == TOK_SEMICOLON || tk.type == TOK_COMMA ||
+                    tk.type == TOK_LBRACE || tk.type == TOK_RBRACE ||
+                    (tk.type == TOK_OP && tk.start[0] == '=' && tk.len == 1))
+                {
+                    break;
+                }
+                if (tk.type == TOK_LANGLE)
+                {
+                    angles++;
+                }
+                else if (tk.type == TOK_RANGLE)
+                {
+                    if (angles > 0)
+                    {
+                        angles--;
+                    }
+                }
+                else if (tk.type == TOK_ARROW && angles == 0)
+                {
+                    found_arrow = 1;
+                    break;
+                }
+                lexer_next(&arrow_scan);
+            }
+
+            if (found_arrow)
+            {
+                Type *param_type = parse_type_formal(ctx, &lookahead);
+                if (lexer_peek(&lookahead).type == TOK_ARROW)
+                {
+                    *l = lookahead;
+                    lexer_next(l); // consume '->'
+                    char **params = xmalloc(sizeof(char *));
+                    Type **param_types = xmalloc(sizeof(Type *));
+                    params[0] = ident; // pass ownership of ident
+                    param_types[0] = param_type;
+                    return parse_arrow_lambda_multi(ctx, l, params, param_types, 1, 0);
+                }
+                // If it fails to match exactly, we'll just fall through to the rest of the parsing
+            }
+        }
+
         if (lexer_peek(l).type == TOK_ARROW)
         {
             lexer_next(l);
@@ -7067,19 +7120,17 @@ ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_nam
     }
     else
     {
-        // Fallback to int if still unknown
         if (lambda->lambda.param_types[0])
         {
             free(lambda->lambda.param_types[0]);
         }
-        lambda->lambda.param_types[0] = xstrdup("int");
-        t->args[0] = type_new(TYPE_INT); // FIX: Update AST type info too!
+        lambda->lambda.param_types[0] = xstrdup("unknown");
+        t->args[0] = type_new(TYPE_UNKNOWN);
 
-        // Update symbol to match fallback
         if (sym)
         {
-            sym->type_name = xstrdup("int");
-            sym->type_info = type_new(TYPE_INT);
+            sym->type_name = xstrdup("unknown");
+            sym->type_info = t->args[0]; // Bind AST node type implicitly!
         }
     }
 
@@ -7116,8 +7167,8 @@ ASTNode *parse_arrow_lambda_multi(ParserContext *ctx, Lexer *l, char **param_nam
         }
         else
         {
-            lambda->lambda.param_types[i] = xstrdup("int");
-            t->args[i] = type_new(TYPE_INT);
+            lambda->lambda.param_types[i] = xstrdup("unknown");
+            t->args[i] = type_new(TYPE_UNKNOWN);
         }
     }
     lambda->type_info = t;
@@ -7126,7 +7177,14 @@ ASTNode *parse_arrow_lambda_multi(ParserContext *ctx, Lexer *l, char **param_nam
     enter_scope(ctx);
     for (int i = 0; i < num_params; i++)
     {
-        add_symbol(ctx, param_names[i], "int", type_new(TYPE_INT));
+        if (param_types && param_types[i])
+        {
+            add_symbol(ctx, param_names[i], lambda->lambda.param_types[i], param_types[i]);
+        }
+        else
+        {
+            add_symbol(ctx, param_names[i], "unknown", t->args[i]);
+        }
     }
 
     // Body parsing...
@@ -7144,7 +7202,7 @@ ASTNode *parse_arrow_lambda_multi(ParserContext *ctx, Lexer *l, char **param_nam
         body_block->block.statements = ret;
     }
     lambda->lambda.body = body_block;
-    lambda->lambda.return_type = xstrdup("int");
+    lambda->lambda.return_type = xstrdup("unknown");
     lambda->lambda.lambda_id = ctx->lambda_counter++;
     lambda->lambda.is_expression = 1;
     register_lambda(ctx, lambda);

@@ -84,7 +84,8 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
 
     if (node->resolved_type && strcmp(node->resolved_type, "unknown") == 0)
     {
-        if (node->var_ref.suggestion && !ctx->silent_warnings)
+        if (node->var_ref.suggestion && !ctx->silent_warnings &&
+            !find_func(ctx, node->var_ref.name))
         {
             char msg[256];
             char help[256];
@@ -734,11 +735,21 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 free(ret);
                 ret = xstrdup("char*");
             }
+            if (strcmp(ret, "unknown") == 0)
+            {
+                free(ret);
+                ret = xstrdup("void*");
+            }
 
             fprintf(out, "((%s (*)(void*", ret);
             for (int i = 0; i < ft->arg_count; i++)
             {
                 char *as = codegen_type_to_string(ft->args[i]);
+                if (strcmp(as, "unknown") == 0)
+                {
+                    free(as);
+                    as = xstrdup("void*");
+                }
                 fprintf(out, ", %s", as);
                 free(as);
             }

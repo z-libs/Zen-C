@@ -15,9 +15,13 @@ impl Foo<T> {
 test "generic neq" {
   let f1 = Foo<i32>{value: 10};
   let f2 = Foo<i32>{value: 20};
-  let f3 = Foo<i32>{value: 10};
-  
   assert(f1 != f2, "f1 should not equal f2");
-  assert(f1 == f3, "f1 should equal f3");
-  assert(!(f1 != f3), "f1 != f3 should be false");
+
+  let f3 = Foo<i32>{value: 10};
+  let f4 = Foo<i32>{value: 10};
+  assert(f3 == f4, "f3 should equal f4");
+  
+  let f5 = Foo<i32>{value: 10};
+  let f6 = Foo<i32>{value: 10};
+  assert(!(f5 != f6), "f5 != f6 should be false");
 }

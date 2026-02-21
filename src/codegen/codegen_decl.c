@@ -323,11 +323,49 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
             fprintf(out, "};\n");
         }
 
-        fprintf(out, "%s _lambda_%d(void* _ctx", node->lambda.return_type, node->lambda.lambda_id);
+        char *ret_type_str = node->lambda.return_type;
+        if (node->type_info && node->type_info->inner &&
+            node->type_info->inner->kind != TYPE_UNKNOWN)
+        {
+            ret_type_str = type_to_string(node->type_info->inner);
+        }
+
+        if (strcmp(ret_type_str, "unknown") == 0)
+        {
+            fprintf(out, "void* _lambda_%d(void* _ctx", node->lambda.lambda_id);
+        }
+        else
+        {
+            fprintf(out, "%s _lambda_%d(void* _ctx", ret_type_str, node->lambda.lambda_id);
+        }
+
+        if (node->type_info && node->type_info->inner &&
+            node->type_info->inner->kind != TYPE_UNKNOWN)
+        {
+            free(ret_type_str);
+        }
 
         for (int i = 0; i < node->lambda.num_params; i++)
         {
-            fprintf(out, ", %s %s", node->lambda.param_types[i], node->lambda.param_names[i]);
+            char *param_type_str = node->lambda.param_types[i];
+            if (node->type_info && node->type_info->args && node->type_info->args[i] &&
+                node->type_info->args[i]->kind != TYPE_UNKNOWN)
+            {
+                param_type_str = type_to_string(node->type_info->args[i]);
+            }
+            if (strcmp(param_type_str, "unknown") == 0)
+            {
+                fprintf(out, ", void* %s", node->lambda.param_names[i]);
+            }
+            else
+            {
+                fprintf(out, ", %s %s", param_type_str, node->lambda.param_names[i]);
+            }
+            if (node->type_info && node->type_info->args && node->type_info->args[i] &&
+                node->type_info->args[i]->kind != TYPE_UNKNOWN)
+            {
+                free(param_type_str);
+            }
         }
         fprintf(out, ") {\n");
 

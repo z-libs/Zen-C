@@ -32,10 +32,19 @@ fn test_explicit_args_with_capture() {
     assert(val == 15);
 }
 
+fn test_unparenthesized_explicit_args() {
+    let n = 1;
+
+    let f1 = n_ptr: int* -> (*n_ptr)++;
+    f1(&n);
+    assert(n == 2);
+}
+
 fn main() {
     test_no_args();
     test_implicit_args();
     test_explicit_args();
+    test_unparenthesized_explicit_args();
     test_explicit_args_with_capture();
     println "OK";
 }

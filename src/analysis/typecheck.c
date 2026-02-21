@@ -209,6 +209,12 @@ static void check_expr_unary(TypeChecker *tc, ASTNode *node)
     // Dereference: *
     if (strcmp(op, "*") == 0)
     {
+        if (operand_type->kind == TYPE_UNKNOWN)
+        {
+            node->type_info = type_new(TYPE_UNKNOWN);
+            return;
+        }
+
         Type *resolved = resolve_alias(operand_type);
         if (resolved->kind != TYPE_POINTER && resolved->kind != TYPE_STRING)
         {
@@ -244,12 +250,24 @@ static void check_expr_unary(TypeChecker *tc, ASTNode *node)
 
 static void check_expr_binary(TypeChecker *tc, ASTNode *node)
 {
-    check_node(tc, node->binary.left);
-    check_node(tc, node->binary.right);
+    const char *op = node->binary.op;
+
+    if (strcmp(op, "=") == 0)
+    {
+        int old_is_assign_lhs = tc->is_assign_lhs;
+        tc->is_assign_lhs = 1;
+        check_node(tc, node->binary.left);
+        tc->is_assign_lhs = old_is_assign_lhs;
+        check_node(tc, node->binary.right);
+    }
+    else
+    {
+        check_node(tc, node->binary.left);
+        check_node(tc, node->binary.right);
+    }
 
     Type *left_type = node->binary.left->type_info;
     Type *right_type = node->binary.right->type_info;
-    const char *op = node->binary.op;
 
     // Assignment Logic for Moves (and type compatibility)
     if (strcmp(op, "=") == 0)
@@ -337,6 +355,12 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node)
 
             if (!left_numeric || !right_numeric)
             {
+                if (left_type->kind == TYPE_UNKNOWN || right_type->kind == TYPE_UNKNOWN)
+                {
+                    node->type_info = type_new(TYPE_UNKNOWN);
+                    return;
+                }
+
                 char msg[256];
                 snprintf(msg, sizeof(msg), "Operator '%s' requires numeric operands", op);
                 const char *hints[] = {
@@ -375,6 +399,12 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node)
 
             if (!left_numeric || !right_numeric)
             {
+                if ((left_type && left_type->kind == TYPE_UNKNOWN) ||
+                    (right_type && right_type->kind == TYPE_UNKNOWN))
+                {
+                    node->type_info = type_new(TYPE_BOOL);
+                    return;
+                }
                 char msg[256];
                 snprintf(msg, sizeof(msg), "Cannot compare '%s' with incompatible types", op);
                 const char *hints[] = {"Ensure both operands have the same or compatible types",
@@ -540,7 +570,45 @@ static void check_expr_call(TypeChecker *tc, ASTNode *node)
 
             if (expected && actual)
             {
+                if (expected->kind == TYPE_FUNCTION && actual->kind == TYPE_FUNCTION)
+                {
+                    for (int j = 0; j < expected->arg_count && j < actual->arg_count; j++)
+                    {
+                        if (actual->args && actual->args[j] &&
+                            actual->args[j]->kind == TYPE_UNKNOWN && expected->args &&
+                            expected->args[j] && expected->args[j]->kind != TYPE_UNKNOWN)
+                        {
+                            *actual->args[j] = *expected->args[j];
+                        }
+                    }
+                    if (actual->inner && actual->inner->kind == TYPE_UNKNOWN && expected->inner)
+                    {
+                        *actual->inner = *expected->inner;
+                    }
+                }
                 check_type_compatibility(tc, expected, actual, arg->token);
+            }
+        }
+        else if (!sig && node->call.callee->type_info &&
+                 node->call.callee->type_info->kind == TYPE_FUNCTION)
+        {
+            Type *callee_t = node->call.callee->type_info;
+            if (arg_idx < callee_t->arg_count && callee_t->args && callee_t->args[arg_idx])
+            {
+                Type *expected = callee_t->args[arg_idx];
+                Type *actual = arg->type_info;
+
+                if (expected && actual)
+                {
+                    if (expected->kind == TYPE_UNKNOWN && actual->kind != TYPE_UNKNOWN)
+                    {
+                        *expected = *actual;
+                    }
+                    else
+                    {
+                        check_type_compatibility(tc, expected, actual, arg->token);
+                    }
+                }
             }
         }
 
@@ -879,7 +947,10 @@ static void check_expr_var(TypeChecker *tc, ASTNode *node)
     }
 
     // Check for Use-After-Move
-    check_use_validity(tc, node, sym);
+    if (!tc->is_assign_lhs)
+    {
+        check_use_validity(tc, node, sym);
+    }
 }
 
 static void check_expr_literal(TypeChecker *tc, ASTNode *node)
@@ -1308,6 +1379,17 @@ static void check_node(TypeChecker *tc, ASTNode *node)
             }
         }
         break;
+    case NODE_TEST:
+    {
+        MoveState *prev_move_state = tc->pctx->move_state;
+        tc->pctx->move_state = move_state_create(NULL);
+
+        check_node(tc, node->test_stmt.body);
+
+        move_state_free(tc->pctx->move_state);
+        tc->pctx->move_state = prev_move_state;
+        break;
+    }
     case NODE_EXPR_CAST:
         // Check the expression being cast
         check_node(tc, node->cast.expr);
@@ -1486,6 +1568,9 @@ static void check_expr_lambda(TypeChecker *tc, ASTNode *node)
         tc_add_symbol(tc, pname, ptype, node->token);
     }
 
+    MoveState *prev_move_state = tc->pctx->move_state;
+    tc->pctx->move_state = move_state_create(NULL);
+
     if (node->lambda.body)
     {
         if (node->lambda.body->type == NODE_BLOCK)
@@ -1497,6 +1582,9 @@ static void check_expr_lambda(TypeChecker *tc, ASTNode *node)
             check_node(tc, node->lambda.body);
         }
     }
+
+    move_state_free(tc->pctx->move_state);
+    tc->pctx->move_state = prev_move_state;
 
     tc_exit_scope(tc);
 }
