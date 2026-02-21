@@ -337,16 +337,27 @@ int main(int argc, char **argv)
         {
             // Add to CFLAGS
             size_t len = strlen(g_config.gcc_flags);
-            snprintf(g_config.gcc_flags + len, sizeof(g_config.gcc_flags) - len, " %s", arg);
+            snprintf(g_config.gcc_flags + len, sizeof(g_config.gcc_flags) - len, " -O");
+            if (strlen(arg) > 2)
+            {
+                len = strlen(g_config.gcc_flags);
+                snprintf(g_config.gcc_flags + len, sizeof(g_config.gcc_flags) - len, "%s", arg + 2);
+            }
+            else if (i + 1 < argc)
+            {
+                len = strlen(g_config.gcc_flags);
+                snprintf(g_config.gcc_flags + len, sizeof(g_config.gcc_flags) - len, "%s",
+                         argv[++i]);
+            }
         }
         else if (strcmp(arg, "-g") == 0)
         {
-            strcat(g_config.gcc_flags, " -g");
+            size_t len = strlen(g_config.gcc_flags);
+            snprintf(g_config.gcc_flags + len, sizeof(g_config.gcc_flags) - len, " -g");
         }
         else if (arg[0] == '-')
         {
             // Unknown flag or C flag
-            
             size_t len = strlen(g_config.gcc_flags);
             snprintf(g_config.gcc_flags + len, sizeof(g_config.gcc_flags) - len, " %s", arg);
         }
@@ -607,7 +618,7 @@ int main(int argc, char **argv)
     char extra_c_sources[4096] = {0};
     for (int i = 0; i < g_config.c_file_count; i++)
     {
-       size_t len = strlen(extra_c_sources);
+        size_t len = strlen(extra_c_sources);
         snprintf(extra_c_sources + len, sizeof(extra_c_sources) - len, " %s", g_config.c_files[i]);
     }
 
@@ -641,7 +652,7 @@ int main(int argc, char **argv)
         int n;
         if (z_is_windows())
         {
-             n = snprintf(run_cmd, sizeof(run_cmd), "%s", outfile);
+            n = snprintf(run_cmd, sizeof(run_cmd), "%s", outfile);
         }
         else
         {
