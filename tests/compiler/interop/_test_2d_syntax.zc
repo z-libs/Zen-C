@@ -1,0 +1,13 @@
+fn twod_known(a: f64[2][2]) {
+    println "known";
+}
+
+fn twod_unknown_outer(a: f64[][2]) {
+    println "unknown outer";
+}
+
+fn main() {
+    let b: f64[2][2] = [[1.0, 2.0], [3.0, 4.0]];
+    twod_known(b);
+    twod_unknown_outer(b);
+}

@@ -1134,7 +1134,18 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
                      "|| _i >= (limit)) { z_panic(\"index out of bounds\"); } _i; })\n");
     }
 
+    SliceType *rev = NULL;
     SliceType *c = ctx->used_slices;
+    while (c)
+    {
+        SliceType *next = c->next;
+        c->next = rev;
+        rev = c;
+        c = next;
+    }
+    ctx->used_slices = rev;
+
+    c = ctx->used_slices;
     while (c)
     {
         fprintf(out,
