@@ -199,7 +199,14 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
     char *ret_type = infer_type(ctx, node);
     int is_expr = (use_result && ret_type && strcmp(ret_type, "void") != 0);
 
-    fprintf(out, "({ ");
+    if (is_expr)
+    {
+        fprintf(out, "({ ");
+    }
+    else
+    {
+        fprintf(out, "{ ");
+    }
 
     // Check if any case uses ref binding - only take address if needed
     int has_ref_binding = 0;
@@ -524,7 +531,7 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
     }
     else
     {
-        fprintf(out, " })");
+        fprintf(out, " }");
     }
 }
 void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)

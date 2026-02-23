@@ -1121,17 +1121,14 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
                          "va_arg(args, void*); } va_end(args); return v; }\n");
         }
         fprintf(out, "#define Vec_push(v, i) _z_vec_push(&(v), (void*)(long)(i))\n");
-
-        fprintf(out, "#define _z_check_bounds(index, limit) ({ ZC_AUTO_INIT(_i, index); if(_i < 0 "
-                     "|| _i >= (limit)) { fprintf(stderr, \"Index out of bounds: %%ld (limit "
-                     "%%d)\\n\", (long)_i, (int)(limit)); exit(1); } _i; })\n");
+        fprintf(out, "static inline long _z_check_bounds(long index, long limit) { if(index < 0 || "
+                     "index >= limit) { fprintf(stderr, \"Index out of bounds: %%ld (limit "
+                     "%%ld)\\n\", index, limit); exit(1); } return index; }\n");
     }
     else
     {
-        // We might need to change this later. So TODO.
-        fprintf(out, "#define _z_check_bounds(index, limit) ({ ZC_AUTO _i = "
-                     "(index); if(_i < 0 "
-                     "|| _i >= (limit)) { z_panic(\"index out of bounds\"); } _i; })\n");
+        fprintf(out, "static inline long _z_check_bounds(long index, long limit) { if (index < 0 "
+                     "|| index >= limit) { __builtin_trap(); } return index; }\n");
     }
 
     SliceType *rev = NULL;
