@@ -5,68 +5,6 @@
 
 static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char **traits, int count);
 
-static int is_cfg_defined(const char *name)
-{
-    for (int i = 0; i < g_config.cfg_define_count; i++)
-    {
-        if (strcmp(g_config.cfg_defines[i], name) == 0)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static void skip_top_level_decl(Lexer *l)
-{
-    Token t = lexer_peek(l);
-
-    if (t.type == TOK_PREPROC)
-    {
-        lexer_next(l);
-        return;
-    }
-
-    int found_brace = 0;
-    while (1)
-    {
-        t = lexer_peek(l);
-        if (t.type == TOK_EOF)
-        {
-            return;
-        }
-        if (t.type == TOK_SEMICOLON && !found_brace)
-        {
-            lexer_next(l);
-            return;
-        }
-        if (t.type == TOK_LBRACE)
-        {
-            found_brace = 1;
-            lexer_next(l);
-            int depth = 1;
-            while (depth > 0)
-            {
-                Token inner = lexer_next(l);
-                if (inner.type == TOK_EOF)
-                {
-                    return;
-                }
-                if (inner.type == TOK_LBRACE)
-                {
-                    depth++;
-                }
-                if (inner.type == TOK_RBRACE)
-                {
-                    depth--;
-                }
-            }
-            return;
-        }
-        lexer_next(l);
-    }
-}
-
 // Main parsing entry point
 ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
 {
