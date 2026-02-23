@@ -84,7 +84,5 @@ test "partial_move_member" {
     // c drops, checks res -> null drop
     
     assert(DROP_COUNT == 1, "Should drop exactly once (r)");
-    // Container generated destructor now correctly calls field destructors!
-    // Since c.res was moved, its data is null, causing 1 null drop.
     assert(DROP_NULL_COUNT == 1, "Container should drop moved res (null drop)");
 }

@@ -46,5 +46,4 @@ test "string_split_edge" {
     
     let empty = parts2.get(1);
     if (!empty.is_empty()) exit(1);
-    
 }

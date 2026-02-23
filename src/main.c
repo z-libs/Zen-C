@@ -395,12 +395,19 @@ int main(int argc, char **argv)
 
             if (extra_root)
             {
-                ASTNode *tail = root;
-                while (tail->next)
+                ASTNode *tail = root->root.children;
+                if (!tail)
                 {
-                    tail = tail->next;
+                    root->root.children = extra_root;
                 }
-                tail->next = extra_root;
+                else
+                {
+                    while (tail->next)
+                    {
+                        tail = tail->next;
+                    }
+                    tail->next = extra_root;
+                }
             }
 
             if (real_path)

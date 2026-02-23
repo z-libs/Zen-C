@@ -37,6 +37,5 @@ test "URL Parser" {
     let u3_res = Url::parse(s3);
     let u3 = u3_res.unwrap();
     
-    assert_true(u3.path.eq_str("/"), "Implicit Path /");
-    
+    assert_true(u3.path.eq_str("/"), "Implicit Path /");    
 }

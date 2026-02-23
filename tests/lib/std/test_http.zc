@@ -28,5 +28,4 @@ test "HTTP Server and Client" {
     assert_true(response.status == 200, "Status 200");
     assert_true(!response.body.is_empty(), "Body not empty");
     assert_true(response.body.eq_str("Hello World"), "Body content match");
-    
 }

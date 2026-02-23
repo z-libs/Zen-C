@@ -946,7 +946,6 @@ static void check_expr_var(TypeChecker *tc, ASTNode *node)
         node->type_info = sym->type_info;
     }
 
-    // Check for Use-After-Move
     if (!tc->is_assign_lhs)
     {
         check_use_validity(tc, node, sym);
