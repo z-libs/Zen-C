@@ -624,7 +624,14 @@ int main(int argc, char **argv)
             {
                 snprintf(exe_out, sizeof(exe_out), "%s", outfile);
             }
-            n = snprintf(run_cmd, sizeof(run_cmd), "%s", exe_out);
+            if (!last_sep)
+            {
+                n = snprintf(run_cmd, sizeof(run_cmd), ".\\%s", exe_out);
+            }
+            else
+            {
+                n = snprintf(run_cmd, sizeof(run_cmd), "%s", exe_out);
+            }
         }
         else
         {
