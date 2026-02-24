@@ -308,19 +308,28 @@ void scan_build_directives(ParserContext *ctx, const char *src)
             if (0 == strncmp(directive, "link:", 5))
             {
                 directive_val = directive + 5;
-                while (*directive_val == ' ') directive_val++;
+                while (*directive_val == ' ')
+                {
+                    directive_val++;
+                }
                 append_flag(g_link_flags, sizeof(g_link_flags), directive_val);
             }
             else if (0 == strncmp(directive, "cflags:", 7))
             {
                 directive_val = directive + 7;
-                while (*directive_val == ' ') directive_val++;
+                while (*directive_val == ' ')
+                {
+                    directive_val++;
+                }
                 append_flag(g_cflags, sizeof(g_cflags), directive_val);
             }
             else if (0 == strncmp(directive, "include:", 8))
             {
                 directive_val = directive + 8;
-                while (*directive_val == ' ') directive_val++;
+                while (*directive_val == ' ')
+                {
+                    directive_val++;
+                }
                 char flags[2048];
                 snprintf(flags, sizeof(flags), "-I%s", directive_val);
                 append_flag(g_cflags, sizeof(g_cflags), flags);
@@ -328,7 +337,10 @@ void scan_build_directives(ParserContext *ctx, const char *src)
             else if (strncmp(directive, "lib:", 4) == 0)
             {
                 directive_val = directive + 4;
-                while (*directive_val == ' ') directive_val++;
+                while (*directive_val == ' ')
+                {
+                    directive_val++;
+                }
                 char flags[2048];
                 snprintf(flags, sizeof(flags), "-L%s", directive_val);
                 append_flag(g_link_flags, sizeof(g_link_flags), flags);
@@ -336,7 +348,10 @@ void scan_build_directives(ParserContext *ctx, const char *src)
             else if (strncmp(directive, "framework:", 10) == 0)
             {
                 directive_val = directive + 10;
-                while (*directive_val == ' ') directive_val++;
+                while (*directive_val == ' ')
+                {
+                    directive_val++;
+                }
                 char flags[2048];
                 snprintf(flags, sizeof(flags), "-framework %s", directive_val);
                 append_flag(g_link_flags, sizeof(g_link_flags), flags);
@@ -344,7 +359,10 @@ void scan_build_directives(ParserContext *ctx, const char *src)
             else if (strncmp(directive, "define:", 7) == 0)
             {
                 directive_val = directive + 7;
-                while (*directive_val == ' ') directive_val++;
+                while (*directive_val == ' ')
+                {
+                    directive_val++;
+                }
                 char flags[2048];
                 snprintf(flags, sizeof(flags), "-D%s", directive_val);
                 append_flag(g_cflags, sizeof(g_cflags), flags);
@@ -353,40 +371,61 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 {
                     char *name = xstrdup(directive_val);
                     char *eq = strchr(name, '=');
-                    if (eq) *eq = '\0';
+                    if (eq)
+                    {
+                        *eq = '\0';
+                    }
                     g_config.cfg_defines[g_config.cfg_define_count++] = name;
                 }
             }
             else if (0 == strncmp(directive, "shell:", 6))
             {
                 directive_val = directive + 6;
-                while (*directive_val == ' ') directive_val++;
-                zwarn("Security Alert: Execution of 'shell:' directive (%s) was BLOCKED by default to prevent Remote Code Execution.", directive_val);
+                while (*directive_val == ' ')
+                {
+                    directive_val++;
+                }
+                zwarn("Security Alert: Execution of 'shell:' directive (%s) was BLOCKED by default "
+                      "to prevent Remote Code Execution.",
+                      directive_val);
                 // Intentionally ignored system() call for security reasons
             }
             else if (strncmp(directive, "get:", 4) == 0)
             {
                 char *url = directive + 4;
-                while (*url == ' ') url++;
-                zwarn("Security Alert: Execution of 'get:' directive (%s) was BLOCKED. Please download external dependencies manually.", url);
+                while (*url == ' ')
+                {
+                    url++;
+                }
+                zwarn("Security Alert: Execution of 'get:' directive (%s) was BLOCKED. Please "
+                      "download external dependencies manually.",
+                      url);
                 // Intentionally ignored external network hit for security reasons
             }
             else if (strncmp(directive, "pkg-config:", 11) == 0)
             {
                 char *libs = directive + 11;
-                
+
                 // Security check for malicious pkg-config commands containing bash injections
                 int is_safe = 1;
-                for (int i = 0; libs[i]; i++) {
-                    if (!isalnum(libs[i]) && libs[i] != '-' && libs[i] != '_' && libs[i] != ' ' && libs[i] != '.') {
+                for (int i = 0; libs[i]; i++)
+                {
+                    if (!isalnum(libs[i]) && libs[i] != '-' && libs[i] != '_' && libs[i] != ' ' &&
+                        libs[i] != '.')
+                    {
                         is_safe = 0;
                         break;
                     }
                 }
 
-                if (!is_safe) {
-                    zwarn("Security Alert: Execution of 'pkg-config:' directive with invalid chars (%s) was BLOCKED.", libs);
-                } else {
+                if (!is_safe)
+                {
+                    zwarn("Security Alert: Execution of 'pkg-config:' directive with invalid chars "
+                          "(%s) was BLOCKED.",
+                          libs);
+                }
+                else
+                {
                     char cmd[4096];
                     snprintf(cmd, sizeof(cmd), "pkg-config --cflags %s", libs);
                     FILE *fp = popen(cmd, "r");
@@ -396,7 +435,10 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                         if (fgets(buf, sizeof(buf), fp))
                         {
                             size_t l = strlen(buf);
-                            if (l > 0 && buf[l - 1] == '\n') buf[l - 1] = 0;
+                            if (l > 0 && buf[l - 1] == '\n')
+                            {
+                                buf[l - 1] = 0;
+                            }
                             append_flag(g_cflags, sizeof(g_cflags), buf);
                         }
                         pclose(fp);
@@ -410,7 +452,10 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                         if (fgets(buf, sizeof(buf), fp))
                         {
                             size_t l = strlen(buf);
-                            if (l > 0 && buf[l - 1] == '\n') buf[l - 1] = 0;
+                            if (l > 0 && buf[l - 1] == '\n')
+                            {
+                                buf[l - 1] = 0;
+                            }
                             append_flag(g_link_flags, sizeof(g_link_flags), buf);
                         }
                         pclose(fp);
