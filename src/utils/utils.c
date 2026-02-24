@@ -137,6 +137,31 @@ char g_cflags[MAX_FLAGS_SIZE] = "";
 int g_warning_count = 0;
 CompilerConfig g_config = {0};
 
+static void append_flag(char *dest, size_t max_size, const char *flag)
+{
+    size_t current_len = strlen(dest);
+    size_t flag_len = strlen(flag);
+    if (current_len > 0)
+    {
+        if (current_len + flag_len + 2 >= max_size)
+        {
+            zwarn("Build flags buffer overflow prevented.");
+            return;
+        }
+        strcat(dest, " ");
+        strcat(dest, flag);
+    }
+    else
+    {
+        if (flag_len + 1 >= max_size)
+        {
+            zwarn("Build flags buffer overflow prevented.");
+            return;
+        }
+        strcat(dest, flag);
+    }
+}
+
 // Helper for environment expansion
 static void expand_env_vars(char *dest, size_t dest_size, const char *src)
 {
@@ -283,202 +308,113 @@ void scan_build_directives(ParserContext *ctx, const char *src)
             if (0 == strncmp(directive, "link:", 5))
             {
                 directive_val = directive + 5;
-                while (*directive_val == ' ')
-                {
-                    directive_val++;
-                }
-
-                if (strlen(g_link_flags) > 0)
-                {
-                    strcat(g_link_flags, " ");
-                }
-                strcat(g_link_flags, directive_val);
+                while (*directive_val == ' ') directive_val++;
+                append_flag(g_link_flags, sizeof(g_link_flags), directive_val);
             }
             else if (0 == strncmp(directive, "cflags:", 7))
             {
                 directive_val = directive + 7;
-                while (*directive_val == ' ')
-                {
-                    directive_val++;
-                }
-
-                if (strlen(g_cflags) > 0)
-                {
-                    strcat(g_cflags, " ");
-                }
-                strcat(g_cflags, directive_val);
+                while (*directive_val == ' ') directive_val++;
+                append_flag(g_cflags, sizeof(g_cflags), directive_val);
             }
             else if (0 == strncmp(directive, "include:", 8))
             {
                 directive_val = directive + 8;
-                while (*directive_val == ' ')
-                {
-                    directive_val++;
-                }
-
+                while (*directive_val == ' ') directive_val++;
                 char flags[2048];
-                sprintf(flags, "-I%s", directive_val);
-                if (strlen(g_cflags) > 0)
-                {
-                    strcat(g_cflags, " ");
-                }
-                strcat(g_cflags, flags);
+                snprintf(flags, sizeof(flags), "-I%s", directive_val);
+                append_flag(g_cflags, sizeof(g_cflags), flags);
             }
             else if (strncmp(directive, "lib:", 4) == 0)
             {
                 directive_val = directive + 4;
-                while (*directive_val == ' ')
-                {
-                    directive_val++;
-                }
-
+                while (*directive_val == ' ') directive_val++;
                 char flags[2048];
-                sprintf(flags, "-L%s", directive_val);
-                if (strlen(g_link_flags) > 0)
-                {
-                    strcat(g_link_flags, " ");
-                }
-                strcat(g_link_flags, flags);
+                snprintf(flags, sizeof(flags), "-L%s", directive_val);
+                append_flag(g_link_flags, sizeof(g_link_flags), flags);
             }
             else if (strncmp(directive, "framework:", 10) == 0)
             {
                 directive_val = directive + 10;
-                while (*directive_val == ' ')
-                {
-                    directive_val++;
-                }
-
+                while (*directive_val == ' ') directive_val++;
                 char flags[2048];
-                sprintf(flags, "-framework %s", directive_val);
-                if (strlen(g_link_flags) > 0)
-                {
-                    strcat(g_link_flags, " ");
-                }
-                strcat(g_link_flags, flags);
+                snprintf(flags, sizeof(flags), "-framework %s", directive_val);
+                append_flag(g_link_flags, sizeof(g_link_flags), flags);
             }
             else if (strncmp(directive, "define:", 7) == 0)
             {
                 directive_val = directive + 7;
-                while (*directive_val == ' ')
-                {
-                    directive_val++;
-                }
-
+                while (*directive_val == ' ') directive_val++;
                 char flags[2048];
-                sprintf(flags, "-D%s", directive_val);
-                if (strlen(g_cflags) > 0)
-                {
-                    strcat(g_cflags, " ");
-                }
-                strcat(g_cflags, flags);
+                snprintf(flags, sizeof(flags), "-D%s", directive_val);
+                append_flag(g_cflags, sizeof(g_cflags), flags);
 
                 if (g_config.cfg_define_count < 64)
                 {
                     char *name = xstrdup(directive_val);
                     char *eq = strchr(name, '=');
-                    if (eq)
-                    {
-                        *eq = '\0';
-                    }
+                    if (eq) *eq = '\0';
                     g_config.cfg_defines[g_config.cfg_define_count++] = name;
                 }
             }
             else if (0 == strncmp(directive, "shell:", 6))
             {
                 directive_val = directive + 6;
-                while (*directive_val == ' ')
-                {
-                    directive_val++;
-                }
-
-                if (system(directive_val) != 0)
-                {
-                    zwarn("Shell directive failed: %s", directive_val);
-                }
+                while (*directive_val == ' ') directive_val++;
+                zwarn("Security Alert: Execution of 'shell:' directive (%s) was BLOCKED by default to prevent Remote Code Execution.", directive_val);
+                // Intentionally ignored system() call for security reasons
             }
             else if (strncmp(directive, "get:", 4) == 0)
             {
                 char *url = directive + 4;
-                while (*url == ' ')
-                {
-                    url++;
-                }
-                char *filename = strrchr(url, '/');
-                if (!filename)
-                {
-                    filename = "downloaded_file";
-                }
-                else
-                {
-                    filename++;
-                }
-                FILE *f = fopen(filename, "r");
-                if (f)
-                {
-                    fclose(f);
-                }
-                else
-                {
-                    char cmd[8192];
-                    if (z_is_windows())
-                    {
-                        sprintf(cmd, "curl -s -L \"%s\" -o \"%s\"", url, filename);
-                    }
-                    else
-                    {
-                        sprintf(cmd, "wget -q \"%s\" -O \"%s\" || curl -s -L \"%s\" -o \"%s\"", url,
-                                filename, url, filename);
-                    }
-                    if (system(cmd) != 0)
-                    {
-                        zwarn("Failed to download %s", url);
-                    }
-                }
+                while (*url == ' ') url++;
+                zwarn("Security Alert: Execution of 'get:' directive (%s) was BLOCKED. Please download external dependencies manually.", url);
+                // Intentionally ignored external network hit for security reasons
             }
             else if (strncmp(directive, "pkg-config:", 11) == 0)
             {
                 char *libs = directive + 11;
-                char cmd[4096];
-                sprintf(cmd, "pkg-config --cflags %s", libs);
-                FILE *fp = popen(cmd, "r");
-                if (fp)
-                {
-                    char buf[1024];
-                    if (fgets(buf, sizeof(buf), fp))
-                    {
-                        size_t l = strlen(buf);
-                        if (l > 0 && buf[l - 1] == '\n')
-                        {
-                            buf[l - 1] = 0;
-                        }
-                        if (strlen(g_cflags) > 0)
-                        {
-                            strcat(g_cflags, " ");
-                        }
-                        strcat(g_cflags, buf);
+                
+                // Security check for malicious pkg-config commands containing bash injections
+                int is_safe = 1;
+                for (int i = 0; libs[i]; i++) {
+                    if (!isalnum(libs[i]) && libs[i] != '-' && libs[i] != '_' && libs[i] != ' ' && libs[i] != '.') {
+                        is_safe = 0;
+                        break;
                     }
-                    pclose(fp);
                 }
 
-                sprintf(cmd, "pkg-config --libs %s", libs);
-                fp = popen(cmd, "r");
-                if (fp)
-                {
-                    char buf[1024];
-                    if (fgets(buf, sizeof(buf), fp))
+                if (!is_safe) {
+                    zwarn("Security Alert: Execution of 'pkg-config:' directive with invalid chars (%s) was BLOCKED.", libs);
+                } else {
+                    char cmd[4096];
+                    snprintf(cmd, sizeof(cmd), "pkg-config --cflags %s", libs);
+                    FILE *fp = popen(cmd, "r");
+                    if (fp)
                     {
-                        size_t l = strlen(buf);
-                        if (l > 0 && buf[l - 1] == '\n')
+                        char buf[1024];
+                        if (fgets(buf, sizeof(buf), fp))
                         {
-                            buf[l - 1] = 0;
+                            size_t l = strlen(buf);
+                            if (l > 0 && buf[l - 1] == '\n') buf[l - 1] = 0;
+                            append_flag(g_cflags, sizeof(g_cflags), buf);
                         }
-                        if (strlen(g_link_flags) > 0)
-                        {
-                            strcat(g_link_flags, " ");
-                        }
-                        strcat(g_link_flags, buf);
+                        pclose(fp);
                     }
-                    pclose(fp);
+
+                    snprintf(cmd, sizeof(cmd), "pkg-config --libs %s", libs);
+                    fp = popen(cmd, "r");
+                    if (fp)
+                    {
+                        char buf[1024];
+                        if (fgets(buf, sizeof(buf), fp))
+                        {
+                            size_t l = strlen(buf);
+                            if (l > 0 && buf[l - 1] == '\n') buf[l - 1] = 0;
+                            append_flag(g_link_flags, sizeof(g_link_flags), buf);
+                        }
+                        pclose(fp);
+                    }
                 }
             }
             else
