@@ -452,10 +452,15 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node)
                 const char *hints[] = {"Shift amount exceeds bit width, result is undefined", NULL};
                 tc_error_with_hints(tc, node->binary.right->token, "Shift amount too large", hints);
             }
-            // Also warn on negative shifts (though stored as unsigned)
-            else if (shift_amt >= 32 && left_type)
+            else if (shift_amt >= 32 && left_type &&
+                     (left_type->kind == TYPE_INT || left_type->kind == TYPE_UINT ||
+                      left_type->kind == TYPE_I32 || left_type->kind == TYPE_U32 ||
+                      left_type->kind == TYPE_C_INT || left_type->kind == TYPE_C_UINT))
             {
-                // Could check if left_type is 32-bit and warn more specifically... TODO.
+                const char *hints[] = {
+                    "Shift amount >= 32 is undefined behavior for 32-bit integers", NULL};
+                tc_error_with_hints(tc, node->binary.right->token,
+                                    "Shift amount exceeds 32-bit type width", hints);
             }
         }
 

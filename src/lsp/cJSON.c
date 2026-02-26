@@ -1927,6 +1927,11 @@ CJSON_PUBLIC(int) cJSON_GetArraySize(const cJSON *array)
     }
 
     /* FIXME: Can overflow here. Cannot be fixed without breaking the API */
+    /* Clamp size to INT_MAX to prevent negative overflow if used unsafely */
+    if (size > (size_t)INT_MAX)
+    {
+        return INT_MAX;
+    }
 
     return (int)size;
 }
@@ -3208,9 +3213,25 @@ cJSON_Compare(const cJSON *const a, const cJSON *const b, const cJSON_bool case_
     {
         cJSON *a_element = NULL;
         cJSON *b_element = NULL;
+        size_t a_size = 0;
+        size_t b_size = 0;
+
         cJSON_ArrayForEach(a_element, a)
         {
-            /* TODO This has O(n^2) runtime, which is horrible! */
+            a_size++;
+        }
+        cJSON_ArrayForEach(b_element, b)
+        {
+            b_size++;
+        }
+
+        if (a_size != b_size)
+        {
+            return false;
+        }
+
+        cJSON_ArrayForEach(a_element, a)
+        {
             b_element = get_object_item(b, a_element->string, case_sensitive);
             if (b_element == NULL)
             {
@@ -3218,22 +3239,6 @@ cJSON_Compare(const cJSON *const a, const cJSON *const b, const cJSON_bool case_
             }
 
             if (!cJSON_Compare(a_element, b_element, case_sensitive))
-            {
-                return false;
-            }
-        }
-
-        /* doing this twice, once on a and b to prevent true comparison if a subset of b
-         * TODO: Do this the proper way, this is just a fix for now */
-        cJSON_ArrayForEach(b_element, b)
-        {
-            a_element = get_object_item(a, b_element->string, case_sensitive);
-            if (a_element == NULL)
-            {
-                return false;
-            }
-
-            if (!cJSON_Compare(b_element, a_element, case_sensitive))
             {
                 return false;
             }

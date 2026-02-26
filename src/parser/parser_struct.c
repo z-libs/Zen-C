@@ -524,7 +524,10 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             {
                 gp = def->strct.generic_params[0];
             }
-            // TODO: Enum generic params support if needed
+            else if (def && def->type == NODE_ENUM && def->enm.is_template)
+            {
+                gp = def->enm.generic_param;
+            }
             register_impl_template(ctx, name2, gp, n);
         }
 
@@ -1030,7 +1033,13 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque)
     if (gp_count > 0)
     {
         node->type_info->kind = TYPE_GENERIC;
-        // TODO: track generic params
+        node->type_info->arg_count = gp_count;
+        node->type_info->args = xmalloc(sizeof(Type *) * gp_count);
+        for (int i = 0; i < gp_count; i++)
+        {
+            node->type_info->args[i] = type_new(TYPE_GENERIC);
+            node->type_info->args[i]->name = xstrdup(gps[i]);
+        }
     }
 
     node->strct.fields = h;
