@@ -8,6 +8,7 @@ a.out
 *.dll
 *.dylib
 *.a
+*.so.dSYM/
 .vscode/
 .idea/
 *.swp
