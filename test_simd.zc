@@ -1,0 +1,17 @@
+
+import "immintrin.h"
+
+fn main() {
+    let a : __m256i = _mm256_set_epi32(1, 2, 3, 4, 5, 6, 7, 8);
+    let b : __m256i = _mm256_set_epi32(1, 2, 3, 4, 5, 6, 7, 8);
+
+    let c : __m256i = _mm256_add_epi32(a, b);
+
+    let result : int[8];
+    _mm256_storeu_si256((__m256i *)result, c);
+
+    for i in result {
+        print "{i} ";
+    }
+    println "";
+}

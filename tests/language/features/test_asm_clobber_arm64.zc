@@ -1,0 +1,20 @@
+fn add(a: int, b: int) -> int {
+    let result: int;
+    asm {
+        "mov {result}, {a}"
+        "add {result}, {result}, {b}"
+        : out(result)
+        : in(a), in(b)
+        : clobber("cc")
+    }
+    return result;
+}
+
+test "asm_clobber_arm64" {
+    let res = add(10, 20);
+    if (res != 30) {
+        println "Failed: Expected 30, got {res}";
+        exit(1);
+    }
+    println "Success: asm with clobber works properly";
+}

@@ -1,0 +1,624 @@
+--- src/parser/parser_core.c ---
+Line 297:
+ 295:                         while (1)
+ 296:                         {
+ 297:                             Token t = lexer_next(l);
+ 298:                             if (t.type == TOK_IDENT && t.len == 3 &&
+ 299:                                 strncmp(t.start, "not", 3) == 0)
+ 300:                             {
+ 301:                                 if (lexer_next(l).type != TOK_LPAREN)
+ 302:                                 {
+ 303:                                     zpanic_at(lexer_peek(l), "Expected ( after not");
+ 304:                                 }
+ 305:                                 Token nt = lexer_next(l);
+ 306:                                 if (nt.type != TOK_IDENT)
+ 307:                                 {
+ 308:                                     zpanic_at(nt, "Expected define name");
+ 309:                                 }
+ 310:                                 char *cfg_name = token_strdup(nt);
+ 311:                                 if (!any_cond)
+ 312:                                 {
+
+Line 391:
+ 389:                         while (1)
+ 390:                         {
+ 391:                             Token t = lexer_next(l);
+ 392:                             if (t.type == TOK_IDENT && t.len == 3 &&
+ 393:                                 strncmp(t.start, "not", 3) == 0)
+ 394:                             {
+ 395:                                 if (lexer_next(l).type != TOK_LPAREN)
+ 396:                                 {
+ 397:                                     zpanic_at(lexer_peek(l), "Expected ( after not");
+ 398:                                 }
+ 399:                                 Token nt = lexer_next(l);
+ 400:                                 if (nt.type != TOK_IDENT)
+ 401:                                 {
+ 402:                                     zpanic_at(nt, "Expected define name");
+ 403:                                 }
+ 404:                                 char *cfg_name = token_strdup(nt);
+ 405:                                 if (!all_cond)
+ 406:                                 {
+
+Line 513:
+ 511:                     while (1)
+ 512:                     {
+ 513:                         Token t = lexer_next(l);
+ 514:                         if (t.type != TOK_IDENT)
+ 515:                         {
+ 516:                             zpanic_at(t, "Expected trait name in @derive");
+ 517:                         }
+ 518:                         if (derived_count < 32)
+ 519:                         {
+ 520:                             derived_traits[derived_count++] = token_strdup(t);
+ 521:                         }
+ 522:                         if (lexer_peek(l).type == TOK_COMMA)
+ 523:                         {
+ 524:                             lexer_next(l);
+ 525:                         }
+ 526:                         else
+ 527:                         {
+ 528:                             break;
+
+Line 570:
+ 568:                         while (1)
+ 569:                         {
+ 570:                             Token t = lexer_next(l);
+ 571:                             new_attr->args =
+ 572:                                 realloc(new_attr->args, sizeof(char *) * (new_attr->arg_count + 1));
+ 573: 
+ 574:                             if (t.type == TOK_STRING)
+ 575:                             {
+ 576:                                 new_attr->args[new_attr->arg_count++] = token_strdup(t);
+ 577:                             }
+ 578:                             else
+ 579:                             {
+ 580:                                 new_attr->args[new_attr->arg_count++] = token_strdup(t);
+ 581:                             }
+ 582: 
+ 583:                             if (lexer_peek(l).type == TOK_COMMA)
+ 584:                             {
+ 585:                                 lexer_next(l);
+
+Line 783:
+ 781:                 while (depth > 0)
+ 782:                 {
+ 783:                     Token t = lexer_next(l);
+ 784:                     if (t.type == TOK_EOF)
+ 785:                     {
+ 786:                         zpanic_at(t, "Unexpected EOF in raw block");
+ 787:                     }
+ 788:                     if (t.type == TOK_LBRACE)
+ 789:                     {
+ 790:                         depth++;
+ 791:                     }
+ 792:                     if (t.type == TOK_RBRACE)
+ 793:                     {
+ 794:                         depth--;
+ 795:                     }
+ 796:                 }
+ 797: 
+ 798:                 const char *end = l->src + l->pos - 1;
+
+--- src/parser/parser_stmt.c ---
+Line 652:
+ 650:     while (1)
+ 651:     {
+ 652:         Token t = lexer_peek(l);
+ 653: 
+ 654:         // Check for end of asm block or start of operands
+ 655:         if (t.type == TOK_RBRACE)
+ 656:         {
+ 657:             break;
+ 658:         }
+ 659:         if (t.type == TOK_COLON)
+ 660:         {
+ 661:             break;
+ 662:         }
+ 663: 
+ 664:         // Support string literals for assembly instructions
+ 665:         if (t.type == TOK_STRING)
+ 666:         {
+ 667:             lexer_next(l);
+
+Line 779:
+ 777:         while (1)
+ 778:         {
+ 779:             Token t = lexer_peek(l);
+ 780:             if (t.type == TOK_COLON || t.type == TOK_RBRACE)
+ 781:             {
+ 782:                 break;
+ 783:             }
+ 784:             if (t.type == TOK_COMMA)
+ 785:             {
+ 786:                 lexer_next(l);
+ 787:                 continue;
+ 788:             }
+ 789: 
+ 790:             // Parse out(var) or inout(var)
+ 791:             if (t.type == TOK_IDENT)
+ 792:             {
+ 793:                 char *mode = token_strdup(t);
+ 794:                 lexer_next(l);
+
+Line 837:
+ 835:         while (1)
+ 836:         {
+ 837:             Token t = lexer_peek(l);
+ 838:             if (t.type == TOK_COLON || t.type == TOK_RBRACE)
+ 839:             {
+ 840:                 break;
+ 841:             }
+ 842:             if (t.type == TOK_COMMA)
+ 843:             {
+ 844:                 lexer_next(l);
+ 845:                 continue;
+ 846:             }
+ 847: 
+ 848:             // Parse in(var)
+ 849:             if (t.type == TOK_IDENT && strncmp(t.start, "in", 2) == 0)
+ 850:             {
+ 851:                 lexer_next(l);
+ 852: 
+
+Line 893:
+ 891:         while (1)
+ 892:         {
+ 893:             Token t = lexer_peek(l);
+ 894:             if (t.type == TOK_RBRACE)
+ 895:             {
+ 896:                 break;
+ 897:             }
+ 898:             if (t.type == TOK_COMMA)
+ 899:             {
+ 900:                 lexer_next(l);
+ 901:                 continue;
+ 902:             }
+ 903: 
+ 904:             // check for clobber("...")
+ 905:             if (t.type == TOK_IDENT && strncmp(t.start, "clobber", 7) == 0)
+ 906:             {
+ 907:                 lexer_next(l); // eat clobber
+ 908:                 if (lexer_peek(l).type != TOK_LPAREN)
+
+Line 2252:
+2250:         content[tk.len] = '\n'; // Ensure newline
+2251:         content[tk.len + 1] = 0;
+2252:         ASTNode *s = ast_create(NODE_RAW_STMT);
+2253:         s->raw_stmt.content = content;
+2254:         return s;
+2255:     }
+2256: 
+2257:     if (tk.type == TOK_STRING || tk.type == TOK_FSTRING)
+2258:     {
+2259:         Lexer lookahead = *l;
+2260:         lexer_next(&lookahead);
+2261:         ZenTokenType next_type = lexer_peek(&lookahead).type;
+2262: 
+2263:         if (next_type == TOK_SEMICOLON || next_type == TOK_DOTDOT || next_type == TOK_RBRACE)
+2264:         {
+2265:             Token t = lexer_next(l); // consume string
+2266: 
+2267:             char *inner = xmalloc(t.len);
+
+Line 2366:
+2364:         while (lexer_peek(&new_l).type != TOK_EOF)
+2365:         {
+2366:             ASTNode *s = parse_statement(ctx, &new_l);
+2367:             if (!s)
+2368:             {
+2369:                 break;
+2370:             }
+2371:             if (!head)
+2372:             {
+2373:                 head = s;
+2374:             }
+2375:             else
+2376:             {
+2377:                 tail->next = s;
+2378:             }
+2379:             tail = s;
+2380:             while (tail->next)
+2381:             {
+
+Line 2468:
+2466:             content[len] = 0;
+2467: 
+2468:             ASTNode *s = ast_create(NODE_RAW_STMT);
+2469:             s->raw_stmt.content = normalize_raw_content(content);
+2470:             free(content);
+2471:             return s;
+2472:         }
+2473: 
+2474:         // Check for plugin blocks
+2475:         if (strncmp(tk.start, "plugin", 6) == 0 && tk.len == 6)
+2476:         {
+2477:             lexer_next(l); // consume 'plugin'
+2478:             return parse_plugin(ctx, l);
+2479:         }
+2480: 
+2481:         if (strncmp(tk.start, "let", 3) == 0 && tk.len == 3)
+2482:         {
+2483:             return parse_var_decl(ctx, l);
+
+Line 2802:
+2800:         // Label detection: identifier followed by : (but not ::)
+2801:         {
+2802:             Lexer lookahead = *l;
+2803:             Token ident = lexer_next(&lookahead);
+2804:             Token maybe_colon = lexer_peek(&lookahead);
+2805:             if (maybe_colon.type == TOK_COLON)
+2806:             {
+2807:                 // Check it's not :: (double colon for namespaces)
+2808:                 lexer_next(&lookahead);
+2809:                 Token after_colon = lexer_peek(&lookahead);
+2810:                 if (after_colon.type != TOK_COLON)
+2811:                 {
+2812:                     // This is a label!
+2813:                     lexer_next(l); // eat identifier
+2814:                     lexer_next(l); // eat :
+2815:                     ASTNode *n = ast_create(NODE_LABEL);
+2816:                     n->label_stmt.label_name = token_strdup(ident);
+2817:                     n->token = ident;
+
+Line 3608:
+3606: 
+3607:             // Check for 'as alias'
+3608:             Token next = lexer_peek(l);
+3609:             if (next.type == TOK_IDENT && next.len == 2 && strncmp(next.start, "as", 2) == 0)
+3610:             {
+3611:                 lexer_next(l); // eat 'as'
+3612:                 Token alias_tok = lexer_next(l);
+3613:                 if (alias_tok.type != TOK_IDENT)
+3614:                 {
+3615:                     zpanic_at(alias_tok, "Expected identifier after 'as'");
+3616:                 }
+3617: 
+3618:                 aliases[symbol_count] = xmalloc(alias_tok.len + 1);
+3619:                 strncpy(aliases[symbol_count], alias_tok.start, alias_tok.len);
+3620:                 aliases[symbol_count][alias_tok.len] = 0;
+3621:             }
+3622:             else
+3623:             {
+
+--- src/parser/parser_expr.c ---
+Line 1257:
+1255:                 // Use a temporary buffer for the token to ensure safe printing
+1256:                 char tok_buf[64];
+1257:                 int len = next.len < 63 ? next.len : 63;
+1258:                 strncpy(tok_buf, next.start, len);
+1259:                 tok_buf[len] = '\0';
+1260:                 if (next.len > 63)
+1261:                 {
+1262:                     strcat(tok_buf, "...");
+1263:                 }
+1264: 
+1265:                 char err_msg[256];
+1266:                 snprintf(err_msg, sizeof(err_msg),
+1267:                          "Invalid expression in f-string: expected '}' or ':', found '%s'.",
+1268:                          tok_buf);
+1269: 
+1270:                 const char *hints[] = {
+1271:                     "braces in f-strings must be escaped with '{{' or '}}'",
+1272:                     "use a raw string literal (r\"...\") to disable interpolation", NULL};
+
+Line 1770:
+1768:         skip_comments(l);
+1769:         {
+1770:             Token t = lexer_next(l);
+1771:             if (t.type != TOK_LBRACE)
+1772:             {
+1773:                 zpanic_at(t, "Expected { after match expression");
+1774:             }
+1775:         }
+1776: 
+1777:         ASTNode *h = 0, *tl = 0;
+1778:         while (1)
+1779:         {
+1780:             skip_comments(l);
+1781:             if (lexer_peek(l).type == TOK_RBRACE)
+1782:             {
+1783:                 break;
+1784:             }
+1785:             if (lexer_peek(l).type == TOK_COMMA)
+
+Line 2885:
+2883:                 for (int i = 0; i < ac; i++)
+2884:                 {
+2885:                     Type *t = args[i]->type_info;
+2886:                     if (!t && args[i]->type == NODE_EXPR_VAR)
+2887:                     {
+2888:                         t = find_symbol_type_info(ctx, args[i]->var_ref.name);
+2889:                     }
+2890: 
+2891:                     if (!t)
+2892:                     {
+2893:                         strcat(fmt, "%d"); // Fallback
+2894:                     }
+2895:                     else
+2896:                     {
+2897:                         if (t->kind == TYPE_INT || t->kind == TYPE_I32 || t->kind == TYPE_BOOL)
+2898:                         {
+2899:                             strcat(fmt, "%d");
+2900:                         }
+
+Line 2989:
+2987:                     if (arg && arg->type == NODE_EXPR_VAR)
+2988:                     {
+2989:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+2990:                         if (!t)
+2991:                         {
+2992:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+2993:                             if (s)
+2994:                             {
+2995:                                 t = s->type_info;
+2996:                             }
+2997:                         }
+2998: 
+2999:                         if (!is_type_copy(ctx, t))
+3000:                         {
+3001:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+3002:                             if (s)
+3003:                             {
+3004:                                 s->is_moved = 1;
+
+Line 3359:
+3357:                     if (arg && arg->type == NODE_EXPR_VAR)
+3358:                     {
+3359:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+3360:                         if (!t)
+3361:                         {
+3362:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+3363:                             if (s)
+3364:                             {
+3365:                                 t = s->type_info;
+3366:                             }
+3367:                         }
+3368: 
+3369:                         if (!is_type_copy(ctx, t))
+3370:                         {
+3371:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+3372:                             if (s)
+3373:                             {
+3374:                                 s->is_moved = 1;
+
+Line 3720:
+3718:                     char *cast_type = type_to_string(cast_type_obj);
+3719:                     {
+3720:                         Token t = lexer_next(l);
+3721:                         if (t.type != TOK_RPAREN)
+3722:                         {
+3723:                             zpanic_at(t, "Expected ) after cast");
+3724:                         }
+3725:                     }
+3726:                     ASTNode *target = parse_expr_prec(ctx, l, PREC_UNARY);
+3727: 
+3728:                     node = ast_create(NODE_EXPR_CAST);
+3729:                     node->cast.target_type = cast_type;
+3730:                     node->cast.expr = target;
+3731:                     node->type_info = cast_type_obj;
+3732:                     return node;
+3733:                 }
+3734:             }
+3735:         }
+
+Line 4064:
+4062:                     if (arg && arg->type == NODE_EXPR_VAR)
+4063:                     {
+4064:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+4065:                         if (!t)
+4066:                         {
+4067:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+4068:                             if (s)
+4069:                             {
+4070:                                 t = s->type_info;
+4071:                             }
+4072:                         }
+4073: 
+4074:                         if (!is_type_copy(ctx, t))
+4075:                         {
+4076:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+4077:                             if (s)
+4078:                             {
+4079:                                 s->is_moved = 1;
+
+Line 4109:
+4107:             }
+4108:             {
+4109:                 Token t = lexer_next(l);
+4110:                 if (t.type != TOK_RPAREN)
+4111:                 {
+4112:                     zpanic_at(t, "Expected ) after call arguments");
+4113:                 }
+4114:             }
+4115: 
+4116:             ASTNode *call = ast_create(NODE_EXPR_CALL);
+4117:             call->call.callee = node;
+4118:             call->call.args = head;
+4119:             call->call.arg_names = has_named ? arg_names : NULL;
+4120:             call->call.arg_count = arg_count;
+4121:             check_format_string(call, op);
+4122: 
+4123:             // Try to infer type if callee has function type info
+4124:             call->resolved_type = xstrdup("unknown"); // Default (was int)
+
+Line 4140:
+4138:             ASTNode *index = parse_expression(ctx, l);
+4139:             {
+4140:                 Token t = lexer_next(l);
+4141:                 if (t.type != TOK_RBRACKET)
+4142:                 {
+4143:                     zpanic_at(t, "Expected ] after index");
+4144:                 }
+4145:             }
+4146: 
+4147:             // Static Array Bounds Check
+4148:             if (node->type_info && node->type_info->kind == TYPE_ARRAY &&
+4149:                 node->type_info->array_size > 0)
+4150:             {
+4151:                 if (index->type == NODE_EXPR_LITERAL && index->literal.type_kind == LITERAL_INT)
+4152:                 {
+4153:                     int idx = index->literal.int_val;
+4154:                     if (idx < 0 || idx >= node->type_info->array_size)
+4155:                     {
+
+Line 4660:
+4658:                 for (int i = 0; i < ac; i++)
+4659:                 {
+4660:                     Type *t = args[i]->type_info;
+4661:                     if (!t && args[i]->type == NODE_EXPR_VAR)
+4662:                     {
+4663:                         t = find_symbol_type_info(ctx, args[i]->var_ref.name);
+4664:                     }
+4665: 
+4666:                     if (!t)
+4667:                     {
+4668:                         strcat(fmt, "%d");
+4669:                     }
+4670:                     else
+4671:                     {
+4672:                         if (t->kind == TYPE_INT || t->kind == TYPE_I32 || t->kind == TYPE_BOOL)
+4673:                         {
+4674:                             strcat(fmt, "%d");
+4675:                         }
+
+Line 5579:
+5577:                     if (arg && arg->type == NODE_EXPR_VAR)
+5578:                     {
+5579:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+5580:                         if (!t)
+5581:                         {
+5582:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+5583:                             if (s)
+5584:                             {
+5585:                                 t = s->type_info;
+5586:                             }
+5587:                         }
+5588: 
+5589:                         if (!is_type_copy(ctx, t))
+5590:                         {
+5591:                             ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+5592:                             if (s)
+5593:                             {
+5594:                                 s->is_moved = 1;
+
+Line 5767:
+5765: 
+5766:                 char *struct_name = NULL;
+5767:                 Type *t = lhs->type_info;
+5768:                 int is_ptr = 0;
+5769: 
+5770:                 if (t)
+5771:                 {
+5772:                     if (t->kind == TYPE_STRUCT)
+5773:                     {
+5774:                         struct_name = t->name;
+5775:                     }
+5776:                     /*
+5777:                     else if (t->kind == TYPE_POINTER && t->inner && t->inner->kind == TYPE_STRUCT)
+5778:                     {
+5779:                         // struct_name = t->inner->name;
+5780:                         // is_ptr = 1;
+5781:                         // DISABLE: Pointers should use array indexing by default, not operator
+5782:                     overload.
+
+Line 6221:
+6219:                     while (1)
+6220:                     {
+6221:                         Type *t = parse_type_formal(ctx, l);
+6222:                         concrete[argc] = type_to_string(t);
+6223:                         unmangled[argc] = type_to_c_string(t);
+6224:                         argc++;
+6225:                         if (lexer_peek(l).type == TOK_COMMA)
+6226:                         {
+6227:                             lexer_next(l);
+6228:                         }
+6229:                         else
+6230:                         {
+6231:                             break;
+6232:                         }
+6233:                     }
+6234:                     if (lexer_next(l).type != TOK_RANGLE)
+6235:                     {
+6236:                         zpanic_at(lexer_peek(l), "Expected >");
+
+Line 6350:
+6348:             if (rhs->type == NODE_EXPR_VAR)
+6349:             {
+6350:                 Type *t = find_symbol_type_info(ctx, rhs->var_ref.name);
+6351:                 // If type info not on var, try looking up symbol
+6352:                 if (!t)
+6353:                 {
+6354:                     ZenSymbol *s = find_symbol_entry(ctx, rhs->var_ref.name);
+6355:                     if (s)
+6356:                     {
+6357:                         t = s->type_info;
+6358:                     }
+6359:                 }
+6360: 
+6361:                 if (!is_type_copy(ctx, t))
+6362:                 {
+6363:                     ZenSymbol *s = find_symbol_entry(ctx, rhs->var_ref.name);
+6364:                     if (s)
+6365:                     {
+
+Line 6470:
+6468:             {
+6469:                 // Check if the variable is const
+6470:                 Type *t = find_symbol_type_info(ctx, lhs->var_ref.name);
+6471:                 if (t && t->is_const)
+6472:                 {
+6473:                     zpanic_at(op, "Cannot assign to const variable '%s'", lhs->var_ref.name);
+6474:                 }
+6475:             }
+6476:             else if (lhs->type == NODE_EXPR_INDEX || lhs->type == NODE_EXPR_MEMBER)
+6477:             {
+6478:                 ASTNode *base = lhs;
+6479:                 while (base)
+6480:                 {
+6481:                     if (base->type == NODE_EXPR_INDEX)
+6482:                     {
+6483:                         base = base->index.array;
+6484:                     }
+6485:                     else if (base->type == NODE_EXPR_MEMBER)
+
+Line 6496:
+6494:                 if (base && base->type == NODE_EXPR_VAR)
+6495:                 {
+6496:                     Type *t = find_symbol_type_info(ctx, base->var_ref.name);
+6497:                     if (t && t->is_const)
+6498:                     {
+6499:                         zpanic_at(op, "Cannot assign to element of const variable '%s'",
+6500:                                   base->var_ref.name);
+6501:                     }
+6502:                 }
+6503:             }
+6504:         }
+6505: 
+6506:         int is_compound = 0;
+6507:         size_t op_len = strlen(bin->binary.op);
+6508: 
+6509:         // Check if operator ends with '=' but is not ==, !=, <=, >=
+6510:         if (op_len > 1 && bin->binary.op[op_len - 1] == '=')
+6511:         {
+
+--- src/parser/parser_type.c ---
+Line 295:
+ 293:                     }
+ 294: 
+ 295:                     Type *t = type_new(name[0] == 'u' ? TYPE_UBITINT : TYPE_BITINT);
+ 296:                     t->array_size = width;
+ 297:                     free(name);
+ 298:                     return t;
+ 299:                 }
+ 300:             }
+ 301:         }
+ 302:         if (strcmp(name, "u16") == 0)
+ 303:         {
+ 304:             free(name);
+ 305:             return type_new(TYPE_U16);
+ 306:         }
+ 307:         if (strcmp(name, "i32") == 0)
+ 308:         {
+ 309:             free(name);
+ 310:             return type_new(TYPE_I32);
+

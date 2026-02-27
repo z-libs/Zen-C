@@ -1,0 +1,126 @@
+import "termbox2.h" as tb;
+import "./state.zc";
+
+struct UI {}
+
+impl UI {
+    fn draw_box(x: int, y: int, width: int, height: int, title: char*, color: int) {
+        // Horizontal lines
+        for (let i = x + 1; i < x + width - 1; i = i + 1) {
+            tb::tb_set_cell(i, y, '-', color, tb::TB_DEFAULT);
+            tb::tb_set_cell(i, y + height - 1, '-', color, tb::TB_DEFAULT);
+        }
+        // Vertical lines
+        for (let j = y + 1; j < y + height - 1; j = j + 1) {
+            tb::tb_set_cell(x, j, '|', color, tb::TB_DEFAULT);
+            tb::tb_set_cell(x + width - 1, j, '|', color, tb::TB_DEFAULT);
+        }
+        // Corners
+        tb::tb_set_cell(x, y, '+', color, tb::TB_DEFAULT);
+        tb::tb_set_cell(x + width - 1, y, '+', color, tb::TB_DEFAULT);
+        tb::tb_set_cell(x, y + height - 1, '+', color, tb::TB_DEFAULT);
+        tb::tb_set_cell(x + width - 1, y + height - 1, '+', color, tb::TB_DEFAULT);
+
+        // Title
+        if title != NULL {
+            tb::tb_print(x + 2, y, color | tb::TB_BOLD, tb::TB_DEFAULT, title);
+        }
+    }
+
+    fn draw_companion(state: CompanionState*, x: int, y: int) {
+        let color = tb::TB_WHITE | tb::TB_BOLD;
+        if state.emotion == Emotion::HAPPY {
+            color = tb::TB_GREEN | tb::TB_BOLD;
+            tb::tb_print(x, y, color, tb::TB_DEFAULT, "  ^u^  ");
+            tb::tb_print(x, y + 1, color, tb::TB_DEFAULT, " \\   / ");
+            tb::tb_print(x, y + 2, color, tb::TB_DEFAULT, "(     )");
+            tb::tb_print(x, y + 3, color, tb::TB_DEFAULT, " \"\"\"\"\" ");
+        } else if state.emotion == Emotion::SAD {
+            color = tb::TB_BLUE | tb::TB_BOLD;
+            tb::tb_print(x, y, color, tb::TB_DEFAULT, "  T_T  ");
+            tb::tb_print(x, y + 1, color, tb::TB_DEFAULT, " /   \\ ");
+            tb::tb_print(x, y + 2, color, tb::TB_DEFAULT, "(  ~  )");
+            tb::tb_print(x, y + 3, color, tb::TB_DEFAULT, " \"\"\"\"\" ");
+        } else if state.emotion == Emotion::THINKING {
+            color = tb::TB_YELLOW | tb::TB_BOLD;
+            tb::tb_print(x, y, color, tb::TB_DEFAULT, "  o_o  ");
+            tb::tb_print(x, y + 1, color, tb::TB_DEFAULT, " /   \\?");
+            tb::tb_print(x, y + 2, color, tb::TB_DEFAULT, "(  ... )");
+            tb::tb_print(x, y + 3, color, tb::TB_DEFAULT, " \"\"\"\"\" ");
+        } else {
+            tb::tb_print(x, y, color, tb::TB_DEFAULT, "  O_O  ");
+            tb::tb_print(x, y + 1, color, tb::TB_DEFAULT, " /   \\ ");
+            tb::tb_print(x, y + 2, color, tb::TB_DEFAULT, "(  u  )");
+            tb::tb_print(x, y + 3, color, tb::TB_DEFAULT, " \"\"\"\"\" ");
+        }
+    }
+
+    fn draw_multiline(x: int, y: int, max_w: int, max_h: int, text: String*) {
+        let lines = text.split('\n');
+        defer lines.free(); // Free the vector
+
+        let line_count = lines.len;
+        if line_count == 0 {
+            return;
+        }
+
+        // Print from bottom to top, capping at max height
+        let start_idx = 0;
+        if line_count > (size_t)max_h {
+            start_idx = line_count - (size_t)max_h;
+        }
+
+        let curr_y = y;
+        let p_end = line_count;
+        for (let i = start_idx; i < p_end; i = i + 1) {
+            let row_ptr = lines.get_ref(i);
+            if row_ptr != NULL {
+                // Ensure we don't bleed out of width
+                let trunc = row_ptr.substring(0, max_w);
+                tb::tb_print(x, curr_y, tb::TB_WHITE, tb::TB_DEFAULT, trunc.c_str());
+                trunc.free();
+                curr_y = curr_y + 1;
+            }
+        }
+    }
+
+    fn render(state: CompanionState*, prompt: String*, last_output: String*) {
+        tb::tb_clear();
+
+        let w = tb::tb_width();
+        let h = tb::tb_height();
+
+        if w < 72 || h < 20 {
+            tb::tb_print(0, 0, tb::TB_RED, tb::TB_DEFAULT, "Terminal is too small.");
+            tb::tb_print(0, 1, tb::TB_WHITE, tb::TB_DEFAULT, "Please resize your window to at least 72x20.");
+            tb::tb_present();
+            return;
+        }
+
+        let split_x = (int)(w * 0.7);
+
+        // Shell View (Left)
+        UI::draw_box(0, 0, split_x, h, " Zen Shell ", tb::TB_MAGENTA);
+        
+        let out_h = h - 4;
+        let max_w = split_x - 3;
+        UI::draw_multiline(2, 2, max_w, out_h, last_output);
+
+        // Prompt Line
+        tb::tb_print(2, h - 2, tb::TB_GREEN | tb::TB_BOLD, tb::TB_DEFAULT, "zensh> ");
+        tb::tb_print(9, h - 2, tb::TB_WHITE, tb::TB_DEFAULT, prompt.c_str());
+
+        // Companion Panel (Right)
+        UI::draw_box(split_x, 0, w - split_x, h, " Companion ", tb::TB_CYAN);
+        
+        // Pet Avatar
+        let pet_x = split_x + ((w - split_x) / 2) - 4;
+        let pet_y = h / 2;
+        UI::draw_companion(state, pet_x, pet_y);
+
+        // Speech Bubble
+        tb::tb_print(split_x + 2, pet_y - 3, tb::TB_YELLOW, tb::TB_DEFAULT, state.message.c_str());
+
+        tb::tb_present();
+    }
+}

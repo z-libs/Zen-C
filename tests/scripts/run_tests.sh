@@ -30,6 +30,7 @@ CC_NAME="gcc (default)"
 USE_TYPECHECK=0
 filtered_args=()
 sys_type=$(uname -s)
+sys_arch=$(uname -m)
 
 for arg in "$@"; do
     if [ "$prev_arg" = "--cc" ]; then
@@ -68,6 +69,23 @@ while read -r test_file; do
         fi
         if [[ "$test_file" == *"test_simd_native.zc"* ]]; then
             echo "Skipping $test_file (SIMD vector extensions not supported by TCC)"
+            continue
+        fi
+    fi
+
+    # Skip architecture-specific tests
+    if [[ "$sys_arch" != *"86"* && "$sys_arch" != "amd64" ]]; then
+        if [[ "$test_file" == *"test_asm.zc"* ]] || \
+           [[ "$test_file" == *"test_asm_clobber.zc"* ]] || \
+           [[ "$test_file" == *"test_intel.zc"* ]]; then
+            echo "Skipping $test_file (x86 assembly not supported on $sys_arch)"
+            continue
+        fi
+    fi
+
+    if [[ "$sys_arch" != *"arm64"* && "$sys_arch" != "aarch64" ]]; then
+        if [[ "$test_file" == *"_arm64.zc"* ]]; then
+            echo "Skipping $test_file (ARM64 assembly not supported on $sys_arch)"
             continue
         fi
     fi

@@ -1,0 +1,8 @@
+#ifdef A
+fn a() {}
+#elif defined(B)
+fn a() {}
+#endif
+
+fn main() {
+}

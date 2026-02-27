@@ -1,0 +1,11 @@
+@cfg(A)
+fn a() {}
+
+@cfg(not(A))
+fn a() {
+    printf("not A\n");
+}
+
+fn main() {
+    a();
+}

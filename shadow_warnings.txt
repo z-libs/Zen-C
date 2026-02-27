@@ -1,0 +1,194 @@
+src/parser/parser_core.c: In function ‘parse_program_nodes’:
+src/parser/parser_core.c:297:35: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  297 |                             Token t = lexer_next(l);
+      |                                   ^
+src/parser/parser_core.c:42:15: note: shadowed declaration is here
+   42 |         Token t = lexer_peek(l);
+      |               ^
+src/parser/parser_core.c:391:35: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  391 |                             Token t = lexer_next(l);
+      |                                   ^
+src/parser/parser_core.c:42:15: note: shadowed declaration is here
+   42 |         Token t = lexer_peek(l);
+      |               ^
+src/parser/parser_core.c:513:31: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  513 |                         Token t = lexer_next(l);
+      |                               ^
+src/parser/parser_core.c:42:15: note: shadowed declaration is here
+   42 |         Token t = lexer_peek(l);
+      |               ^
+src/parser/parser_core.c:570:35: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  570 |                             Token t = lexer_next(l);
+      |                                   ^
+src/parser/parser_core.c:42:15: note: shadowed declaration is here
+   42 |         Token t = lexer_peek(l);
+      |               ^
+src/parser/parser_core.c:783:27: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  783 |                     Token t = lexer_next(l);
+      |                           ^
+src/parser/parser_core.c:42:15: note: shadowed declaration is here
+   42 |         Token t = lexer_peek(l);
+      |               ^
+src/parser/parser_stmt.c: In function ‘parse_asm’:
+src/parser/parser_stmt.c:652:15: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  652 |         Token t = lexer_peek(l);
+      |               ^
+src/parser/parser_stmt.c:627:11: note: shadowed declaration is here
+  627 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_stmt.c:779:19: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  779 |             Token t = lexer_peek(l);
+      |                   ^
+src/parser/parser_stmt.c:627:11: note: shadowed declaration is here
+  627 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_stmt.c:837:19: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  837 |             Token t = lexer_peek(l);
+      |                   ^
+src/parser/parser_stmt.c:627:11: note: shadowed declaration is here
+  627 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c: In function ‘create_fstring_block’:
+src/parser/parser_stmt.c:893:19: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  893 |             Token t = lexer_peek(l);
+      |                   ^
+src/parser/parser_stmt.c:627:11: note: shadowed declaration is here
+  627 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c:1257:21: warning: declaration of ‘len’ shadows a parameter [-Wshadow]
+ 1257 |                 int len = next.len < 63 ? next.len : 63;
+      |                     ^~~
+src/parser/parser_expr.c:1016:97: note: shadowed declaration is here
+ 1016 | static ASTNode *create_fstring_block(ParserContext *ctx, Token parent_token, char *content, int len)
+      |                                                                                             ~~~~^~~
+src/parser/parser_expr.c: In function ‘parse_primary’:
+src/parser/parser_expr.c:1770:19: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 1770 |             Token t = lexer_next(l);
+      |                   ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_stmt.c: In function ‘parse_statement’:
+src/parser/parser_stmt.c:2252:18: warning: declaration of ‘s’ shadows a previous local [-Wshadow]
+ 2252 |         ASTNode *s = ast_create(NODE_RAW_STMT);
+      |                  ^
+src/parser/parser_stmt.c:2235:14: note: shadowed declaration is here
+ 2235 |     ASTNode *s = NULL;
+      |              ^
+src/parser/parser_stmt.c:2366:22: warning: declaration of ‘s’ shadows a previous local [-Wshadow]
+ 2366 |             ASTNode *s = parse_statement(ctx, &new_l);
+      |                      ^
+src/parser/parser_stmt.c:2235:14: note: shadowed declaration is here
+ 2235 |     ASTNode *s = NULL;
+      |              ^
+src/parser/parser_stmt.c:2468:22: warning: declaration of ‘s’ shadows a previous local [-Wshadow]
+ 2468 |             ASTNode *s = ast_create(NODE_RAW_STMT);
+      |                      ^
+src/parser/parser_expr.c:2885:27: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 2885 |                     Type *t = args[i]->type_info;
+      |                           ^
+src/parser/parser_stmt.c:2235:14: note: shadowed declaration is here
+ 2235 |     ASTNode *s = NULL;
+      |              ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_expr.c:2989:31: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 2989 |                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+      |                               ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_stmt.c:2802:19: warning: declaration of ‘lookahead’ shadows a previous local [-Wshadow]
+ 2802 |             Lexer lookahead = *l;
+      |                   ^~~~~~~~~
+src/parser/parser_stmt.c:2416:15: note: shadowed declaration is here
+ 2416 |         Lexer lookahead = *l;
+      |               ^~~~~~~~~
+src/parser/parser_expr.c:3359:31: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 3359 |                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+      |                               ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_stmt.c: In function ‘parse_import’:
+src/parser/parser_expr.c:3720:31: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 3720 |                         Token t = lexer_next(l);
+      |                               ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_stmt.c:3608:19: warning: declaration of ‘next’ shadows a previous local [-Wshadow]
+ 3608 |             Token next = lexer_peek(l);
+      |                   ^~~~
+src/parser/parser_stmt.c:3516:11: note: shadowed declaration is here
+ 3516 |     Token next = lexer_peek(l);
+      |           ^~~~
+src/parser/parser_expr.c:4064:31: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 4064 |                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+      |                               ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_expr.c:4109:23: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 4109 |                 Token t = lexer_next(l);
+      |                       ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_expr.c:4140:23: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 4140 |                 Token t = lexer_next(l);
+      |                       ^
+src/parser/parser_expr.c:1669:11: note: shadowed declaration is here
+ 1669 |     Token t = lexer_next(l);
+      |           ^
+src/parser/parser_expr.c: In function ‘parse_expr_prec’:
+src/parser/parser_expr.c:4660:27: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 4660 |                     Type *t = args[i]->type_info;
+      |                           ^
+src/parser/parser_expr.c:4598:11: note: shadowed declaration is here
+ 4598 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c:5579:31: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 5579 |                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+      |                               ^
+src/parser/parser_expr.c:4598:11: note: shadowed declaration is here
+ 4598 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c:5767:23: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 5767 |                 Type *t = lhs->type_info;
+      |                       ^
+src/parser/parser_expr.c:4598:11: note: shadowed declaration is here
+ 4598 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_type.c: In function ‘parse_type_base’:
+src/parser/parser_type.c:295:27: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+  295 |                     Type *t = type_new(name[0] == 'u' ? TYPE_UBITINT : TYPE_BITINT);
+      |                           ^
+src/parser/parser_type.c:8:11: note: shadowed declaration is here
+    8 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c:6221:31: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 6221 |                         Type *t = parse_type_formal(ctx, l);
+      |                               ^
+src/parser/parser_expr.c:4598:11: note: shadowed declaration is here
+ 4598 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c:6350:23: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 6350 |                 Type *t = find_symbol_type_info(ctx, rhs->var_ref.name);
+      |                       ^
+src/parser/parser_expr.c:4598:11: note: shadowed declaration is here
+ 4598 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c:6470:23: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 6470 |                 Type *t = find_symbol_type_info(ctx, lhs->var_ref.name);
+      |                       ^
+src/parser/parser_expr.c:4598:11: note: shadowed declaration is here
+ 4598 |     Token t = lexer_peek(l);
+      |           ^
+src/parser/parser_expr.c:6496:27: warning: declaration of ‘t’ shadows a previous local [-Wshadow]
+ 6496 |                     Type *t = find_symbol_type_info(ctx, base->var_ref.name);
+      |                           ^
+src/parser/parser_expr.c:4598:11: note: shadowed declaration is here
+ 4598 |     Token t = lexer_peek(l);
+      |           ^

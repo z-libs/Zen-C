@@ -1,0 +1,34 @@
+import "std/io.zc"
+import "std/string.zc"
+
+enum Emotion {
+    IDLE,
+    HAPPY,
+    SAD,
+    THINKING,
+    PANIC
+}
+
+struct CompanionState {
+    emotion: Emotion;
+    message: String;
+}
+
+impl CompanionState {
+    fn new() -> CompanionState {
+        return CompanionState {
+            emotion: Emotion::IDLE,
+            message: String::from("Ready to compute!")
+        };
+    }
+
+    fn set_emotion(self, e: Emotion, msg: char*) {
+        self.emotion = e;
+        self.message.free();
+        self.message = String::from(msg);
+    }
+    
+    fn free(self) {
+        self.message.free();
+    }
+}

@@ -1,0 +1,221 @@
+--- src/parser/parser_core.c ---
+Line 297:
+ 295:                         while (1)
+ 296:                         {
+ 297:                             Token t = lexer_next(l);
+ 298:                             if (t.type == TOK_IDENT && t.len == 3 &&
+ 299:                                 strncmp(t.start, "not", 3) == 0)
+
+Line 391:
+ 389:                         while (1)
+ 390:                         {
+ 391:                             Token t = lexer_next(l);
+ 392:                             if (t.type == TOK_IDENT && t.len == 3 &&
+ 393:                                 strncmp(t.start, "not", 3) == 0)
+
+Line 513:
+ 511:                     while (1)
+ 512:                     {
+ 513:                         Token t = lexer_next(l);
+ 514:                         if (t.type != TOK_IDENT)
+ 515:                         {
+
+Line 570:
+ 568:                         while (1)
+ 569:                         {
+ 570:                             Token t = lexer_next(l);
+ 571:                             new_attr->args =
+ 572:                                 realloc(new_attr->args, sizeof(char *) * (new_attr->arg_count + 1));
+
+Line 783:
+ 781:                 while (depth > 0)
+ 782:                 {
+ 783:                     Token t = lexer_next(l);
+ 784:                     if (t.type == TOK_EOF)
+ 785:                     {
+
+--- src/parser/parser_stmt.c ---
+Line 652:
+ 650:     while (1)
+ 651:     {
+ 652:         Token t = lexer_peek(l);
+ 653: 
+ 654:         // Check for end of asm block or start of operands
+
+Line 779:
+ 777:         while (1)
+ 778:         {
+ 779:             Token t = lexer_peek(l);
+ 780:             if (t.type == TOK_COLON || t.type == TOK_RBRACE)
+ 781:             {
+
+Line 837:
+ 835:         while (1)
+ 836:         {
+ 837:             Token t = lexer_peek(l);
+ 838:             if (t.type == TOK_COLON || t.type == TOK_RBRACE)
+ 839:             {
+
+Line 893:
+ 891:         while (1)
+ 892:         {
+ 893:             Token t = lexer_peek(l);
+ 894:             if (t.type == TOK_RBRACE)
+ 895:             {
+
+Line 2252:
+2250:         content[tk.len] = '\n'; // Ensure newline
+2251:         content[tk.len + 1] = 0;
+2252:         ASTNode *s = ast_create(NODE_RAW_STMT);
+2253:         s->raw_stmt.content = content;
+2254:         return s;
+
+Line 2366:
+2364:         while (lexer_peek(&new_l).type != TOK_EOF)
+2365:         {
+2366:             ASTNode *s = parse_statement(ctx, &new_l);
+2367:             if (!s)
+2368:             {
+
+Line 2468:
+2466:             content[len] = 0;
+2467: 
+2468:             ASTNode *s = ast_create(NODE_RAW_STMT);
+2469:             s->raw_stmt.content = normalize_raw_content(content);
+2470:             free(content);
+
+Line 2802:
+2800:         // Label detection: identifier followed by : (but not ::)
+2801:         {
+2802:             Lexer lookahead = *l;
+2803:             Token ident = lexer_next(&lookahead);
+2804:             Token maybe_colon = lexer_peek(&lookahead);
+
+Line 3608:
+3606: 
+3607:             // Check for 'as alias'
+3608:             Token next = lexer_peek(l);
+3609:             if (next.type == TOK_IDENT && next.len == 2 && strncmp(next.start, "as", 2) == 0)
+3610:             {
+
+--- src/parser/parser_expr.c ---
+Line 1257:
+1255:                 // Use a temporary buffer for the token to ensure safe printing
+1256:                 char tok_buf[64];
+1257:                 int len = next.len < 63 ? next.len : 63;
+1258:                 strncpy(tok_buf, next.start, len);
+1259:                 tok_buf[len] = '\0';
+
+Line 1770:
+1768:         skip_comments(l);
+1769:         {
+1770:             Token t = lexer_next(l);
+1771:             if (t.type != TOK_LBRACE)
+1772:             {
+
+Line 2885:
+2883:                 for (int i = 0; i < ac; i++)
+2884:                 {
+2885:                     Type *t = args[i]->type_info;
+2886:                     if (!t && args[i]->type == NODE_EXPR_VAR)
+2887:                     {
+
+Line 2989:
+2987:                     if (arg && arg->type == NODE_EXPR_VAR)
+2988:                     {
+2989:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+2990:                         if (!t)
+2991:                         {
+
+Line 3359:
+3357:                     if (arg && arg->type == NODE_EXPR_VAR)
+3358:                     {
+3359:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+3360:                         if (!t)
+3361:                         {
+
+Line 3720:
+3718:                     char *cast_type = type_to_string(cast_type_obj);
+3719:                     {
+3720:                         Token t = lexer_next(l);
+3721:                         if (t.type != TOK_RPAREN)
+3722:                         {
+
+Line 4064:
+4062:                     if (arg && arg->type == NODE_EXPR_VAR)
+4063:                     {
+4064:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+4065:                         if (!t)
+4066:                         {
+
+Line 4109:
+4107:             }
+4108:             {
+4109:                 Token t = lexer_next(l);
+4110:                 if (t.type != TOK_RPAREN)
+4111:                 {
+
+Line 4140:
+4138:             ASTNode *index = parse_expression(ctx, l);
+4139:             {
+4140:                 Token t = lexer_next(l);
+4141:                 if (t.type != TOK_RBRACKET)
+4142:                 {
+
+Line 4660:
+4658:                 for (int i = 0; i < ac; i++)
+4659:                 {
+4660:                     Type *t = args[i]->type_info;
+4661:                     if (!t && args[i]->type == NODE_EXPR_VAR)
+4662:                     {
+
+Line 5579:
+5577:                     if (arg && arg->type == NODE_EXPR_VAR)
+5578:                     {
+5579:                         Type *t = find_symbol_type_info(ctx, arg->var_ref.name);
+5580:                         if (!t)
+5581:                         {
+
+Line 5767:
+5765: 
+5766:                 char *struct_name = NULL;
+5767:                 Type *t = lhs->type_info;
+5768:                 int is_ptr = 0;
+5769: 
+
+Line 6221:
+6219:                     while (1)
+6220:                     {
+6221:                         Type *t = parse_type_formal(ctx, l);
+6222:                         concrete[argc] = type_to_string(t);
+6223:                         unmangled[argc] = type_to_c_string(t);
+
+Line 6350:
+6348:             if (rhs->type == NODE_EXPR_VAR)
+6349:             {
+6350:                 Type *t = find_symbol_type_info(ctx, rhs->var_ref.name);
+6351:                 // If type info not on var, try looking up symbol
+6352:                 if (!t)
+
+Line 6470:
+6468:             {
+6469:                 // Check if the variable is const
+6470:                 Type *t = find_symbol_type_info(ctx, lhs->var_ref.name);
+6471:                 if (t && t->is_const)
+6472:                 {
+
+Line 6496:
+6494:                 if (base && base->type == NODE_EXPR_VAR)
+6495:                 {
+6496:                     Type *t = find_symbol_type_info(ctx, base->var_ref.name);
+6497:                     if (t && t->is_const)
+6498:                     {
+
+--- src/parser/parser_type.c ---
+Line 295:
+ 293:                     }
+ 294: 
+ 295:                     Type *t = type_new(name[0] == 'u' ? TYPE_UBITINT : TYPE_BITINT);
+ 296:                     t->array_size = width;
+ 297:                     free(name);
+

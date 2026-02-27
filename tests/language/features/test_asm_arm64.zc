@@ -1,0 +1,53 @@
+fn test_nop() {
+    asm { nop }
+}
+
+fn test_yield() {
+    asm { yield }
+}
+
+fn test_multiline() {
+    asm {
+        mov x0, 1
+        mov x1, 2
+        add x0, x0, x1
+    }
+}
+
+fn test_volatile() {
+    asm volatile {
+        isb
+    }
+}
+
+test "test_asm_arm64" {
+    println "Testing inline assembly...";
+    
+    test_nop();
+    test_yield();
+    test_multiline();
+    test_volatile();
+    
+    println "-> Assembly blocks compiled successfully!";
+}
+
+fn add_five(x: int) -> int {
+    let result: int;
+    asm {
+        "add {result}, {x}, 5"
+        : out(result)
+        : in(x)
+    }
+    return result;
+}
+
+test "test_asm_params_arm64" {
+    println "Testing assembly parameters...";
+    let val = add_five(10);
+    if (val == 15) {
+        println "-> Success! add_five(10) = 15";
+    } else {
+        println "-> Failed: expected 15, got {val}";
+        exit(1);
+    }
+}

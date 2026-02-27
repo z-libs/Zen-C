@@ -1,0 +1,13 @@
+fn twod(a: f64[2][2]) {
+    for i in 0 .. 2 {
+        for j in 0 .. 2 {
+            println "{a[i][j]}"
+        }
+    }
+}
+
+fn main() {
+    // b is a contiguous double[2][2]
+    let b: f64[2][2] = [[1.0, 2.0], [3.0, 4.0]];
+    twod(b);
+}

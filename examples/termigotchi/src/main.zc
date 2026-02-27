@@ -1,0 +1,79 @@
+//> include: src
+//> cflags: -Isrc
+import "termbox2.h" as tb;
+import "std/string.zc";
+import "std/process.zc";
+import "./state.zc";
+import "./ui.zc";
+
+extern struct tb_event;
+
+fn main() -> int {
+    let err = tb::tb_init();
+    if err != 0 {
+        printf("tb_init() failed with error code %d\n", err);
+        return 1;
+    }
+
+    let state = CompanionState::new();
+    let prompt = String::from("");
+    let last_output = String::from("");
+
+    let ev: tb_event;
+    while (true) {
+        UI::render(&state, &prompt, &last_output);
+
+        // Blocking event loop since it's an interactive shell now
+        tb::tb_poll_event(&ev);
+        
+        if ev.type == 1 { // Key event
+            if ev.key == 0x03 { // Ctrl-C to quit
+                break;
+            } else if ev.key == tb::TB_KEY_BACKSPACE || ev.key == tb::TB_KEY_BACKSPACE2 {
+                let len = prompt.length();
+                if len > 0 {
+                    let new_prompt = prompt.substring(0, len - 1);
+                    prompt.free();
+                    prompt = new_prompt;
+                }
+            } else if ev.key == tb::TB_KEY_ENTER {
+                if prompt.length() > 0 {
+                    state.set_emotion(Emotion::THINKING, "Executing...");
+                    UI::render(&state, &prompt, &last_output);
+
+                    let cmd = Command::new("bash");
+                    let arg1 = cmd.arg("-c");
+                    let arg2 = arg1.arg(prompt.c_str());
+
+                    let out = arg2.output();
+                    
+                    last_output.free();
+                    last_output = String::from(out.std_out.c_str());
+                    
+                    if out.exit_code == 0 {
+                        state.set_emotion(Emotion::HAPPY, "Success!");
+                    } else {
+                        state.set_emotion(Emotion::SAD, "That didn't work...");
+                    }
+
+                    out.std_out.free();
+                    arg2.free();
+                    
+                    prompt.free();
+                    prompt = String::from("");
+                }
+            } else if ev.ch != 0 {
+                let tmp: char[2];
+                tmp[0] = (char)ev.ch;
+                tmp[1] = 0;
+                prompt.append_c(tmp);
+            }
+        }
+    }
+
+    state.free();
+    prompt.free();
+    last_output.free();
+    tb::tb_shutdown();
+    return 0;
+}
