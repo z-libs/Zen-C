@@ -1439,7 +1439,17 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                     if (idx >= 0)
                     {
                         // Replace with %N
-                        dst += sprintf(dst, "%%%d", idx);
+#if defined(ZC_ARCH_ARM64)
+                        // Use most optimal register size on arm architectures
+                        if (node->asm_stmt.register_size <= 32)
+                        {
+                            dst += sprintf(dst, "%%w%d", idx);
+                        }
+                        else
+#endif
+                        {
+                            dst += sprintf(dst, "%%%d", idx);
+                        }
                     }
                     else
                     {

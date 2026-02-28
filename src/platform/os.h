@@ -35,6 +35,19 @@
 #include <limits.h> /* PATH_MAX */
 #endif
 
+// Target architecture
+#if defined(__aarch64__)
+#define ZC_ARCH_ARM64 1
+#elif defined(__arm__)
+#define ZC_ARCH_ARM32 1
+#elif defined(__x86_64__) || defined(_M_X64)
+#define ZC_ARCH_X64 1
+#elif defined(__i386__) || defined(_M_IX86)
+#define ZC_ARCH_X86 1
+#else
+#error Add definition for this preprocessors to identify target cpu architecture
+#endif
+
 // Path helpers
 static inline int z_is_abs_path(const char *p)
 {

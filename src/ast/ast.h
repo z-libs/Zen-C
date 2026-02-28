@@ -558,6 +558,7 @@ struct ASTNode
         {
             char *code;
             int is_volatile;
+            int register_size; // The register size to use of 32/64/128 bits
             char **outputs;
             char **output_modes;
             char **inputs;

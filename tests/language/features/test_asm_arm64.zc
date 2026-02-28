@@ -31,8 +31,18 @@ test "test_asm_arm64" {
     println "-> Assembly blocks compiled successfully!";
 }
 
-fn add_five(x: int) -> int {
+fn add_five_32_bit(x: int) -> int {
     let result: int;
+    asm {
+        "add {result}, {x}, #5"
+        : out(result)
+        : in(x)
+    }
+    return result;
+}
+
+fn add_five_64_bit(x: i64) -> i64 {
+    let result: i64;
     asm {
         "add {result}, {x}, #5"
         : out(result)
@@ -43,9 +53,20 @@ fn add_five(x: int) -> int {
 
 test "test_asm_params_arm64" {
     println "Testing assembly parameters...";
-    let val = add_five(10);
+    let val = add_five_32_bit(10);
     if (val == 15) {
-        println "-> Success! add_five(10) = 15";
+        println "-> Success! add_five_32_bit(10) = 15";
+    } else {
+        println "-> Failed: expected 15, got {val}";
+        exit(1);
+    }
+}
+
+test "test_asm_64_bit_register_arm64" {
+    println "Testing assembly parameters...";
+    let val = add_five_64_bit(10);
+    if (val == 15) {
+        println "-> Success! add_five_64_bit(10) = 15";
     } else {
         println "-> Failed: expected 15, got {val}";
         exit(1);

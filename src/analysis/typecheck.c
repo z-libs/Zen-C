@@ -114,6 +114,25 @@ static int is_char_type(Type *t)
     return 0;
 }
 
+static int get_asm_register_size(Type *t)
+{
+    if (!t)
+    {
+        return 0;
+    }
+    if (t->kind == TYPE_F64 || t->kind == TYPE_I64 || t->kind == TYPE_U64 ||
+        (t->kind == TYPE_STRUCT && t->name &&
+         (0 == strcmp(t->name, "int64_t") || 0 == strcmp(t->name, "uint64_t"))))
+    {
+        return 64;
+    }
+    if (t->kind == TYPE_I128 || t->kind == TYPE_U128)
+    {
+        return 128;
+    }
+    return 32;
+}
+
 // ** Node Checkers **
 
 static void check_node(TypeChecker *tc, ASTNode *node);
@@ -1525,23 +1544,49 @@ static void check_node(TypeChecker *tc, ASTNode *node)
     case NODE_ASM:
         for (int i = 0; i < node->asm_stmt.num_outputs; i++)
         {
-            if (!tc_lookup(tc, node->asm_stmt.outputs[i]))
+            ZenSymbol *sym = tc_lookup(tc, node->asm_stmt.outputs[i]);
+            if (!sym)
             {
                 char msg[256];
                 snprintf(msg, sizeof(msg), "Undefined output variable in inline assembly: '%s'",
                          node->asm_stmt.outputs[i]);
                 tc_error(tc, node->token, msg);
             }
+            else if (sym->type_info)
+            {
+                int width = get_asm_register_size(sym->type_info);
+                if (width > node->asm_stmt.register_size)
+                {
+                    node->asm_stmt.register_size = width;
+                }
+            }
         }
         for (int i = 0; i < node->asm_stmt.num_inputs; i++)
         {
-            if (!tc_lookup(tc, node->asm_stmt.inputs[i]))
+            ZenSymbol *sym = tc_lookup(tc, node->asm_stmt.inputs[i]);
+            if (!sym)
             {
                 char msg[256];
                 snprintf(msg, sizeof(msg), "Undefined input variable in inline assembly: '%s'",
                          node->asm_stmt.inputs[i]);
                 tc_error(tc, node->token, msg);
             }
+            else if (sym->type_info)
+            {
+                int width = get_asm_register_size(sym->type_info);
+                if (width > node->asm_stmt.register_size)
+                {
+                    node->asm_stmt.register_size = width;
+                }
+            }
+        }
+        if (node->asm_stmt.register_size > 64)
+        {
+            char msg[256];
+            snprintf(msg, sizeof(msg),
+                     "Unsupported register size is required in inline assembly: %i bits",
+                     node->asm_stmt.register_size);
+            tc_error(tc, node->token, msg);
         }
         break;
     case NODE_LAMBDA:
