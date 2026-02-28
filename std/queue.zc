@@ -27,7 +27,7 @@ impl Queue<T> {
 
   fn _grow(self) {
     let new_cap = (self.cap == 0) ? 8 : self.cap * 2;
-    let new_data = malloc(sizeof(T) * new_cap);
+    let new_data: T* = malloc(sizeof(T) * new_cap);
     
     if (self.count > 0) {
         if (self.tail > self.head) {

@@ -70,20 +70,15 @@ test "Queue Ring Buffer (Advanced)" {
     q.push(3);
     assert(*q.pop().unwrap_ref() == 1);
     
-    println "Pushing until capacity (assume 8)"
-    q.push(4); q.push(5); q.push(6); q.push(7); q.push(8); q.push(9);
+    println "Pushing just over capacity (assume 8)"
+    q.push(4); q.push(5); q.push(6); q.push(7); q.push(8); q.push(9); q.push(10);
     
-    println "Popping some to advance head"
-    assert(*q.pop().unwrap_ref() == 2);
-    assert(*q.pop().unwrap_ref() == 3);
-    
-    println "Pushing to wrap tail"
-    q.push(10);
-    q.push(11);
-    
-    while (!q.is_empty()) {
-        q.pop();
+    println "Testing grow logic when tail is behind head"
+    for i in 2..=10 {
+        assert(*q.pop().unwrap_ref() == i);
     }
+
+    assert(q.is_empty());
     
     println "Testing clear"
     q.push(100);
