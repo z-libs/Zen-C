@@ -8,9 +8,9 @@ fn test_yield() {
 
 fn test_multiline() {
     asm {
-        mov x0, 1
-        mov x1, 2
-        add x0, x0, x1
+        "mov x0, #1"
+        "mov x1, #2"
+        "add x0, x0, x1"
     }
 }
 
@@ -34,7 +34,7 @@ test "test_asm_arm64" {
 fn add_five(x: int) -> int {
     let result: int;
     asm {
-        "add {result}, {x}, 5"
+        "add {result}, {x}, #5"
         : out(result)
         : in(x)
     }
