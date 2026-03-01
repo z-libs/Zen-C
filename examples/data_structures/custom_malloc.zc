@@ -1,0 +1,131 @@
+import "std/core.zc"
+import "sys/mman.h" as mman;
+
+struct BlockHeader {
+    size: usize;
+    is_free: bool;
+    next: BlockHeader*;
+}
+
+struct Allocator {
+    memory_pool: u8*;
+    pool_size: usize;
+    free_list: BlockHeader*;
+}
+
+impl Allocator {
+    fn new(pool_size: usize) -> Self {
+        let pool = (u8*)mman::mmap(NULL, pool_size, mman::PROT_READ | mman::PROT_WRITE, mman::MAP_PRIVATE | mman::MAP_ANONYMOUS, -1, 0);
+        
+        let map_failed = (void*)(-1);
+        if pool == (u8*)map_failed {
+            eprintln "Fatal: Failed to allocate underlying memory pool with mmap.";
+            exit(1);
+        }
+
+        let alloc = Allocator {
+            memory_pool: pool,
+            pool_size: pool_size,
+            free_list: (BlockHeader*)pool
+        };
+
+        alloc.free_list.size = pool_size - sizeof(BlockHeader);
+        alloc.free_list.is_free = true;
+        alloc.free_list.next = NULL;
+        return alloc;
+    }
+
+    fn alloc(self, size: usize) -> void* {
+        if size == 0 return NULL;
+
+        let curr = self.free_list;
+        while curr != NULL {
+            if curr.is_free && curr.size >= size {
+                if curr.size > size + sizeof(BlockHeader) + 8 {
+                    let split_block = (BlockHeader*)(((u8*)curr) + sizeof(BlockHeader) + size);
+                    split_block.size = curr.size - size - sizeof(BlockHeader);
+                    split_block.is_free = true;
+                    split_block.next = curr.next;
+                    
+                    curr.size = size;
+                    curr.is_free = false;
+                    curr.next = split_block;
+                } else {
+                    curr.is_free = false;
+                }
+                return (void*)(((u8*)curr) + sizeof(BlockHeader));
+            }
+            curr = curr.next;
+        }
+        return NULL;
+    }
+
+    fn free(self, ptr: void*) {
+        if ptr == NULL return;
+
+        let header = (BlockHeader*)(((u8*)ptr) - sizeof(BlockHeader));
+        header.is_free = true;
+
+        let curr = self.free_list;
+        while curr != NULL {
+            if curr.is_free && curr.next != NULL && curr.next.is_free {
+                let expected_next = (BlockHeader*)(((u8*)curr) + sizeof(BlockHeader) + curr.size);
+                if expected_next == curr.next {
+                    curr.size = curr.size + sizeof(BlockHeader) + curr.next.size;
+                    curr.next = curr.next.next;
+                    continue;
+                }
+            }
+            curr = curr.next;
+        }
+    }
+
+    fn print_state(self) {
+        println "--- Memory State ---";
+        let curr = self.free_list;
+        let i = 0;
+        while curr != NULL {
+            println "Block {i}: size={curr.size}, free={(int)curr.is_free}";
+            curr = curr.next;
+            i += 1;
+        }
+        println "--------------------\n";
+    }
+}
+
+impl Drop for Allocator {
+    fn drop(self) {
+        if self.memory_pool != NULL {
+            mman::munmap((void*)self.memory_pool, self.pool_size);
+        }
+    }
+}
+
+fn main() {
+    def POOL_SIZE = 1024 * 1024;
+    println "Memory Pool Size: {POOL_SIZE} bytes";
+    println "BlockHeader Overhead: {sizeof(BlockHeader)} bytes\n";
+    
+    let allocator = Allocator::new(POOL_SIZE);
+    
+    let ptr1 = (int*)allocator.alloc(sizeof(int) * 10);
+    println "Allocated ptr1 (10 ints = {sizeof(int) * 10} bytes)";
+    allocator.print_state();
+
+    let ptr2 = (int*)allocator.alloc(sizeof(int) * 50);
+    println "Allocated ptr2 (50 ints = {sizeof(int) * 50} bytes)";
+    allocator.print_state();
+    
+    println "Freeing ptr1...";
+    allocator.free((void*)ptr1);
+    allocator.print_state();
+
+    let ptr3 = (int*)allocator.alloc(sizeof(int) * 5);
+    println "Allocated ptr3 (5 ints = {sizeof(int) * 5} bytes). Should split and fit in ptr1's old freed spot!";
+    allocator.print_state();
+    
+    println "Freeing all remaining pointers to trigger coalescing...";
+    allocator.free((void*)ptr2);
+    allocator.free((void*)ptr3);
+    allocator.print_state();
+}
