@@ -254,7 +254,7 @@ static char *quote_arg(const char *arg)
     char *p = result;
     *p++ = '\"';
 
-    for (size_t i = 0; i < len; )
+    for (size_t i = 0; i < len;)
     {
         int num_backslashes = 0;
         while (i < len && arg[i] == '\\')
@@ -265,18 +265,27 @@ static char *quote_arg(const char *arg)
 
         if (i == len)
         {
-            for (int k = 0; k < num_backslashes * 2; k++) *p++ = '\\';
+            for (int k = 0; k < num_backslashes * 2; k++)
+            {
+                *p++ = '\\';
+            }
             break;
         }
         else if (arg[i] == '\"')
         {
-            for (int k = 0; k < num_backslashes * 2 + 1; k++) *p++ = '\\';
+            for (int k = 0; k < num_backslashes * 2 + 1; k++)
+            {
+                *p++ = '\\';
+            }
             *p++ = '\"';
             i++;
         }
         else
         {
-            for (int k = 0; k < num_backslashes; k++) *p++ = '\\';
+            for (int k = 0; k < num_backslashes; k++)
+            {
+                *p++ = '\\';
+            }
             *p++ = arg[i];
             i++;
         }

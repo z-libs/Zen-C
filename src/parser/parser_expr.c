@@ -2527,13 +2527,13 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     is_struct_init = 1;
                 }
             }
-            
+
             // Allow primitive types to be initialized with positional values e.g., int{5}
             if (!is_struct_init && is_primitive_type_name(acc))
             {
                 is_struct_init = 1;
             }
-            
+
             if (is_struct_init)
             {
                 // Special case for primitive types (e.g. i32{})
@@ -2549,7 +2549,10 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                         node->literal.int_val = 0;
                         // Determine type kind from name
                         TypeKind tk = get_primitive_type_kind(acc);
-                        if (tk == TYPE_UNKNOWN) tk = TYPE_INT; // fallback
+                        if (tk == TYPE_UNKNOWN)
+                        {
+                            tk = TYPE_INT; // fallback
+                        }
 
                         if (tk == TYPE_F32 || tk == TYPE_F64 || tk == TYPE_FLOAT)
                         {
@@ -2568,14 +2571,17 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                             zpanic_at(lexer_peek(l), "Expected '}' after primitive initialization");
                         }
                         lexer_next(l); // Eat }
-                        
+
                         ASTNode *cast = ast_create(NODE_EXPR_CAST);
                         cast->cast.target_type = xstrdup(acc);
                         cast->cast.expr = node;
-                        
+
                         TypeKind tk = get_primitive_type_kind(acc);
-                        if (tk == TYPE_UNKNOWN) tk = TYPE_INT;
-                        
+                        if (tk == TYPE_UNKNOWN)
+                        {
+                            tk = TYPE_INT;
+                        }
+
                         cast->type_info = type_new(tk);
                         return cast;
                     }
