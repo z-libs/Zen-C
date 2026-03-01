@@ -4417,14 +4417,20 @@ int validate_types(ParserContext *ctx)
     while (u)
     {
         ASTNode *def = find_struct_def(ctx, u->name);
-        const char *alias = find_type_alias(ctx, u->name);
-
-        if (!def && !alias)
+        if (!def)
         {
-            SelectiveImport *si = find_selective_import(ctx, u->name);
-            if (!si && !is_trait(u->name))
+            const char *alias = find_type_alias(ctx, u->name);
+            if (!alias)
             {
-                zwarn_at(u->location, "Unknown type '%s' (assuming external C struct)", u->name);
+                SelectiveImport *si = find_selective_import(ctx, u->name);
+                if (!si && !is_extern_symbol(ctx, u->name))
+                {
+                    if (!is_trait(u->name))
+                    {
+                        zwarn_at(u->location, "Unknown type '%s' (assuming external C struct)",
+                                 u->name);
+                    }
+                }
             }
         }
         u = u->next;

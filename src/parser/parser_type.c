@@ -84,6 +84,8 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                     // To prevent name mangling, we might consider changing
                     // this to also use the prefix.
                     merged = xstrdup(resolved_suffix);
+
+                    register_extern_symbol(ctx, merged);
                 }
                 else
                 {
