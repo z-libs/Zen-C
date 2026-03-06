@@ -67,7 +67,8 @@ void print_usage()
     printf("  " COLOR_CYAN "--freestanding" COLOR_RESET "  Freestanding mode (no stdlib)\n");
     printf("  " COLOR_CYAN "--cc" COLOR_RESET
            " <compiler> C compiler to use (gcc, clang, tcc, zig)\n");
-    printf("  " COLOR_CYAN "--check" COLOR_RESET "         Enable semantic analysis (types, borrows, moves)\n");
+    printf("  " COLOR_CYAN "--check" COLOR_RESET
+           "         Enable semantic analysis (types, borrows, moves)\n");
     printf("  " COLOR_CYAN "--json" COLOR_RESET "          Emit diagnostics as JSON\n");
     printf("  " COLOR_CYAN "--no-zen" COLOR_RESET "        Disable Zen facts\n");
     printf("  " COLOR_CYAN "--cpp" COLOR_RESET "           Use C++ mode\n");
