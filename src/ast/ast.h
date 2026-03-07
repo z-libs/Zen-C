@@ -17,10 +17,11 @@ typedef struct ASTNode ASTNode;
  */
 typedef enum
 {
-    LITERAL_INT = 0,    ///< Integer literal.
-    LITERAL_FLOAT = 1,  ///< Floating point literal.
-    LITERAL_STRING = 2, ///< String literal.
-    LITERAL_CHAR = 3    ///< Character literal.
+    LITERAL_INT = 0,       ///< Integer literal.
+    LITERAL_FLOAT = 1,     ///< Floating point literal.
+    LITERAL_STRING = 2,    ///< String literal.
+    LITERAL_CHAR = 3,      ///< Character literal.
+    LITERAL_RAW_STRING = 4 ///< Raw string literal.
 } LiteralKind;
 
 /**

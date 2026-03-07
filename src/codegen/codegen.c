@@ -34,9 +34,22 @@ static const char *get_missing_function_hint(const char *name)
 // Emit literal expression (int, float, string, char)
 static void codegen_literal_expr(ASTNode *node, FILE *out)
 {
-    if (node->literal.type_kind == LITERAL_STRING)
+    if (node->literal.type_kind == LITERAL_STRING || node->literal.type_kind == LITERAL_RAW_STRING)
     {
-        fprintf(out, "\"%s\"", node->literal.string_val);
+        fprintf(out, "\"");
+        for (int i = 0; node->literal.string_val[i]; i++)
+        {
+            if (node->literal.type_kind == LITERAL_RAW_STRING &&
+                node->literal.string_val[i] == '\\')
+            {
+                fprintf(out, "\\\\");
+            }
+            else
+            {
+                fprintf(out, "%c", node->literal.string_val[i]);
+            }
+        }
+        fprintf(out, "\"");
     }
     else if (node->literal.type_kind == LITERAL_CHAR)
     {
