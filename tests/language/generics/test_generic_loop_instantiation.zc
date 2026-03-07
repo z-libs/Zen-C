@@ -1,0 +1,37 @@
+import "std/mem.zc"
+
+struct List<G> {
+    data: G*
+}
+
+impl Drop for List<G> {
+    fn drop(self) {
+        let item = &self.data[0];
+        item.drop(); // Should resolve correct function call
+
+        for i in 0..1 {
+            let item1 = &self.data[i];
+            item1.drop(); // Should resolve correct function call
+        }
+    }
+}
+
+struct Item {}
+impl Drop for Item {
+    fn drop(self) {}
+}
+
+test "test_generic_loop_instantiation" {
+    let list: List<Item> = List<Item> {};
+    list.data = malloc(sizeof(Item));
+    
+    let item = &list.data[0];
+    item.drop(); // Should resolve correct function call
+
+    for i in 0..1 {
+        let item1 = &list.data[i];
+        item1.drop(); // Should resolve correct function call
+    }
+    
+    list.drop(); // Should resolve correct function call
+}

@@ -1433,9 +1433,6 @@ char *replace_in_string(const char *src, const char *old_w, const char *new_w)
 char *replace_type_str(const char *src, const char *param, const char *concrete,
                        const char *old_struct, const char *new_struct)
 {
-    if (src && param && concrete)
-    {
-    }
     if (!src)
     {
         return NULL;
@@ -2220,6 +2217,11 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         new_node->for_stmt.step = copy_ast_replacing(n->for_stmt.step, p, c, os, ns);
         new_node->for_stmt.body = copy_ast_replacing(n->for_stmt.body, p, c, os, ns);
         break;
+    case NODE_FOR_RANGE:
+        new_node->for_range.start = copy_ast_replacing(n->for_range.start, p, c, os, ns);
+        new_node->for_range.end = copy_ast_replacing(n->for_range.end, p, c, os, ns);
+        new_node->for_range.body = copy_ast_replacing(n->for_range.body, p, c, os, ns);
+        break;
 
     case NODE_MATCH_CASE:
         if (n->match_case.pattern)
@@ -2531,6 +2533,11 @@ static void trigger_instantiations(ParserContext *ctx, ASTNode *node)
         trigger_instantiations(ctx, node->for_stmt.condition);
         trigger_instantiations(ctx, node->for_stmt.step);
         trigger_instantiations(ctx, node->for_stmt.body);
+        break;
+    case NODE_FOR_RANGE:
+        trigger_instantiations(ctx, node->for_range.start);
+        trigger_instantiations(ctx, node->for_range.end);
+        trigger_instantiations(ctx, node->for_range.body);
         break;
     case NODE_EXPR_STRUCT_INIT:
         trigger_instantiations(ctx, node->struct_init.fields);

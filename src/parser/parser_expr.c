@@ -574,6 +574,11 @@ static void find_var_refs(ASTNode *node, char ***refs, int *ref_count)
         find_var_refs(node->for_stmt.step, refs, ref_count);
         find_var_refs(node->for_stmt.body, refs, ref_count);
         break;
+    case NODE_FOR_RANGE:
+        find_var_refs(node->for_range.start, refs, ref_count);
+        find_var_refs(node->for_range.end, refs, ref_count);
+        find_var_refs(node->for_range.body, refs, ref_count);
+        break;
     case NODE_MATCH:
         find_var_refs(node->match_stmt.expr, refs, ref_count);
         for (ASTNode *c = node->match_stmt.cases; c; c = c->next)
@@ -632,6 +637,10 @@ static void find_declared_vars(ASTNode *node, char ***decls, int *count)
     case NODE_FOR:
         find_declared_vars(node->for_stmt.init, decls, count);
         find_declared_vars(node->for_stmt.body, decls, count);
+        break;
+    case NODE_FOR_RANGE:
+        find_declared_vars(node->for_range.start, decls, count);
+        find_declared_vars(node->for_range.body, decls, count);
         break;
     case NODE_MATCH:
         for (ASTNode *c = node->match_stmt.cases; c; c = c->next)
