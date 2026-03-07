@@ -658,13 +658,6 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                         s->type_info->kind = TYPE_VECTOR;
                         s->type_info->array_size = attr_vector_size;
                     }
-
-                    if (derived_count > 0)
-                    {
-                        ASTNode *impls =
-                            generate_derive_impls(ctx, s, derived_traits, derived_count);
-                        s->next = impls;
-                    }
                 }
             }
             else if (0 == strncmp(t.start, "enum", 4) && 4 == t.len)
@@ -850,7 +843,6 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 zpanic_at(next, "Expected 'fn' after 'async'");
             }
         }
-
         else if (t.type == TOK_UNION)
         {
             s = parse_struct(ctx, l, 1, 0);
@@ -907,8 +899,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 }
             }
         }
-
-        if (s && s->type == NODE_STRUCT)
+        else if (s && s->type == NODE_STRUCT)
         {
             s->strct.is_export = attr_export;
             s->strct.attributes = current_custom_attributes;
@@ -920,6 +911,11 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             if (attr_deprecated && s->strct.name)
             {
                 register_deprecated_func(ctx, s->strct.name, deprecated_msg);
+            }
+            if (derived_count > 0)
+            {
+                ASTNode *impls = generate_derive_impls(ctx, s, derived_traits, derived_count);
+                s->next = impls;
             }
         }
 
