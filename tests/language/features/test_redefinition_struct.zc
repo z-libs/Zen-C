@@ -1,0 +1,14 @@
+// EXPECT: FAIL
+// Test: struct redefinition should be illegal
+
+struct Point {
+    x: int;
+    y: int;
+}
+
+struct Point {
+    a: int;
+    b: int;
+}
+
+fn main() {}

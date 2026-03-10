@@ -772,6 +772,11 @@ void register_tuple(ParserContext *ctx, const char *sig);
 ASTNode *find_struct_def(ParserContext *ctx, const char *name);
 
 /**
+ * @brief Finds an already-registered concrete struct definition.
+ */
+ASTNode *find_concrete_struct_def(ParserContext *ctx, const char *name);
+
+/**
  * @brief Registers a struct definition.
  */
 void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node);

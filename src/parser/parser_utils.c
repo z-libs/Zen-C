@@ -1208,6 +1208,54 @@ ASTNode *find_struct_def(ParserContext *ctx, const char *name)
     return NULL;
 }
 
+ASTNode *find_concrete_struct_def(ParserContext *ctx, const char *name)
+{
+    Instantiation *i = ctx->instantiations;
+    while (i)
+    {
+        if (strcmp(i->name, name) == 0 && i->struct_node && i->struct_node->type == NODE_STRUCT &&
+            !i->struct_node->strct.is_template)
+        {
+            return i->struct_node;
+        }
+        i = i->next;
+    }
+
+    ASTNode *s = ctx->instantiated_structs;
+    while (s)
+    {
+        if (s->type == NODE_STRUCT && !s->strct.is_template && strcmp(s->strct.name, name) == 0)
+        {
+            return s;
+        }
+        s = s->next;
+    }
+
+    StructRef *r = ctx->parsed_structs_list;
+    while (r)
+    {
+        if (r->node->type == NODE_STRUCT && !r->node->strct.is_template &&
+            strcmp(r->node->strct.name, name) == 0)
+        {
+            return r->node;
+        }
+        r = r->next;
+    }
+
+    StructDef *d = ctx->struct_defs;
+    while (d)
+    {
+        if (d->node && d->node->type == NODE_STRUCT && !d->node->strct.is_template &&
+            strcmp(d->name, name) == 0)
+        {
+            return d->node;
+        }
+        d = d->next;
+    }
+
+    return NULL;
+}
+
 Module *find_module(ParserContext *ctx, const char *alias)
 {
     Module *m = ctx->modules;

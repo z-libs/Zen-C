@@ -873,6 +873,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque)
     Token n = lexer_next(l);
     check_identifier(ctx, n);
     char *name = token_strdup(n);
+    Token name_token = n;
 
     // Generic Params <T> or <K, V>
     char **gps = NULL;
@@ -1083,9 +1084,6 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque)
         }
     }
 
-    ASTNode *node = ast_create(NODE_STRUCT);
-    add_to_struct_list(ctx, node);
-
     // Auto-prefix struct name if in module context
     if (ctx->current_module_prefix && gp_count == 0)
     { // Don't prefix generic templates
@@ -1094,6 +1092,19 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque)
         free(name);
         name = prefixed_name;
     }
+
+    // Generic templates are registered separately and may share the base name.
+    if (gp_count == 0)
+    {
+        ASTNode *existing = find_concrete_struct_def(ctx, name);
+        if (existing)
+        {
+            zpanic_at(name_token, "Redefinition of %s '%s'", is_union ? "union" : "struct", name);
+        }
+    }
+
+    ASTNode *node = ast_create(NODE_STRUCT);
+    add_to_struct_list(ctx, node);
 
     node->strct.name = name;
 
