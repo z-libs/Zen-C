@@ -1,0 +1,6 @@
+import "std/core.zc"
+fn main() {
+    let a: u32 = 255;
+    println "Left shift (a << b):\t\t{a << 3}";
+    println "Logical right shift:\t\t{a >> 3}";
+}

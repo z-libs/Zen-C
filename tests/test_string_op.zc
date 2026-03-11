@@ -1,0 +1,10 @@
+import "std/string.zc"
+
+fn main() {
+    let s1 = String::from("Hello");
+    let s2 = String::from(" World");
+    
+    // Testing '+' operator (maps to `add`)
+    let s3 = s1 + &s2;
+    println "{s3}";
+}

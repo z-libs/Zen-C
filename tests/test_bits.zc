@@ -1,0 +1,58 @@
+import "std/bits.zc"
+import "std/core.zc"
+
+fn main() {
+    println "Testing rots...";
+    // --- Rotations ---
+    let a8: u8 = 0b10000001;
+    assert(Bits::rotl8(a8, 1) == 0b00000011);
+    assert(Bits::rotr8(a8, 1) == 0b11000000);
+
+    let a16: u16 = 0x8001;
+    assert(Bits::rotl16(a16, 1) == 0x0003);
+    assert(Bits::rotr16(a16, 1) == 0xC000);
+    
+    let a32: u32 = 0x80000001;
+    assert(Bits::rotl32(a32, 1) == 0x00000003);
+    assert(Bits::rotr32(a32, 1) == 0xC0000000);
+    
+    let a64: u64 = 0x8000000000000001;
+    assert(Bits::rotl64(a64, 1) == 0x0000000000000003);
+    assert(Bits::rotr64(a64, 1) == 0xC000000000000000);
+
+    let a128: u128 = (((u128)0x8000000000000000) << 64) | 0x1;
+    let b128: u128 = 0x3;
+    let c128: u128 = (((u128)0xC000000000000000) << 64);
+    assert(Bits::rotl128(a128, 1) == b128);
+    assert(Bits::rotr128(a128, 1) == c128);
+
+    // --- Population Count ---
+    assert(Bits::popcount8((u8)0b10101010) == 4);
+    assert(Bits::popcount16((u16)0xFFFF) == 16);
+    assert(Bits::popcount32(0x12345678) == 13);
+    assert(Bits::popcount64(0xF0F0F0F0F0F0F0F0) == 32);
+    assert(Bits::popcount128((((u128)0xFFFFFFFFFFFFFFFF) << 64) | 0xFFFFFFFFFFFFFFFF) == 128);
+
+    // --- CLZ (Count Leading Zeros) ---
+    assert(Bits::clz8((u8)0b00101010) == 2);
+    assert(Bits::clz16((u16)0x00FF) == 8);
+    assert(Bits::clz32(0x00001234) == 19);
+    assert(Bits::clz64(0x00000000FFFFFFFF) == 32);
+    
+    // --- CTZ (Count Trailing Zeros) ---
+    assert(Bits::ctz8((u8)0b10101000) == 3);
+    assert(Bits::ctz16((u16)0xFF00) == 8);
+    assert(Bits::ctz32(0xFFFF0000) == 16);
+
+    // --- Byte Swap ---
+    assert(Bits::bswap16((u16)0x1234) == 0x3412);
+    assert(Bits::bswap32(0x12345678) == 0x78563412);
+    assert(Bits::bswap64(0x1122334455667788) == 0x8877665544332211);
+    
+    // --- Reverse Bits ---
+    assert(Bits::reverse_bits8((u8)0b10100011) == 0b11000101);
+    assert(Bits::reverse_bits16((u16)0x0F00) == 0x00F0);
+    assert(Bits::reverse_bits32(0x0F0F0F0F) == 0xF0F0F0F0);
+
+    println "Bits tests passed successfully!";
+}

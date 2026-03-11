@@ -1,0 +1,33 @@
+import "std/complex.zc"
+
+fn main() {
+    let c1 = Complex::new(3.0, 4.0);
+    let c2 = Complex::new(1.0, 2.0);
+
+    // Test Addition
+    let sum = c1 + c2;
+    assert(sum.real == 4.0, "Add real failed");
+    assert(sum.imag == 6.0, "Add imag failed");
+
+    // Test Subtraction
+    let diff = c1 - c2;
+    assert(diff.real == 2.0, "Sub real failed");
+    assert(diff.imag == 2.0, "Sub imag failed");
+
+    // Test Multiplication
+    // (3 + 4i) * (1 + 2i) = 3 + 6i + 4i + 8i^2 = -5 + 10i
+    let prod = c1 * c2;
+    assert(prod.real == -5.0, "Mul real failed");
+    assert(prod.imag == 10.0, "Mul imag failed");
+
+    // Test Magnitude
+    // sqrt(3^2 + 4^2) = 5
+    let mag = c1.magnitude();
+    assert(mag == 5.0, "Magnitude failed");
+
+    // Test Equality
+    assert(c1 == Complex::new(3.0, 4.0), "Eq failed");
+    assert(c1 != c2, "Neq failed");
+
+    println "All complex tests passed!";
+}

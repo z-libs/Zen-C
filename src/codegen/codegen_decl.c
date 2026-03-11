@@ -64,9 +64,10 @@ static void emit_freestanding_preamble(FILE *out)
           "unsigned long long: \"%llu\", float: \"%f\", double: \"%f\", "
           "char*: \"%s\", const char*: \"%s\", void*: \"%p\" _z_128_map)\n",
           out);
-    fputs(
-        "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(x) _z_128_arg_map(x), default: (x))\n",
-        out);
+    fputs("#define _z_safe_bool(x) _Generic((x), _Bool: (x), default: (_Bool)0)\n"
+          "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(_z_safe_bool(x)) _z_128_arg_map(x), "
+          "default: (x))\n",
+          out);
     fputs("typedef struct { void *func; void *ctx; } z_closure_T;\n", out);
     fputs("static void *_z_closure_ctx_stash[256];\n", out);
 

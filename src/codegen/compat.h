@@ -104,7 +104,9 @@
     "#else\n"                                                                                      \
     "#define _z_128_arg_map(x)\n"                                                                  \
     "#endif\n"                                                                                     \
-    "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(x) _z_128_arg_map(x) _z_objc_arg_map(x), " \
+    "#define _z_safe_bool(x) _Generic((x), _Bool: (x), default: (_Bool)0)\n"                       \
+    "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(_z_safe_bool(x)) _z_128_arg_map(x) "       \
+    "_z_objc_arg_map(x), "                                                                         \
     "default: (x))\n"
 
 #ifdef __cplusplus

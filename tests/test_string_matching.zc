@@ -1,0 +1,37 @@
+import "std/string.zc"
+
+fn main() {
+    let s = String::from("hello world hello");
+
+    // Test starts_with
+    assert(s.starts_with("hello"), "should start with 'hello'");
+    assert(!s.starts_with("world"), "should not start with 'world'");
+
+    // Test ends_with
+    assert(s.ends_with("hello"), "should end with 'hello'");
+    assert(!s.ends_with("world"), "should not end with 'world'");
+
+    // Test contains_str
+    assert(s.contains_str("world"), "should contain 'world'");
+    assert(!s.contains_str("zen"), "should not contain 'zen'");
+
+    // Test find_str
+    let first_hello = s.find_str("hello");
+    assert(first_hello.is_some(), "should find 'hello'");
+    assert(first_hello.unwrap() == 0, "first 'hello' should be at index 0");
+
+    let first_world = s.find_str("world");
+    assert(first_world.is_some(), "should find 'world'");
+    assert(first_world.unwrap() == 6, "'world' should be at index 6");
+
+    let none_zen = s.find_str("zen");
+    assert(none_zen.is_none(), "should not find 'zen'");
+
+    // Test find_all_str
+    let all_hellos = s.find_all_str("hello");
+    assert(all_hellos.len == 2, "should find 2 hellos");
+    assert(all_hellos.get(0) == 0, "first hello at 0");
+    assert(all_hellos.get(1) == 12, "second hello at 12");
+
+    println "All string matching tests passed!";
+}

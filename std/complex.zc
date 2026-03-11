@@ -1,0 +1,79 @@
+import "./core.zc"
+import "./math.zc"
+import "./string.zc"
+
+struct Complex {
+    real: double;
+    imag: double;
+}
+
+impl Complex {
+    fn new(r: double, i: double) -> Complex {
+        return Complex { real: r, imag: i };
+    }
+
+    // Arithmetic Operators
+    fn add(self, other: Complex) -> Complex {
+        return Complex {
+            real: self.real + other.real,
+            imag: self.imag + other.imag
+        };
+    }
+
+    fn sub(self, other: Complex) -> Complex {
+        return Complex {
+            real: self.real - other.real,
+            imag: self.imag - other.imag
+        };
+    }
+
+    fn mul(self, other: Complex) -> Complex {
+        return Complex {
+            real: (self.real * other.real) - (self.imag * other.imag),
+            imag: (self.real * other.imag) + (self.imag * other.real)
+        };
+    }
+
+    fn div(self, other: Complex) -> Complex {
+        let denominator = (other.real * other.real) + (other.imag * other.imag);
+        return Complex {
+            real: ((self.real * other.real) + (self.imag * other.imag)) / denominator,
+            imag: ((self.imag * other.real) - (self.real * other.imag)) / denominator
+        };
+    }
+
+    // Mathematical Properties
+    fn magnitude(self) -> double {
+        return Math::sqrt((self.real * self.real) + (self.imag * self.imag));
+    }
+
+    fn phase(self) -> double {
+        return Math::atan2(self.imag, self.real);
+    }
+
+    // Equality Comparisons
+    fn eq(self, other: Complex) -> bool {
+        return (self.real == other.real) && (self.imag == other.imag);
+    }
+
+    fn neq(self, other: Complex) -> bool {
+        return !self.eq(other);
+    }
+
+    // String Interpolation Support
+    fn to_string(self) -> String {
+        let sign = "+";
+        let im = self.imag;
+        if (im < 0.0) {
+            sign = "-";
+            im = -im;
+        }
+        
+        let s = String::from("");
+        s.append_c("{self.real} ");
+        s.append_c(sign);
+        s.append_c(" {im}i");
+        
+        return s;
+    }
+}

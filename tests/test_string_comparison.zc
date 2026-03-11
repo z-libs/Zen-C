@@ -1,0 +1,33 @@
+import "std/string.zc"
+
+fn main() {
+    let s1 = String::from("apple");
+    let s2 = String::from("banana");
+    let s3 = String::from("apple");
+    let s4 = String::from("APPLE");
+
+    // Exact Equality & Inequality
+    assert(s1 == &s3, "s1 should equal s3");
+    assert(s1 != &s2, "s1 should not equal s2");
+
+    // Lexical Ordering
+    assert(s1 < &s2, "apple should be less than banana");
+    assert(s2 > &s1, "banana should be greater than apple");
+    assert(s1 <= &s3, "apple should be less than or equal to apple");
+    assert(s1 >= &s3, "apple should be greater than or equal to apple");
+
+    // Case Sensitivity
+    assert(s1 != &s4, "apple should not equal APPLE (case-sensitive)");
+    
+    // Case Insensitivity
+    assert(s1.eq_ignore_case(&s4), "apple should equal APPLE (case-insensitive)");
+    assert(s1.compare_ignore_case(&s4) == 0, "compare_ignore_case should return 0 for apple vs APPLE");
+
+    // Numeric String Lexical Comparison
+    let n1 = String::from("10");
+    let n2 = String::from("2");
+    // Lexically, "10" < "2" because '1' < '2'
+    assert(n1 < &n2, "'10' should be lexically less than '2'");
+
+    println "All string comparison tests passed!";
+}

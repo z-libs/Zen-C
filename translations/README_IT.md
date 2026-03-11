@@ -1391,6 +1391,7 @@ Zen C include una libreria standard (`std`) che ricopre funzionalità essenziali
 | :--- | :--- | :--- |
 | **`std/bigint.zc`** | Intero a precisione arbitraria `BigInt`. | [Docs](../docs/std/bigint.md) |
 | **`std/bits.zc`** | Operazioni bit a bit a basso livello (`rotl`, `rotr`, ecc.). | [Docs](../docs/std/bits.md) |
+| **`std/complex.zc`** | Aritmetica dei numeri complessi `Complex`. | [Docs](../docs/std/complex.md) |
 | **`std/vec.zc`** | Array dinamico espandibile `Vec<T>`. | [Docs](../docs/std/vec.md) |
 | **`std/string.zc`** | Tipo `String` allocato sull'Heap con supporto UTF-8. | [Docs](../docs/std/string.md) |
 | **`std/queue.zc`** | Coda FIFO (Buffer Circolare). | [Docs](../docs/std/queue.md) |

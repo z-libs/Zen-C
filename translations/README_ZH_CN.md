@@ -1355,6 +1355,7 @@ Zen C 包含一个涵盖基本功能的标准库 (`std`)。
 | :--- | :--- | :--- |
 | **`std/bigint.zc`** | 任意精度整数 `BigInt`。 | [文档](../docs/std/bigint.md) |
 | **`std/bits.zc`** | 底层位运算操作 (`rotl`, `rotr` 等)。 | [文档](../docs/std/bits.md) |
+| **`std/complex.zc`** | 复数算术 `Complex`。 | [文档](../docs/std/complex.md) |
 | **`std/vec.zc`** | 可增长动态数组 `Vec<T>`。 | [文档](../docs/std/vec.md) |
 | **`std/string.zc`** | 堆分配的 `String` 类型，支持 UTF-8。 | [文档](../docs/std/string.md) |
 | **`std/queue.zc`** | 先进先出队列 (环形缓冲区)。 | [文档](../docs/std/queue.md) |

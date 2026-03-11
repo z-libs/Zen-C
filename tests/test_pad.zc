@@ -1,0 +1,5 @@
+import "std/string.zc"
+fn main() {
+    let s = String::from("Hello").pad_right(10, '*');
+    println "Test: {s} World";
+}
