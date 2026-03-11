@@ -968,7 +968,6 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
     {
         if (node->type == NODE_EXPR_VAR)
         {
-            char *prefix = "";
             char *df_prefix = "";
             if (g_current_lambda)
             {
@@ -979,7 +978,6 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
                         if (g_current_lambda->lambda.capture_modes &&
                             g_current_lambda->lambda.capture_modes[i] == 0)
                         {
-                            prefix = "ctx->";
                             df_prefix = "ctx->";
                         }
                         break;
@@ -987,9 +985,7 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
             }
 
-            fprintf(out, "%s__z_drop_flag_%s = 0; ", df_prefix, node->var_ref.name);
-            fprintf(out, "memset(&%s%s, 0, sizeof(%s%s))", prefix, node->var_ref.name, prefix,
-                    node->var_ref.name);
+            fprintf(out, "%s__z_drop_flag_%s = 0", df_prefix, node->var_ref.name);
             return 1;
         }
         else if (node->type == NODE_EXPR_MEMBER)
@@ -1051,13 +1047,24 @@ void codegen_expression_with_move(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (has_drop)
         {
-            fprintf(out, "({ __typeof__(");
-            codegen_expression(ctx, node, out);
-            fprintf(out, ") _mv = ");
-            codegen_expression(ctx, node, out);
-            fprintf(out, "; ");
-            emit_move_invalidation(ctx, node, out);
-            fprintf(out, "; _mv; })");
+            if (node->type == NODE_EXPR_VAR)
+            {
+                fprintf(out, "({ ");
+                emit_move_invalidation(ctx, node, out);
+                fprintf(out, "; ");
+                codegen_expression(ctx, node, out);
+                fprintf(out, "; })");
+            }
+            else
+            {
+                fprintf(out, "({ __typeof__(");
+                codegen_expression(ctx, node, out);
+                fprintf(out, ") _mv = ");
+                codegen_expression(ctx, node, out);
+                fprintf(out, "; ");
+                emit_move_invalidation(ctx, node, out);
+                fprintf(out, "; _mv; })");
+            }
             return;
         }
     }
