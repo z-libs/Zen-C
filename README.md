@@ -166,6 +166,9 @@ zc build hello.zc -o hello
 
 # Interactive Shell
 zc repl
+
+# Show Zen Facts
+zc build hello.zc --zen
 ```
 
 ### Environment Variables
@@ -231,7 +234,8 @@ let y: const int = 10;  // Read-only (Type qualified)
 #### Literals
 - **Integers**: Decimal (`123`), Hex (`0xFF`), Octal (`0o755`), Binary (`0b1011`).
   - *Note*: Numbers with leading zeros are treated as decimal (`0123` is `123`), unlike C.
-- **Floats**: Standard (`3.14`), Scientific (`1e-5`, `1.2E3`).
+  - *Note*: Numbers can contain underscores for readability (`1_000_000`, `0b_1111_0000`).
+- **Floats**: Standard (`3.14`), Scientific (`1e-5`, `1.2E3`). Floating point numbers also support underscores (`3_14.15_92`).
 
 > [!IMPORTANT]
 > **Best Practices for Portable Code**

@@ -1492,6 +1492,16 @@ static ASTNode *parse_int_literal(Token t)
     node->literal.type_kind = LITERAL_INT;
     node->type_info = type_new(TYPE_INT);
     char *s = token_strdup(t);
+    int write_idx = 0;
+    for (int read_idx = 0; s[read_idx]; read_idx++)
+    {
+        if (s[read_idx] != '_')
+        {
+            s[write_idx++] = s[read_idx];
+        }
+    }
+    s[write_idx] = '\0';
+
     unsigned long long val;
     char *endptr = NULL;
 
@@ -1534,8 +1544,20 @@ static ASTNode *parse_float_literal(Token t)
     ASTNode *node = ast_create(NODE_EXPR_LITERAL);
     node->token = t;
     node->literal.type_kind = LITERAL_FLOAT;
-    node->literal.float_val = atof(t.start);
+    char *s = token_strdup(t);
+    int write_idx = 0;
+    for (int read_idx = 0; s[read_idx]; read_idx++)
+    {
+        if (s[read_idx] != '_')
+        {
+            s[write_idx++] = s[read_idx];
+        }
+    }
+    s[write_idx] = '\0';
+
+    node->literal.float_val = atof(s);
     node->type_info = type_new(TYPE_F64);
+    free(s);
     return node;
 }
 

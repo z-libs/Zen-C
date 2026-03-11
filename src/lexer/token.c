@@ -362,7 +362,7 @@ Token lexer_next(Lexer *l)
         {
             is_hex = 1;
             len = 2;
-            while (isxdigit(s[len]))
+            while (isxdigit(s[len]) || s[len] == '_')
             {
                 len++;
             }
@@ -371,7 +371,7 @@ Token lexer_next(Lexer *l)
         {
             is_bin = 1;
             len = 2;
-            while (s[len] == '0' || s[len] == '1')
+            while (s[len] == '0' || s[len] == '1' || s[len] == '_')
             {
                 len++;
             }
@@ -380,14 +380,14 @@ Token lexer_next(Lexer *l)
         {
             is_oct = 1;
             len = 2;
-            while (s[len] >= '0' && s[len] <= '7')
+            while ((s[len] >= '0' && s[len] <= '7') || s[len] == '_')
             {
                 len++;
             }
         }
         else
         {
-            while (isdigit(s[len]))
+            while (isdigit(s[len]) || s[len] == '_')
             {
                 len++;
             }
@@ -402,7 +402,7 @@ Token lexer_next(Lexer *l)
                 {
                     is_float = 1;
                     len++;
-                    while (isdigit(s[len]))
+                    while (isdigit(s[len]) || s[len] == '_')
                     {
                         len++;
                     }
@@ -417,7 +417,7 @@ Token lexer_next(Lexer *l)
                 {
                     len++;
                 }
-                while (isdigit(s[len]))
+                while (isdigit(s[len]) || s[len] == '_')
                 {
                     len++;
                 }

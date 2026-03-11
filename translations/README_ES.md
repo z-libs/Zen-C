@@ -166,6 +166,9 @@ zc build hello.zc -o hello
 
 # Shell Interactiva
 zc repl
+
+# Mostrar Zen Facts
+zc build hello.zc --zen
 ```
 
 ### Variables de Entorno
@@ -227,6 +230,12 @@ let y: const int = 10;  // Solo lectura (Calificado por tipo)
 | `U0`, `u0`, `void` | `void` | Tipo vacío |
 | `iN` (ej. `i256`) | `_BitInt(N)` | Entero con signo de ancho arbitrario (C23) |
 | `uN` (ej. `u42`) | `unsigned _BitInt(N)` | Entero sin signo de ancho arbitrario (C23) |
+
+#### Literales
+- **Enteros**: Decimal (`123`), Hex (`0xFF`), Octal (`0o755`), Binario (`0b1011`).
+  - *Nota*: Los números con ceros a la izquierda se tratan como decimales (`0123` es `123`), a diferencia de C.
+  - *Nota*: Los números pueden contener guiones bajos para mejorar la legibilidad (`1_000_000`, `0b_1111_0000`).
+- **Flotantes**: Estándar (`3.14`), Científico (`1e-5`, `1.2E3`). Los números de punto flotante también soportan guiones bajos (`3_14.15_92`).
 
 > [!IMPORTANT]
 > **Mejores Prácticas para Código Portable**

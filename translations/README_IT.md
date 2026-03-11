@@ -167,6 +167,9 @@ zc build hello.zc -o hello
 
 # Shell interattiva
 zc repl
+
+# Mostra curiosità Zen
+zc build hello.zc --zen
 ```
 
 ### Variabili d'ambiente
@@ -228,6 +231,12 @@ let y: const int = 10;  // Sola lettura (Tipo qualificato)
 | `U0`, `u0`, `void` | `void` | Tipo vuoto |
 | `iN` (Per esempio, `i256`) | `_BitInt(N)` | Intero con segno a larghezza arbitraria di bit (C23) |
 | `uN` (Per esempio, `u42`) | `unsigned _BitInt(N)` | Intero senza segno a larghezza arbitraria di bit (C23) |
+
+#### Letterali
+- **Interi**: Decimali (`123`), Hex (`0xFF`), Ottali (`0o755`), Binari (`0b1011`).
+  - *Nota*: I numeri con zeri iniziali sono trattati come decimali (`0123` è `123`), a differenza del C.
+  - *Nota*: I numeri possono contenere trattini bassi per leggibilità (`1_000_000`, `0b_1111_0000`).
+- **A virgola mobile**: Standard (`3.14`), Scientifico (`1e-5`, `1.2E3`). I numeri in virgola mobile supportano anche i trattini bassi (`3_14.15_92`).
 
 > [!IMPORTANT]
 > **Best Practice per Codice Portabile**

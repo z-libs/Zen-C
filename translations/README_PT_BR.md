@@ -166,6 +166,8 @@ zc build hello.zc -o hello
 
 # Shell interativo
 zc repl
+# Mostrar Fatos Zen
+zc build hello.zc --zen
 ```
 
 ### Variáveis de Ambiente
@@ -224,6 +226,12 @@ let y: const int = 10;  // Apenas leitura (tipo qualificado)
 | `U0`, `u0`, `void` | `void` | Tipo vazio |
 | `iN` (por exemplo, `i256`) | `_BitInt(N)` | Inteiro sinalizado de largura de bit arbitrária (C23) |
 | `uN` (por exemplo, `u42`) | `unsigned _BitInt(N)` | Inteiro não-sinalizado de largura de bit arbitrária (C23) |
+
+#### Literais
+- **Inteiros**: Decimal (`123`), Hex (`0xFF`), Octal (`0o755`), Binário (`0b1011`).
+  - *Nota*: Números com zeros à esquerda são tratados como decimais (`0123` é `123`), diferente de C.
+  - *Nota*: Números podem conter sublinhados para legibilidade (`1_000_000`, `0b_1111_0000`).
+- **Flutuantes**: Padrão (`3.14`), Científico (`1e-5`, `1.2E3`). Números de ponto flutuante também suportam sublinhados (`3_14.15_92`).
 
 ### 3. Tipos Agregados
 
