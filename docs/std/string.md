@@ -69,7 +69,9 @@ struct String {
 | **ends_with** | `ends_with(self, suffix: char*) -> bool` | Checks if the string ends with the given suffix. |
 | **contains** | `contains(self, target: char) -> bool` | Checks if the string contains the given character. |
 | **contains_str** | `contains_str(self, target: char*) -> bool` | Checks if the string contains the given substring. |
-| **find** | `find(self, target: char) -> Option<usize>` | Returns the index of the first occurrence of `target`. |
+| **find** | `find(self, target: char) -> Option<usize>` | Returns the index of the first occurrence of byte `target`. |
+| **find_str** | `find_str(self, target: char*) -> Option<usize>` | Returns the index of the first occurrence of substring `target`. |
+| **find_all_str** | `find_all_str(self, target: char*) -> Vec<usize>` | Returns a vector containing all indices where `target` occurs. |
 | **substring** | `substring(self, start: usize, len: usize) -> String` | Returns a new String containing the specified substring. |
 
 ### UTF-8 Support
