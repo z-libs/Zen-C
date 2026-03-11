@@ -70,8 +70,8 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
             {
                 lexer_next(l);
                 Token cfg_tok = lexer_next(l);
-                if (cfg_tok.type == TOK_IDENT && cfg_tok.len == 3 &&
-                    strncmp(cfg_tok.start, "not", 3) == 0)
+                if ((cfg_tok.type == TOK_NOT || (cfg_tok.type == TOK_IDENT && cfg_tok.len == 3 &&
+                                                 strncmp(cfg_tok.start, "not", 3) == 0)))
                 {
                     if (lexer_peek(l).type != TOK_LPAREN)
                     {
@@ -114,8 +114,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                     while (1)
                     {
                         Token inner_t = lexer_next(l);
-                        if (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
-                            strncmp(inner_t.start, "not", 3) == 0)
+                        if ((inner_t.type == TOK_NOT ||
+                             (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
+                              strncmp(inner_t.start, "not", 3) == 0)))
                         {
                             if (lexer_next(l).type != TOK_LPAREN)
                             {
@@ -208,8 +209,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                     while (1)
                     {
                         Token inner_t = lexer_next(l);
-                        if (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
-                            strncmp(inner_t.start, "not", 3) == 0)
+                        if ((inner_t.type == TOK_NOT ||
+                             (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
+                              strncmp(inner_t.start, "not", 3) == 0)))
                         {
                             if (lexer_next(l).type != TOK_LPAREN)
                             {
@@ -669,8 +671,9 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 {
                     lexer_next(l);
                     Token cfg_tok = lexer_next(l);
-                    if (cfg_tok.type == TOK_IDENT && cfg_tok.len == 3 &&
-                        strncmp(cfg_tok.start, "not", 3) == 0)
+                    if ((cfg_tok.type == TOK_NOT ||
+                         (cfg_tok.type == TOK_IDENT && cfg_tok.len == 3 &&
+                          strncmp(cfg_tok.start, "not", 3) == 0)))
                     {
                         if (lexer_peek(l).type != TOK_LPAREN)
                         {
@@ -713,8 +716,9 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                         while (1)
                         {
                             Token inner_t = lexer_next(l);
-                            if (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
-                                strncmp(inner_t.start, "not", 3) == 0)
+                            if ((inner_t.type == TOK_NOT ||
+                                 (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
+                                  strncmp(inner_t.start, "not", 3) == 0)))
                             {
                                 if (lexer_next(l).type != TOK_LPAREN)
                                 {
@@ -807,8 +811,9 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                         while (1)
                         {
                             Token inner_t = lexer_next(l);
-                            if (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
-                                strncmp(inner_t.start, "not", 3) == 0)
+                            if ((inner_t.type == TOK_NOT ||
+                                 (inner_t.type == TOK_IDENT && inner_t.len == 3 &&
+                                  strncmp(inner_t.start, "not", 3) == 0)))
                             {
                                 if (lexer_next(l).type != TOK_LPAREN)
                                 {

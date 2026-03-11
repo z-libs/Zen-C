@@ -243,6 +243,20 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                 ast_free(var_node);
 
                 fprintf(out, ";\n");
+
+                char *tname = node->lambda.captured_types[i];
+                const char *clean = tname;
+                if (strncmp(clean, "struct ", 7) == 0)
+                {
+                    clean += 7;
+                }
+
+                ASTNode *fdef = find_struct_def_codegen(ctx, clean);
+                if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
+                {
+                    fprintf(out, "_z_ctx_%d->__z_drop_flag_%s = 1;\n", lid,
+                            node->lambda.captured_vars[i]);
+                }
             }
         }
         if (g_config.use_cpp)

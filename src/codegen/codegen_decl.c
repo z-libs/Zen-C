@@ -374,6 +374,19 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                 {
                     fprintf(out, "    %s %s;\n", node->lambda.captured_types[i],
                             node->lambda.captured_vars[i]);
+
+                    char *tname = node->lambda.captured_types[i];
+                    const char *clean = tname;
+                    if (strncmp(clean, "struct ", 7) == 0)
+                    {
+                        clean += 7;
+                    }
+
+                    ASTNode *fdef = find_struct_def_codegen(ctx, clean);
+                    if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
+                    {
+                        fprintf(out, "    int __z_drop_flag_%s;\n", node->lambda.captured_vars[i]);
+                    }
                 }
             }
             fprintf(out, "};\n\n");
@@ -397,7 +410,8 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                     ASTNode *fdef = find_struct_def_codegen(ctx, clean);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
-                        fprintf(out, "    %s__Drop_glue(&ctx->%s);\n", clean,
+                        fprintf(out, "    if (ctx->__z_drop_flag_%s) %s__Drop_glue(&ctx->%s);\n",
+                                node->lambda.captured_vars[i], clean,
                                 node->lambda.captured_vars[i]);
                     }
                 }

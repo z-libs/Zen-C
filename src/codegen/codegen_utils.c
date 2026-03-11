@@ -968,8 +968,28 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
     {
         if (node->type == NODE_EXPR_VAR)
         {
-            fprintf(out, "__z_drop_flag_%s = 0; ", node->var_ref.name);
-            fprintf(out, "memset(&%s, 0, sizeof(%s))", node->var_ref.name, node->var_ref.name);
+            char *prefix = "";
+            char *df_prefix = "";
+            if (g_current_lambda)
+            {
+                for (int i = 0; i < g_current_lambda->lambda.num_captures; i++)
+                {
+                    if (strcmp(node->var_ref.name, g_current_lambda->lambda.captured_vars[i]) == 0)
+                    {
+                        if (g_current_lambda->lambda.capture_modes &&
+                            g_current_lambda->lambda.capture_modes[i] == 0)
+                        {
+                            prefix = "ctx->";
+                            df_prefix = "ctx->";
+                        }
+                        break;
+                    }
+                }
+            }
+
+            fprintf(out, "%s__z_drop_flag_%s = 0; ", df_prefix, node->var_ref.name);
+            fprintf(out, "memset(&%s%s, 0, sizeof(%s%s))", prefix, node->var_ref.name, prefix,
+                    node->var_ref.name);
             return 1;
         }
         else if (node->type == NODE_EXPR_MEMBER)
