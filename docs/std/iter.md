@@ -1,21 +1,23 @@
 # Standard Library: Iterator (`std/iter.zc`)
 
-Use `std/iter.zc` to define custom iterators compatible with `for-in` loops. By implementing the `Iterable` trait, your types can integrate seamlessly with Zen C's loop syntax.
+The `std/iter` module provides traits for defining custom iterators compatible with Zen C's `for-in` loop syntax.
 
 ## Usage
 
 ```zc
 import "std/iter.zc"
 
-// Assuming Mycollection implements Iterable<T>
-for item in my_collection {
-    // ...
+fn main() {
+    // Assuming my_collection implements Iterable<T>
+    for item in my_collection {
+        // ...
+    }
 }
 ```
 
 ## Traits
 
-### Iterator
+### `Iterator<T>`
 
 An interface for advancing through a sequence.
 
@@ -27,9 +29,9 @@ trait Iterator<T> {
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
-| **next** | `next(self) -> Option<T>` | Returns `Option<T>::Some(item)` if there is a next item, or `Option<T>::None` if iteration is complete. |
+| **next** | `next(self) -> Option<T>` | Returns `Some(item)` if there is a next item, or `None` if iteration is complete. |
 
-### Iterable
+### `Iterable<T>`
 
 An interface for types that can produce an `Iterator`.
 

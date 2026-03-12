@@ -19,10 +19,10 @@ fn main() {
     }
     
     m.remove("two");
-} // m is freed automatically (but values are NOT freed automatically if they are pointers)
+} // m is freed automatically here
 ```
 
-## Structure
+## Struct Definition
 
 ```zc
 struct Map<V> {
@@ -67,9 +67,8 @@ struct MapEntry<V> {
 | :--- | :--- | :--- |
 | **put** | `put(self, key: char*, val: V)` | Inserts or updates a key-value pair. |
 | **remove** | `remove(self, key: char*)` | Removes a key and its value from the map. |
-| **free** | `free(self)` | Frees the map's internal storage. **Note**: This does not free the values if they are pointers/objects. |
 
-### Access
+### Access & Query
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
@@ -79,13 +78,17 @@ struct MapEntry<V> {
 | **is_empty** | `is_empty(self) -> bool` | Returns true if the map is empty. |
 | **capacity** | `capacity(self) -> usize` | Returns the current capacity of the map. |
 
-
 ### Iteration Helpers
- 
-You can use index-based access if needed:
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | **is_slot_occupied** | `is_slot_occupied(self, idx: usize) -> bool` | Checks if a raw slot index is occupied. |
 | **key_at** | `key_at(self, idx: usize) -> char*` | Gets key at raw slot index. |
 | **val_at** | `val_at(self, idx: usize) -> V` | Gets value at raw slot index. |
+
+## Memory Management
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **free** | `free(self)` | Frees the map's internal storage. **Note**: This does not free the values if they are pointers/objects. |
+| **Trait** | `impl Drop for Map` | Automatically calls `free()` when out of scope. |

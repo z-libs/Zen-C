@@ -1,6 +1,6 @@
 # Standard Library: Env (`std/env.zc`)
 
-`Env` is a Zen-C library for accessing the environment of the process environment.
+The `std/env` module provides access to process environment variables.
 
 ## Usage
 
@@ -18,7 +18,7 @@ fn main() {
 }
 ```
 
-## Enum
+## Enum Definition
 
 ```zc
 enum EnvRes {
@@ -29,38 +29,16 @@ enum EnvRes {
 
 ## Methods
 
-### get
+### Access & Query
 
-Retrieves the env-variable as borrowed string (char *) (no alloc)
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **get** | `Env::get(name: char*) -> Option<char*>` | Retrieves an environment variable as a borrowed C string (no allocation). |
+| **get_dup** | `Env::get_dup(name: char*) -> Option<String>` | Retrieves an environment variable as a heap-allocated `String`. |
 
-```zc
-fn get(name: string) -> Option<string>
-```
+### Modification
 
-### get_dup
-
-Retrieves the env-variable as caller-owned String() (heap alloc)
-
-```zc
-fn get_dup(name: string) -> Option<String>
-```
-
-### set
-
-Sets an env-variable
-
-```zc
-fn set(name: string, value: string) -> EnvRes
-```
-
-### unset
-
-Unsets an existing env-variable
-
-```zc
-fn unset(name: string) -> EnvRes
-```
-
----
-
-Check the ``examples`` folder for more.
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **set** | `Env::set(name: char*, value: char*) -> EnvRes` | Sets an environment variable. |
+| **unset** | `Env::unset(name: char*) -> EnvRes` | Unsets an environment variable. |

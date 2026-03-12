@@ -20,26 +20,26 @@ fn main() {
 }
 ```
 
-## Functions
+## Methods
 
 ### Output
 
-| Function | Signature | Description |
+| Method | Signature | Description |
 | :--- | :--- | :--- |
-| **print** | `print(fmt: char*, ...) -> int` | Prints formatted output to stdout. |
-| **println** | `println(fmt: char*, ...) -> int` | Prints formatted output to stdout with a newline. |
+| **print** | `io::print(fmt: char*, ...) -> int` | Prints formatted output to stdout. |
+| **println** | `io::println(fmt: char*, ...) -> int` | Prints formatted output to stdout with a newline. |
 
 ### Formatting
 
-| Function | Signature | Description |
+| Method | Signature | Description |
 | :--- | :--- | :--- |
-| **format** | `format(fmt: char*, ...) -> char*` | Formats string into a static buffer (returns pointer). **Not thread-safe**. |
-| **format_into** | `format_into(buf: char*, size: usize, fmt: char*, ...) -> int` | Formats string into a user-provided buffer. |
-| **format_new** | `format_new(fmt: char*, ...) -> char*` | Formats string into a newly allocated buffer (caller must free). |
+| **format** | `io::format(fmt: char*, ...) -> char*` | Formats string into a static buffer. **Not thread-safe**. |
+| **format_into** | `io::format_into(buf: char*, size: usize, fmt: char*, ...) -> int` | Formats string into a user-provided buffer. |
+| **format_new** | `io::format_new(fmt: char*, ...) -> char*` | Formats string into a newly allocated buffer (caller must free). |
 
 ### Input
 
-| Function | Signature | Description |
+| Method | Signature | Description |
 | :--- | :--- | :--- |
-| **readln** | `readln() -> char*` | Reads a line from stdin. Returns heap-allocated string (caller must free) or `NULL` on EOF/error. |
-| **read_rune** | `read_rune() -> rune` | Reads a single UTF-8 character from stdin and returns it as a `rune`. Returns 0 on EOF. |
+| **readln** | `io::readln() -> char*` | Reads a line from stdin (caller must free). |
+| **read_rune** | `io::read_rune() -> rune` | Reads a single UTF-8 character from stdin. |

@@ -30,7 +30,7 @@ fn main() {
     - `clone`: **O(N)**.
 - **Safety**: Safe handling of memory wrapping and resizing.
 
-## Structure
+## Struct Definition
 
 ```zc
 struct Queue<T> {
@@ -59,14 +59,14 @@ struct Queue<T> {
 | **pop** | `pop(self) -> Option<T>` | Removes and returns the element at the front. Returns `None` if empty. |
 | **clear** | `clear(self)` | Removes all items from the queue. |
 
-### Access / Query
+### Access & Query
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | **length** | `length(self) -> usize` | Returns the number of items. |
 | **is_empty** | `is_empty(self) -> bool` | Returns `true` if the queue is empty. |
 
-### Memory Management
+## Memory Management
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |

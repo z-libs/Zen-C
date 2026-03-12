@@ -1,4 +1,4 @@
-# Networking (`std/net/`)
+# Standard Library: Networking (`std/net/`)
 
 The `std/net` module provides a comprehensive networking stack including TCP, UDP, DNS, and HTTP.
 
@@ -15,78 +15,72 @@ import "std/net/websocket.zc" // WebSocket
 
 ## WebSocket (`std/net/websocket.zc`)
 
-Provides server-side WebSocket handshake and framing.
-
 ### Type `WebSocket`
 
-- **`fn handshake(stream: TcpStream, key: String) -> Result<WebSocket>`**
-  Performs the server-side handshake. `key` is the `Sec-WebSocket-Key` header value from the client request.
-  
-- **`fn recv(self) -> Result<String>`**
-  Receives a text frame. Handles unmasking automatically. Returns error on close or non-text frame.
+Provides server-side WebSocket handshake and framing.
 
-- **`fn send(self, msg: String) -> Result<int>`**
-  Sends a text frame (unmasked).
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **handshake** | `WebSocket::handshake(stream: TcpStream, key: String) -> Result<WebSocket>` | Performs the server-side handshake. |
+| **recv** | `recv(self) -> Result<String>` | Receives a text frame (handles unmasking). |
+| **send** | `send(self, msg: String) -> Result<int>` | Sends a text frame. |
 
-## HTTP Client & Server
+## HTTP Client & Server (`std/net/http.zc`)
 
-### Type `Server` (`std/net/http.zc`)
+### Type `Server`
 
-A simple multithreaded-capable (blocking) HTTP server.
+A simple multithreaded-capable HTTP server.
 
-```zc
-import "std/net/http.zc"
-
-fn handler(req: Request*, res: Response*) {
-    res.set_body_str("Hello World");
-}
-
-let server = Server::new(8080, handler);
-server.start();
-```
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **new** | `Server::new(port: int, handler: fn(Request*, Response*)) -> Server` | Creates a new HTTP server. |
+| **start** | `start(self)` | Starts the server listening loop. |
 
 ### Client `fetch`
 
-```zc
-let res = fetch(String::new("http://example.com/api"));
-println "Status: {res.status}";
-println "Body: {res.body.c_str()}";
-```
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **fetch** | `fetch(url: String) -> Response` | Performs a GET request. |
 
-### URL Parsing (`std/net/url.zc`)
+## URL Parsing (`std/net/url.zc`)
 
-```zc
-import "std/net/url.zc"
+### Type `Url`
 
-let u = Url::parse(String::new("http://host:80/path?q=1")).unwrap();
-println "Host: {u.host.c_str()}";
-```
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **parse** | `Url::parse(s: String) -> Option<Url>` | Parses a URL string. |
 
 ## TCP (`std/net/tcp.zc`)
 
 ### Type `TcpListener`
 
-- **`fn bind(host: char*, port: int) -> Result<TcpListener>`**
-- **`fn accept(self) -> Result<TcpStream>`**
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **bind** | `TcpListener::bind(host: char*, port: int) -> Result<TcpListener>` | Binds to a local address. |
+| **accept** | `accept(self) -> Result<TcpStream>` | Accepts a new connection. |
 
 ### Type `TcpStream`
 
-- **`fn connect(host: char*, port: int) -> Result<TcpStream>`**
-  (Note: `host` must be an IP address literal currently, or use `Dns::resolve` first)
-- **`fn read(self, buf: char*, len: usize) -> Result<usize>`**
-- **`fn write(self, buf: u8*, len: usize) -> Result<usize>`**
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **connect** | `TcpStream::connect(host: char*, port: int) -> Result<TcpStream>` | Connects to a remote host. |
+| **read** | `read(self, buf: char*, len: usize) -> Result<usize>` | Reads from the stream. |
+| **write** | `write(self, buf: u8*, len: usize) -> Result<usize>` | Writes to the stream. |
 
 ## UDP (`std/net/udp.zc`)
 
 ### Type `UdpSocket`
 
-- **`fn bind(host: char*, port: int) -> Result<UdpSocket>`**
-- **`fn recv_from(self, buf: char*, len: usize) -> Result<UdpRecvResult>`**
-- **`fn send_to(self, buf: char*, len: usize, host: char*, port: int) -> Result<usize>`**
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **bind** | `UdpSocket::bind(host: char*, port: int) -> Result<UdpSocket>` | Binds to a local address. |
+| **recv_from** | `recv_from(self, buf: char*, len: usize) -> Result<UdpRecvResult>` | Receives data and sender info. |
+| **send_to** | `send_to(self, buf: char*, len: usize, host: char*, port: int) -> Result<usize>` | Sends data to a specific destination. |
 
 ## DNS (`std/net/dns.zc`)
 
 ### Type `Dns`
 
-- **`fn resolve(host: char*) -> Result<String>`**
-  Resolves a hostname (e.g., "google.com") to an IPv4 string (e.g., "142.250.1.100").
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **resolve** | `Dns::resolve(host: char*) -> Result<String>` | Resolves a hostname to an IP address. |

@@ -1,6 +1,6 @@
 # Standard Library: Slice (`std/slice.zc`)
 
-`Slice<T>` is a lightweight, non-owning view into a contiguous sequence of elements. It's particularly useful for working with fixed-size arrays and enabling iteration.
+`Slice<T>` is a lightweight, non-owning view into a contiguous sequence of elements, useful for working with fixed-size arrays.
 
 ## Usage
 
@@ -14,16 +14,10 @@ fn main() {
     for val in arr {
         println "{val}";
     }
-    
-    // Manual slice creation
-    let slice = Slice<int>::from_array((int*)(&arr), 5);
-    for val in slice {
-        println "{val}";
-    }
 }
 ```
 
-## Structure
+## Struct Definition
 
 ```zc
 struct Slice<T> {
@@ -39,15 +33,13 @@ struct Slice<T> {
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | **from_array** | `Slice<T>::from_array(arr: T*, len: usize) -> Slice<T>` | Creates a slice view over an array. |
-| **new** | `Slice<T>::new(data: T*, len: usize) -> Slice<T>` | Alias for `from_array` (backwards compat). |
+| **new** | `Slice<T>::new(data: T*, len: usize) -> Slice<T>` | Alias for `from_array`. |
 
 ### Iteration
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | **iterator** | `iterator(self) -> SliceIter<T>` | Returns an iterator for `for-in` loops. |
-
-`SliceIter<T>` implements the iterator protocol with a `next() -> Option<T>` method.
 
 ### Access & Query
 
@@ -58,36 +50,8 @@ struct Slice<T> {
 | **get** | `get(self, idx: usize) -> Option<T>` | Returns the element at index, or None if out of bounds. |
 | **at** | `at(self, idx: usize) -> Option<T>` | Alias for `get`. |
 
-## Examples
-
-### Iterating over fixed-size arrays
-
-```zc
-// std/slice.zc is auto-imported when using for-in on arrays
-let numbers: int[3] = [10, 20, 30];
-
-for n in numbers {
-    println "Number: {n}";
-}
-```
-
-### Safe indexed access
-
-```zc
-import "std/slice.zc"
-
-let arr: int[3] = [1, 2, 3];
-let slice = Slice<int>::from_array((int*)(&arr), 3);
-
-let opt = slice.get(1);
-if (!opt.is_none()) {
-    println "Value: {opt.unwrap()}";  // Prints: Value: 2
-}
-```
-
 ## Notes
 
-- `Slice<T>` does not own its data — it's just a view
-- No memory management needed (no `free()` method)
-- **Auto-import**: `std/slice.zc` is automatically imported when using `for val in arr` on a fixed-size array
-- The array pointer cast `(T*)(&arr)` is required for fixed-size arrays
+- `Slice<T>` does not own its data — it's just a view.
+- No memory management needed (no `free()` method).
+- **Auto-import**: `std/slice.zc` is automatically imported when using `for val in arr` on a fixed-size array.

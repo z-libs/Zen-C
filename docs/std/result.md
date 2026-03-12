@@ -24,7 +24,7 @@ fn main() {
 }
 ```
 
-## Structure
+## Struct Definition
 
 ```zc
 struct Result<T> {
@@ -43,13 +43,18 @@ struct Result<T> {
 | **Ok** | `Result<T>::Ok(v: T) -> Result<T>` | Creates a success result containing `v`. |
 | **Err** | `Result<T>::Err(e: char*) -> Result<T>` | Creates an error result with message `e`. |
 
-### Query / Extraction
+### Query & Extraction
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
 | **is_ok** | `is_ok(self) -> bool` | Returns `true` if the result is `Ok`. |
 | **is_err** | `is_err(self) -> bool` | Returns `true` if the result is `Err`. |
 | **unwrap** | `unwrap(self) -> T` | Returns the contained value. Panics if `Err`. |
-| **unwrap_ref** | `unwrap_ref(self) -> T*` | Returns a pointer to the contained value. Panics if `Err`. |
-| **expect** | `expect(self, msg: char*) -> T` | Returns the contained value or panics with `msg` if `Err`. |
-| **forget** | `forget(self)` | Zeroes out memory without destructors. |
+| **unwrap_ref** | `unwrap_ref(self) -> T*` | Returns a pointer to the value. Panics if `Err`. |
+| **expect** | `expect(self, msg: char*) -> T` | Returns the value or panics with `msg` if `Err`. |
+
+## Memory Management
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **forget** | `forget(self)` | Zeroes out memory without calling destructors. |

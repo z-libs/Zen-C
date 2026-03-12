@@ -1,11 +1,10 @@
-# Math (`std/math.zc`)
+# Standard Library: Math (`std/math.zc`)
 
-The `Math` module provides a core set of standard mathematical constants and functions natively wrapped around the POSIX `<math.h>` standard library to function smoothly within Zen C's Object-Oriented context. 
+The `Math` module provides a core set of standard mathematical constants and functions wrapped around the POSIX `<math.h>` standard library.
 
 ## Usage
 
 ```zc
-import "std/core.zc"
 import "std/math.zc"
 
 fn main() {
@@ -16,37 +15,51 @@ fn main() {
 ```
 
 ## Constants
+
 All constants are functions returning a `double`.
-- `Math::PI()`: Archimedes' constant.
-- `Math::E()`: Euler's number.
 
-## Functions
+| Constant | Description |
+| :--- | :--- |
+| **Math::PI()** | Archimedes' constant. |
+| **Math::E()** | Euler's number. |
 
-### Absolute Value
-- `fn abs(x: double) -> double`: Returns the absolute value of `x`.
+## Methods
+
+### Arithmetic
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **abs** | `abs(x: double) -> double` | Returns the absolute value of `x`. |
+| **sqrt** | `sqrt(x: double) -> double` | Returns the square root of `x`. |
+| **pow** | `pow(base: double, exp: double) -> double` | Returns `base` raised to the power of `exp`. |
+| **exp** | `exp(x: double) -> double` | Returns `e` raised to the power of `x`. |
+| **log** | `log(x: double) -> double` | Returns the natural logarithm (base-e) of `x`. |
+| **log10** | `log10(x: double) -> double` | Returns the base-10 logarithm of `x`. |
 
 ### Trigonometry
-- `fn sin(x: double) -> double`
-- `fn cos(x: double) -> double`
-- `fn tan(x: double) -> double`
-- `fn asin(x: double) -> double`
-- `fn acos(x: double) -> double`
-- `fn atan(x: double) -> double`
-- `fn atan2(y: double, x: double) -> double`
 
-### Exponentials & Logarithms
-- `fn sqrt(x: double) -> double`
-- `fn pow(base: double, exp: double) -> double`
-- `fn exp(x: double) -> double`
-- `fn log(x: double) -> double`
-- `fn log10(x: double) -> double`
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **sin** | `sin(x: double) -> double` | Returns the sine of `x` (radians). |
+| **cos** | `cos(x: double) -> double` | Returns the cosine of `x` (radians). |
+| **tan** | `tan(x: double) -> double` | Returns the tangent of `x` (radians). |
+| **asin** | `asin(x: double) -> double` | Returns the arcsine of `x`. |
+| **acos** | `acos(x: double) -> double` | Returns the arccosine of `x`. |
+| **atan** | `atan(x: double) -> double` | Returns the arctangent of `x`. |
+| **atan2** | `atan2(y: double, x: double) -> double` | Returns the arctangent of `y/x`. |
 
 ### Rounding & Remainder
-- `fn ceil(x: double) -> double`: Rounds up to the nearest integer.
-- `fn floor(x: double) -> double`: Rounds down to the nearest integer.
-- `fn round(x: double) -> double`: Rounds to the closest integer.
-- `fn mod(x: double, y: double) -> double`: Computes the floating-point remainder of `x / y`.
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **ceil** | `ceil(x: double) -> double` | Rounds up to the nearest integer. |
+| **floor** | `floor(x: double) -> double` | Rounds down to the nearest integer. |
+| **round** | `round(x: double) -> double` | Rounds to the closest integer. |
+| **mod** | `mod(x: double, y: double) -> double` | Computes the floating-point remainder of `x / y`. |
 
 ### Min / Max
-- `fn max(a: double, b: double) -> double`
-- `fn min(a: double, b: double) -> double`
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **max** | `max(a: double, b: double) -> double` | Returns the larger of two values. |
+| **min** | `min(a: double, b: double) -> double` | Returns the smaller of two values. |

@@ -1,4 +1,4 @@
-# Concurrency (`std/thread.zc`)
+# Standard Library: Thread (`std/thread.zc`)
 
 The `std/thread` module provides primitives for multithreading and synchronization.
 
@@ -6,42 +6,59 @@ The `std/thread` module provides primitives for multithreading and synchronizati
 
 ```zc
 import "std/thread.zc"
+
+fn worker() {
+    println "Hello from thread!";
+}
+
+fn main() {
+    let t = Thread::spawn(worker).unwrap();
+    t.join();
+}
 ```
 
-## Functions
+## Struct Definitions
 
-- **`fn sleep_ms(ms: int)`**
-  Sleeps the current thread for the specified number of milliseconds.
-
-## Types
-
-### Type `Thread`
+### `Thread`
 
 Represents a handle to a spawned thread.
 
-#### Methods
+```zc
+struct Thread {
+    // Internal handle
+}
+```
 
-- **`fn spawn(func: fn()) -> Result<Thread>`**
-  Spawns a new thread executing the provided function.
-  > Note: Currently supports void functions with no arguments.
-
-- **`fn join(self) -> Result<bool>`**
-  Blocks the current thread until the spawned thread finishes.
-
-### Type `Mutex`
+### `Mutex`
 
 A mutual exclusion primitive for protecting shared data.
 
-#### Methods
+```zc
+struct Mutex {
+    // Internal sync primitives
+}
+```
 
-- **`fn new() -> Mutex`**
-  Creates a new mutex.
+## Methods
 
-- **`fn lock(self)`**
-  Acquires the lock. Blocks if the lock is already held.
+### `Thread` Methods
 
-- **`fn unlock(self)`**
-  Releases the lock.
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **spawn** | `Thread::spawn(func: fn()) -> Result<Thread>` | Spawns a new thread executing `func`. |
+| **join** | `join(self) -> Result<bool>` | Blocks current thread until the spawned thread finishes. |
 
-- **`fn free(self)`**
-  Destroys the mutex and frees associated resources.
+### `Mutex` Methods
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **new** | `Mutex::new() -> Mutex` | Creates a new mutex. |
+| **lock** | `lock(self)` | Acquires the lock (blocking). |
+| **unlock** | `unlock(self)` | Releases the lock. |
+| **free** | `free(self)` | Destroys the mutex and frees associated resources. |
+
+### Utility Functions
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **sleep_ms** | `thread::sleep_ms(ms: int)` | Sleeps the current thread. |

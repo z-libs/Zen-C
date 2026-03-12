@@ -1,4 +1,4 @@
-# Time (`std/time.zc`)
+# Standard Library: Time (`std/time.zc`)
 
 The `std/time` module provides functionality for measuring time and sleeping.
 
@@ -6,33 +6,51 @@ The `std/time` module provides functionality for measuring time and sleeping.
 
 ```zc
 import "std/time.zc"
+
+fn main() {
+    let start = Time::now();
+    Time::sleep(Duration::from_secs(1));
+    let end = Time::now();
+    
+    println "Elapsed: {end - start} ms";
+}
 ```
 
-## Structs
+## Struct Definitions
 
-### Struct `Duration`
+### `Duration`
 
-Represents a span of time in milliseconds.
+Represents a span of time.
 
-#### Methods
+```zc
+struct Duration {
+    // Internal milliseconds count
+}
+```
 
-- **`fn from_ms(ms: U64) -> Duration`**
-  Creates a duration from milliseconds.
+### `Time`
 
-- **`fn from_secs(s: U64) -> Duration`**
-  Creates a duration from seconds.
+Utilities for system time.
 
-### Struct `Time`
+```zc
+struct Time {
+    // Static methods
+}
+```
 
-Utilities for time manipulation.
+## Methods
 
-#### Methods
+### `Duration` Methods
 
-- **`fn now() -> U64`**
-  Returns the current system time in milliseconds since the epoch.
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **from_ms** | `Duration::from_ms(ms: U64) -> Duration` | Creates a duration from milliseconds. |
+| **from_secs** | `Duration::from_secs(s: U64) -> Duration` | Creates a duration from seconds. |
 
-- **`fn sleep(d: Duration)`**
-  Sleeps for the specified duration.
+### `Time` Static Methods
 
-- **`fn sleep_ms(ms: U64)`**
-  Sleeps for the specified number of milliseconds.
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **now** | `Time::now() -> U64` | Returns current system time in milliseconds since epoch. |
+| **sleep** | `Time::sleep(d: Duration)` | Sleeps for the specified duration. |
+| **sleep_ms** | `Time::sleep_ms(ms: U64)` | Sleeps for the specified number of milliseconds. |

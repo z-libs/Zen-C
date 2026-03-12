@@ -1,24 +1,43 @@
-# Complex Number Library (`std/complex.zc`)
+# Standard Library: Complex Number Library (`std/complex.zc`)
 
 The `std/complex.zc` library provides the `Complex` struct and essential mathematical operations for working with complex numbers in Zen C.
 
-## Complex Struct
+## Usage
 
-The `Complex` struct represents a complex number with a real and imaginary part, both stored as double-precision floating-point numbers.
+```zc
+import "std/complex.zc"
 
-```rust
+fn main() {
+    let c = Complex::new(3.0, 4.0);
+    println "Value: {c}"; // Value: 3.000000 + 4.000000i
+}
+```
+
+## Struct Definition
+
+```zc
 struct Complex {
     real: double;
     imag: double;
 }
 ```
 
-### Instantiation
-```rust
-let c = Complex::new(3.0, 4.0);
-```
+## Methods
 
-## Methods and Operators
+### Construction
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **new** | `Complex::new(real: double, imag: double) -> Complex` | Creates a new complex number. |
+
+### Access & Query
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| **magnitude** | `magnitude(self) -> double` | Returns the magnitude (absolute value): `sqrt(real^2 + imag^2)`. |
+| **phase** | `phase(self) -> double` | Returns the phase (angle) in radians: `atan2(imag, real)`. |
+
+### Operators
 
 Zen C supports operator overloading natively for `Complex` through the following methods:
 
@@ -30,17 +49,4 @@ Zen C supports operator overloading natively for `Complex` through the following
 | `/` | **div** | Divides one complex number by another. |
 | `==` | **eq** | Checks if two complex numbers are strictly equal. |
 | `!=` | **neq** | Checks if two complex numbers are NOT strictly equal. |
-
-## Properties
-
-| Method | Signature | Description |
-| :--- | :--- | :--- |
-| **magnitude** | `magnitude(self) -> double` | Returns the magnitude (absolute value) of the complex number: `sqrt(real^2 + imag^2)`. |
-| **phase** | `phase(self) -> double` | Returns the phase (angle) in radians: `atan2(imag, real)`. |
-
-## String Formatting
-`Complex` implements `to_string(self) -> String`, allowing for direct and intuitive string interpolation:
-```rust
-let c = Complex::new(3.0, 4.0);
-println "Value: {c}"; // Value: 3.000000 + 4.000000i
-```
+| `{}` | **to_string** | Allows for direct string interpolation. |

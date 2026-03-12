@@ -1,6 +1,6 @@
 # Standard Library: Regex (`std/regex.zc`)
 
-Regular expression support based on POSIX `regex.h`. Compile patterns, match strings, and extract sub-matches or split text.
+The `std/regex` module providing regular expression support based on POSIX `regex.h`.
 
 ## Usage
 
@@ -18,13 +18,23 @@ fn main() {
 }
 ```
 
-## Structure
+## Struct Definitions
+
+### `Regex`
+
+Represents a compiled regular expression.
 
 ```zc
 struct Regex {
-    // internal handles
+    // Internal handles
 }
+```
 
+### `Match`
+
+Represents a successful regex match.
+
+```zc
 struct Match {
     text: char*;
     start: int;
@@ -49,20 +59,18 @@ struct Match {
 | **match** | `match(self, text: char*) -> bool` | Returns true if the pattern matches anywhere in `text`. |
 | **find** | `find(self, text: char*) -> Option<Match>` | Returns the first match including position and length. |
 | **count** | `count(self, text: char*) -> int` | Returns the number of non-overlapping matches. |
-| **split** | `split(self, text: char*) -> Vec<String>` | Splits the text by the pattern into a Vector of Strings. |
+| **split** | `split(self, text: char*) -> Vec<String>` | Splits the text by the pattern. |
 
 ### Match Access
 
 | Method | Signature | Description |
 | :--- | :--- | :--- |
-| **as_string** | `as_string(self) -> char*` | Returns a pointer to the start of the match in the original text string. |
+| **as_string** | `as_string(self) -> char*` | Returns a pointer to the start of the match. |
 | **end** | `end(self) -> int` | Returns the index after the last character of the match. |
 
-### Helper Functions
+### Static Helper Functions
 
-Convenience functions that compile, execute, and destroy in one step.
-
-| Function | Signature | Description |
+| Method | Signature | Description |
 | :--- | :--- | :--- |
 | **regex_match** | `regex_match(pattern: char*, text: char*) -> bool` | Quick check for a match. |
 | **regex_find** | `regex_find(pattern: char*, text: char*) -> Option<Match>` | Find first match. |
