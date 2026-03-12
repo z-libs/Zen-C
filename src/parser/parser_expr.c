@@ -2401,13 +2401,16 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                             TypeAlias *ta = find_type_alias_node(ctx, acc);
                             if (ta)
                             {
-                                const char *aliased = find_type_alias(ctx, acc);
-                                if (aliased)
+                                is_opaque_alias = ta->is_opaque;
+                                if (!is_opaque_alias)
                                 {
-                                    free(acc);
-                                    acc = xstrdup(aliased);
-                                    def = find_struct_def(ctx, acc);
-                                    is_opaque_alias = ta->is_opaque;
+                                    const char *aliased = find_type_alias(ctx, acc);
+                                    if (aliased)
+                                    {
+                                        free(acc);
+                                        acc = xstrdup(aliased);
+                                        def = find_struct_def(ctx, acc);
+                                    }
                                 }
                             }
                         }

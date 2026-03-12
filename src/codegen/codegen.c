@@ -157,7 +157,8 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
         // Output as Type__method
         if (ctx)
         {
-            const char *alias = find_type_alias(ctx, mangled_type);
+            TypeAlias *ta = find_type_alias_node(ctx, mangled_type);
+            const char *alias = (ta && !ta->is_opaque) ? ta->original_type : NULL;
             if (alias)
             {
                 fprintf(out, "%s__%s", alias, method_name);
@@ -336,44 +337,57 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             char *t1 = infer_type(ctx, node->binary.left);
             int is_ptr = 0;
+            char *fully_resolved = t1;
+            char *mangle_base = t1;
+            int found_opaque = 0;
+
             if (t1)
             {
-                char *check = t1;
+                char *curr = t1;
                 int depth = 0;
-                while (depth++ < 10)
+                while (depth++ < 20)
                 {
-                    if (strchr(check, '*'))
+                    if (strchr(curr, '*'))
                     {
                         is_ptr = 1;
                         break;
                     }
+
                     int resolved = 0;
-                    ASTNode *alias = global_user_structs;
-                    while (alias)
+                    TypeAlias *ta = find_type_alias_node(ctx, curr);
+                    if (ta)
                     {
-                        if (alias->type == NODE_TYPE_ALIAS &&
-                            strcmp(check, alias->type_alias.alias) == 0)
+                        if (ta->is_opaque)
                         {
-                            check = alias->type_alias.original_type;
-                            resolved = 1;
-                            break;
+                            if (!found_opaque)
+                            {
+                                mangle_base = ta->alias;
+                                found_opaque = 1;
+                            }
                         }
-                        alias = alias->next;
+                        else if (!found_opaque)
+                        {
+                            mangle_base = ta->original_type;
+                        }
+
+                        curr = ta->original_type;
+                        resolved = 1;
                     }
+
                     if (!resolved)
                     {
                         break;
                     }
                 }
+                fully_resolved = curr;
             }
 
-            int is_basic = IS_BASIC_TYPE(t1);
+            int is_basic = IS_BASIC_TYPE(fully_resolved);
             ASTNode *def = t1 ? find_struct_def(ctx, t1) : NULL;
 
-            if (t1 && def && (def->type == NODE_STRUCT || def->type == NODE_ENUM) && !is_basic &&
-                !is_ptr)
+            if (t1 && (def || found_opaque) && !is_basic && !is_ptr)
             {
-                char *base = t1;
+                char *base = mangle_base;
                 if (strncmp(base, "struct ", 7) == 0)
                 {
                     base += 7;
@@ -392,7 +406,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     fprintf(out, "&");
                     codegen_expression(ctx, node->binary.left, out);
                 }
-                if (g_config.use_cpp)
+                else if (g_config.use_cpp)
                 {
                     fprintf(out, "({ __typeof__((");
                     codegen_expression(ctx, node->binary.left, out);
@@ -411,29 +425,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 fprintf(out, ", ");
 
-                if (node->binary.right->type == NODE_EXPR_VAR ||
-                    node->binary.right->type == NODE_EXPR_INDEX ||
-                    node->binary.right->type == NODE_EXPR_MEMBER)
-                {
-                    fprintf(out, "&");
-                    codegen_expression(ctx, node->binary.right, out);
-                }
-                if (g_config.use_cpp)
-                {
-                    fprintf(out, "({ __typeof__((");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, ")) _tmp = ");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, "; &_tmp; })");
-                }
-                else
-                {
-                    fprintf(out, "(__typeof__((");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, "))[]){");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, "}");
-                }
+                codegen_expression(ctx, node->binary.right, out);
 
                 fprintf(out, ")");
                 if (strcmp(node->binary.op, "!=") == 0)
@@ -694,7 +686,8 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 if (ctx)
                 {
-                    const char *alias = find_type_alias(ctx, base);
+                    TypeAlias *ta = find_type_alias_node(ctx, base);
+                    const char *alias = (ta && !ta->is_opaque) ? ta->original_type : NULL;
                     if (alias)
                     {
                         base = (char *)alias;

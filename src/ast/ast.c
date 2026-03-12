@@ -772,6 +772,10 @@ static char *type_to_c_string_impl(Type *t)
         }
 
     case TYPE_ALIAS:
+        if (t->alias.is_opaque_alias)
+        {
+            return xstrdup(t->name);
+        }
         return type_to_c_string(t->inner);
 
     case TYPE_ENUM:

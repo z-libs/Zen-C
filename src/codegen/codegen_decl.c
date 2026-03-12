@@ -1076,7 +1076,8 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
             }
 
             // Resolve opaque alias (e.g. StringView -> Slice_char)
-            const char *resolved = find_type_alias(g_parser_ctx, sname);
+            TypeAlias *ta = find_type_alias_node(g_parser_ctx, sname);
+            const char *resolved = (ta && !ta->is_opaque) ? ta->original_type : NULL;
             const char *effective_name = resolved ? resolved : sname;
 
             char *mangled = replace_string_type(sname);

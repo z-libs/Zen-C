@@ -890,7 +890,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_IMPL:
     {
         char *sname = node->impl.struct_name;
-        const char *resolved = find_type_alias(ctx, sname);
+        TypeAlias *ta = find_type_alias_node(ctx, sname);
+        const char *resolved = (ta && !ta->is_opaque) ? ta->original_type : NULL;
 
         // If this is an opaque alias, rename method func.name prefixes before codegen
         if (resolved)
@@ -925,7 +926,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_IMPL_TRAIT:
     {
         char *sname = node->impl_trait.target_type;
-        const char *resolved = find_type_alias(ctx, sname);
+        TypeAlias *ta = find_type_alias_node(ctx, sname);
+        const char *resolved = (ta && !ta->is_opaque) ? ta->original_type : NULL;
 
         if (resolved)
         {

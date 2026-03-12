@@ -58,6 +58,9 @@ test "opaque alias instance method" {
 
     assert(sv1.eq(sv2), "StringView eq same failed");
     assert(!sv1.eq(sv3), "StringView eq diff failed");
+
+    assert(sv1 == sv2, "StringView == operator same failed");
+    assert(sv1 != sv3, "StringView != operator diff failed");
 }
 
 test "opaque alias chop_by_delim" {
