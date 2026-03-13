@@ -1,0 +1,18 @@
+fn logical_ops(a: bool, b: bool) {
+    println "Inputs -> a: {a}, b: {b}";
+    println "  a AND b: {a && b}";
+    println "  a OR b:  {a || b}";
+    println "  NOT a:   {!a}";
+    println "  a XOR b: {a ^ b}";
+}
+
+fn main() {
+    println "(true, false)";
+    logical_ops(true, false);
+    
+    println "\n(true, true)";
+    logical_ops(true, true);
+    
+    println "\n(false, false)";
+    logical_ops(false, false);
+}

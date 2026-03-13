@@ -1,0 +1,67 @@
+import "std/string.zc"
+import "std/core.zc"
+
+fn caesar_shift(input: char*, key: int) -> String {
+    let result = String::new("");
+    let len = strlen(input);
+    
+    let shift = key % 26;
+    if (shift < 0) {
+        shift = shift + 26;
+    }
+
+    for let i: usize = 0; i < len; i++ {
+        let c = input[i];
+        
+        match (c) {
+            'A'..='Z' => {
+                let base = (int)'A';
+                let val = (int)c - base;
+                let shifted = (val + shift) % 26;
+                result.push_rune((rune)(base + shifted));
+            }
+            'a'..='z' => {
+                let base = (int)'a';
+                let val = (int)c - base;
+                let shifted = (val + shift) % 26;
+                result.push_rune((rune)(base + shifted));
+            }
+            _ => {
+                result.push_rune((rune)c);
+            }
+        }
+    }
+    
+    return result;
+}
+
+fn encode(text: char*, key: int) -> String {
+    return caesar_shift(text, key);
+}
+
+fn decode(text: char*, key: int) -> String {
+    return caesar_shift(text, -key);
+}
+
+fn main() {
+    let original = "Hello, Zen-C World! (XYZ)";
+    let key = 3;
+
+    println "Original: {original}";
+    println "Key: {key}";
+
+    // Encode
+    let encoded = encode(original, key);
+    println "Encoded: {encoded.c_str()}";
+
+    // Decode
+    let decoded = decode(encoded.c_str(), key);
+    println "Decoded: {decoded.c_str()}";
+
+    assert(strcmp(original, decoded.c_str()) == 0, "Decode(Encode(text)) should be original");
+    
+    // Test wrapping
+    let wrapped = encode("XYZ", 3);
+    println "Wrap Test ('XYZ' + 3): {wrapped.c_str()}";
+    assert(strcmp(wrapped.c_str(), "ABC") == 0, "XYZ should wrap to ABC");
+}

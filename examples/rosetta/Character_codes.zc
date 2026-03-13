@@ -1,0 +1,23 @@
+import "std/io.zc"
+
+fn main() {
+    // Character to Code (ASCII)
+    let c = 'a';
+    println "The character '{c}' has a code of {(int)c} in ASCII/Unicode.";
+
+    // Code to Character (ASCII)
+    let code = 97;
+    println "The code {code} corresponds to the character '{(char)code}'.";
+
+    // Multibyte Character (Rune) to Code
+    let r: rune = '🚀';
+    println "The rune '{r}' has a code of {(uint32_t)r} in Unicode.";
+
+    // Code to Multibyte Character (Rune)
+    let r_code: uint32_t = 128640;
+    println "The code {r_code} corresponds to the rune '{(rune)r_code}'.";
+    
+    // Using Unicode Escapes for conversion clarity and Hex formatting
+    let r_esc: rune = '\u{2764}';
+    println "The rune '{r_esc}' has code {(uint32_t)r_esc} (0x{(uint32_t)r_esc : X})";
+}

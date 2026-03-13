@@ -1,0 +1,30 @@
+import "std/vec.zc"
+
+fn mean(v: Vec<f64>*) -> f64 {
+    if v.is_empty() {
+        return 0.0;
+    }
+
+    let sum: f64 = 0.0;
+    for x in v {
+        sum += x;
+    }
+    
+    return sum / (f64)v.length();
+}
+
+fn main() {
+    let numbers = Vec<f64>::new();
+    numbers.push(10.0);
+    numbers.push(20.0);
+    numbers.push(30.0);
+    numbers.push(40.0);
+    
+    let m = mean(&numbers);
+    println "Numbers: 10, 20, 30, 40";
+    println "Mean: {m}";
+
+    let empty = Vec<f64>::new();
+    let m_empty = mean(&empty);
+    println "Empty mean: {m_empty}";
+}

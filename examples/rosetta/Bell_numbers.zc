@@ -1,0 +1,39 @@
+import "std/bigint.zc"
+
+fn main() {
+    let a: BigInt[51];
+    let bells: BigInt[51];
+    
+    a[0] = BigInt::from_int(1);
+    bells[0] = BigInt::from_int(1);
+    for i in 1..=50 {
+        a[i] = BigInt::new();
+        bells[i] = BigInt::new();
+    }
+    
+    println "First 10 rows of the Bell Triangle\n1";
+    
+    for i in 1..=50 {
+        let prev = a[0].clone();
+        a[0] = a[i - 1].clone();
+        bells[i] = a[0].clone();
+        
+        let pr = i < 10;
+        if pr { print "{a[0]} "; }
+        
+        for j in 1..=i {
+            let temp = a[j].clone();
+            a[j] = prev + a[j - 1];
+            prev = temp;
+            
+            if pr { print "{a[j]} "; }
+        }
+        if pr { println ""; }
+    }
+    
+    println "\nFirst 15 Bell Numbers";
+    for i in 0..15 { println "B({i}) = {bells[i]}"; }
+    
+    println "\n50th Bell Number";
+    println "B(50) = {bells[50]}";
+}

@@ -1,0 +1,5 @@
+git clone https://github.com/z-libs/Zen-C.git
+cd Zen-C
+make clean # remove old build files
+make
+sudo make install

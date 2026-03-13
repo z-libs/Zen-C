@@ -1,0 +1,12 @@
+// The procedure accepts a standard closure and an integer
+fn times(proc: fn(), n: uint) {
+    for _ in 0..n {
+        proc();
+    }
+}
+
+fn main() {
+    times(fn() { 
+        println "Hello from closure!"; 
+    }, 3);
+}

@@ -1,0 +1,8 @@
+fn main() {
+    let fruits: string[2] = ["apple", "orange"];
+    
+    // Calculate the number of elements using sizeof
+    let count = sizeof(fruits) / sizeof(fruits[0]);
+    
+    println "Raw array length: {count}";
+}

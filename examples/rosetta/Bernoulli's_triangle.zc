@@ -1,0 +1,25 @@
+fn main() {
+    let rows = 15;
+    let triangle: uint[15][15];
+
+    for n in 0..rows {
+
+        triangle[n][0] = 1;
+ 
+        for k in 1..n {
+            triangle[n][k] = triangle[n-1][k] + triangle[n-1][k-1];
+        }
+ 
+        if n > 0 {
+            triangle[n][n] = 2 * triangle[n-1][n-1];
+        }
+    }
+
+    // Print the triangle
+    for n in 0..rows {
+        for k in 0..=n {
+            print "{triangle[n][k]} ";
+        }
+        println "";
+    }
+}

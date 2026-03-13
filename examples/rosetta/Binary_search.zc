@@ -1,0 +1,33 @@
+fn binary_search_iterative(arr: int*, value: int, low: int, high: int) -> int {
+    let l = low;
+    let h = high;
+    
+    while l <= h {
+        let mid = l + (h - l) / 2;
+        
+        if arr[mid] > value {
+            h = mid - 1;
+        } else if arr[mid] < value {
+            l = mid + 1;
+        } else {
+            return mid;
+        }
+    }
+    return -1;
+}
+
+fn main() {
+    let arr: int[10] = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
+    let n = 10;
+    let targets: int[3] = [12, 5, 20];
+    
+    println "=> Iterative Binary Search";
+    for target in targets {
+        let index = binary_search_iterative(arr, target, 0, n - 1);
+        if index != -1 {
+            println "Value {target} found at index {index}.";
+        } else {
+            println "Value {target} not found.";
+        }
+    }
+}

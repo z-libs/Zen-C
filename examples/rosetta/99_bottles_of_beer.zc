@@ -1,0 +1,18 @@
+fn main() {
+    // Descending loop from 99 down to 1
+    for i in 99..0 step -1 {
+        let b1 = i == 1 ? "bottle" : "bottles";
+        println "{i} {b1} of beer on the wall, {i} {b1} of beer.";
+        
+        let next = i - 1;
+        if next > 0 {
+            let b2 = next == 1 ? "bottle" : "bottles";
+            println "Take one down and pass it around, {next} {b2} of beer on the wall.\n";
+        } else {
+            println "Take one down and pass it around, no more bottles of beer on the wall.\n";
+        }
+    }
+    
+    println "No more bottles of beer on the wall, no more bottles of beer.";
+    println "Go to the store and buy some more, 99 bottles of beer on the wall.";
+}

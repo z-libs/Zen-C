@@ -1,0 +1,23 @@
+fn main() {
+    def SIZE = 3;
+
+    // Explicitly initialized array
+    let ints: int[5] = [1, 2, 3, 4, 5];
+    
+    // Zero-initialized array using a compile-time constant for size
+    let zeros: [int; SIZE];
+    
+    // Element access and mutation
+    zeros[0] = 42;
+    zeros[2] = 100;
+    
+    println "Iterating over ints array:";
+    for val in ints {
+        println "{val}";
+    }
+    
+    println "\nIterating over zeros array:";
+    for val in zeros {
+        println "{val}";
+    }
+}

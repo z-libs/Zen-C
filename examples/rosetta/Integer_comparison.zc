@@ -1,0 +1,18 @@
+fn main() {
+    let a: int;
+    let b: int;
+    
+    ? "Enter two integers separated by a space: " (a, b);
+    
+    if a < b {
+        println "{a} is less than {b}";
+    }
+    
+    if a == b {
+        println "{a} is equal to {b}";
+    }
+    
+    if a > b {
+        println "{a} is greater than {b}";
+    }
+}

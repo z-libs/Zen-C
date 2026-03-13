@@ -1,0 +1,50 @@
+//> pkg-config: gtk+-3.0
+
+import "gtk/gtk.h" as gtk;
+
+let counter = 0;
+let label: gtk::GtkWidget*;
+
+fn on_button_clicked(button: gtk::GtkWidget*, data: gtk::gpointer) {
+    counter += 1;
+    
+    let text = "Button clicked {counter} times";
+    if counter == 1 {
+        text = "Button clicked 1 time";
+    }
+    
+    gtk::gtk_label_set_text((gtk::GtkLabel*)label, text);
+}
+
+fn main(argc: int, argv: char**) {
+    // Initialize GTK
+    gtk::gtk_init(&argc, &argv);
+
+    // Create the main window
+    let window = gtk::gtk_window_new(gtk::GTK_WINDOW_TOPLEVEL);
+    gtk::gtk_window_set_title((gtk::GtkWindow*)window, "Click Counter");
+    gtk::gtk_window_set_default_size((gtk::GtkWindow*)window, 300, 200);
+    gtk::gtk_container_set_border_width((gtk::GtkContainer*)window, 10);
+
+    // Connect the destroy signal to quit the application
+    gtk::g_signal_connect_data(window, "destroy", (gtk::GCallback)gtk::gtk_main_quit, 0, 0, 0);
+
+    // Create a vertical box container
+    let vbox = gtk::gtk_box_new(gtk::GTK_ORIENTATION_VERTICAL, 10);
+    gtk::gtk_container_add((gtk::GtkContainer*)window, vbox);
+    
+    // Create and add the label
+    label = gtk::gtk_label_new("There have been no clicks yet");
+    gtk::gtk_box_pack_start((gtk::GtkBox*)vbox, label, true, true, 0);
+
+    // Create and add the button
+    let button = gtk::gtk_button_new_with_label("click me");
+    gtk::gtk_box_pack_start((gtk::GtkBox*)vbox, button, true, true, 0);
+
+    // Connect the button click signal
+    gtk::g_signal_connect_data(button, "clicked", (gtk::GCallback)on_button_clicked, 0, 0, 0);
+    
+    // Show all widgets and start the GTK main loop
+    gtk::gtk_widget_show_all(window);
+    gtk::gtk_main();
+}

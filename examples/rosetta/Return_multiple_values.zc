@@ -1,0 +1,12 @@
+// Function returning a tuple of two integers
+fn add_and_subtract(a: int, b: int) -> (int, int) {
+    return (a + b, a - b);
+}
+
+fn main() {
+    // Destructuring the returned tuple directly into 'sum' and 'diff'
+    let (sum, diff) = add_and_subtract(10, 4);
+    
+    println "Sum: {sum}";
+    println "Difference: {diff}";
+}
