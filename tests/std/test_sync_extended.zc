@@ -69,3 +69,50 @@ test "test_rwlock_try" {
     
     lock.unlock();
 }
+
+struct BarrierTestData {
+    barrier: Barrier;
+    m: Mutex;
+    counter: int*;
+}
+
+test "test_barrier" {
+    println "Testing Barrier...";
+    
+    let data = (BarrierTestData*)malloc(sizeof(BarrierTestData));
+    data.barrier = Barrier::new(3);
+    data.m = Mutex::new();
+    data.counter = (int*)malloc(sizeof(int));
+    *(data.counter) = 0;
+
+    let t1 = Thread::spawn(fn() {
+        data.m.lock();
+        *(data.counter) = *(data.counter) + 1;
+        data.m.unlock();
+        data.barrier.wait();
+    }).unwrap();
+
+    let t2 = Thread::spawn(fn() {
+        data.m.lock();
+        *(data.counter) = *(data.counter) + 1;
+        data.m.unlock();
+        data.barrier.wait();
+    }).unwrap();
+
+    sleep_ms(100);
+    data.m.lock();
+    let c = *(data.counter);
+    data.m.unlock();
+    assert(c == 2, "Both threads should have reached the barrier");
+
+    data.barrier.wait(); // Third "thread" to hit the barrier
+
+    t1.join();
+    t2.join();
+    
+    data.barrier.free();
+    data.m.free();
+    free(data.counter);
+    free(data);
+    println "Barrier Test Passed!";
+}

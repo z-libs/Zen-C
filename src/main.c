@@ -53,6 +53,21 @@ int main(int argc, char **argv)
         g_config.cc[sizeof(g_config.cc) - 1] = '\0';
     }
 
+    // Add default platform defines for @cfg()
+    if (ZC_OS_WINDOWS)
+    {
+        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("windows");
+    }
+    else if (ZC_OS_LINUX)
+    {
+        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("linux");
+    }
+    else if (ZC_OS_MACOS)
+    {
+        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("apple");
+        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("macos");
+    }
+
     if (argc < 2)
     {
         print_usage();

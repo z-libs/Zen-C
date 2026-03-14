@@ -156,18 +156,74 @@ struct Barrier {
     handle: void*;
 }
 
+@cfg(apple)
+struct BarrierData {
+    mutex: Mutex;
+    cond: CondVar;
+    count: int;
+    threshold: int;
+    generation: int;
+}
+
 impl Barrier {
+    @cfg(apple)
+    fn new(count: int) -> Barrier {
+        let data = (BarrierData*)malloc(sizeof(BarrierData));
+        data.mutex = Mutex::new();
+        data.cond = CondVar::new();
+        data.count = count;
+        data.threshold = count;
+        data.generation = 0;
+        return Barrier { handle: data };
+    }
+
+    @cfg(not(apple))
     fn new(count: int) -> Barrier {
         let ptr = malloc(64); 
         pthread_barrier_init(ptr, NULL, count);
         return Barrier { handle: ptr };
     }
     
+    @cfg(apple)
+    fn wait(self) -> bool {
+        let data = (BarrierData*)self.handle;
+        data.mutex.lock();
+        let gen = data.generation;
+        data.count = data.count - 1;
+        
+        if (data.count == 0) {
+            data.generation = data.generation + 1;
+            data.count = data.threshold;
+            data.cond.broadcast();
+            data.mutex.unlock();
+            return true;
+        }
+        
+        while (gen == data.generation) {
+            data.cond.wait(&data.mutex);
+        }
+        data.mutex.unlock();
+        return false;
+    }
+
+    @cfg(not(apple))
     fn wait(self) -> bool {
         let ret = pthread_barrier_wait(self.handle);
         return ret == 0 || ret == -1; 
     }
     
+    @cfg(apple)
+    fn free(self) {
+        if (self.handle != NULL) {
+            let data = (BarrierData*)self.handle;
+            data.mutex.free();
+            data.cond.free();
+            free(data);
+            self.handle = NULL;
+        }
+    }
+
+    @cfg(not(apple))
     fn free(self) {
         if (self.handle != NULL) {
             pthread_barrier_destroy(self.handle);
@@ -187,31 +243,106 @@ struct Semaphore {
     handle: void*;
 }
 
+@cfg(apple)
+struct SemData {
+    mutex: Mutex;
+    cond: CondVar;
+    count: int;
+}
+
 impl Semaphore {
+    @cfg(apple)
+    fn new(value: int) -> Semaphore {
+        let data = (SemData*)malloc(sizeof(SemData));
+        data.mutex = Mutex::new();
+        data.cond = CondVar::new();
+        data.count = value;
+        return Semaphore { handle: data };
+    }
+
+    @cfg(not(apple))
     fn new(value: int) -> Semaphore {
         let ptr = malloc(32);
         sem_init(ptr, 0, value);
         return Semaphore { handle: ptr };
     }
     
+    @cfg(apple)
+    fn wait(self) {
+        let data = (SemData*)self.handle;
+        data.mutex.lock();
+        while (data.count <= 0) {
+            data.cond.wait(&data.mutex);
+        }
+        data.count = data.count - 1;
+        data.mutex.unlock();
+    }
+
+    @cfg(not(apple))
     fn wait(self) {
         sem_wait(self.handle);
     }
     
+    @cfg(apple)
+    fn try_wait(self) -> bool {
+        let data = (SemData*)self.handle;
+        data.mutex.lock();
+        if (data.count > 0) {
+            data.count = data.count - 1;
+            data.mutex.unlock();
+            return true;
+        }
+        data.mutex.unlock();
+        return false;
+    }
+
+    @cfg(not(apple))
     fn try_wait(self) -> bool {
         return sem_trywait(self.handle) == 0;
     }
     
+    @cfg(apple)
+    fn post(self) {
+        let data = (SemData*)self.handle;
+        data.mutex.lock();
+        data.count = data.count + 1;
+        data.cond.signal();
+        data.mutex.unlock();
+    }
+
+    @cfg(not(apple))
     fn post(self) {
         sem_post(self.handle);
     }
     
+    @cfg(apple)
+    fn value(self) -> int {
+        let data = (SemData*)self.handle;
+        data.mutex.lock();
+        let val = data.count;
+        data.mutex.unlock();
+        return val;
+    }
+
+    @cfg(not(apple))
     fn value(self) -> int {
         let val: int = 0;
         sem_getvalue(self.handle, &val);
         return val;
     }
     
+    @cfg(apple)
+    fn free(self) {
+        if (self.handle != NULL) {
+            let data = (SemData*)self.handle;
+            data.mutex.free();
+            data.cond.free();
+            free(data);
+            self.handle = NULL;
+        }
+    }
+
+    @cfg(not(apple))
     fn free(self) {
         if (self.handle != NULL) {
             sem_destroy(self.handle);

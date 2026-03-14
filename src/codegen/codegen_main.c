@@ -327,6 +327,11 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
         if (s->type == NODE_STRUCT && s->type_info && s->type_info->traits.has_drop &&
             !s->strct.is_template)
         {
+            if (s->cfg_condition)
+            {
+                fprintf(out, "#if %s\n", s->cfg_condition);
+            }
+
             char *sname = s->strct.name;
             fprintf(out, "// Auto-Generated RAII Glue for %s\n", sname);
             fprintf(out, "void %s__Drop_glue(%s *self) {\n", sname, sname);
@@ -353,7 +358,12 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
                 field = field->next;
             }
 
-            fprintf(out, "}\n\n");
+            fprintf(out, "}\n");
+            if (s->cfg_condition)
+            {
+                fprintf(out, "#endif\n");
+            }
+            fprintf(out, "\n");
         }
         s = s->next;
     }
