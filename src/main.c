@@ -157,7 +157,7 @@ int main(int argc, char **argv)
         }
     }
 
-    char* optimization_level = NULL;
+    char *optimization_level = NULL;
 
     // Parse args
     for (int i = arg_start; i < argc; i++)
@@ -331,12 +331,14 @@ int main(int argc, char **argv)
             if (strlen(arg) > 2)
             {
                 optimization_level = arg + 2;
-                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O", optimization_level);
+                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O",
+                                 optimization_level);
             }
             else if (i + 1 < argc)
             {
                 optimization_level = argv[++i];
-                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O", optimization_level);
+                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O",
+                                 optimization_level);
             }
         }
         else if (strcmp(arg, "-g") == 0)
@@ -433,12 +435,12 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if(g_config.mode_debug && g_config.mode_run)
+    if (g_config.mode_debug && g_config.mode_run)
     {
         // Debug requires -g
         main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
 
-        if(optimization_level)
+        if (optimization_level)
         {
             zwarn("You are debugging an optimized program.");
         }
@@ -647,15 +649,14 @@ int main(int argc, char **argv)
         }
     }
 
-    int has_errors_as_warnings = g_config.warn_as_errors && g_warning_count != 0;
-
     // In check mode, exit after type checking
     if (g_config.mode_check)
     {
-        if (tc_result != 0 || has_errors_as_warnings)
+        if (tc_result != 0)
         {
-            fprintf(stderr, COLOR_BOLD COLOR_RED "       Check" COLOR_RESET " failed with %d warning%s\n",
-                g_warning_count, g_warning_count == 1 ? "" : "s");
+            fprintf(stderr,
+                    COLOR_BOLD COLOR_RED "       Check" COLOR_RESET " failed with %d warning%s\n",
+                    g_warning_count, g_warning_count == 1 ? "" : "s");
             return 1;
         }
         printf(COLOR_BOLD COLOR_GREEN "       Check" COLOR_RESET " passed\n");
@@ -740,29 +741,34 @@ int main(int argc, char **argv)
     codegen_node(&ctx, root, out);
     fclose(out);
 
-    if (g_config.mode_transpile)
+    if (g_config.mode_transpile && g_config.output_file)
+    {
+        // If user specified -o, rename temp file to that
+        if (rename(temp_source_file, g_config.output_file) != 0)
+        {
+            perror("rename output");
+            return 1;
+        }
+    }
+
+    if (g_config.warn_as_errors && g_warning_count != 0)
+    {
+        fprintf(stderr, COLOR_BOLD COLOR_RED "    Failed" COLOR_RESET " build with %d warning%s\n",
+                g_warning_count, g_warning_count == 1 ? "" : "s");
+        return 1;
+    }
+
+    if (g_config.mode_transpile && !g_config.quiet)
     {
         if (g_config.output_file)
         {
-            // If user specified -o, rename temp file to that
-            if (rename(temp_source_file, g_config.output_file) != 0)
-            {
-                perror("rename output");
-                return 1;
-            }
-            if (!g_config.quiet)
-            {
-                printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n",
-                       g_config.output_file);
-            }
+            printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n",
+                    g_config.output_file);
         }
         else
         {
-            if (!g_config.quiet)
-            {
-                printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n",
-                       temp_source_file);
-            }
+            printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n",
+                    temp_source_file);
         }
         // Done, no C compilation
         return 0;
@@ -806,7 +812,7 @@ int main(int argc, char **argv)
         remove(temp_source_file);
     }
 
-    if (g_config.mode_run && !has_errors_as_warnings)
+    if (g_config.mode_run)
     {
         ArgList run_args;
         arg_list_init(&run_args);
@@ -874,21 +880,13 @@ int main(int argc, char **argv)
     double end_time = z_get_monotonic_time();
     double time_taken = end_time - start_time;
 
-    if (!g_config.quiet && (!g_config.mode_run || has_errors_as_warnings))
+    if (!g_config.quiet)
     {
         if (g_warning_count > 0)
         {
-            if(g_config.warn_as_errors)
-            {
-                fprintf(stderr, COLOR_BOLD COLOR_RED "    Failed" COLOR_RESET
-                                            " build in %.2fs with %d warning%s\n",
-                    time_taken, g_warning_count, g_warning_count == 1 ? "" : "s");
-                return 1;
-            }
-            
             printf(COLOR_BOLD COLOR_GREEN "    Finished" COLOR_RESET
-                                        " build in %.2fs with %d warning%s\n",
-                time_taken, g_warning_count, g_warning_count == 1 ? "" : "s");
+                                          " build in %.2fs with %d warning%s\n",
+                   time_taken, g_warning_count, g_warning_count == 1 ? "" : "s");
         }
         else
         {
