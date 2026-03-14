@@ -1,0 +1,58 @@
+
+import "../../std/string.zc"
+import "../../std/result.zc"
+import "../../std/vec.zc"
+
+struct Hex {}
+
+impl Hex {
+    fn encode(data: u8*, len: usize) -> String {
+        let table = "0123456789abcdef";
+        let out = String::new("");
+        out.reserve(len * 2);
+        
+        for (let i: usize = 0; i < len; i = i + 1) {
+            let b = data[i];
+            let buf: char[3];
+            buf[0] = table[(b >> 4) & 0x0F];
+            buf[1] = table[b & 0x0F];
+            buf[2] = 0;
+            out.append_c(&buf[0]);
+        }
+        
+        return out;
+    }
+
+    fn decode(hex: String) -> Result<Vec<u8>> {
+        let s = hex.c_str();
+        let len = hex.length();
+        
+        if (len % 2 != 0) {
+            return Result<Vec<u8>>::Err("Hex string must have even length");
+        }
+        
+        let out = Vec<u8>::new();
+        out.grow_to_fit(len / 2);
+        
+        for (let i: usize = 0; i < len; i = i + 2) {
+            let h = _hex_digit_to_int(s[i]);
+            let l = _hex_digit_to_int(s[i+1]);
+            
+            if (h == -1 || l == -1) {
+                out.free();
+                return Result<Vec<u8>>::Err("Invalid hex digit");
+            }
+            
+            out.push((u8)((h << 4) | l));
+        }
+        
+        return Result<Vec<u8>>::Ok(out);
+    }
+}
+
+fn _hex_digit_to_int(c: char) -> int {
+    if (c >= '0' && c <= '9') return (int)(c - '0');
+    if (c >= 'a' && c <= 'f') return (int)(c - 'a' + 10);
+    if (c >= 'A' && c <= 'F') return (int)(c - 'A' + 10);
+    return -1;
+}

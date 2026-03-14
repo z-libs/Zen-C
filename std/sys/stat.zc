@@ -1,0 +1,70 @@
+
+import "../core.zc"
+
+include <sys/stat.h>
+include <time.h>
+
+struct Stat {
+    mode: u32;
+    size: u64;
+    atime: i64;
+    mtime: i64;
+    ctime: i64;
+    uid: u32;
+    gid: u32;
+}
+
+raw {
+    int _z_stat(const char* path, uint32_t* mode, uint64_t* size, int64_t* atime, int64_t* mtime, int64_t* ctime, uint32_t* uid, uint32_t* gid) {
+        struct stat st;
+        if (stat(path, &st) != 0) return -1;
+        *mode = (uint32_t)st.st_mode;
+        *size = (uint64_t)st.st_size;
+        *atime = (int64_t)st.st_atime;
+        *mtime = (int64_t)st.st_mtime;
+        *ctime = (int64_t)st.st_ctime;
+        *uid = (uint32_t)st.st_uid;
+        *gid = (uint32_t)st.st_gid;
+        return 0;
+    }
+}
+
+extern fn _z_stat(path: const char*, mode: u32*, size: u64*, atime: i64*, mtime: i64*, ctime: i64*, uid: u32*, gid: u32*) -> int;
+
+struct FileStat {}
+
+impl FileStat {
+    fn stat(path: char*) -> Option<Stat> {
+        let mode: u32;
+        let size: u64;
+        let atime: i64;
+        let mtime: i64;
+        let ctime: i64;
+        let uid: u32;
+        let gid: u32;
+        
+        if (_z_stat(path, &mode, &size, &atime, &mtime, &ctime, &uid, &gid) != 0) {
+            return Option<Stat>::None();
+        }
+        
+        return Option<Stat>::Some(Stat {
+            mode: mode,
+            size: size,
+            atime: atime,
+            mtime: mtime,
+            ctime: ctime,
+            uid: uid,
+            gid: gid
+        });
+    }
+
+    fn is_dir(mode: u32) -> bool {
+        let _mode = mode;
+        raw { return S_ISDIR(_mode); }
+    }
+
+    fn is_file(mode: u32) -> bool {
+        let _mode = mode;
+        raw { return S_ISREG(_mode); }
+    }
+}

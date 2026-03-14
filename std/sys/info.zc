@@ -1,0 +1,77 @@
+
+import "../core.zc"
+import "../string.zc"
+
+include <sys/utsname.h>
+
+struct Uname {
+    sysname: String;
+    nodename: String;
+    release: String;
+    version: String;
+    machine: String;
+}
+
+raw {
+    int _z_uname(char* sys, char* node, char* rel, char* ver, char* mach) {
+        struct utsname buffer;
+        if (uname(&buffer) != 0) return -1;
+        strcpy(sys, buffer.sysname);
+        strcpy(node, buffer.nodename);
+        strcpy(rel, buffer.release);
+        strcpy(ver, buffer.version);
+        strcpy(mach, buffer.machine);
+        return 0;
+    }
+}
+
+extern fn _z_uname(sys: char*, node: char*, rel: char*, ver: char*, mach: char*) -> int;
+
+struct SysInfo {}
+
+impl SysInfo {
+    fn get_uname() -> Uname {
+        let sys = (char*)malloc(256);
+        let node = (char*)malloc(256);
+        let rel = (char*)malloc(256);
+        let ver = (char*)malloc(256);
+        let mach = (char*)malloc(256);
+        
+        if (_z_uname(sys, node, rel, ver, mach) != 0) {
+            // Return empty info on failure
+            return Uname {
+                sysname: String::new("Unknown"),
+                nodename: String::new("Unknown"),
+                release: String::new("Unknown"),
+                version: String::new("Unknown"),
+                machine: String::new("Unknown")
+            };
+        }
+        
+        let u = Uname {
+            sysname: String::from(sys),
+            nodename: String::from(node),
+            release: String::from(rel),
+            version: String::from(ver),
+            machine: String::from(mach)
+        };
+        
+        free(sys);
+        free(node);
+        free(rel);
+        free(ver);
+        free(mach);
+        
+        return u;
+    }
+}
+
+impl Drop for Uname {
+    fn drop(self) {
+        self.sysname.free();
+        self.nodename.free();
+        self.release.free();
+        self.version.free();
+        self.machine.free();
+    }
+}
