@@ -2115,18 +2115,133 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                 {
                     format_spec = "%p"; // Pointer
                 }
+
+                if (!format_spec && t)
+                {
+                    Type *base = t;
+                    int is_p = 0;
+                    if (base->kind == TYPE_POINTER)
+                    {
+                        base = base->inner;
+                        is_p = 1;
+                    }
+
+                    while (base)
+                    {
+                        if (base->kind == TYPE_ALIAS)
+                        {
+                            base = base->inner;
+                        }
+                        else if (base->kind == TYPE_STRUCT && base->name)
+                        {
+                            TypeAlias *ta = find_type_alias_node(ctx, base->name);
+                            if (ta && ta->type_info)
+                            {
+                                base = ta->type_info;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    if (base && base->kind == TYPE_ARRAY && base->array_size == 0)
+                    {
+                        char *inner_name = type_to_string(base->inner);
+                        char slice_name[256];
+                        sprintf(slice_name, "Slice_%s", inner_name);
+                        free(inner_name);
+
+                        ASTNode *def = find_struct_def(ctx, slice_name);
+                        if (def && def->type == NODE_STRUCT)
+                        {
+                            int has_data = 0;
+                            int has_len = 0;
+                            char *data_type = NULL;
+
+                            ASTNode *curr = def->strct.fields;
+                            while (curr)
+                            {
+                                if (strcmp(curr->field.name, "data") == 0)
+                                {
+                                    has_data = 1;
+                                    data_type = curr->field.type;
+                                }
+                                else if (strcmp(curr->field.name, "len") == 0)
+                                {
+                                    has_len = 1;
+                                }
+                                curr = curr->next;
+                            }
+
+                            if (has_data && has_len && data_type &&
+                                (strstr(data_type, "char") || strstr(data_type, "u8") ||
+                                 strstr(data_type, "byte")))
+                            {
+                                char buf[512];
+                                const char *acc = is_p ? "->" : ".";
+                                sprintf(buf, "fprintf(%s, \"%%.*s\", (int)(%s)%slen, (%s)%sdata); ",
+                                        target, rw_expr, acc, rw_expr, acc);
+                                strcat(gen, buf);
+                                goto next_segment;
+                            }
+                        }
+                    }
+                    else if (base && base->kind == TYPE_STRUCT && base->name)
+                    {
+                        ASTNode *def = find_struct_def(ctx, base->name);
+                        if (def && def->type == NODE_STRUCT)
+                        {
+                            int has_data = 0;
+                            int has_len = 0;
+                            char *data_type = NULL;
+
+                            ASTNode *curr = def->strct.fields;
+                            while (curr)
+                            {
+                                if (strcmp(curr->field.name, "data") == 0)
+                                {
+                                    has_data = 1;
+                                    data_type = curr->field.type;
+                                }
+                                else if (strcmp(curr->field.name, "len") == 0)
+                                {
+                                    has_len = 1;
+                                }
+                                curr = curr->next;
+                            }
+
+                            if (has_data && has_len && data_type &&
+                                (strstr(data_type, "char") || strstr(data_type, "u8") ||
+                                 strstr(data_type, "byte")))
+                            {
+                                char buf[512];
+                                const char *acc = is_p ? "->" : ".";
+                                sprintf(buf, "fprintf(%s, \"%%.*s\", (int)(%s)%slen, (%s)%sdata); ",
+                                        target, rw_expr, acc, rw_expr, acc);
+                                strcat(gen, buf);
+                                goto next_segment;
+                            }
+                        }
+                    }
+                }
+
                 if (t)
                 {
                     free(inferred_type);
                 }
             }
 
-            // Check for Literals if variable lookup failed
             if (!format_spec)
             {
                 if (isdigit(clean_expr[0]) || clean_expr[0] == '-')
                 {
-                    format_spec = "%d"; // Naive integer guess (could be float)
+                    format_spec = "%d";
                 }
                 else if (clean_expr[0] == '"')
                 {
@@ -2170,6 +2285,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
             }
         }
 
+    next_segment:
         if (rw_expr && used_codegen)
         {
             free(rw_expr);

@@ -1,0 +1,40 @@
+import "std/core.zc"
+import "std/slice.zc"
+import "std/vec.zc"
+
+opaque alias StringView = Slice<char>;
+alias MyVec = Vec<char>;
+
+test "println_robustness_slice" {
+    let val = "hello";
+    let sv = Slice<char>{data: val, len: 5};
+    println "{sv}";
+}
+
+test "println_robustness_opaque_alias" {
+    let val = "opaque";
+    let sv = StringView{data: val, len: 6};
+    println "{sv}";
+}
+
+test "println_robustness_vec_alias" {
+    let v = Vec<char>::new();
+    v.push('a');
+    v.push('b');
+    v.push('c');
+    let mv = (MyVec)v;
+    println "{mv}";
+}
+
+test "println_robustness_pointer" {
+    let val = "pointer";
+    let sv = Slice<char>{data: val, len: 7};
+    let p = &sv;
+    println "{p}";
+}
+
+test "println_robustness_builtin_slice" {
+    let val = "builtin";
+    let s: [char] = [char]{data: val, len: 7};
+    println "{s}";
+}
