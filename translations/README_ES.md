@@ -75,6 +75,7 @@ Echa un vistazo a estos proyectos construidos con Zen C:
         <li><a href="#herramientas">Herramientas</a>
           <ul>
             <li><a href="#protocolo-de-servidor-de-lenguaje-lsp">LSP</a></li>
+            <li><a href="#depuración-de-zen-c">Depuración</a></li>
           </ul>
         </li>
         <li><a href="#soporte-del-compilador-y-compatibilidad">Soporte del Compilador</a></li>
@@ -1533,6 +1534,38 @@ Zen C incluye un Servidor de Lenguaje integrado para la integración con editore
 - **Editores Soportados**: VS Code, Neovim, Vim, Zed, y cualquier editor capaz de LSP.
 
 Usa `zc lsp` para iniciar el servidor.
+
+### Depuración de Zen C
+
+Los programas de Zen C se pueden depurar utilizando depuradores de C estándar como **LLDB** o **GDB**.
+
+#### Visual Studio Code
+
+Para obtener la mejor experiencia en VS Code, instale la [extensión oficial de Zen C](https://marketplace.visualstudio.com/items?itemName=Z-Libs.zenc). Para la depuración, puede utilizar la extensión **C/C++** (de Microsoft) o **CodeLLDB**.
+
+Agregue estas configuraciones a su directorio `.vscode` para habilitar la depuración con un solo clic:
+
+**`tasks.json`** (Tarea de compilación):
+```json
+{
+    "label": "Zen C: Build Debug",
+    "type": "shell",
+    "command": "zc",
+    "args": [ "${file}", "-g", "-o", "${fileDirname}/app", "-O0" ],
+    "group": { "kind": "build", "isDefault": true }
+}
+```
+
+**`launch.json`** (Depurador):
+```json
+{
+    "name": "Zen C: Debug (LLDB)",
+    "type": "lldb",
+    "request": "launch",
+    "program": "${fileDirname}/app",
+    "preLaunchTask": "Zen C: Build Debug"
+}
+```
 
 ## Soporte del Compilador y Compatibilidad
 

@@ -75,6 +75,7 @@ Check out these projects built with Zen C:
         <li><a href="#tooling">Tooling</a>
           <ul>
             <li><a href="#language-server-protocol-lsp">LSP</a></li>
+            <li><a href="#debugging-zen-c">Debugging</a></li>
           </ul>
         </li>
         <li><a href="#compiler-support--compatibility">Compiler Support & Compatibility</a></li>
@@ -1539,43 +1540,36 @@ Zen C includes a built-in Language Server for editor integration.
 
 Use `zc lsp` to start the server.
 
-### Debugging Zen C programs
+### Debugging Zen C
 
-You can install the VS Code extension to set breakpoints and debug your Zen C source code inside the editor. You can also use LLDB in any supported editor or terminal.
+Zen C programs can be debugged using standard C debuggers like **LLDB** or **GDB**.
 
-#### VS Code tasks for debugging
+#### Visual Studio Code
 
-In addition to installing the VS Code extension, use these setups for your `tasks.json` and `launch.json` in VS Code and configure them to your needs.
+For the best experience in VS Code, install the official [Zen C extension](https://marketplace.visualstudio.com/items?itemName=Z-Libs.zenc). For debugging, you can use the **C/C++** (by Microsoft) or **CodeLLDB** extension.
 
+Add these configurations to your `.vscode` directory to enable one-click debugging:
+
+**`tasks.json`** (Build Task):
 ```json
-// tasks.json
-"tasks": [
-    {
-        // Builds your Zen C program in a debug configuration
-        "label": "Build Debug (Zen C)",
-        "type": "shell",
-        "command": "zc",
-        "args": [ "\"${file}\"", "-g", "-o", "app", "-O0" ],
-        "options": { "cwd": "${fileDirname}" },
-        "problemMatcher": [],
-        "group": { "kind": "build", "isDefault": true }
-    },
-]
+{
+    "label": "Zen C: Build Debug",
+    "type": "shell",
+    "command": "zc",
+    "args": [ "${file}", "-g", "-o", "${fileDirname}/app", "-O0" ],
+    "group": { "kind": "build", "isDefault": true }
+}
+```
 
-// launch.json
-"configurations": [
-    {
-        // Launches your Zen C program with an attached debugger
-        "name": "Debug (Zen C)",
-        "type": "lldb",
-        "request": "launch",
-        "program": "${fileDirname}/app",
-        "args": [],
-        "cwd": "${fileDirname}",
-        "preLaunchTask": "Build Debug (Zen C)",
-        "stopOnEntry": false
-    },
-]
+**`launch.json`** (Debugger):
+```json
+{
+    "name": "Zen C: Debug (LLDB)",
+    "type": "lldb",
+    "request": "launch",
+    "program": "${fileDirname}/app",
+    "preLaunchTask": "Zen C: Build Debug"
+}
 ```
 
 ## Compiler Support & Compatibility

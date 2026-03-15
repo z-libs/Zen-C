@@ -75,6 +75,7 @@
         <li><a href="#工具链">工具链</a>
           <ul>
             <li><a href="#语言服务器协议-lsp">LSP</a></li>
+            <li><a href="#zen-c-调试">调试</a></li>
           </ul>
         </li>
         <li><a href="#编译器支持与兼容性">编译器支持与兼容性</a></li>
@@ -1495,6 +1496,38 @@ Zen C 包含一个内置的语言服务器，用于编辑器集成。
 - **支持的编辑器**: VS Code, Neovim, Vim, Zed, 以及任何支持 LSP 的编辑器。
 
 使用 `zc lsp` 启动服务器。
+
+### Zen C 调试
+
+Zen C 程序可以使用标准的 C 调试器（如 **LLDB** 或 **GDB**）进行调试。
+
+#### Visual Studio Code
+
+为了在 VS Code 中获得最佳体验，请安装官方的 [Zen C 扩展](https://marketplace.visualstudio.com/items?itemName=Z-Libs.zenc)。对于调试，您可以使用 **C/C++**（由 Microsoft 提供）或 **CodeLLDB** 扩展。
+
+将这些配置添加到您的 `.vscode` 目录中，以启用一键调试：
+
+**`tasks.json`** (构建任务):
+```json
+{
+    "label": "Zen C: Build Debug",
+    "type": "shell",
+    "command": "zc",
+    "args": [ "${file}", "-g", "-o", "${fileDirname}/app", "-O0" ],
+    "group": { "kind": "build", "isDefault": true }
+}
+```
+
+**`launch.json`** (调试器):
+```json
+{
+    "name": "Zen C: Debug (LLDB)",
+    "type": "lldb",
+    "request": "launch",
+    "program": "${fileDirname}/app",
+    "preLaunchTask": "Zen C: Build Debug"
+}
+```
 
 ## 编译器支持与兼容性
 

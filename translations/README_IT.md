@@ -73,6 +73,7 @@ Dai un'occhiata a questi progetti creati con Zen C:
         <li><a href="#strumenti">Strumenti</a>
           <ul>
             <li><a href="#protocollo-server-di-linguaggio-lsp">LSP</a></li>
+            <li><a href="#debugging-zen-c">Debugging</a></li>
           </ul>
         </li>
         <li><a href="#guida-rapida">Guida Rapida</a></li>
@@ -1527,6 +1528,38 @@ Zen C include un Server di Linguaggio integrato per l'integrazione con gli edito
 - **Editor Supportati**: VS Code, Neovim, Vim, Zed, e qualsiasi editor compatibile con LSP.
 
 Usa `zc lsp` per avviare il server.
+
+### Debugging Zen C
+
+I programmi Zen C possono essere sottoposti a debug utilizzando i debugger C standard come **LLDB** o **GDB**.
+
+#### Visual Studio Code
+
+Per la migliore esperienza in VS Code, installa l'[estensione ufficiale Zen C](https://marketplace.visualstudio.com/items?itemName=Z-Libs.zenc). Per il debugging, puoi utilizzare l'estensione **C/C++** (di Microsoft) o **CodeLLDB**.
+
+Aggiungi queste configurazioni alla tua directory `.vscode` per abilitare il debugging con un clic:
+
+**`tasks.json`** (Attività di compilazione):
+```json
+{
+    "label": "Zen C: Build Debug",
+    "type": "shell",
+    "command": "zc",
+    "args": [ "${file}", "-g", "-o", "${fileDirname}/app", "-O0" ],
+    "group": { "kind": "build", "isDefault": true }
+}
+```
+
+**`launch.json`** (Debugger):
+```json
+{
+    "name": "Zen C: Debug (LLDB)",
+    "type": "lldb",
+    "request": "launch",
+    "program": "${fileDirname}/app",
+    "preLaunchTask": "Zen C: Build Debug"
+}
+```
 
 ## Supporto del Compilatore e Compatibilità
 

@@ -74,6 +74,7 @@
         <li><a href="#инструменты">Инструменты</a>
           <ul>
             <li><a href="#протокол-языкового-сервера-lsp">LSP</a></li>
+            <li><a href="#отладка-zen-c">Отладка</a></li>
           </ul>
         </li>
         <li><a href="#поддержка-компилятора-и-совместимость">Поддержка компилятора</a></li>
@@ -1472,6 +1473,38 @@ Zen C включает встроенный языковой сервер для
 - **Поддерживаемые редакторы**: VS Code, Neovim, Vim, Zed и любой редактор с поддержкой LSP.
 
 Используйте `zc lsp` для запуска сервера.
+
+### Отладка Zen C
+
+Программы на Zen C можно отлаживать с помощью стандартных отладчиков C, таких как **LLDB** или **GDB**.
+
+#### Visual Studio Code
+
+Для наилучшей работы в VS Code установите официальное [расширение Zen C](https://marketplace.visualstudio.com/items?itemName=Z-Libs.zenc). Для отладки вы можете использовать расширения **C/C++** (от Microsoft) или **CodeLLDB**.
+
+Добавьте эти конфигурации в вашу директорию `.vscode`, чтобы включить отладку одним щелчком мыши:
+
+**`tasks.json`** (Задача сборки):
+```json
+{
+    "label": "Zen C: Build Debug",
+    "type": "shell",
+    "command": "zc",
+    "args": [ "${file}", "-g", "-o", "${fileDirname}/app", "-O0" ],
+    "group": { "kind": "build", "isDefault": true }
+}
+```
+
+**`launch.json`** (Отладчик):
+```json
+{
+    "name": "Zen C: Debug (LLDB)",
+    "type": "lldb",
+    "request": "launch",
+    "program": "${fileDirname}/app",
+    "preLaunchTask": "Zen C: Build Debug"
+}
+```
 
 ## Поддержка компилятора и совместимость
 
