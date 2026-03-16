@@ -18,12 +18,12 @@ jobs:
           token: ${{ secrets.WEBSITE_REPO_TOKEN }}
           fetch-depth: 0
 
-      - name: Checkout Website Repository
+      - name: Checkout Docs Repository
         uses: actions/checkout@v4
         with:
-          repository: 'zenc-lang/www'
+          repository: 'zenc-lang/docs'
           token: ${{ secrets.WEBSITE_REPO_TOKEN }}
-          path: 'website'
+          path: 'docs'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -50,13 +50,13 @@ jobs:
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore: auto-sync new Rosetta Code examples" && git push origin HEAD:main)
 
 
-      - name: Sync Markdown to Website Repo
+      - name: Sync Markdown to Docs Repo
         run: |
-          mkdir -p website/docs.zenc-lang.org/content/examples/rosetta/
-          rsync -avz --delete --exclude='_index.md' zen-c/website_out/ website/docs.zenc-lang.org/content/examples/rosetta/
+          mkdir -p docs/rosetta/
+          rsync -avz --delete --exclude='_index.md' zen-c/website_out/ docs/rosetta/
           
-          cd website
+          cd docs
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs.zenc-lang.org/content/examples/rosetta/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-publish Rosetta Code examples" && git push)
+          git add rosetta/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-sync Rosetta Code examples from zenc repo" && git push)
