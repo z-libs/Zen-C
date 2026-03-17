@@ -1041,9 +1041,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                     }
 
-                    // Only warn if no C interop, not internal, not explicitly extern, and not
-                    // whitelisted
-                    if (!has_c_interop && !is_internal && !is_extern && !is_whitelisted)
+                    if (!has_c_interop && !is_internal && !is_extern && !is_whitelisted &&
+                        !(node->call.callee->type_info &&
+                          get_inner_type(node->call.callee->type_info)->kind == TYPE_FUNCTION))
                     {
                         Token t = node->call.callee->token;
                         char msg[256];
