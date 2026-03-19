@@ -924,6 +924,20 @@ void register_builtins(ParserContext *ctx)
     register_impl(ctx, "Copy", "va_list");
 }
 
+void register_comptime_builtins(ParserContext *ctx)
+{
+    Type *void_t = type_new(TYPE_VOID);
+    add_symbol(ctx, "yield", "void", void_t);
+    add_symbol(ctx, "code", "void", void_t); // Alias for yield
+    add_symbol(ctx, "compile_warn", "void", void_t);
+    add_symbol(ctx, "compile_error", "void", void_t);
+
+    register_extern_symbol(ctx, "yield");
+    register_extern_symbol(ctx, "code");
+    register_extern_symbol(ctx, "compile_warn");
+    register_extern_symbol(ctx, "compile_error");
+}
+
 void add_instantiated_func(ParserContext *ctx, ASTNode *fn)
 {
     fn->next = ctx->instantiated_funcs;
@@ -4377,6 +4391,53 @@ char *find_similar_symbol(ParserContext *ctx, const char *name)
     return best_match ? xstrdup(best_match) : NULL;
 }
 
+static const char *get_closest_type_hint(ParserContext *ctx, const char *name)
+{
+    int best_dist = 4;
+    const char *best = NULL;
+
+    StructDef *def = ctx->struct_defs;
+    while (def)
+    {
+        int dist = levenshtein(name, def->name);
+        if (dist < best_dist)
+        {
+            best_dist = dist;
+            best = def->name;
+        }
+        def = def->next;
+    }
+
+    StructRef *er = ctx->parsed_enums_list;
+    while (er)
+    {
+        if (er->node && er->node->type == NODE_ENUM)
+        {
+            int dist = levenshtein(name, er->node->enm.name);
+            if (dist < best_dist)
+            {
+                best_dist = dist;
+                best = er->node->enm.name;
+            }
+        }
+        er = er->next;
+    }
+
+    TypeAlias *ta = ctx->type_aliases;
+    while (ta)
+    {
+        int dist = levenshtein(name, ta->alias);
+        if (dist < best_dist)
+        {
+            best_dist = dist;
+            best = ta->alias;
+        }
+        ta = ta->next;
+    }
+
+    return best;
+}
+
 void register_plugin(ParserContext *ctx, const char *name, const char *alias)
 {
     // Try to find existing (built-in) or already loaded plugin
@@ -4468,8 +4529,20 @@ int validate_types(ParserContext *ctx)
                 {
                     if (!is_trait(u->name))
                     {
-                        zwarn_at(u->location, "Unknown type '%s' (assuming external C struct)",
+                        char msg[256];
+                        snprintf(msg, sizeof(msg), "Unknown type '%s' (assuming external C struct)",
                                  u->name);
+                        const char *hint = get_closest_type_hint(ctx, u->name);
+                        if (hint)
+                        {
+                            char help[512];
+                            snprintf(help, sizeof(help), "Did you mean '%s'?", hint);
+                            zwarn_with_suggestion(u->location, msg, help);
+                        }
+                        else
+                        {
+                            zwarn_at(u->location, "%s", msg);
+                        }
                     }
                 }
             }

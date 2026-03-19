@@ -1790,10 +1790,24 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
     while (*cur)
     {
-        // 1. Find text before the next '{'
         char *brace = cur;
-        while (*brace && *brace != '{')
+        while (*brace)
         {
+            if (*brace == '{')
+            {
+                if (brace[1] == '{')
+                {
+                    brace += 2;
+                    continue;
+                }
+                break; // Found single '{'
+            }
+            if (*brace == '}' && brace[1] == '}')
+            {
+                // We'll treat '}}' as part of literal text and unescape it later
+                brace += 2;
+                continue;
+            }
             brace++;
         }
 
@@ -1806,8 +1820,25 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
             int seg_len = brace - cur;
             char *txt = xmalloc(seg_len + 1);
-            strncpy(txt, cur, seg_len);
-            txt[seg_len] = 0;
+            int write_idx = 0;
+            for (int i = 0; i < seg_len; i++)
+            {
+                if (cur[i] == '{' && cur[i + 1] == '{')
+                {
+                    txt[write_idx++] = '{';
+                    i++;
+                }
+                else if (cur[i] == '}' && cur[i + 1] == '}')
+                {
+                    txt[write_idx++] = '}';
+                    i++;
+                }
+                else
+                {
+                    txt[write_idx++] = cur[i];
+                }
+            }
+            txt[write_idx] = 0;
 
             char *escaped = escape_c_string(txt);
             strcat(gen, escaped);
@@ -1822,7 +1853,6 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
             break;
         }
 
-        // 2. Handle {expression}
         char *p = brace + 1;
         char *colon = NULL;
         int depth = 1;
@@ -4223,6 +4253,8 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     memset(&cctx, 0, sizeof(cctx));
     enter_scope(&cctx); // Global scope
     register_builtins(&cctx);
+    register_comptime_builtins(&cctx);
+    cctx.has_external_includes = 1; // Suppress undefined warnings for comptime helpers
 
     ASTNode *block = parse_block(&cctx, &cl);
     ASTNode *nodes = block ? block->block.statements : NULL;

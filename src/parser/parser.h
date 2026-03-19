@@ -576,6 +576,7 @@ void add_to_global_list(ParserContext *ctx, ASTNode *node);
  * @brief Registers built-in types and functions.
  */
 void register_builtins(ParserContext *ctx);
+void register_comptime_builtins(ParserContext *ctx);
 
 /**
  * @brief Adds an instantiated function to the list.

@@ -4330,7 +4330,17 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
     }
     else
     {
-        zpanic_at(t, "Unexpected token in parse_primary: %.*s", t.len, t.start);
+        const char *hints[] = {"Valid primary expressions include:",
+                               "- Identifiers (variables, functions, fields)",
+                               "- Literals (numbers, strings, booleans, runes)",
+                               "- Parenthesized expressions `(...)`",
+                               "- Array literals `[...]`",
+                               "- Block expressions `{...}`",
+                               NULL};
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Unexpected token '%.*s' while parsing expression", t.len,
+                 t.start);
+        zpanic_with_hints(t, msg, hints);
         return NULL;
     }
 

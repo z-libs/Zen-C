@@ -11,7 +11,7 @@
 #include "zprep_plugin.h"
 
 // Helper to suggest standard library imports for common missing functions
-static const char *get_missing_function_hint(const char *name)
+static const char *get_missing_function_hint(ParserContext *ctx, const char *name)
 {
     if (strcmp(name, "malloc") == 0 || strcmp(name, "free") == 0 || strcmp(name, "calloc") == 0 ||
         strcmp(name, "realloc") == 0)
@@ -28,7 +28,69 @@ static const char *get_missing_function_hint(const char *name)
     {
         return "Include <string.h>";
     }
+
+    int best_dist = 4;
+    static char best_buf[256];
+    const char *best = NULL;
+
+    FuncSig *sig = ctx->func_registry;
+    while (sig)
+    {
+        int dist = levenshtein(name, sig->name);
+        if (dist < best_dist)
+        {
+            best_dist = dist;
+            best = sig->name;
+        }
+        sig = sig->next;
+    }
+
+    StructRef *ref = ctx->parsed_funcs_list;
+    while (ref)
+    {
+        if (ref->node && ref->node->type == NODE_FUNCTION)
+        {
+            int dist = levenshtein(name, ref->node->func.name);
+            if (dist < best_dist)
+            {
+                best_dist = dist;
+                best = ref->node->func.name;
+            }
+        }
+        ref = ref->next;
+    }
+
+    if (best)
+    {
+        snprintf(best_buf, sizeof(best_buf), "Did you mean '%s'?", best);
+        return best_buf;
+    }
+
     return NULL;
+}
+
+static const char *get_closest_symbol_hint(ParserContext *ctx, const char *name)
+{
+    int best_dist = 4;
+    const char *best = NULL;
+
+    Scope *s = ctx->current_scope;
+    while (s)
+    {
+        ZenSymbol *sym = s->symbols;
+        while (sym)
+        {
+            int dist = levenshtein(name, sym->name);
+            if (dist < best_dist)
+            {
+                best_dist = dist;
+                best = sym->name;
+            }
+            sym = sym->next;
+        }
+        s = s->parent;
+    }
+    return best;
 }
 
 // Emit literal expression (int, float, string, char)
@@ -1057,7 +1119,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         Token t = node->call.callee->token;
                         char msg[256];
                         snprintf(msg, sizeof(msg), "Undefined function '%s'", name);
-                        const char *hint = get_missing_function_hint(name);
+                        const char *hint = get_missing_function_hint(ctx, name);
 
                         if (hint)
                         {
