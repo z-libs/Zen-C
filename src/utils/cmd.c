@@ -43,7 +43,10 @@ void print_usage()
     printf("\n" COLOR_BOLD COLOR_YELLOW "Options:" COLOR_RESET "\n");
     printf("  " COLOR_CYAN "-o" COLOR_RESET " <file>       Output executable name\n");
     printf("  " COLOR_CYAN "-O" COLOR_RESET "<level>       Optimization level\n");
-    printf("  " COLOR_CYAN "-g" COLOR_RESET "              Debug info\n");
+    printf("  " COLOR_CYAN "-g" COLOR_RESET "              Debug info (default)\n");
+    printf("  " COLOR_CYAN "-g0" COLOR_RESET ", " COLOR_CYAN "--no-debug" COLOR_RESET
+           "    Disable debug info\n");
+    printf("  " COLOR_CYAN "--release" COLOR_RESET "         Release mode (no-debug + -O3)\n");
     printf("  " COLOR_CYAN "-c" COLOR_RESET "              Compile only (produce .o)\n");
     printf("  " COLOR_CYAN "-v" COLOR_RESET ", " COLOR_CYAN "--verbose" COLOR_RESET
            "   Verbose output\n");

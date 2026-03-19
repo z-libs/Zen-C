@@ -42,6 +42,7 @@ static void main_append_flag(char *dest, size_t max_size, const char *prefix, co
 int main(int argc, char **argv)
 {
     memset(&g_config, 0, sizeof(g_config));
+    g_config.mode_debug = 1;
     if (z_is_windows())
     {
         strncpy(g_config.cc, "gcc.exe", sizeof(g_config.cc) - 1);
@@ -344,7 +345,15 @@ int main(int argc, char **argv)
         else if (strcmp(arg, "-g") == 0)
         {
             g_config.mode_debug = 1;
-            main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
+        }
+        else if (strcmp(arg, "-g0") == 0 || strcmp(arg, "--no-debug") == 0)
+        {
+            g_config.mode_debug = 0;
+        }
+        else if (strcmp(arg, "--release") == 0)
+        {
+            g_config.mode_debug = 0;
+            main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O3", NULL);
         }
         else if (strncmp(arg, "-D", 2) == 0)
         {
@@ -765,6 +774,11 @@ int main(int argc, char **argv)
     // Compile C
     char *outfile =
         g_config.output_file ? g_config.output_file : (z_is_windows() ? "a.exe" : "a.out");
+
+    if (g_config.mode_debug)
+    {
+        main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
+    }
 
     ArgList compile_args;
     arg_list_init(&compile_args);
