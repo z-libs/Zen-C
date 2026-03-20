@@ -6944,25 +6944,108 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             }
 
             // 4. Trait Object Wrapping for Assignment
+            char *raw_lhs_type = NULL;
+            int allocated_lhs = 0;
             if (lhs->type == NODE_EXPR_VAR)
             {
-                char *lhs_type_str = find_symbol_type(ctx, lhs->var_ref.name);
-                if (lhs_type_str && is_trait(lhs_type_str) && rhs && rhs->type == NODE_EXPR_UNARY &&
-                    strcmp(rhs->unary.op, "&") == 0 && rhs->unary.operand->type == NODE_EXPR_VAR)
+                raw_lhs_type = find_symbol_type(ctx, lhs->var_ref.name);
+            }
+            if (!raw_lhs_type && lhs->resolved_type)
+            {
+                raw_lhs_type = lhs->resolved_type;
+            }
+            if (!raw_lhs_type && lhs->type_info)
+            {
+                raw_lhs_type = type_to_string(lhs->type_info);
+                allocated_lhs = 1;
+            }
+
+            if (raw_lhs_type)
+            {
+                char *clean_lhs_type = raw_lhs_type;
+                if (strncmp(clean_lhs_type, "const ", 6) == 0)
                 {
-                    char *var_ref_name = rhs->unary.operand->var_ref.name;
-                    char *struct_type = find_symbol_type(ctx, var_ref_name);
-                    if (struct_type)
+                    clean_lhs_type += 6;
+                }
+
+                if (is_trait(clean_lhs_type) && rhs)
+                {
+                    char *struct_type = NULL;
+                    char *var_ref_name = NULL;
+                    int allocated_struct = 0;
+
+                    if (rhs->type == NODE_EXPR_UNARY && strcmp(rhs->unary.op, "&") == 0 &&
+                        rhs->unary.operand->type == NODE_EXPR_VAR)
                     {
+                        var_ref_name = rhs->unary.operand->var_ref.name;
+                        struct_type = find_symbol_type(ctx, var_ref_name);
+                    }
+                    else if (rhs->type == NODE_EXPR_VAR)
+                    {
+                        Type *rhs_t = find_symbol_type_info(ctx, rhs->var_ref.name);
+                        if (rhs_t && rhs_t->kind == TYPE_POINTER && rhs_t->inner &&
+                            rhs_t->inner->kind == TYPE_STRUCT)
+                        {
+                            struct_type = rhs_t->inner->name;
+                            var_ref_name = rhs->var_ref.name;
+                        }
+                        else
+                        {
+                            char *rhs_type_str = find_symbol_type(ctx, rhs->var_ref.name);
+                            if (rhs_type_str)
+                            {
+                                char *clean_rhs = rhs_type_str;
+                                if (strncmp(clean_rhs, "const ", 6) == 0)
+                                {
+                                    clean_rhs += 6;
+                                }
+                                size_t len = strlen(clean_rhs);
+                                if (len > 0 && clean_rhs[len - 1] == '*')
+                                {
+                                    struct_type = xmalloc(len);
+                                    strncpy(struct_type, clean_rhs, len - 1);
+                                    struct_type[len - 1] = '\0';
+                                    allocated_struct = 1;
+                                    var_ref_name = rhs->var_ref.name;
+                                }
+                            }
+                        }
+                    }
+
+                    if (struct_type && var_ref_name)
+                    {
+                        char *clean_struct_type = struct_type;
+                        if (strncmp(clean_struct_type, "const ", 6) == 0)
+                        {
+                            clean_struct_type += 6;
+                        }
+
                         char *code = xmalloc(512);
-                        sprintf(code, "(%s){.self=&%s, .vtable=&%s_%s_VTable}", lhs_type_str,
-                                var_ref_name, struct_type, lhs_type_str);
+                        if (rhs->type == NODE_EXPR_UNARY && strcmp(rhs->unary.op, "&") == 0)
+                        {
+                            sprintf(code, "(%s){.self=&%s, .vtable=&%s_%s_VTable}", clean_lhs_type,
+                                    var_ref_name, clean_struct_type, clean_lhs_type);
+                        }
+                        else
+                        {
+                            sprintf(code, "(%s){.self=%s, .vtable=&%s_%s_VTable}", clean_lhs_type,
+                                    var_ref_name, clean_struct_type, clean_lhs_type);
+                        }
                         ASTNode *wrapper = ast_create(NODE_RAW_STMT);
                         wrapper->token = rhs->token;
                         wrapper->raw_stmt.content = code;
                         bin->binary.right = wrapper;
                         rhs = wrapper;
                     }
+
+                    if (allocated_struct)
+                    {
+                        free((void *)struct_type);
+                    }
+                }
+                if (allocated_lhs)
+                {
+                    free(raw_lhs_type);
                 }
             }
         }

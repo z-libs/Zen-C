@@ -142,3 +142,29 @@ test "trait_underscores" {
     
     assert(t.method_with_underscores_123() == 100, "Method with underscores call failed");
 }
+
+let g_shape: Shape;
+
+test "trait_reassignment" {
+    let c = Circle { radius: 10.0 };
+    let r = Rectangle { width: 5.0, height: 5.0 };
+    
+    // 1. Initial declaration
+    let my_shape: Shape = &c;
+    assert(my_shape.area() > 314.0 && my_shape.area() < 315.0, "Initial declaration OK");
+
+    // 2. Reassignment (RHS is &var)
+    my_shape = &r;
+    // Rectangle area is width * height => 5.0 * 5.0 = 25.0
+    assert(my_shape.area() == 25.0, "Reassignment &var OK");
+
+    // 3. Reassignment (RHS is a pointer variable)
+    let circle_ptr = &c;
+    my_shape = circle_ptr;
+    assert(my_shape.area() > 314.0 && my_shape.area() < 315.0, "Reassignment ptr OK");
+
+    // 4. Global assignment
+    g_shape = &r;
+    assert(g_shape.area() == 25.0, "Global reassignment OK");
+}
+
