@@ -537,15 +537,24 @@ void scan_build_directives(ParserContext *ctx, const char *src)
             {
                 char *libs = directive + 11;
 
-                // Security check for malicious pkg-config commands containing bash injections
+                // Security check for malicious pkg-config commands containing shell injections.
+                // We only allow a strict whitelist of characters: alphanumeric, spaces, and safe
+                // non-alphanumeric. This prevents characters like ;, &, |, $, `, (, ), <, >, etc.
                 int is_safe = 1;
-                for (int i = 0; libs[i]; i++)
+                if (!libs || !*libs)
                 {
-                    if (!isalnum(libs[i]) && libs[i] != '-' && libs[i] != '_' && libs[i] != ' ' &&
-                        libs[i] != '.' && libs[i] != '+')
+                    is_safe = 0;
+                }
+                else
+                {
+                    for (int i = 0; libs[i]; i++)
                     {
-                        is_safe = 0;
-                        break;
+                        if (!isalnum((unsigned char)libs[i]) && libs[i] != '-' && libs[i] != '_' &&
+                            libs[i] != ' ' && libs[i] != '.' && libs[i] != '+')
+                        {
+                            is_safe = 0;
+                            break;
+                        }
                     }
                 }
 

@@ -4385,9 +4385,10 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
 
     sprintf(bin, "%s%s", filename, z_get_exe_ext());
 
-    // Construct compilation command
-    sprintf(cmdbuf, "%s %s -o %s -Istd -Istd/third-party/tre/include%s", g_config.cc, filename, bin,
-            z_get_comptime_link_flags());
+    // Use quotes for paths to prevent injection/errors with spaces
+    snprintf(cmdbuf, sizeof(cmdbuf),
+             "\"%s\" \"%s\" -o \"%s\" -Istd -Istd/third-party/tre/include %s", g_config.cc,
+             filename, bin, z_get_comptime_link_flags());
 
     if (!g_config.verbose)
     {
@@ -4404,7 +4405,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     sprintf(out_file, "%s.out", filename);
 
     // Execution command
-    sprintf(cmdbuf, "%s%s > %s", z_get_run_prefix(), bin, out_file);
+    snprintf(cmdbuf, sizeof(cmdbuf), "%s\"%s\" > \"%s\"", z_get_run_prefix(), bin, out_file);
 
     if (system(cmdbuf) != 0)
     {

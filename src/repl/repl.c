@@ -1431,9 +1431,10 @@ void run_repl(const char *self_path)
                             {
                                 fclose(f);
 
-                                char cmd[4096];
-                                snprintf(cmd, sizeof(cmd), "%s %s", editor, edit_path);
-                                int status = system(cmd);
+                                char cmdbuf[4096];
+                                snprintf(cmdbuf, sizeof(cmdbuf), "\"%s\" \"%s\"", editor,
+                                         edit_path);
+                                int status = system(cmdbuf);
 
                                 if (0 == status)
                                 {
@@ -1501,9 +1502,9 @@ void run_repl(const char *self_path)
                             editor = "nano";
                         }
 
-                        char cmd[4096];
-                        sprintf(cmd, "%s %s", editor, edit_path);
-                        int status = system(cmd);
+                        char cmdbuf[4096];
+                        snprintf(cmdbuf, sizeof(cmdbuf), "\"%s\" \"%s\"", editor, edit_path);
+                        int status = system(cmdbuf);
 
                         if (0 == status)
                         {
@@ -1879,9 +1880,10 @@ void run_repl(const char *self_path)
                         {
                             fprintf(f, "%s", probe_code);
                             fclose(f);
-                            char cmd[4096];
-                            snprintf(cmd, sizeof(cmd), "%s run -q %s", self_path, tmp_path);
-                            system(cmd);
+                            char cmdbuf[4096];
+                            snprintf(cmdbuf, sizeof(cmdbuf), "\"%s\" run -q \"%s\"", self_path,
+                                     tmp_path);
+                            system(cmdbuf);
                             remove(tmp_path);
                         }
                         free(probe_code);
@@ -1957,7 +1959,8 @@ void run_repl(const char *self_path)
                         fclose(f);
 
                         char cmd[2048];
-                        sprintf(cmd, "%s run -q %s 2>&1", self_path, tmp_path);
+                        snprintf(cmd, sizeof(cmd), "\"%s\" run -q \"%s\" 2>&1", self_path,
+                                 tmp_path);
 
                         FILE *p = popen(cmd, "r");
                         if (p)
@@ -2068,9 +2071,10 @@ void run_repl(const char *self_path)
                     {
                         fprintf(f, "%s", code);
                         fclose(f);
-                        char cmd[2048];
-                        sprintf(cmd, "%s run -q %s", self_path, tmp_path);
-                        system(cmd);
+                        char cmdbuf[2048];
+                        snprintf(cmdbuf, sizeof(cmdbuf), "\"%s\" run -q \"%s\"", self_path,
+                                 tmp_path);
+                        system(cmdbuf);
                     }
                     free(code);
                     continue;
@@ -2142,15 +2146,15 @@ void run_repl(const char *self_path)
                     {
                         fprintf(f, "%s", code);
                         fclose(f);
-                        char cmd[2048];
-                        sprintf(cmd,
-                                "%s build -q --emit-c -o /tmp/zprep_repl_out %s "
-                                "2>/dev/null; sed "
-                                "-n '/^int main() {$/,/^}$/p' /tmp/zprep_repl_out.c "
-                                "2>/dev/null | "
-                                "tail -n +3 | head -n -2 | sed 's/^    //'",
-                                self_path, tmp_path);
-                        system(cmd);
+                        char cmdbuf[2048];
+                        snprintf(cmdbuf, sizeof(cmdbuf),
+                                 "\"%s\" build -q --emit-c -o /tmp/zprep_repl_out \"%s\" "
+                                 "2>/dev/null; sed "
+                                 "-n '/^int main() {$/,/^}$/p' /tmp/zprep_repl_out.c "
+                                 "2>/dev/null | "
+                                 "tail -n +3 | head -n -2 | sed 's/^    //'",
+                                 self_path, tmp_path);
+                        system(cmdbuf);
                     }
                     free(code);
                     continue;
@@ -2175,9 +2179,9 @@ void run_repl(const char *self_path)
                     {
                         fprintf(f, "%s", code);
                         fclose(f);
-                        char cmd[2048];
-                        sprintf(cmd, "%s run %s", self_path, tmp_path);
-                        system(cmd);
+                        char cmdbuf[2048];
+                        snprintf(cmdbuf, sizeof(cmdbuf), "\"%s\" run \"%s\"", self_path, tmp_path);
+                        system(cmdbuf);
                     }
                     free(code);
                     continue;
@@ -2225,11 +2229,29 @@ void run_repl(const char *self_path)
                         }
                         else
                         {
-                            char man_cmd[256];
-                            sprintf(man_cmd,
-                                    "man 3 %s 2>/dev/null | sed -n '/^SYNOPSIS/,/^[A-Z]/p' | "
-                                    "head -10",
-                                    sym);
+                            char man_cmd[512];
+                            // Sanitize symbol name to only allow alphanumeric, underscore, colon,
+                            // dot
+                            char safe_sym[256];
+                            size_t slen = strlen(sym);
+                            if (slen > 255)
+                            {
+                                slen = 255;
+                            }
+                            strncpy(safe_sym, sym, slen);
+                            safe_sym[slen] = 0;
+                            for (int i = 0; safe_sym[i]; i++)
+                            {
+                                if (!isalnum((unsigned char)safe_sym[i]) && safe_sym[i] != '_' &&
+                                    safe_sym[i] != ':' && safe_sym[i] != '.')
+                                {
+                                    safe_sym[i] = '_';
+                                }
+                            }
+                            snprintf(man_cmd, sizeof(man_cmd),
+                                     "man 3 %s 2>/dev/null | sed -n '/^SYNOPSIS/,/^[A-Z]/p' | "
+                                     "head -10",
+                                     safe_sym);
                             FILE *mp = popen(man_cmd, "r");
                             if (mp)
                             {
