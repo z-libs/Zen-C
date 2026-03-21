@@ -105,7 +105,11 @@ Check out these projects built with Zen C:
     <td valign="top">
       <ul>
         <li><a href="#1-variables-and-constants">1. Variables & Constants</a></li>
-        <li><a href="#2-primitive-types">2. Primitive Types</a></li>
+        <li><a href="#2-primitive-types">2. Primitive Types</a>
+          <ul>
+            <li><a href="#unicode-and-runes">Unicode & Runes</a></li>
+          </ul>
+        </li>
         <li><a href="#3-aggregate-types">3. Aggregate Types</a></li>
         <li><a href="#4-functions--lambdas">4. Functions & Lambdas</a></li>
         <li><a href="#5-control-flow">5. Control Flow</a></li>
@@ -121,6 +125,7 @@ Check out these projects built with Zen C:
         <li><a href="#15-build-directives">15. Build Directives</a></li>
         <li><a href="#16-keywords">16. Keywords</a></li>
         <li><a href="#17-c-interoperability">17. C Interoperability</a></li>
+        <li><a href="#18-unit-testing-framework">18. Unit Testing Framework</a></li>
       </ul>
     </td>
   </tr>
@@ -250,12 +255,44 @@ let y: const int = 10;  // Read-only (Type qualified)
 | `U0`, `u0`, `void` | `void` | Empty type |
 | `iN` (for example, `i256`) | `_BitInt(N)` | Arbitrary bit-width signed integer (C23) |
 | `uN` (for example, `u42`) | `unsigned _BitInt(N)` | Arbitrary bit-width unsigned integer (C23) |
+| `rune` | `uint32_t` | Unicode scalar value (UTF-32 code point) |
 
 #### Literals
 - **Integers**: Decimal (`123`), Hex (`0xFF`), Octal (`0o755`), Binary (`0b1011`).
   - *Note*: Numbers with leading zeros are treated as decimal (`0123` is `123`), unlike C.
   - *Note*: Numbers can contain underscores for readability (`1_000_000`, `0b_1111_0000`).
 - **Floats**: Standard (`3.14`), Scientific (`1e-5`, `1.2E3`). Floating point numbers also support underscores (`3_14.15_92`).
+
+#### Unicode and Runes
+
+Zen C provides first-class support for Unicode scalar values via the `rune` type. A `rune` represents a single Unicode code point (encoded as a 32-bit unsigned integer).
+
+| Literal | Description |
+|:---|:---|
+| `'a'` | Standard ASCII character |
+| `'🚀'` | Multi-byte Unicode character |
+| `'\u{2764}'` | Unicode escape sequence (Hex) |
+
+```zc
+import "std.zc"
+
+fn main() {
+    let c = 'a';
+    println "The character '{c}' has a code of {(int)c} in ASCII/Unicode";
+
+    let code = 97;
+    println "The code {code} corresponds to the character {(char)code}";
+
+    let r: rune = '🚀';
+    println "The rune '{r}' has a code of {(uint)r} in Unicode";
+    
+    let r_code: uint = 128640;
+    println "The code {r_code} corresponds to the rune '{(rune)r_code}'";
+
+    let r_esc: rune = '\u{2764}';
+    println "The rune '{r_esc}' has code {(uint)r_esc} (0x{(uint)r_esc:X})";
+}
+```
 
 > [!IMPORTANT]
 > **Best Practices for Portable Code**
@@ -1483,6 +1520,34 @@ Zen C includes a standard library (`std`) covering essential functionality.
 | **`std/simd.zc`** | Native SIMD vector types. | [Docs](docs/std/simd.md) |
 
 </details>
+
+### 18. Unit Testing Framework
+
+Zen C features a built-in testing framework that allows you to write unit tests directly in your source files using the `test` keyword.
+
+#### Syntax
+A `test` block contains a descriptive name and a body of code to execute. Tests do not require a `main` function to run.
+
+```zc
+test "unittest1" {
+    "This is an unittest";
+
+    let a = 3;
+    assert(a > 0, "a should be a positive integer");
+
+    "unittest1 passed.";
+}
+```
+
+#### Running Tests
+To run all tests in a file, use the `run` command. The compiler will automatically detect and execute all top-level `test` blocks.
+
+```bash
+zc run my_file.zc
+```
+
+#### Assertions
+Use the built-in `assert(condition, message)` function to verify expectations. If the condition is false, the test will fail and print the provided message.
 
 ---
 

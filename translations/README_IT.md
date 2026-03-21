@@ -105,7 +105,11 @@ Dai un'occhiata a questi progetti creati con Zen C:
     <td valign="top">
       <ul>
         <li><a href="#1-variabili-e-costanti">1. Variabili e Costanti</a></li>
-        <li><a href="#2-tipi-primitivi">2. Tipi Primitivi</a></li>
+        <li><a href="#2-tipi-primitivi">2. Tipi Primitivi</a>
+          <ul>
+            <li><a href="#unicode-e-rune">Unicode e Rune</a></li>
+          </ul>
+        </li>
         <li><a href="#3-tipi-aggregati">3. Tipi Aggregati</a></li>
         <li><a href="#4-funzioni-e-lambda">4. Funzioni e Lambda</a></li>
         <li><a href="#5-controllo-di-flusso">5. Controllo di Flusso</a></li>
@@ -119,8 +123,9 @@ Dai un'occhiata a questi progetti creati con Zen C:
         <li><a href="#13-attributi">13. Attributi</a></li>
         <li><a href="#14-assembly-inline">14. Assembly Inline</a></li>
         <li><a href="#15-direttive-della-build">15. Direttive della Build</a></li>
-        <li><a href="#16-keyword">16. Keyword</a></li>
+        <li><a href="#16-parole-chiave">16. Parole Chiave</a></li>
         <li><a href="#17-interoperabilità-c">17. Interoperabilità C</a></li>
+        <li><a href="#18-framework-di-test-unitari">18. Framework di Test Unitari</a></li>
       </ul>
     </td>
   </tr>
@@ -248,8 +253,40 @@ let y: const int = 10;  // Sola lettura (Tipo qualificato)
 | `char` | `char` | Carattere singolo |
 | `string` | `char*` | Stringhe C terminate da NULL |
 | `U0`, `u0`, `void` | `void` | Tipo vuoto |
-| `iN` (Per esempio, `i256`) | `_BitInt(N)` | Intero con segno a larghezza arbitraria di bit (C23) |
-| `uN` (Per esempio, `u42`) | `unsigned _BitInt(N)` | Intero senza segno a larghezza arbitraria di bit (C23) |
+| `iN` (es. `i256`) | `_BitInt(N)` | Intero con segno di ampiezza arbitraria (C23) |
+| `uN` (es. `u42`) | `unsigned _BitInt(N)` | Intero senza segno di ampiezza arbitraria (C23) |
+| `rune` | `uint32_t` | Valore scalare Unicode (punto di codice UTF-32) |
+
+#### Unicode e Rune
+
+Zen C fornisce supporto di prima classe per i valori scalari Unicode tramite il tipo `rune`. Una `rune` rappresenta un singolo punto di codice Unicode (codificato come un intero non segnato a 32 bit).
+
+| Letterale | Descrizione |
+|:---|:---|
+| `'a'` | Carattere ASCII standard |
+| `'🚀'` | Carattere Unicode multi-byte |
+| `\u{2764}'` | Sequenza di escape Unicode (Hex) |
+
+```zc
+import "std.zc"
+
+fn main() {
+    let c = 'a';
+    println "Il carattere '{c}' ha un codice di {(int)c} in ASCII/Unicode";
+
+    let codice = 97;
+    println "Il codice {codice} corrisponde al carattere {(char)codice}";
+
+    let r: rune = '🚀';
+    println "La runa '{r}' ha un codice di {(uint)r} in Unicode";
+    
+    let r_code: uint = 128640;
+    println "Il codice {r_code} corrisponde alla runa '{(rune)r_code}'";
+
+    let r_esc: rune = '\u{2764}';
+    println "La runa '{r_esc}' ha il codice {(uint)r_esc} (0x{(uint)r_esc:X})";
+}
+```
 
 #### Letterali
 - **Interi**: Decimali (`123`), Hex (`0xFF`), Ottali (`0o755`), Binari (`0b1011`).
@@ -1413,7 +1450,6 @@ Per un controllo rigoroso dei tipi o quando non vuoi includere il testo di un he
 
 ```zc
 include <stdio.h> // Emette #include <stdio.h> nel C generato
-
 // Definisci firma rigorosa
 extern fn printf(fmt: char*, ...) -> c_int;
 
@@ -1430,6 +1466,33 @@ fn main() {
 - **`import "file.h"`**: Registra l'header come un modulo con nome. Abilita l'accesso implicito ai simboli (es. `file::function()`).
 - **`include <file.h>`**: Emette puramente `#include <file.h>` nel codice C generato. Non introduce alcun simbolo nel compilatore Zen C; devi usare `extern fn` per accedervi.
 
+### 18. Framework di Test Unitari
+
+Zen C include un framework di test integrato che consente di scrivere test unitari direttamente nei file sorgente utilizzando la parola chiave `test`.
+
+#### Sintassi
+Un blocco `test` contiene un nome descrittivo e un corpo di codice da eseguire. I test non richiedono una funzione `main` per essere eseguiti.
+
+```zc
+test "unittest1" {
+    "Questo è un test unitario";
+
+    let a = 3;
+    assert(a > 0, "a dovrebbe essere un intero positivo");
+
+    "unittest1 superato.";
+}
+```
+
+#### Esecuzione dei Test
+Per eseguire tutti i test in un file, usa il comando `run`. Il compilatore rileverà ed eseguirà automaticamente tutti i blocchi `test` di alto livello.
+
+```bash
+zc run mio_file.zc
+```
+
+#### Asserzioni
+Usa la funzione integrata `assert(condizione, messaggio)` per verificare le aspettative. Se la condizione è falsa, il test fallirà e stamperà il messaggio fornito.
 
 ---
 

@@ -105,7 +105,11 @@ Echa un vistazo a estos proyectos construidos con Zen C:
     <td valign="top">
       <ul>
         <li><a href="#1-variables-y-constantes">1. Variables y Constantes</a></li>
-        <li><a href="#2-tipos-primitivos">2. Tipos Primitivos</a></li>
+        <li><a href="#2-tipos-primitivos">2. Tipos Primitivos</a>
+          <ul>
+            <li><a href="#unicode-y-runas">Unicode y Runas</a></li>
+          </ul>
+        </li>
         <li><a href="#3-tipos-agregados">3. Tipos Agregados</a></li>
         <li><a href="#4-funciones-y-lambdas">4. Funciones y Lambdas</a></li>
         <li><a href="#5-flujo-de-control">5. Flujo de Control</a></li>
@@ -121,6 +125,7 @@ Echa un vistazo a estos proyectos construidos con Zen C:
         <li><a href="#15-directivas-de-construcción">15. Directivas de Construcción</a></li>
         <li><a href="#16-palabras-clave">16. Palabras Clave</a></li>
         <li><a href="#17-interoperabilidad-c">17. Interoperabilidad C</a></li>
+        <li><a href="#18-marco-de-pruebas-unitarias">18. Marco de Pruebas Unitarias</a></li>
       </ul>
     </td>
   </tr>
@@ -250,12 +255,44 @@ let y: const int = 10;  // Solo lectura (Calificado por tipo)
 | `U0`, `u0`, `void` | `void` | Tipo vacío |
 | `iN` (ej. `i256`) | `_BitInt(N)` | Entero con signo de ancho arbitrario (C23) |
 | `uN` (ej. `u42`) | `unsigned _BitInt(N)` | Entero sin signo de ancho arbitrario (C23) |
+| `rune` | `uint32_t` | Valor escalar Unicode (punto de código UTF-32) |
 
 #### Literales
 - **Enteros**: Decimal (`123`), Hex (`0xFF`), Octal (`0o755`), Binario (`0b1011`).
   - *Nota*: Los números con ceros a la izquierda se tratan como decimales (`0123` es `123`), a diferencia de C.
   - *Nota*: Los números pueden contener guiones bajos para mejorar la legibilidad (`1_000_000`, `0b_1111_0000`).
 - **Flotantes**: Estándar (`3.14`), Científico (`1e-5`, `1.2E3`). Los números de punto flotante también soportan guiones bajos (`3_14.15_92`).
+
+#### Unicode y Runas
+
+Zen C proporciona soporte de primera clase para valores escalares Unicode a través del tipo `rune`. Una `rune` representa un único punto de código Unicode (codificado como un entero sin signo de 32 bits).
+
+| Literal | Descripción |
+|:---|:---|
+| `'a'` | Carácter ASCII estándar |
+| `'🚀'` | Carácter Unicode multi-byte |
+| `'\u{2764}'` | Secuencia de escape Unicode (Hex) |
+
+```zc
+import "std.zc"
+
+fn main() {
+    let c = 'a';
+    println "El carácter '{c}' tiene un código de {(int)c} en ASCII/Unicode";
+
+    let codigo = 97;
+    println "El código {codigo} corresponde al carácter {(char)codigo}";
+
+    let r: rune = '🚀';
+    println "La runa '{r}' tiene un código de {(uint)r} en Unicode";
+    
+    let r_codigo: uint = 128640;
+    println "El código {r_codigo} corresponde a la runa '{(rune)r_codigo}'";
+
+    let r_esc: rune = '\u{2764}';
+    println "La runa '{r_esc}' tiene el código {(uint)r_esc} (0x{(uint)r_esc:X})";
+}
+```
 
 > [!IMPORTANT]
 > **Mejores Prácticas para Código Portable**
@@ -1796,6 +1833,34 @@ fn main() {
 
 > [!NOTE]
 > **Nota:** La interpolación de cadenas de Zen C funciona con objetos de Objective-C (`id`) llamando a `debugDescription` o `description`.
+
+### 18. Marco de Pruebas Unitarias
+
+Zen C incluye un marco de pruebas integrado que permite escribir pruebas unitarias directamente en los archivos fuente utilizando la palabra clave `test`.
+
+#### Sintaxis
+Un bloque `test` contiene un nombre descriptivo y un cuerpo de código para ejecutar. Las pruebas no requieren una función `main` para ejecutarse.
+
+```zc
+test "unittest1" {
+    "Esta es una prueba unitaria";
+
+    let a = 3;
+    assert(a > 0, "a debería ser un entero positivo");
+
+    "unittest1 pasado.";
+}
+```
+
+#### Ejecución de Pruebas
+Para ejecutar todas las pruebas en un archivo, usa el comando `run`. El compilador detectará y ejecutará automáticamente todos los bloques `test` de nivel superior.
+
+```bash
+zc run mi_archivo.zc
+```
+
+#### Aserciones
+Usa la función integrada `assert(condición, mensaje)` para verificar las expectativas. Si la condición es falsa, la prueba fallará y se imprimirá el mensaje proporcionado.
 
 ---
 

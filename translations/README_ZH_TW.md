@@ -104,7 +104,11 @@ Zen C 項目包含多個倉庫。下面是主要的倉庫列表：
     <td valign="top">
       <ul>
         <li><a href="#1-變量與常量">1. 變量與常量</a></li>
-        <li><a href="#2-原始類型">2. 原始類型</a></li>
+        <li><a href="#2-原始類型">2. 原始類型</a>
+          <ul>
+            <li><a href="#unicode-與-rune">Unicode 與 Rune</a></li>
+          </ul>
+        </li>
         <li><a href="#3-複合類型">3. 複合類型</a></li>
         <li><a href="#4-函數與-lambda">4. 函數與 Lambda</a></li>
         <li><a href="#5-控制流">5. 控制流</a></li>
@@ -120,6 +124,7 @@ Zen C 項目包含多個倉庫。下面是主要的倉庫列表：
         <li><a href="#15-構建指令">15. 構建指令</a></li>
         <li><a href="#16-關鍵字">16. 關鍵字</a></li>
         <li><a href="#17-c-互操作性">17. C 互操作性</a></li>
+        <li><a href="#18-單元測試框架">18. 單元測試框架</a></li>
       </ul>
     </td>
   </tr>
@@ -246,14 +251,46 @@ let y: const int = 10;  // 只讀 (類型修飾)
 | `char` | `char` | 單個字符 |
 | `string` | `char*` | C-string (以 null 結尾) |
 | `U0`, `u0`, `void` | `void` | 空類型 |
-| `iN` (例 `i256`) | `_BitInt(N)` | 任意位元寬度有號整數 (C23) |
-| `uN` (例 `u42`) | `unsigned _BitInt(N)` | 任意位寬無號整數 (C23) |
+| `iN` (例如 `i256`) | `_BitInt(N)` | 任意位寬有符號整數 (C23) |
+| `uN` (例如 `u42`) | `unsigned _BitInt(N)` | 任意位寬無符號整數 (C23) |
+| `rune` | `uint32_t` | Unicode 標量值 (UTF-32 碼點) |
 
 #### 字面量
 - **整數**: 十進制 (`123`), 十六進制 (`0xFF`), 八進制 (`0o755`), 二進制 (`0b1011`).
   - *注意*: 帶有前導零的數字被視為十進制（`0123` 即 `123`），這與 C 語言不同。
   - *注意*: 數字可以包含底線以提高可讀性 (`1_000_000`, `0b_1111_0000`).
-- **浮點數**: 標準 (`3.14`), 科學記數法 (`1e-5`, `1.2E3`). 浮點數也支援底線 (`3_14.15_92`).
+- **浮點數**: 標準格式 (`3.14`), 科學計數法 (`1e-5`, `1.2E3`)。浮點數同樣支持下劃線 (`3_14.15_92`)。
+
+#### Unicode 與 Rune
+
+Zen C 通過 `rune` 類型提供對 Unicode 標量值的一等支持。一個 `rune` 代表一個 Unicode 碼點（編碼為 32 位無符號整數）。
+
+| 字面量 | 描述 |
+|:---|:---|
+| `'a'` | 標準 ASCII 字符 |
+| `'🚀'` | 多字節 Unicode 字符 |
+| `'\u{2764}'` | Unicode 轉義序列 (十六進制) |
+
+```zc
+import "std.zc"
+
+fn main() {
+    let c = 'a';
+    println "字符 '{c}' 的 ASCII/Unicode 編碼為 {(int)c}";
+
+    let code = 97;
+    println "編碼 {code} 對應的字符為 {(char)code}";
+
+    let r: rune = '🚀';
+    println "Rune '{r}' 的 Unicode 編碼為 {(uint)r}";
+    
+    let r_code: uint = 128640;
+    println "編碼 {r_code} 對應的 Rune 為 '{(rune)r_code}'";
+
+    let r_esc: rune = '\u{2764}';
+    println "Rune '{r_esc}' 的編碼為 {(uint)r_esc} (0x{(uint)r_esc:X})";
+}
+```
 
 > [!IMPORTANT]
 > **可移植代碼最佳實踐**
@@ -1756,6 +1793,34 @@ fn main() {
 
 > [!NOTE]
 > **注意：** Zen C 字符串插值通過調用 `debugDescription` 或 `description` 同樣適用於 Objective-C 對象 (`id`)。
+
+### 18. 單元測試框架
+
+Zen C 内置了測試框架，允許你使用 `test` 關鍵字直接在源文件中編寫單元測試。
+
+#### 語法
+`test` 塊包含一個描述性名稱和要執行的代碼體。測試不需要 `main` 函數即可運行。
+
+```zc
+test "unittest1" {
+    "這是一個單元測試";
+
+    let a = 3;
+    assert(a > 0, "a 應該是一個正整數");
+
+    "unittest1 通過。";
+}
+```
+
+#### 運行測試
+要運行文件中的所有測試，請使用 `run` 命令。編譯器將自動檢測並執行所有頂層 `test` 塊。
+
+```bash
+zc run my_file.zc
+```
+
+#### 斷言
+使用內置的 `assert(condition, message)` 函數來驗證預期。如果條件為假，測試將失敗並打印提供的消息。
 
 ---
 

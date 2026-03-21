@@ -41,6 +41,7 @@ static void main_append_flag(char *dest, size_t max_size, const char *prefix, co
 
 int main(int argc, char **argv)
 {
+    z_setup_terminal();
     memset(&g_config, 0, sizeof(g_config));
     g_config.mode_debug = 1;
     if (z_is_windows())
@@ -504,8 +505,6 @@ int main(int argc, char **argv)
         return 1;
     }
     g_parser_ctx = &ctx;
-
-    z_setup_terminal();
 
     double start_time = z_get_monotonic_time();
 

@@ -33,6 +33,7 @@ void z_setup_terminal(void)
     }
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
+    SetConsoleOutputCP(CP_UTF8);
 
     HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
     if (hErr == INVALID_HANDLE_VALUE)
@@ -45,6 +46,7 @@ void z_setup_terminal(void)
     }
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hErr, dwMode);
+    SetConsoleErrorCP(CP_UTF8);
 #endif
 }
 
