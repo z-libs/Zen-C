@@ -1107,7 +1107,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                         else
                         {
-                            zwarn_at(t, msg);
+                            zwarn_at(t, "%s", msg);
                         }
                     }
                 }

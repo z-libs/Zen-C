@@ -4846,6 +4846,6 @@ void check_identifier(ParserContext *ctx, Token t)
         strncpy(name, t.start, len);
         name[len] = 0;
         snprintf(buf, sizeof(buf), "Cannot use reserved keyword '%s' as an identifier", name);
-        zpanic_at(t, buf);
+        zpanic_at(t, "%s", buf);
     }
 }

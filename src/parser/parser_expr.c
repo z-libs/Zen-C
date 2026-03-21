@@ -100,7 +100,7 @@ static void validate_named_arguments(Token call_token, const char *func_name, ch
                 msg, sizeof(msg),
                 "Named arguments must follow function parameter order. Expected '%s' but got '%s'",
                 expected_name, arg_names[i]);
-            zpanic_at(call_token, msg);
+            zpanic_at(call_token, "%s", msg);
         }
     }
 }
@@ -1596,7 +1596,7 @@ static ASTNode *parse_int_literal(Token t)
         {
             char err[256];
             snprintf(err, sizeof(err), "Invalid integer literal suffix: '%s'", endptr);
-            zpanic_at(t, err);
+            zpanic_at(t, "%s", err);
         }
     }
 
@@ -1634,7 +1634,7 @@ static ASTNode *parse_float_literal(Token t)
         {
             char err[256];
             snprintf(err, sizeof(err), "Invalid float literal suffix: '%s'", endptr);
-            zpanic_at(t, err);
+            zpanic_at(t, "%s", err);
         }
         if (strcmp(endptr, "f") == 0 || strcmp(endptr, "F") == 0)
         {

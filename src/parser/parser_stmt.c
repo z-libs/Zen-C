@@ -2433,7 +2433,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
         char err[256];
         snprintf(err, sizeof(err), "Unknown plugin: %s (did you forget 'import plugin \"%s\"'?)",
                  macro_name, macro_name);
-        zpanic_at(start_tok, err);
+        zpanic_at(start_tok, "%s", err);
     }
 
     // Find Plugin Definition
@@ -2444,7 +2444,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     {
         char err[256];
         snprintf(err, sizeof(err), "Plugin implementation not found: %s", plugin_name);
-        zpanic_at(start_tok, err);
+        zpanic_at(start_tok, "%s", err);
     }
 
     // Execute Plugin Immediately (Expansion)
