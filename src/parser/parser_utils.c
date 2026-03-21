@@ -1632,9 +1632,10 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
     len = strlen(src);
     if (len > 1 && src[len - 1] == '*')
     {
-        char *base = xmalloc(len);
-        strncpy(base, src, len - 1);
-        base[len - 1] = 0;
+        size_t base_len = len - 1;
+        char *base = xmalloc(base_len + 1);
+        strncpy(base, src, base_len);
+        base[base_len] = 0;
 
         char *new_base = replace_type_str(base, param, concrete, old_struct, new_struct);
         free(base);
@@ -1682,9 +1683,10 @@ Type *type_from_string_helper(const char *c)
     size_t len = strlen(c);
     if (len > 0 && c[len - 1] == '*')
     {
-        char *base = xmalloc(len);
-        strncpy(base, c, len - 1);
-        base[len - 1] = 0;
+        size_t base_len = len - 1;
+        char *base = xmalloc(base_len + 1);
+        strncpy(base, c, base_len);
+        base[base_len] = 0;
 
         Type *inner = type_from_string_helper(base);
         free(base);

@@ -7087,9 +7087,10 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                                 size_t len = strlen(clean_rhs);
                                 if (len > 0 && clean_rhs[len - 1] == '*')
                                 {
-                                    struct_type = xmalloc(len);
-                                    strncpy(struct_type, clean_rhs, len - 1);
-                                    struct_type[len - 1] = '\0';
+                                    size_t struct_type_len = len - 1;
+                                    struct_type = xmalloc(struct_type_len + 1);
+                                    strncpy(struct_type, clean_rhs, struct_type_len);
+                                    struct_type[struct_type_len] = '\0';
                                     allocated_struct = 1;
                                     var_ref_name = rhs->var_ref.name;
                                 }
@@ -7284,9 +7285,10 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             op_node->binary.right = rhs;
 
             // Extract the base operator (remove last char '=')
-            char *inner_op = xmalloc(op_len);
-            strncpy(inner_op, bin->binary.op, op_len - 1);
-            inner_op[op_len - 1] = '\0';
+            size_t inner_op_len = op_len - 1;
+            char *inner_op = xmalloc(inner_op_len + 1);
+            strncpy(inner_op, bin->binary.op, inner_op_len);
+            inner_op[inner_op_len] = '\0';
             op_node->binary.op = inner_op;
 
             // Inherit type info temporarily
