@@ -70,7 +70,7 @@ static void tc_exit_scope(TypeChecker *tc)
     free(old);
 }
 
-static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t)
+static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t, int is_immutable)
 {
     // Guard against NULL scope (e.g., global variables before entering function)
     if (!tc->current_scope)
@@ -83,6 +83,7 @@ static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t
     s->name = strdup(name);
     s->type_info = type;
     s->decl_token = t;
+    s->is_immutable = is_immutable;
     s->next = tc->current_scope->symbols;
     tc->current_scope->symbols = s;
 }
@@ -374,6 +375,10 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node)
             ZenSymbol *lhs_sym = tc_lookup(tc, node->binary.left->var_ref.name);
             if (lhs_sym)
             {
+                if (lhs_sym->is_immutable)
+                {
+                    tc_error(tc, node->binary.left->token, "Cannot assign to immutable variable");
+                }
                 mark_symbol_valid(tc->pctx, lhs_sym, node->binary.left);
             }
         }
@@ -1098,7 +1103,7 @@ static void check_var_decl(TypeChecker *tc, ASTNode *node)
         node->type_info = t;
     }
 
-    tc_add_symbol(tc, node->var_decl.name, t, node->token);
+    tc_add_symbol(tc, node->var_decl.name, t, node->token, 0);
     ZenSymbol *new_sym = tc_lookup(tc, node->var_decl.name);
     if (new_sym)
     {
@@ -1205,7 +1210,7 @@ static void check_function(TypeChecker *tc, ASTNode *node)
             Type *param_type =
                 (node->func.arg_types && node->func.arg_types[i]) ? node->func.arg_types[i] : NULL;
 
-            tc_add_symbol(tc, node->func.param_names[i], param_type, node->token);
+            tc_add_symbol(tc, node->func.param_names[i], param_type, node->token, 0);
         }
     }
 
@@ -2374,7 +2379,27 @@ static void check_expr_lambda(TypeChecker *tc, ASTNode *node)
                 ptype = node_ti->args[i];
             }
         }
-        tc_add_symbol(tc, pname, ptype, node->token);
+        tc_add_symbol(tc, pname, ptype, node->token, 0);
+    }
+
+    // Add captured variables to the scope to ensure visibility and immutability inside the lambda.
+    if (node->lambda.captured_vars)
+    {
+        for (int i = 0; i < node->lambda.num_captures; i++)
+        {
+            char *var_name = node->lambda.captured_vars[i];
+            int mode = node->lambda.capture_modes ? node->lambda.capture_modes[i]
+                                                  : node->lambda.default_capture_mode;
+
+            // Lookup original symbol to get its type
+            ZenSymbol *orig_sym = tc_lookup(tc, var_name);
+            if (orig_sym)
+            {
+                // Shadow the original variable in the lambda scope
+                // Value captures are immutable.
+                tc_add_symbol(tc, var_name, orig_sym->type_info, node->token, (mode == 0));
+            }
+        }
     }
 
     MoveState *prev_move_state = tc->pctx->move_state;

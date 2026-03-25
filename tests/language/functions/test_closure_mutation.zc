@@ -1,4 +1,5 @@
 // EXPECT: FAIL
+// REQUIRE: CHECK
 
 test "closure_value_capture_mutation" {
     let x = 10;

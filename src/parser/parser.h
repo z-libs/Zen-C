@@ -81,6 +81,7 @@ typedef struct ZenSymbol
     int is_def;             ///< 1 if it is a definition (vs declaration).
     int const_int_val;      ///< Integer value if it is a constant.
     int is_moved;           ///< 1 if the value has been moved (ownership transfer).
+    int is_immutable;       ///< 1 if the symbol is immutable (cannot be reassigned).
     struct ZenSymbol *next; ///< Next symbol in the bucket/list (chaining).
 } ZenSymbol;
 
