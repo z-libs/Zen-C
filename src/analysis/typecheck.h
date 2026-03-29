@@ -18,7 +18,6 @@ struct MoveState; // Forward declaration
 typedef struct TypeChecker
 {
     ParserContext *pctx;   ///< Reference to global parser context (for lookups).
-    Scope *current_scope;  ///< Current lexical scope during traversal.
     ASTNode *current_func; ///< Current function being checked (for return type checks).
     int error_count;       ///< Number of type errors found.
     int warning_count;     // Number of recommendations/warnings.

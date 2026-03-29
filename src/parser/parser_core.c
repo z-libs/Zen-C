@@ -1384,7 +1384,8 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
 ASTNode *parse_program(ParserContext *ctx, Lexer *l)
 {
     g_parser_ctx = ctx;
-    enter_scope(ctx);
+    ctx->global_scope = symbol_scope_create(NULL, "Global");
+    ctx->current_scope = ctx->global_scope;
     register_builtins(ctx);
 
     ASTNode *r = ast_create(NODE_ROOT);

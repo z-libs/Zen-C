@@ -41,70 +41,27 @@ void tc_move_error_with_hints(TypeChecker *tc, Token t, const char *msg, const c
 
 static void tc_enter_scope(TypeChecker *tc)
 {
-    Scope *s = malloc(sizeof(Scope));
-    if (!s)
-    {
-        return;
-    }
-    s->symbols = NULL;
-    s->parent = tc->current_scope;
-    tc->current_scope = s;
+    enter_scope(tc->pctx);
 }
 
 static void tc_exit_scope(TypeChecker *tc)
 {
-    if (!tc->current_scope)
-    {
-        return;
-    }
-    Scope *old = tc->current_scope;
-    tc->current_scope = old->parent;
-
-    ZenSymbol *sym = old->symbols;
-    while (sym)
-    {
-        ZenSymbol *next = sym->next;
-        free(sym);
-        sym = next;
-    }
-    free(old);
+    exit_scope(tc->pctx);
 }
 
 static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t, int is_immutable)
 {
-    // Guard against NULL scope (e.g., global variables before entering function)
-    if (!tc->current_scope)
+    add_symbol_with_token(tc->pctx, name, NULL, type, t);
+    ZenSymbol *sym = symbol_lookup(tc->pctx->current_scope, name);
+    if (sym)
     {
-        return; // Skip adding to scope - global symbols handled separately
+        sym->is_immutable = is_immutable;
     }
-
-    ZenSymbol *s = malloc(sizeof(ZenSymbol));
-    memset(s, 0, sizeof(ZenSymbol));
-    s->name = strdup(name);
-    s->type_info = type;
-    s->decl_token = t;
-    s->is_immutable = is_immutable;
-    s->next = tc->current_scope->symbols;
-    tc->current_scope->symbols = s;
 }
 
 static ZenSymbol *tc_lookup(TypeChecker *tc, const char *name)
 {
-    Scope *s = tc->current_scope;
-    while (s)
-    {
-        ZenSymbol *curr = s->symbols;
-        while (curr)
-        {
-            if (0 == strcmp(curr->name, name))
-            {
-                return curr;
-            }
-            curr = curr->next;
-        }
-        s = s->parent;
-    }
-    return NULL;
+    return symbol_lookup(tc->pctx->current_scope, name);
 }
 
 static int is_char_type(Type *t)
@@ -2467,6 +2424,7 @@ int check_program(ParserContext *ctx, ASTNode *root)
 {
     TypeChecker tc = {0};
     tc.pctx = ctx;
+    ctx->current_scope = ctx->global_scope;
 
     if (!ctx->move_state)
     {
@@ -2507,6 +2465,7 @@ int check_moves_only(ParserContext *ctx, ASTNode *root)
     TypeChecker tc = {0};
     tc.pctx = ctx;
     tc.move_checks_only = 1;
+    ctx->current_scope = ctx->global_scope;
 
     if (!ctx->move_state)
     {

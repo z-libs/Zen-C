@@ -63,38 +63,7 @@ ASTNode *parse_program(ParserContext *ctx, Lexer *l);
 
 extern ParserContext *g_parser_ctx;
 
-// Symbol table
-/**
- * @brief Represents a symbol in the symbol table.
- *
- * Used for variables, functions, and other named entities.
- */
-typedef struct ZenSymbol
-{
-    char *name;             ///< Symbol name.
-    char *type_name;        ///< String representation of the type.
-    Type *type_info;        ///< Formal type definition.
-    int is_used;            ///< 1 if the symbol has been referenced.
-    int is_autofree;        ///< 1 if it requires automatic memory management (RAII).
-    Token decl_token;       ///< Token where the symbol was declared.
-    int is_const_value;     ///< 1 if it is a compile-time constant.
-    int is_def;             ///< 1 if it is a definition (vs declaration).
-    int const_int_val;      ///< Integer value if it is a constant.
-    int is_moved;           ///< 1 if the value has been moved (ownership transfer).
-    int is_immutable;       ///< 1 if the symbol is immutable (cannot be reassigned).
-    struct ZenSymbol *next; ///< Next symbol in the bucket/list (chaining).
-} ZenSymbol;
-
-/**
- * @brief Represents a lexical scope (block).
- *
- * Scopes form a hierarchy (parent pointer) and contain a list of symbols defined in that scope.
- */
-typedef struct Scope
-{
-    ZenSymbol *symbols;   ///< Linked list of symbols in this scope.
-    struct Scope *parent; ///< Pointer to the parent scope (NULL for global).
-} Scope;
+#include "ast/symbols.h"
 
 /**
  * @brief Registry entry for a function signature.
@@ -301,8 +270,9 @@ typedef struct TypeAlias
  */
 struct ParserContext
 {
+    Scope *global_scope;    ///< Root of the unified symbol table.
     Scope *current_scope;   ///< Current lexical scope for variable lookup.
-    FuncSig *func_registry; ///< Registry of declared function signatures.
+    FuncSig *func_registry; ///< Registry of declared function signatures (DEPRECATED: moved to global_scope).
 
     // Lambdas
     LambdaRef *global_lambdas; ///< List of all lambdas generated during parsing.
@@ -515,9 +485,9 @@ const char *normalize_type_name(const char *name);
 /**
  * @brief Registers a function.
  */
-void register_func(ParserContext *ctx, const char *name, int count, char **defaults,
-                   Type **arg_types, Type *ret_type, int is_varargs, int is_async, int is_pure,
-                   Token decl_token);
+void register_func(ParserContext *ctx, Scope *scope, const char *name, int count, char **defaults,
+                   Type **arg_types, Type *ret_type, int is_varargs, int is_async,
+                   int is_pure, Token decl_token);
 
 /**
  * @brief Registers a function template.
