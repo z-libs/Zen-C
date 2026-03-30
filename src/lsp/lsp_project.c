@@ -149,14 +149,16 @@ void lsp_project_update_file(const char *uri, const char *src)
         return;
     }
 
-    extern char *g_current_filename;
-    g_current_filename = (char *)uri;
-
     ProjectFile *pf = lsp_project_get_file(uri);
     if (!pf)
     {
         pf = add_project_file(uri);
     }
+
+    // Use the plain path for internal compiler state, not the URI.
+    // This ensures z_resolve_path can use access() correctly.
+    extern char *g_current_filename;
+    g_current_filename = pf->path;
 
     if (pf->index)
     {

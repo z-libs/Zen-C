@@ -4693,6 +4693,10 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
                 COLOR_RED "Error:" COLOR_RESET " Could not load plugin '%s'\n"
                           "       Tried built-ins and dynamic loading (.so)\n",
                 name);
+        if (g_config.mode_lsp)
+        {
+            return;
+        }
         exit(1);
     }
 

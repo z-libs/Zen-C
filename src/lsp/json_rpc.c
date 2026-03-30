@@ -284,6 +284,24 @@ void handle_request(const char *json_str)
             free(uri);
         }
     }
+    else if (strcmp(method, "shutdown") == 0)
+    {
+        cJSON *res_json = cJSON_CreateObject();
+        cJSON_AddStringToObject(res_json, "jsonrpc", "2.0");
+        cJSON_AddNumberToObject(res_json, "id", id);
+        cJSON_AddNullToObject(res_json, "result");
+
+        char *str = cJSON_PrintUnformatted(res_json);
+        fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
+        fflush(stdout);
+        free(str);
+        cJSON_Delete(res_json);
+    }
+    else if (strcmp(method, "exit") == 0)
+    {
+        // For notification, no ID. Just exit.
+        exit(0);
+    }
 
     cJSON_Delete(json);
 }
