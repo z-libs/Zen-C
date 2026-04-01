@@ -1915,6 +1915,6 @@ Dieses Projekt verwendet Bibliotheken von Drittanbietern. Die vollständigen Liz
     <a href="https://github.com/zenc-lang/docs">Dokumentation</a> •
     <a href="https://github.com/zenc-lang/awesome-zenc">Beispiele</a> •
     <a href="https://github.com/zenc-lang/rfcs">RFCs</a> •
-    <a href="CONTRIBUTING.md">Mitwirken</a>
+    <a href="CONTRIBUTING_DE.md">Mitwirken</a>
   </p>
 </div>
