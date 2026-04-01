@@ -1629,7 +1629,7 @@ zc repl
 
 Zen C enthält einen integrierten Sprachserver zur Editorintegration.
 
-- **[Installations- und Einrichtungsanleitung](docs/LSP.md)**
+- **[Installations- und Einrichtungsanleitung](../docs/LSP.md)**
 - **Unterstützte Editoren**: VS Code, Neovim, Vim ([zenc.vim](https://github.com/zenc-lang/zenc.vim)), Zed und alle LSP-fähigen Editoren.
 
 Verwende `zc lsp`, um den Server zu starten.
