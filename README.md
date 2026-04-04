@@ -117,7 +117,7 @@ Check out these projects built with Zen C:
 
 ```bash
 git clone https://github.com/zenc-lang/zenc.git
-cd Zen-C
+cd zenc
 make clean # remove old build files
 make
 sudo make install
