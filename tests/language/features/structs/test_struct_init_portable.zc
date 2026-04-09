@@ -1,0 +1,13 @@
+struct Empty {
+    x: int;
+}
+
+test "empty_struct_init_portable" {
+    // This previously generated (struct Empty){} which is non-standard C.
+    // It should now generate (struct Empty){0}.
+    let e = Empty{};
+    if (e.x != 0) {
+        panic("Empty struct not zero-initialized");
+    }
+    printf("Portable empty struct init: OK\n");
+}

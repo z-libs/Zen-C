@@ -2148,7 +2148,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             if (in_func && !is_vector)
             {
-                fprintf(out, "({ %s _s = {}; ", struct_name);
+                fprintf(out, "({ %s _s = {0}; ", struct_name);
                 ASTNode *f = node->struct_init.fields;
                 while (f)
                 {
@@ -2286,6 +2286,10 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         first = 0;
                     }
                     f = f->next;
+                }
+                if (first)
+                {
+                    fprintf(out, "0");
                 }
             }
             fprintf(out, "}");
