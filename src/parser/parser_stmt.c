@@ -1922,6 +1922,9 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
         char *rw_expr = NULL;
         int used_codegen = 0;
+        char *mangled_to_string = NULL;
+        int to_string_is_ptr = 0;
+        char *to_string_struct_name = NULL;
 
         if (expr_node)
         {
@@ -1949,57 +1952,32 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                     snprintf(mangled, mangled_sz, "%s__to_string", struct_name);
                     if (find_func(ctx, mangled))
                     {
-                        char *inner_c = NULL;
-                        size_t len = 0;
-                        FILE *ms = tmpfile();
-                        if (ms)
-                        {
-                            codegen_expression(ctx, expr_node, ms);
-                            len = ftell(ms);
-                            fseek(ms, 0, SEEK_SET);
-                            inner_c = xmalloc(len + 1);
-                            fread(inner_c, 1, len, ms);
-                            inner_c[len] = 0;
-                            fclose(ms);
-                        }
-
-                        if (inner_c)
-                        {
-                            char *new_expr = xmalloc(strlen(inner_c) + strlen(mangled) + 64);
-                            if (is_ptr)
-                            {
-                                sprintf(new_expr, "%s(%s)", mangled, inner_c);
-                            }
-                            else
-                            {
-                                sprintf(new_expr, "%s(({ %s _z_tmp = (%s); &_z_tmp; }))", mangled,
-                                        struct_name, inner_c);
-                            }
-                            rw_expr = new_expr;
-                            free(inner_c);
-                        }
+                        mangled_to_string = xstrdup(mangled);
+                        to_string_is_ptr = is_ptr;
+                        to_string_struct_name = xstrdup(struct_name);
                     }
                     free(mangled);
                 }
             }
+        }
 
-            if (!rw_expr)
+        // Always codegen the base expression first
+        if (expr_node)
+        {
+            char *buf = NULL;
+            size_t len = 0;
+            FILE *ms = tmpfile();
+            if (ms)
             {
-                char *buf = NULL;
-                size_t len = 0;
-                FILE *ms = tmpfile();
-                if (ms)
-                {
-                    codegen_expression(ctx, expr_node, ms);
-                    len = ftell(ms);
-                    fseek(ms, 0, SEEK_SET);
-                    buf = xmalloc(len + 1);
-                    fread(buf, 1, len, ms);
-                    buf[len] = 0;
-                    fclose(ms);
-                    rw_expr = buf;
-                    used_codegen = 1;
-                }
+                codegen_expression(ctx, expr_node, ms);
+                len = ftell(ms);
+                fseek(ms, 0, SEEK_SET);
+                buf = xmalloc(len + 1);
+                fread(buf, 1, len, ms);
+                buf[len] = 0;
+                fclose(ms);
+                rw_expr = buf;
+                used_codegen = 1;
             }
         }
 
@@ -2011,13 +1989,12 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         if (fmt)
         {
             // Explicit format: {x:%.2f}
-            char buf[128];
-            sprintf(buf, "fprintf(%s, \"%%", target);
+            char buf[512];
+            sprintf(
+                buf,
+                "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", _z_interp_val); }); ",
+                rw_expr, target, fmt);
             strcat(gen, buf);
-            strcat(gen, fmt);
-            strcat(gen, "\", ");
-            strcat(gen, rw_expr); // Use rewritten expr
-            strcat(gen, "); ");
         }
         else
         {
@@ -2029,7 +2006,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
             // Robust string-like detection (Slice/Vector or compatible struct)
             // MUST run before name-based heuristics to handle pointers to slices/vectors correctly
-            if (t)
+            if (t && !mangled_to_string)
             {
                 Type *base = t;
                 int is_p = 0;
@@ -2098,8 +2075,10 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                         {
                             char buf[512];
                             const char *acc = is_p ? "->" : ".";
-                            sprintf(buf, "fprintf(%s, \"%%.*s\", (int)(%s)%slen, (%s)%sdata); ",
-                                    target, rw_expr, acc, rw_expr, acc);
+                            sprintf(buf,
+                                    "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%.*s\", "
+                                    "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); }); ",
+                                    rw_expr ? rw_expr : expr, target, acc, acc);
                             strcat(gen, buf);
                             goto next_segment;
                         }
@@ -2135,8 +2114,10 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                         {
                             char buf[512];
                             const char *acc = is_p ? "->" : ".";
-                            sprintf(buf, "fprintf(%s, \"%%.*s\", (int)(%s)%slen, (%s)%sdata); ",
-                                    target, rw_expr, acc, rw_expr, acc);
+                            sprintf(buf,
+                                    "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%.*s\", "
+                                    "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); }); ",
+                                    rw_expr, target, acc, acc);
                             strcat(gen, buf);
                             goto next_segment;
                         }
@@ -2252,37 +2233,55 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
             if (format_spec)
             {
-                char buf[128];
-                sprintf(buf, "fprintf(%s, \"", target);
-                strcat(gen, buf);
-                strcat(gen, format_spec);
-                strcat(gen, "\", ");
+                char buf[512];
                 if (is_bool)
                 {
-                    strcat(gen, "_z_bool_str(");
-                    strcat(gen, rw_expr);
-                    strcat(gen, ")");
+                    sprintf(buf,
+                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
+                            "_z_bool_str(_z_interp_val)); }); ",
+                            rw_expr, target, format_spec + 1); // skip % in format_spec
                 }
                 else
                 {
-                    strcat(gen, rw_expr);
+                    sprintf(buf,
+                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
+                            "_z_interp_val); }); ",
+                            rw_expr, target, format_spec + 1);
                 }
-                strcat(gen, "); ");
+                strcat(gen, buf);
             }
             else
             {
                 // Fallback to runtime macro
-                char buf[128];
-                sprintf(buf, "fprintf(%s, _z_str(", target);
+                char buf[512];
+                if (mangled_to_string)
+                {
+                    sprintf(buf,
+                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%s\", "
+                            "(char*)%s(%s_z_interp_val)); }); ",
+                            rw_expr, target, mangled_to_string, to_string_is_ptr ? "" : "&");
+                }
+                else
+                {
+                    sprintf(buf,
+                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, "
+                            "_z_str(_z_interp_val), _z_arg(_z_interp_val)); }); ",
+                            rw_expr, target);
+                }
                 strcat(gen, buf);
-                strcat(gen, rw_expr);
-                strcat(gen, "), _z_arg(");
-                strcat(gen, rw_expr);
-                strcat(gen, ")); ");
             }
         }
 
     next_segment:
+        if (mangled_to_string)
+        {
+            free(mangled_to_string);
+        }
+        if (to_string_struct_name)
+        {
+            free(to_string_struct_name);
+        }
+
         if (rw_expr && used_codegen)
         {
             free(rw_expr);
