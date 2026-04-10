@@ -315,6 +315,8 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
             {
                 char clean_type[256];
                 snprintf(clean_type, sizeof(clean_type), "%s", target_type);
+
+                // Robustly strip all pointer levels for method lookup
                 char *ptr = strchr(clean_type, '*');
                 if (ptr)
                 {
@@ -332,6 +334,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 char *func_name = merge_underscores(func_base);
 
                 FuncSig *sig = find_func(ctx, func_name);
+
                 if (sig && sig->ret_type)
                 {
                     char *ret = type_to_c_string(sig->ret_type);

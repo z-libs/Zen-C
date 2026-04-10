@@ -1428,8 +1428,95 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
 
                 char *iter_type_ptr = NULL;
                 char *option_type_ptr = NULL;
+                char *u_type = NULL;
+                char *inner = NULL;
 
-                if (slice_decl)
+                char *coll_type = infer_type(ctx, start_expr);
+                if (coll_type)
+                {
+                    char *t_start = strchr(coll_type, '<');
+                    if (t_start)
+                    {
+                        char *t_end = strrchr(coll_type, '>');
+                        if (t_end)
+                        {
+                            int len = t_end - t_start - 1;
+                            inner = xmalloc(len + 1);
+                            strncpy(inner, t_start + 1, len);
+                            inner[len] = 0;
+                        }
+                    }
+                    else
+                    {
+                        // Try mangled name Vec__T or Slice__T
+                        char *m_start = strstr(coll_type, "__");
+                        if (m_start)
+                        {
+                            m_start += 2;
+                            char *m_end = strchr(m_start, '*');
+                            if (!m_end)
+                            {
+                                m_end = m_start + strlen(m_start);
+                            }
+                            int len = m_end - m_start;
+                            inner = xmalloc(len + 1);
+                            strncpy(inner, m_start, len);
+                            inner[len] = 0;
+                        }
+                    }
+
+                    if (inner)
+                    {
+                        // Default inference: if name contains 'Ref', assume pointer.
+                        u_type = xmalloc(strlen(inner) + 8);
+                        if (strchr(coll_type, '&') || (coll_type[0] == '&') ||
+                            (strchr(coll_type, '*')) || strstr(coll_type, "Ref"))
+                        {
+                            sprintf(u_type, "%s*", inner);
+                        }
+                        else
+                        {
+                            strcpy(u_type, inner);
+                        }
+
+                        // Specialization for common collections
+                        if (strstr(coll_type, "Map"))
+                        {
+                            char *old_u = u_type;
+                            u_type = xmalloc(strlen(inner) + 32);
+                            sprintf(u_type, "MapEntry<%s>", inner);
+                            if (old_u)
+                            {
+                                free(old_u);
+                            }
+
+                            option_type_ptr = xmalloc(strlen(inner) + 64);
+                            sprintf(option_type_ptr, "MapIterResult<%s>", inner);
+                        }
+                        else if (strstr(coll_type, "Vec") || strstr(coll_type, "Slice"))
+                        {
+                            option_type_ptr = xmalloc(strlen(inner) + 64);
+                            if (strchr(coll_type, '&') || (coll_type[0] == '&') ||
+                                (strchr(coll_type, '*')) || strstr(coll_type, "Ref"))
+                            {
+                                sprintf(option_type_ptr, "VecIterResult<%s>", inner);
+                            }
+                            else
+                            {
+                                sprintf(option_type_ptr, "Option<%s>", u_type);
+                            }
+                        }
+                        else
+                        {
+                            option_type_ptr = xmalloc(strlen(u_type) + 64);
+                            sprintf(option_type_ptr, "Option<%s>", u_type);
+                        }
+
+                        free(inner);
+                    }
+                }
+
+                if (slice_decl && !u_type)
                 {
                     char *slice_t = slice_decl->var_decl.type_str;
                     char *start = strchr(slice_t, '<');
@@ -1442,6 +1529,9 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                             char *elem = xmalloc(len + 1);
                             strncpy(elem, start + 1, len);
                             elem[len] = 0;
+
+                            u_type = xmalloc(len + 8);
+                            strcpy(u_type, elem);
 
                             iter_type_ptr = xmalloc(256);
                             sprintf(iter_type_ptr, "SliceIter<%s>", elem);
@@ -1512,7 +1602,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                 ASTNode *user_var_decl = ast_create(NODE_VAR_DECL);
                 user_var_decl->token = tk;
                 user_var_decl->var_decl.name = var_name;
-                user_var_decl->var_decl.type_str = NULL;
+                user_var_decl->var_decl.type_str = u_type;
 
                 // __opt.unwrap()
                 ASTNode *call_unwrap = ast_create(NODE_EXPR_CALL);
@@ -1551,7 +1641,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
 
                 // User body statements
                 enter_scope(ctx);
-                add_symbol(ctx, var_name, NULL, NULL);
+                add_symbol(ctx, var_name, u_type, NULL);
                 if (enum_idx_name)
                 {
                     add_symbol(ctx, enum_idx_name, "int", type_new(TYPE_INT));
@@ -1920,6 +2010,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         lex.col = srctoken.col;
 
         ASTNode *expr_node = parse_expression(ctx, &lex);
+        infer_type(ctx, expr_node);
 
         char *rw_expr = NULL;
         int used_codegen = 0;

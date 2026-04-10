@@ -441,7 +441,7 @@ int main(int argc, char **argv)
     for (int i = arg_start; i < argc; i++)
     {
         char *arg = argv[i];
-        if (strcmp(arg, "--version") == 0 || strcmp(arg, "-V") == 0)
+        if (arg && (strcmp(arg, "--version") == 0 || strcmp(arg, "-V") == 0))
         {
             print_version();
             return 0;

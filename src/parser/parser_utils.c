@@ -1245,11 +1245,29 @@ ASTNode *find_struct_def(ParserContext *ctx, const char *name)
     StructRef *r = ctx->parsed_structs_list;
     while (r)
     {
-        if (strcmp(r->node->strct.name, name) == 0)
+        if (r->node->type == NODE_STRUCT && strcmp(r->node->strct.name, name) == 0)
+        {
+            return r->node;
+        }
+        if (r->node->type == NODE_ENUM && strcmp(r->node->enm.name, name) == 0)
         {
             return r->node;
         }
         r = r->next;
+    }
+
+    // Fallback: Search all symbols ever registered (robust for cross-module/early calls)
+    ZenSymbol *all = ctx->all_symbols;
+    while (all)
+    {
+        if ((all->kind == SYM_STRUCT || all->kind == SYM_ENUM) && strcmp(all->name, name) == 0)
+        {
+            if (all->data.node)
+            {
+                return all->data.node;
+            }
+        }
+        all = all->next;
     }
 
     // Check manually registered definitions (e.g. Slices)
@@ -1588,8 +1606,6 @@ Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os,
 // Option_int_None)
 char *replace_mangled_part(const char *src, const char *param, const char *concrete)
 {
-    // fprintf(stderr, "[replace_mangled_part] src='%s' param='%s' concrete='%s'\n", src?src:"NULL",
-    // param?param:"NULL", concrete?concrete:"NULL");
     if (!src || !param || !concrete)
     {
         return src ? xstrdup(src) : NULL;
@@ -3940,7 +3956,6 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
         strcat(m, clean);
         free(clean);
     }
-    fprintf(stderr, "DEBUG: Generic instantiation name for '%s' is '%s'\n", tpl, m);
 
     // Check if already instantiated
     Instantiation *c = ctx->instantiations;

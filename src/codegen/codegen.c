@@ -329,18 +329,21 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 fprintf(out, ";\n");
 
-                char *tname = node->lambda.captured_types[i];
-                const char *clean = tname;
-                if (strncmp(clean, "struct ", 7) == 0)
+                if (node->lambda.captured_types && node->lambda.captured_types[i])
                 {
-                    clean += 7;
-                }
+                    char *tname = node->lambda.captured_types[i];
+                    const char *clean = tname;
+                    if (strncmp(clean, "struct ", 7) == 0)
+                    {
+                        clean += 7;
+                    }
 
-                ASTNode *fdef = find_struct_def(ctx, clean);
-                if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
-                {
-                    fprintf(out, "_z_ctx_%d->__z_drop_flag_%s = 1;\n", lid,
-                            node->lambda.captured_vars[i]);
+                    ASTNode *fdef = find_struct_def(ctx, clean);
+                    if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
+                    {
+                        fprintf(out, "_z_ctx_%d->__z_drop_flag_%s = 1;\n", lid,
+                                node->lambda.captured_vars[i]);
+                    }
                 }
             }
         }
@@ -963,7 +966,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     {
                         // Reverse alias lookup: if base is a resolved alias (e.g. Slice_char),
                         // try finding the method under the alias name (e.g. StringView__println)
-                        TypeAlias *ta = ctx->type_aliases;
+                        TypeAlias *ta = ctx ? ctx->type_aliases : NULL;
                         while (ta)
                         {
                             if (strcmp(ta->original_type, call_base) == 0)

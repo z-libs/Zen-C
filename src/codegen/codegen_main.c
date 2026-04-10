@@ -430,7 +430,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
             rewind(ctx->hoist_out);
             char buf[4096];
             size_t n;
-            while ((n = fread(buf, 1, sizeof(buf), ctx->hoist_out)) > 0)
+            while (ctx->hoist_out && (n = fread(buf, 1, sizeof(buf), ctx->hoist_out)) > 0)
             {
                 fwrite(buf, 1, n, out);
             }
@@ -674,7 +674,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                     }
                 }
 
-                if (!is_duplicate)
+                if (!is_duplicate && struct_ref->node)
                 {
                     ASTNode *copy = xmalloc(sizeof(ASTNode));
                     *copy = *struct_ref->node;

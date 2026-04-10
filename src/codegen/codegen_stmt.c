@@ -631,7 +631,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                 fprintf(out, "    %s *res_ptr = malloc(sizeof(%s));\n", rt, rt);
                 fprintf(out, "    *res_ptr = ");
             }
-            else if (strcmp(rt, "void") != 0 && strcmp(rt, "Async") != 0)
+            else if (rt && strcmp(rt, "void") != 0 && strcmp(rt, "Async") != 0)
             {
                 fprintf(out, "    %s res = ", rt);
             }
@@ -821,7 +821,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         for (int i = 0; i < node->func.arg_count; i++)
         {
             Type *arg_type = node->func.arg_types[i];
-            char *arg_name = node->func.param_names[i];
+            char *arg_name = node->func.param_names ? node->func.param_names[i] : NULL;
             if (arg_type && arg_name)
             {
                 // Check if type implements Drop
