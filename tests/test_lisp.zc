@@ -1,0 +1,9 @@
+
+import plugin "plugins/lisp" as lisp
+
+test "lisp isolation" {
+    lisp! {
+        (defun square (x) (* x x))
+        (print (square 10))
+    }
+}

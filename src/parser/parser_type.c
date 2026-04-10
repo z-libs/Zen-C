@@ -550,6 +550,13 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
 
         while (lexer_peek(l).type != TOK_RPAREN)
         {
+            if (lexer_peek(l).type == TOK_ELLIPSIS)
+            {
+                lexer_next(l);
+                fn_type->is_varargs = 1;
+                break;
+            }
+
             Type *arg = parse_type_formal(ctx, l);
             fn_type->arg_count++;
             fn_type->args = xrealloc(fn_type->args, sizeof(Type *) * fn_type->arg_count);

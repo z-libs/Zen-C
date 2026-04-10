@@ -1,0 +1,285 @@
+
+import "../std/plugin.zc"
+
+include <ctype.h>
+include <stdio.h>
+include <stdlib.h>
+include <string.h>
+
+fn skip_whitespace(p: char**) {
+    let ptr = *p;
+    while (ptr[0] != 0 && isspace((int)ptr[0])) {
+        ptr = &ptr[1];
+    }
+    *p = ptr;
+}
+
+fn parse_lisp_expr(p: char**, api: ZApi*, depth: int);
+
+fn parse_atom(p: char**, api: ZApi*) {
+    let out = api.out;
+    let ptr = *p;
+    let start = ptr;
+    
+    if (ptr[0] == ')') {
+        api.error(api, "Unexpected ')' in Lisp expression");
+        return;
+    }
+    
+    // Number
+    if (isdigit((int)ptr[0]) || (ptr[0] == '-' && isdigit((int)ptr[1]))) {
+        if (ptr[0] == '-') ptr = &ptr[1];
+        while (ptr[0] != 0 && isdigit((int)ptr[0])) {
+            ptr = &ptr[1];
+        }
+        fputs("l_num(", out);
+        fwrite(start, 1, (size_t)(ptr - start), out);
+        fputs(")", out);
+        *p = ptr;
+        return;
+    }
+    
+    if (ptr[0] == '"') {
+        ptr = &ptr[1];
+        while (ptr[0] != 0 && ptr[0] != '"') {
+            if (ptr[0] == '\\') ptr = &ptr[1];
+            ptr = &ptr[1];
+        }
+        if (ptr[0] == '"') ptr = &ptr[1];
+        fputs("l_nil()", out);
+        *p = ptr;
+        return;
+    }
+    
+    // Symbol
+    while (ptr[0] != 0 && !isspace((int)ptr[0]) && ptr[0] != ')' && ptr[0] != '(') {
+        ptr = &ptr[1];
+    }
+    fwrite(start, 1, (size_t)(ptr - start), out);
+    *p = ptr;
+}
+
+fn parse_lisp_list(p: char**, api: ZApi*, depth: int) {
+    let out = api.out;
+    let ptr = *p;
+    ptr = &ptr[1]; // consume (
+    *p = ptr;
+    skip_whitespace(p);
+    ptr = *p;
+    
+    if (ptr[0] == 0) {
+        api.error(api, "Unclosed parenthesis (unexpected EOF) in Lisp list");
+        return;
+    }
+    
+    let op_start = ptr;
+    while (ptr[0] != 0 && !isspace((int)ptr[0]) && ptr[0] != ')' && ptr[0] != '(') {
+        ptr = &ptr[1];
+    }
+    let op_len = (int)(ptr - op_start);
+    *p = ptr;
+    
+    // Arithmetic
+    if (op_len == 1 && strchr("+-*/", (int)op_start[0]) != (char*)0) {
+        let op_char = op_start[0];
+        let func = "l_add";
+        match (int)op_char {
+            45 => func = "l_sub",
+            42 => func = "l_mul",
+            47 => func = "l_div",
+            _ => (void)0
+        }
+        fprintf(out, "%s(", func);
+        skip_whitespace(p);
+        parse_lisp_expr(p, api, depth + 1);
+        fputs(", ", out);
+        skip_whitespace(p);
+        parse_lisp_expr(p, api, depth + 1);
+        fputs(")", out);
+        
+        skip_whitespace(p);
+        ptr = *p;
+        while (ptr[0] != 0 && ptr[0] != ')') {
+            if (ptr[0] == '(') {
+                let d = 1;
+                ptr = &ptr[1];
+                while (d > 0 && ptr[0] != 0) {
+                    if (ptr[0] == '(') d = d + 1;
+                    if (ptr[0] == ')') d = d - 1;
+                    ptr = &ptr[1];
+                }
+            } else {
+                while (ptr[0] != 0 && !isspace((int)ptr[0]) && ptr[0] != ')') {
+                    ptr = &ptr[1];
+                }
+            }
+            *p = ptr;
+            skip_whitespace(p);
+            ptr = *p;
+        }
+        *p = ptr;
+    } else if (strncmp(op_start, "print", 5) == 0) {
+        skip_whitespace(p);
+        ptr = *p;
+        if (ptr[0] == '"') {
+            fputs("printf(\x22", out);
+            ptr = &ptr[1];
+            while (ptr[0] != 0 && ptr[0] != '"') {
+                if (ptr[0] == '\\') {
+                    fputs("\\", out);
+                    ptr = &ptr[1];
+                    if (ptr[0] != 0) {
+                        fprintf(out, "%c", (int)ptr[0]);
+                        ptr = &ptr[1];
+                    }
+                } else {
+                    fprintf(out, "%c", (int)ptr[0]);
+                    ptr = &ptr[1];
+                }
+            }
+            let ln_str: char*;
+            if (op_start[5] == 'l') { ln_str = "\\n"; } else { ln_str = ""; }
+            fprintf(out, "%s\x22)", ln_str);
+            if (ptr[0] == '"') ptr = &ptr[1];
+            *p = ptr;
+        } else {
+            fputs("l_print(", out);
+            parse_lisp_expr(p, api, depth + 1);
+            let print_stmt: char*;
+            if (op_start[5] == 'l') { print_stmt = " printf(\x22\\n\x22);"; } else { print_stmt = ""; }
+            fprintf(out, ")%s", print_stmt);
+        }
+    } else if (op_len == 5 && strncmp(op_start, "defun", 5) == 0) {
+        skip_whitespace(p);
+        ptr = *p;
+        let nstart = ptr;
+        while (ptr[0] != 0 && !isspace((int)ptr[0]) && ptr[0] != '(') {
+            ptr = &ptr[1];
+        }
+        fputs("auto LVal ", out);
+        fwrite(nstart, 1, (size_t)(ptr - nstart), out);
+        fputs("(", out);
+        *p = ptr;
+        skip_whitespace(p);
+        ptr = *p;
+        ptr = &ptr[1]; // eat (
+        *p = ptr;
+        skip_whitespace(p);
+        ptr = *p;
+        let first = 1;
+        while (ptr[0] != 0 && ptr[0] != ')') {
+            if (first == 0) fputs(", ", out);
+            first = 0;
+            fputs("LVal ", out);
+            let astart = ptr;
+            while (ptr[0] != 0 && !isspace((int)ptr[0]) && ptr[0] != ')') {
+                ptr = &ptr[1];
+            }
+            fwrite(astart, 1, (size_t)(ptr - astart), out);
+            *p = ptr;
+            skip_whitespace(p);
+            ptr = *p;
+        }
+        ptr = &ptr[1]; // eat )
+        fputs(f") {{ \n return ({{ \n", out);
+        *p = ptr;
+        skip_whitespace(p);
+        ptr = *p;
+        while (ptr[0] != 0 && ptr[0] != ')') {
+            *p = ptr;
+            parse_lisp_expr(p, api, depth + 1);
+            fputs(";\n", out);
+            skip_whitespace(p);
+            ptr = *p;
+        }
+        fputs(f"}});\n}}\n", out);
+        *p = ptr;
+    } else {
+        fwrite(op_start, 1, (size_t)op_len, out);
+        fputs("(", out);
+        skip_whitespace(p);
+        let first = 1;
+        ptr = *p;
+        while (ptr[0] != 0 && ptr[0] != ')') {
+            if (first == 0) fputs(", ", out);
+            first = 0;
+            *p = ptr;
+            parse_lisp_expr(p, api, depth + 1);
+            skip_whitespace(p);
+            ptr = *p;
+        }
+        fputs(")", out);
+        *p = ptr;
+    }
+    
+    ptr = *p;
+    while (ptr[0] != 0 && ptr[0] != ')') {
+        ptr = &ptr[1];
+    }
+    if (ptr[0] == ')') ptr = &ptr[1];
+    *p = ptr;
+}
+
+fn parse_lisp_expr(p: char**, api: ZApi*, depth: int) {
+    skip_whitespace(p);
+    let ptr = *p;
+    if (ptr[0] == 0) return;
+    if (ptr[0] == '(') {
+        parse_lisp_list(p, api, depth);
+    } else {
+        parse_atom(p, api);
+    }
+}
+
+fn lisp_transpile(input_body: char*, api: ZApi*) {
+    let out = api.out;
+    let p = input_body;
+
+    static let runtime_emitted = 0;
+    if (runtime_emitted == 0 && api.hoist_out != (void*)0) {
+        let h = api.hoist_out;
+        fputs(f"""/* Lisp Runtime */
+typedef enum {{ L_NUM, L_PAIR, L_NIL }} LType;
+typedef struct LVal {{ LType type; union {{ long num; struct {{ struct LVal *car; struct LVal *cdr; }} pair; }}; }} *LVal;
+static struct LVal _nil = {{ L_NIL }}; static LVal LNIL = &_nil;
+static LVal nil = &_nil;
+static LVal l_num(long n) {{ LVal v = malloc(sizeof(struct LVal)); v->type=L_NUM; v->num=n; return v; }}
+static LVal l_nil() {{ return LNIL; }}
+static LVal l_cons(LVal a, LVal b) {{ LVal v = malloc(sizeof(struct LVal)); v->type=L_PAIR; v->pair.car=a; v->pair.cdr=b; return v; }}
+static LVal l_car(LVal v) {{ return (v && v->type==L_PAIR) ? v->pair.car : LNIL; }}
+static LVal l_cdr(LVal v) {{ return (v && v->type==L_PAIR) ? v->pair.cdr : LNIL; }}
+static int l_truthy(LVal v) {{ return (v && v->type!=L_NIL); }}
+static LVal l_add(LVal a, LVal b) {{ long x=(a&&a->type==L_NUM)?a->num:0; long y=(b&&b->type==L_NUM)?b->num:0; return l_num(x+y); }}
+static LVal l_sub(LVal a, LVal b) {{ long x=(a&&a->type==L_NUM)?a->num:0; long y=(b&&b->type==L_NUM)?b->num:0; return l_num(x-y); }}
+static LVal l_mul(LVal a, LVal b) {{ long x=(a&&a->type==L_NUM)?a->num:0; long y=(b&&b->type==L_NUM)?b->num:0; return l_num(x*y); }}
+static LVal l_div(LVal a, LVal b) {{ long x=(a&&a->type==L_NUM)?a->num:0; long y=(b&&b->type==L_NUM)?b->num:0; return l_num(y?x/y:0); }}
+static LVal l_lt(LVal a, LVal b) {{ long x=(a&&a->type==L_NUM)?a->num:0; long y=(b&&b->type==L_NUM)?b->num:0; return (x<y)?l_num(1):LNIL; }}
+static void l_print(LVal v) {{
+  if(!v || v->type==L_NIL) printf("nil");
+  else if(v->type==L_NUM) printf("%ld", v->num);
+  else if(v->type==L_PAIR) {{ printf("("); l_print(v->pair.car); printf(" . "); l_print(v->pair.cdr); printf(")"); }}
+}}
+""", h);
+        runtime_emitted = 1;
+    }
+
+    fputs(f"({{ \n", out);
+
+    while (p[0] != 0) {
+        skip_whitespace(&p);
+        if (p[0] == 0) break;
+        parse_lisp_expr(&p, api, 0);
+        fputs(";\n", out);
+    }
+    fputs(f"}});\n", out);
+}
+
+let lisp_plugin = ZPlugin {
+    name: "lisp",
+    handler: lisp_transpile
+};
+
+@export
+fn z_plugin_init() -> ZPlugin* {
+    return &lisp_plugin;
+}

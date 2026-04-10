@@ -1,0 +1,98 @@
+
+import "../std/plugin.zc"
+
+include <ctype.h>
+include <stdio.h>
+include <stdlib.h>
+include <string.h>
+
+fn skip_whitespace(p: char**) {
+    let ptr = *p;
+    while (ptr[0] != 0 && isspace((int)ptr[0])) {
+        ptr = &ptr[1];
+    }
+    *p = ptr;
+}
+
+fn befunge_transpile(body: char*, api: ZApi*) {
+    let out = api.out;
+    let grid: [char; 2000];
+    memset(&grid[0], 32, (size_t)2000); // 32 is space
+
+    let r = 0; let c = 0;
+    let p = body;
+    while (p[0] != 0 && (p[0] == 10 || p[0] == 13)) p = &p[1];
+    
+    while (p[0] != 0) {
+        if (p[0] == 10) {
+            r++; c = 0;
+            if (r >= 25) break;
+        } else if (c < 80) {
+            grid[r * 80 + c] = p[0];
+            c++;
+        }
+        p = &p[1];
+    }
+
+    fputs(f"""{{
+    long stack[1024]; int sp = 0;
+    int x = 0, y = 0, dx = 1, dy = 0, string_mode = 0;
+    static void *dispatch[25][80] = {{
+""", out);
+    for row in 0 .. 25 {
+        fputs(f"        {{ ", out);
+        for col in 0 .. 80 {
+            if (grid[row * 80 + col] == 32) fputs("&&space_handler, ", out);
+            else fprintf(out, "&&cell_%d_%d, ", row, col);
+        }
+        fputs(f" }}, \n", out);
+    }
+    fputs(f"    }};\n    goto *dispatch[0][0];\n", out);
+
+    for row in 0 .. 25 {
+        for col in 0 .. 80 {
+            let op = (int)grid[row * 80 + col];
+            if (op == 32) continue;
+            fprintf(out, "cell_%d_%d:\n", row, col);
+            if (op >= 48 && op <= 57) { // 0-9
+                fprintf(out, "    if(string_mode) stack[sp++] = %d; else stack[sp++] = %d;\n", op, op - 48);
+            } else if (op == 34) { // "
+                fputs("    string_mode = !string_mode;\n", out);
+            } else {
+                match op {
+                    62 => fputs("    dx=1; dy=0;\n", out), // >
+                    60 => fputs("    dx=-1; dy=0;\n", out), // <
+                    94 => fputs("    dx=0; dy=-1;\n", out), // ^
+                    118 => fputs("    dx=0; dy=1;\n", out), // v
+                    43 => fputs(f"    {{ long a=stack[--sp]; stack[sp-1]+=a; }}\n", out), // +
+                    45 => fputs(f"    {{ long a=stack[--sp]; stack[sp-1]-=a; }}\n", out), // -
+                    42 => fputs(f"    {{ long a=stack[--sp]; stack[sp-1]*=a; }}\n", out), // *
+                    47 => fputs(f"    {{ long a=stack[--sp]; stack[sp-1]=a?stack[sp-1]/a:0; }}\n", out), // /
+                    37 => fputs(f"    {{ long a=stack[--sp]; stack[sp-1]=a?stack[sp-1]%a:0; }}\n", out), // %
+                    33 => fputs("    stack[sp-1] = !stack[sp-1];\n", out), // !
+                    96 => fputs(f"    {{ long a=stack[--sp]; stack[sp-1]=(stack[sp-1]>a); }}\n", out), // `
+                    58 => fputs(f"    {{ if(sp>0) {{ stack[sp]=stack[sp-1]; sp++; }} }}\n", out), // :
+                    92 => fputs(f"    {{ if(sp>1) {{ long t=stack[sp-1]; stack[sp-1]=stack[sp-2]; stack[sp-2]=t; }} }}\n", out), // \
+                    36 => fputs("    if(sp>0) sp--;\n", out), // $
+                    46 => fputs("    printf(\"%ld \", stack[--sp]);\n", out), // .
+                    44 => fputs("    printf(\"%c\", (char)stack[--sp]);\n", out), // ,
+                    95 => fputs(f"    {{ long a=stack[--sp]; dx=a?-1:1; dy=0; }}\n", out), // _
+                    124 => fputs(f"    {{ long a=stack[--sp]; dx=0; dy=a?-1:1; }}\n", out), // |
+                    64 => fputs("    goto end_befunge;\n", out), // @
+                    35 => fputs("    x+=dx; y+=dy;\n", out), // #
+                    _ => fprintf(out, "    if(string_mode) stack[sp++] = %d;\n", op)
+                }
+            }
+            fputs("    x+=dx; y+=dy; if(x>=80) x=0; else if(x<0) x=79; if(y>=25) y=0; else if(y<0) y=24; goto *dispatch[y][x];\n", out);
+        }
+    }
+    fputs(f"""space_handler: x+=dx; y+=dy; if(x>=80) x=0; else if(x<0) x=79; if(y>=25) y=0; else if(y<0) y=24; goto *dispatch[y][x];
+end_befunge:;
+}}
+""", out);
+}
+
+let befunge_plugin = ZPlugin { name: "befunge", handler: befunge_transpile };
+
+@export 
+fn z_plugin_init() -> ZPlugin* { return &befunge_plugin; }

@@ -31,6 +31,11 @@ ZPlugin *zptr_load_plugin(const char *path);
 ZPlugin *zptr_find_plugin(const char *name);
 
 /**
+ * @brief Initialize a ZApi structure with host-provided context.
+ */
+void zptr_init_api(ZApi *api, const char *filename, int line, FILE *out, FILE *hoist_out);
+
+/**
  * @brief Cleanup the plugin system and free resources.
  */
 void zptr_plugin_mgr_cleanup(void);

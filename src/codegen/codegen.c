@@ -1810,10 +1810,8 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         ZPlugin *found = zptr_find_plugin(node->plugin_stmt.plugin_name);
         if (found)
         {
-            ZApi api = {.filename = g_current_filename ? g_current_filename : "input.zc",
-                        .current_line = node->line,
-                        .out = out,
-                        .hoist_out = ctx->hoist_out};
+            ZApi api;
+            zptr_init_api(&api, g_current_filename, node->line, out, ctx->hoist_out);
             found->fn(node->plugin_stmt.body, &api);
         }
         else

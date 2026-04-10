@@ -687,8 +687,6 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
             }
         }
 
-        emit_globals(ctx, merged_globals, out);
-
         ASTNode *merged_funcs = NULL;
         ASTNode *merged_funcs_tail = NULL;
 
@@ -795,6 +793,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
         }
 
         emit_protos(ctx, merged_funcs, out);
+        emit_globals(ctx, merged_globals, out);
 
         emit_impl_vtables(ctx, out);
         emit_auto_drop_glues(ctx, sorted, out);

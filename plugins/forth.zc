@@ -1,0 +1,477 @@
+
+import "../std/plugin.zc"
+
+include <math.h>
+include <stdio.h>
+include <stdlib.h>
+include <string.h>
+
+let stack: [long; 256];
+let sp: int = 0;
+let fstack: [double; 256];
+let fsp: int = 0;
+let zmemory: [long; 4096];
+let zhere: int = 0;
+let loop_stack: [long; 32];
+let lsp: int = 0;
+
+struct ForthWord {
+    name: [char; 32],
+    body: [char; 512]
+}
+
+let forth_dict: [ForthWord; 128];
+let forth_dict_count: int = 0;
+
+fn push(v: long) {
+    if (sp < 256) {
+        stack[sp] = v;
+        sp = sp + 1;
+    }
+}
+
+fn pop() -> long {
+    if (sp > 0) {
+        sp = sp - 1;
+        return stack[sp];
+    }
+    return 0;
+}
+
+fn peek() -> long {
+    if (sp > 0) {
+        return stack[sp - 1];
+    }
+    return 0;
+}
+
+fn fpush(v: double) {
+    if (fsp < 256) {
+        fstack[fsp] = v;
+        fsp = fsp + 1;
+    }
+}
+
+fn fpop() -> double {
+    if (fsp > 0) {
+        fsp = fsp - 1;
+        return fstack[fsp];
+    }
+    return 0.0;
+}
+
+fn fpeek() -> double {
+    if (fsp > 0) {
+        return fstack[fsp - 1];
+    }
+    return 0.0;
+}
+
+fn next_token(ptr: char**) -> char* {
+    if (ptr == (char**)0 || *ptr == (char*)0) {
+        return (char*)0;
+    }
+    let p = *ptr;
+    while (p[0] != 0 && (p[0] == ' ' || p[0] == '\t' || p[0] == '\n')) {
+        p = &p[1];
+    }
+    if (p[0] == 0) {
+        *ptr = p;
+        return (char*)0;
+    }
+    let start = p;
+    while (p[0] != 0 && p[0] != ' ' && p[0] != '\t' && p[0] != '\n') {
+        p = &p[1];
+    }
+    if (p[0] != 0) {
+        p[0] = 0;
+        *ptr = &p[1];
+    } else {
+        *ptr = p;
+    }
+    return start;
+}
+
+fn skip_tokens_until(ptr: char**, target: char*, alt: char*) {
+    while (1) {
+        let t = next_token(ptr);
+        if (t == (char*)0) {
+            return;
+        }
+        if (strcmp(t, target) == 0) {
+            return;
+        }
+        if (alt != (char*)0 && strcmp(t, alt) == 0) {
+            return;
+        }
+    }
+}
+
+fn eval_forth_token(token: char*, scan_ptr: char**, out_ptr: char**, api: ZApi*) {
+    if (strcmp(token, "+") == 0) {
+        push(pop() + pop());
+    } else if (strcmp(token, "-") == 0) {
+        let b = pop();
+        push(pop() - b);
+    } else if (strcmp(token, "*") == 0) {
+        push(pop() * pop());
+    } else if (strcmp(token, "/") == 0) {
+        let b = pop();
+        push(if (b != 0) pop() / b else 0);
+    } else if (strcmp(token, "%") == 0) {
+        let b = pop();
+        push(if (b != 0) pop() % b else 0);
+    } else if (strcmp(token, "<<") == 0) {
+        let b = pop();
+        push(pop() << (int)b);
+    } else if (strcmp(token, ">>") == 0) {
+        let b = pop();
+        push(pop() >> (int)b);
+    } else if (strcmp(token, "&") == 0) {
+        push(pop() & pop());
+    } else if (strcmp(token, "|") == 0) {
+        push(pop() | pop());
+    } else if (strcmp(token, "^") == 0) {
+        push(pop() ^ pop());
+    } else if (strcmp(token, "~") == 0) {
+        push(~pop());
+    } else if (strcmp(token, "=") == 0) {
+        push(if (pop() == pop()) 1 else 0);
+    } else if (strcmp(token, ">") == 0) {
+        let b = pop();
+        push(if (pop() > b) 1 else 0);
+    } else if (strcmp(token, "<") == 0) {
+        let b = pop();
+        push(if (pop() < b) 1 else 0);
+    } else if (strcmp(token, "choose") == 0) {
+        let f = pop();
+        let t = pop();
+        let c = pop();
+        push(if (c != 0) t else f);
+    } else if (strcmp(token, "if") == 0) {
+        if (pop() == 0) {
+            skip_tokens_until(scan_ptr, "then", "else");
+        }
+    } else if (strcmp(token, "else") == 0) {
+        skip_tokens_until(scan_ptr, "then", (char*)0);
+    } else if (strcmp(token, "then") == 0) {
+        // Marker
+    } else if (strcmp(token, "(") == 0) {
+        while (1) {
+            let t = next_token(scan_ptr);
+            if (t == (char*)0 || strchr(t, (int)')') != (char*)0) {
+                break;
+            }
+        }
+    } else if (strcmp(token, "do") == 0) {
+        let start = pop();
+        let limit = pop();
+        let rest = *scan_ptr;
+        let temp = strdup(rest);
+        let curs = temp;
+        let depth = 0;
+        let end_p = (char*)0;
+        while (1) {
+            let t = next_token(&curs);
+            if (t == (char*)0) break;
+            if (strcmp(t, "do") == 0) depth = depth + 1;
+            if (strcmp(t, "loop") == 0) {
+                if (depth == 0) {
+                    end_p = curs;
+                    break;
+                }
+                depth = depth - 1;
+            }
+        }
+        if (end_p == (char*)0) {
+            api.error(api, "'do' without matching 'loop' in Forth");
+            return;
+        }
+        let len = (int)(end_p - temp);
+        *scan_ptr = &rest[len];
+        let body_len = (size_t)len;
+        let body = (char*)malloc(body_len + 1);
+        strncpy(body, rest, body_len);
+        body[len] = 0;
+        
+        for i in start .. limit {
+            if (lsp < 32) {
+                loop_stack[lsp] = i;
+                lsp = lsp + 1;
+            } else {
+                api.error(api, "Forth Loop Stack Overflow");
+                return;
+            }
+            let runnable = strdup(body);
+            let rc = runnable;
+            while (1) {
+                let rt = next_token(&rc);
+                if (rt == (char*)0) break;
+                eval_forth_token(rt, &rc, out_ptr, api);
+            }
+            free(runnable);
+            lsp = lsp - 1;
+        }
+        free(body);
+        free(temp);
+    } else if (strcmp(token, "loop") == 0) {
+        // Marker
+    } else if (strcmp(token, "i") == 0) {
+        if (lsp > 0) {
+            push(loop_stack[lsp - 1]);
+        } else {
+            api.error(api, "'i' used outside of loop in Forth");
+        }
+    } else if (strcmp(token, "f+") == 0) {
+        fpush(fpop() + fpop());
+    } else if (strcmp(token, "f-") == 0) {
+        let b = fpop();
+        fpush(fpop() - b);
+    } else if (strcmp(token, "f*") == 0) {
+        fpush(fpop() * fpop());
+    } else if (strcmp(token, "f/") == 0) {
+        let b = fpop();
+        fpush(if (b != 0.0) fpop() / b else 0.0);
+    } else if (strcmp(token, "fsqrt") == 0) {
+        fpush(sqrt(fpop()));
+    } else if (strcmp(token, "dup") == 0) {
+        push(peek());
+    } else if (strcmp(token, "drop") == 0) {
+        pop();
+    } else if (strcmp(token, "swap") == 0) {
+        let a = pop();
+        let b = pop();
+        push(a);
+        push(b);
+    } else if (strcmp(token, "rot") == 0) {
+        let a = pop();
+        let b = pop();
+        let c = pop();
+        push(b);
+        push(a);
+        push(c);
+    } else if (strcmp(token, "-rot") == 0) {
+        let a = pop();
+        let b = pop();
+        let c = pop();
+        push(a);
+        push(c);
+        push(b);
+    } else if (strcmp(token, "fdup") == 0) {
+        fpush(fpeek());
+    } else if (strcmp(token, "fdrop") == 0) {
+        fpop();
+    } else if (strcmp(token, "fswap") == 0) {
+        let a = fpop();
+        let b = fpop();
+        fpush(a);
+        fpush(b);
+    } else if (strcmp(token, "i>f") == 0) {
+        fpush((double)pop());
+    } else if (strcmp(token, "f>i") == 0) {
+        push((long)fpop());
+    } else if (strcmp(token, "emit") == 0) {
+        let n = sprintf(*out_ptr, "%ld", pop());
+        *out_ptr = &(*out_ptr)[n];
+    } else if (strcmp(token, "femit") == 0) {
+        let n = sprintf(*out_ptr, "%f", fpop());
+        *out_ptr = &(*out_ptr)[n];
+    } else if (strcmp(token, ",") == 0) {
+        let n = sprintf(*out_ptr, ", ");
+        *out_ptr = &(*out_ptr)[n];
+    } else if (strcmp(token, ".") == 0) {
+        api.note(api, "Debug [Forth]: Int = %ld", peek());
+    } else if (strcmp(token, "f.") == 0) {
+        api.note(api, "Debug [Forth]: Float = %f", fpeek());
+    } else if (strcmp(token, ".\"") == 0) {
+        let p = *scan_ptr;
+        if (p[0] == ' ') p = &p[1];
+        let end_p = strchr(p, (int)'"');
+        if (end_p != (char*)0) {
+            let len = (int)(end_p - p);
+            strncpy(*out_ptr, p, (size_t)len);
+            *out_ptr = &(*out_ptr)[len];
+            (*out_ptr)[0] = 0;
+            *scan_ptr = &end_p[1];
+        } else {
+            api.error(api, "Unterminated string literal in Forth");
+        }
+    } else if (strcmp(token, "s\"") == 0) {
+        let p = *scan_ptr;
+        if (p[0] == ' ') p = &p[1];
+        let end_p = strchr(p, (int)'"');
+        if (end_p != (char*)0) {
+            let len = (int)(end_p - p);
+            let start_addr = zhere;
+            for i in 0 .. len {
+                zmemory[zhere] = (long)p[i];
+                zhere = zhere + 1;
+            }
+            push((long)start_addr);
+            push((long)len);
+            *scan_ptr = &end_p[1];
+        } else {
+            api.error(api, "Unterminated string literal (s\") in Forth");
+        }
+    } else if (strcmp(token, "c@") == 0) {
+        let addr = (int)pop();
+        push(zmemory[addr]);
+    } else if (strcmp(token, "!") == 0) {
+        let addr = (int)pop();
+        let val = pop();
+        zmemory[addr] = val;
+    } else if (strcmp(token, "@") == 0) {
+        let addr = (int)pop();
+        push(zmemory[addr]);
+    } else if (strcmp(token, "?") == 0) {
+        let addr = (int)pop();
+        api.note(api, "Debug [Forth]: @%d = %ld", addr, zmemory[addr]);
+    } else if (strcmp(token, "allot") == 0) {
+        zhere = zhere + (int)pop();
+    } else if (strcmp(token, "variable") == 0) {
+        let name = next_token(scan_ptr);
+        if (name == (char*)0) {
+            api.error(api, "Forth 'variable' directive missing name");
+            return;
+        }
+        if (forth_dict_count < 128) {
+            strncpy(&forth_dict[forth_dict_count].name[0], name, 31);
+            sprintf(&forth_dict[forth_dict_count].body[0], "%d", zhere);
+            forth_dict_count = forth_dict_count + 1;
+            zhere = zhere + 1;
+        }
+    } else if (strcmp(token, "constant") == 0) {
+        let val = pop();
+        let name = next_token(scan_ptr);
+        if (name == (char*)0) {
+            api.error(api, "Forth 'constant' directive missing name");
+            return;
+        }
+        if (forth_dict_count < 128) {
+            strncpy(&forth_dict[forth_dict_count].name[0], name, 31);
+            sprintf(&forth_dict[forth_dict_count].body[0], "%ld", val);
+            forth_dict_count = forth_dict_count + 1;
+        }
+    } else {
+        if (strchr(token, (int)'.') != (char*)0) {
+            let end_p: char*;
+            let fval = strtod(token, &end_p);
+            if (end_p[0] == 0) {
+                fpush(fval);
+                return;
+            }
+        }
+        let end_p: char*;
+        let val = strtol(token, &end_p, 0);
+        if (end_p[0] == 0) {
+            push(val);
+        } else {
+            let found = 0;
+            for i in forth_dict_count - 1 .. -1 step -1 {
+                if (strcmp(&forth_dict[i].name[0], token) == 0) {
+                    let body_copy: [char; 512];
+                    strncpy(&body_copy[0], &forth_dict[i].body[0], 511);
+                    let sub_scan = &body_copy[0];
+                    while (1) {
+                        let sub_token = next_token(&sub_scan);
+                        if (sub_token == (char*)0) break;
+                        eval_forth_token(sub_token, &sub_scan, out_ptr, api);
+                    }
+                    found = 1;
+                    break;
+                }
+            }
+            if (found == 0) {
+                let n = sprintf(*out_ptr, "%s ", token);
+                *out_ptr = &(*out_ptr)[n];
+            }
+        }
+    }
+}
+
+fn process_forth_source(src: char*, out_ptr: char**, api: ZApi*) {
+    let cursor = src;
+    let state = 0;
+    let name: [char; 32];
+    let body: [char; 512];
+    body[0] = 0;
+
+    while (1) {
+        let token = next_token(&cursor);
+        if (token == (char*)0) break;
+        if (strcmp(token, "#end") == 0) break;
+
+        if (state == 0) {
+            if (strcmp(token, ":") == 0) {
+                state = 1;
+            } else {
+                eval_forth_token(token, &cursor, out_ptr, api);
+            }
+        } else if (state == 1) {
+            strncpy(&name[0], token, 31);
+            name[31] = 0;
+            body[0] = 0;
+            state = 2;
+        } else if (state == 2) {
+            if (strcmp(token, ";") == 0) {
+                if (forth_dict_count < 128) {
+                    strncpy(&forth_dict[forth_dict_count].name[0], &name[0], 31);
+                    strncpy(&forth_dict[forth_dict_count].body[0], &body[0], 511);
+                    forth_dict_count = forth_dict_count + 1;
+                }
+                state = 0;
+            } else {
+                if (strlen(&body[0]) > 0) {
+                    strcat(&body[0], " ");
+                }
+                if (strlen(&body[0]) + strlen(token) < 512) {
+                    strcat(&body[0], token);
+                }
+            }
+        }
+    }
+}
+
+fn load_prelude() {
+    let prelude = ": squared fdup f* ; : hypot squared fswap squared f+ fsqrt ; : over swap dup rot rot ; : panic 0 1 - exit ; ";
+    let dummy_buf: [char; 1024];
+    dummy_buf[0] = 0;
+    let ptr = &dummy_buf[0];
+    let prelude_copy = strdup(prelude);
+    process_forth_source(prelude_copy, &ptr, (ZApi*)0);
+    free(prelude_copy);
+}
+
+fn forth_transpile(input_body: char*, api: ZApi*) {
+    let cap = 8192;
+    let output_buffer = (char*)malloc((size_t)cap);
+    if (output_buffer == (char*)0) return;
+    output_buffer[0] = 0;
+
+    let write_ptr = output_buffer;
+    let input_copy = strdup(input_body);
+
+    static let prelude_loaded = 0;
+    if (prelude_loaded == 0) {
+        load_prelude();
+        prelude_loaded = 1;
+    }
+
+    process_forth_source(input_copy, &write_ptr, api);
+
+    free(input_copy);
+
+    fputs(output_buffer, api.out);
+
+    free(output_buffer);
+}
+
+let forth_plugin = ZPlugin {
+    name: "forth",
+    handler: forth_transpile
+};
+
+@export
+fn z_plugin_init() -> ZPlugin* {
+    return &forth_plugin;
+}

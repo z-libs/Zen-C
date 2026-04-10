@@ -1,0 +1,42 @@
+
+import "../std/plugin.zc"
+
+include <stdio.h>
+
+fn bf_transpile(body: char*, api: ZApi*) {
+    let out = api.out;
+    
+    fputs(f"""{{
+    static unsigned char tape[30000] = {{0}};
+    unsigned char *ptr = tape;
+""", out);
+    
+    let idx = 0;
+    while (body[idx] != 0) {
+        let ch = body[idx];
+        match ch {
+            '>' => fputs("    ++ptr;\n", out),
+            '<' => fputs("    --ptr;\n", out),
+            '+' => fputs("    ++*ptr;\n", out),
+            '-' => fputs("    --*ptr;\n", out),
+            '.' => fputs("    putchar(*ptr);\n", out),
+            ',' => fputs("    *ptr = getchar();\n", out),
+            '[' => fputs(f"    while (*ptr) {{ \n", out),
+            ']' => fputs(f"    }} \n", out),
+            _ => (void)0
+        }
+        idx = idx + 1;
+    }
+    
+    fputs(f"}} \n", out);
+}
+
+let bf_plugin = ZPlugin {
+    name: "brainfuck",
+    handler: bf_transpile
+};
+
+@export
+fn z_plugin_init() -> ZPlugin* {
+    return &bf_plugin;
+}

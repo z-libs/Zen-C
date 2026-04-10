@@ -1,0 +1,172 @@
+
+import "../std/plugin.zc"
+
+include <ctype.h>
+include <stdio.h>
+include <stdlib.h>
+include <string.h>
+
+fn skip_whitespace(p: char**) {
+    let ptr = *p;
+    while (ptr[0] != 0 && isspace((int)ptr[0])) {
+        ptr = &ptr[1];
+    }
+    *p = ptr;
+}
+
+fn match_kw(p: char**, kw: char*) -> int {
+    skip_whitespace(p);
+    let ptr = *p;
+    let len = strlen(kw);
+    if (strncasecmp(ptr, kw, (size_t)len) == 0 && !isalnum((int)ptr[len]) && ptr[len] != '_') {
+        *p = &ptr[len];
+        return 1;
+    }
+    return 0;
+}
+
+static let registered_tables: [char[64]; 16];
+static let table_count = 0;
+
+fn register_table(name: char*) {
+    if (table_count < 16) {
+        strncpy(&registered_tables[table_count][0], name, 63);
+        table_count = table_count + 1;
+    }
+}
+
+fn parse_create_table(p: char**, api: ZApi*) {
+    let out = api.out;
+    skip_whitespace(p);
+    let ptr = *p;
+    let name_start = ptr;
+    while (ptr[0] != 0 && (isalnum((int)ptr[0]) || ptr[0] == '_')) {
+        ptr = &ptr[1];
+    }
+    let name_len = (int)(ptr - name_start);
+    let table_name: [char; 64];
+    snprintf(&table_name[0], (size_t)(name_len + 1), "%s", name_start);
+    *p = ptr;
+    register_table(&table_name[0]);
+
+    skip_whitespace(p);
+    ptr = *p;
+    if (ptr[0] == '(') ptr = &ptr[1];
+    *p = ptr;
+
+    fputs(f"typedef struct {{ \n", out);
+    
+    ptr = *p;
+    while (ptr[0] != 0 && ptr[0] != ')') {
+        skip_whitespace(&ptr);
+        let col_start = ptr;
+        while (ptr[0] != 0 && (isalnum((int)ptr[0]) || ptr[0] == '_')) ptr = &ptr[1];
+        let col_len = (int)(ptr - col_start);
+        if (col_len == 0) break;
+        let col_name: [char; 64];
+        snprintf(&col_name[0], (size_t)(col_len + 1), "%s", col_start);
+        
+        skip_whitespace(&ptr);
+        let type_start = ptr;
+        while (ptr[0] != 0 && isalnum((int)ptr[0])) ptr = &ptr[1];
+        let type_len = (int)(ptr - type_start);
+        
+        if (strncasecmp(type_start, "INTEGER", (size_t)type_len) == 0) {
+            fputs("    long ", out);
+        } else {
+            fputs("    const char* ", out);
+        }
+        fputs(&col_name[0], out); fputs(";\n", out);
+
+        skip_whitespace(&ptr);
+        if (ptr[0] == ',') ptr = &ptr[1];
+    }
+    if (ptr[0] == ')') ptr = &ptr[1];
+    *p = ptr;
+    
+    fputs(f"""}} Row_{table_name};
+static Row_{table_name} table_{table_name}[128];
+static int count_{table_name} = 0;
+""", out);
+}
+
+fn parse_insert(p: char**, api: ZApi*) {
+    let out = api.out;
+    match_kw(p, "INTO");
+    skip_whitespace(p);
+    let ptr = *p;
+    let name_start = ptr;
+    while (ptr[0] != 0 && (isalnum((int)ptr[0]) || ptr[0] == '_')) ptr = &ptr[1];
+    let name_len = (int)(ptr - name_start);
+    let table_name: [char; 64];
+    snprintf(&table_name[0], (size_t)(name_len + 1), "%s", name_start);
+    *p = ptr;
+
+    skip_whitespace(p);
+    if (!match_kw(p, "VALUES")) {
+        api.error(api, "Expected VALUES in INSERT");
+        return;
+    }
+    skip_whitespace(p);
+    ptr = *p;
+    if (ptr[0] == '(') ptr = &ptr[1];
+    *p = ptr;
+
+    fprintf(out, f"if (count_{table_name} < 128) {{ \n");
+    fprintf(out, f"    table_{table_name}[count_{table_name}] = (Row_{table_name}){{ ");
+
+    ptr = *p;
+    while (ptr[0] != 0 && ptr[0] != ')') {
+        skip_whitespace(&ptr);
+        if (ptr[0] == 34 || ptr[0] == 39) {
+            let quote = ptr[0];
+            ptr = &ptr[1];
+            fputs("\"", out);
+            while (ptr[0] != 0 && ptr[0] != quote) {
+                if (ptr[0] == '\\' && ptr[1] != 0) {
+                    fputc((int)ptr[0], out);
+                    ptr = &ptr[1];
+                }
+                fputc((int)ptr[0], out);
+                ptr = &ptr[1];
+            }
+            fputs("\"", out);
+            if (ptr[0] == quote) ptr = &ptr[1];
+        } else {
+            let start = ptr;
+            while (ptr[0] != 0 && ptr[0] != ',' && ptr[0] != ')') ptr = &ptr[1];
+            fwrite(start, 1, (size_t)(ptr - start), out);
+        }
+        skip_whitespace(&ptr);
+        if (ptr[0] == ',') {
+            fputs(", ", out);
+            ptr = &ptr[1];
+        }
+    }
+    if (ptr[0] == ')') ptr = &ptr[1];
+    *p = ptr;
+    
+    fprintf(out, f" }};\n    count_{table_name}++;\n}} \n");
+}
+
+fn sql_transpile(body: char*, api: ZApi*) {
+    let p = body;
+    while (p[0] != 0) {
+        skip_whitespace(&p);
+        if (p[0] == 0) break;
+        if (match_kw(&p, "CREATE")) {
+            match_kw(&p, "TABLE");
+            parse_create_table(&p, api);
+        } else if (match_kw(&p, "INSERT")) {
+            parse_insert(&p, api);
+        } else {
+            while (p[0] != 0 && p[0] != ';') p = &p[1];
+            if (p[0] == ';') p = &p[1];
+        }
+    }
+}
+
+let sql_plugin = ZPlugin { name: "sql", handler: sql_transpile };
+
+@export 
+fn z_plugin_init() -> ZPlugin* { return &sql_plugin; }

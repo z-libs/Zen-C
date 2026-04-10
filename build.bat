@@ -82,7 +82,7 @@ echo Build success! zc.exe created.
 rem Build plugins
 echo Building plugins...
 if not exist plugins mkdir plugins
-for %%f in (plugins\*.c) do (
-    echo Compiling plugin %%f...
-    %CC% %CFLAGS% -shared -o %%~dpnf.dll %%f
+for %%f in (plugins\*.zc) do (
+    echo Compiling native plugin %%f...
+    .\zc.exe build %%f -shared -o %%~dpnf.dll
 )

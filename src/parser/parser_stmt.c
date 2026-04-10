@@ -2579,10 +2579,8 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
         zpanic_at(start_tok, "Failed to create capture buffer for plugin expansion");
     }
 
-    ZApi api = {.filename = g_current_filename ? g_current_filename : "input.zc",
-                .current_line = start_tok.line,
-                .out = capture,
-                .hoist_out = ctx->hoist_out};
+    ZApi api;
+    zptr_init_api(&api, g_current_filename, start_tok.line, capture, ctx->hoist_out);
 
     found->fn(body, &api);
 
@@ -3881,7 +3879,7 @@ void scan_c_header_contents(ParserContext *ctx, const char *path, int depth)
                             memcpy(inc_name, inc, inc_len);
                             inc_name[inc_len] = '\0';
 
-                            char nested_path[MAX_PATH_LEN];
+                            char nested_path[MAX_PATH_LEN * 2];
                             if (header_dir[0])
                             {
                                 snprintf(nested_path, sizeof(nested_path), "%s/%s", header_dir,
@@ -4436,7 +4434,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     fprintf(f, "return 0;\n}\n");
     fclose(f);
 
-    char cmdbuf[MAX_PATH_LEN * 2];
+    char cmdbuf[MAX_PATH_LEN * 3];
     char bin[MAX_PATH_LEN];
 
     sprintf(bin, "%s%s", filename, z_get_exe_ext());

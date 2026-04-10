@@ -518,6 +518,13 @@ static char *type_to_string_impl(Type *t)
                 res = tmp;
                 free(arg);
             }
+            if (t->is_varargs)
+            {
+                char *tmp = xmalloc(strlen(res) + 6);
+                sprintf(tmp, "%s, ...", res);
+                free(res);
+                res = tmp;
+            }
             char *tmp = xmalloc(strlen(res) + strlen(ret) + 5); // ) -> Ret
             sprintf(tmp, "%s) -> %s", res, ret);
             free(res);
@@ -838,6 +845,23 @@ static char *type_to_c_string_impl(Type *t)
                 free(res);
                 res = tmp;
                 free(arg);
+            }
+            if (t->is_varargs)
+            {
+                if (t->arg_count > 0)
+                {
+                    char *tmp = xmalloc(strlen(res) + 6);
+                    sprintf(tmp, "%s, ...", res);
+                    free(res);
+                    res = tmp;
+                }
+                else
+                {
+                    char *tmp = xmalloc(strlen(res) + 4);
+                    sprintf(tmp, "%s...", res);
+                    free(res);
+                    res = tmp;
+                }
             }
             char *tmp = xmalloc(strlen(res) + 2);
             sprintf(tmp, "%s)", res);

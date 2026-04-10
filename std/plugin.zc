@@ -1,0 +1,49 @@
+
+import "./core.zc"
+
+include <stdio.h>
+
+def ZEN_PLUGIN_API_VERSION = 1;
+def ZEN_PLUGIN_MAX_NAME = 256;
+
+struct ZConfig {
+    is_debug: int,
+    verbose: int,
+    target: char*,
+    cc: char*
+}
+
+struct ZApi {
+    api_version: u32,
+    filename: char*,
+    current_line: int,
+    out: void*,
+    hoist_out: void*,
+    
+    error: fn*(ZApi*, char*, ...),
+    warn: fn*(ZApi*, char*, ...),
+    note: fn*(ZApi*, char*, ...),
+    
+    config: ZConfig,
+    user_data: void*
+}
+
+struct ZPlugin {
+    name: char[256], // ZEN_PLUGIN_MAX_NAME
+    handler: fn*(char*, ZApi*)
+}
+
+// Helper: Provide a more native Zen C experience for diagnostics
+impl ZApi {
+    fn report_error(self, msg: char*) {
+        self.error(self, "%s", msg);
+    }
+    
+    fn report_warn(self, msg: char*) {
+        self.warn(self, "%s", msg);
+    }
+    
+    fn report_note(self, msg: char*) {
+        self.note(self, "%s", msg);
+    }
+}

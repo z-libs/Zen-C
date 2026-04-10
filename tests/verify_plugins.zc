@@ -1,0 +1,49 @@
+
+import plugin "plugins/brainfuck" as bf
+import plugin "plugins/forth" as forth
+import plugin "plugins/sql" as sql
+import plugin "plugins/lisp" as lisp
+import plugin "plugins/befunge" as befunge
+
+test "lisp plugin" {
+    println "--- Testing Lisp ---";
+    lisp! {
+        (defun square (x) (* x x))
+        (print (square 10))
+    }
+    println "";
+}
+
+test "sql plugin" {
+    println "--- Testing SQL ---";
+    sql! {
+        CREATE TABLE kids (id INTEGER, name TEXT);
+        INSERT INTO kids VALUES (1, 'Alice');
+    }
+    println "";
+}
+
+test "forth plugin" {
+    println "--- Testing Forth ---";
+    forth! {
+        10 20 + .
+        5 30 * .
+    }
+    println "";
+}
+
+test "brainfuck plugin" {
+    println "--- Testing Brainfuck ---";
+    bf! {
+        ++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.
+    }
+    println "";
+}
+
+test "befunge plugin" {
+    println "--- Testing Befunge ---";
+    befunge! {
+        >25*"!A",,,@
+    }
+    println "";
+}

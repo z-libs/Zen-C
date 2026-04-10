@@ -494,7 +494,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                     }
                     *d = '\0';
 
-                    char flags[1050];
+                    char flags[MAX_PATH_LEN + 32];
                     snprintf(flags, sizeof(flags), "-I%s", path);
                     append_flag(g_cflags, sizeof(g_cflags), flags, NULL);
                 }
@@ -534,7 +534,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                     }
                     *d = '\0';
 
-                    char flags[1050];
+                    char flags[MAX_PATH_LEN + 32];
                     snprintf(flags, sizeof(flags), "-L%s", path);
                     append_flag(g_link_flags, sizeof(g_link_flags), flags, NULL);
                 }
@@ -574,7 +574,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                     }
                     *d = '\0';
 
-                    char flags[MAX_SHORT_MSG_LEN];
+                    char flags[MAX_VAR_NAME_LEN + 32];
                     snprintf(flags, sizeof(flags), "-framework %s", name);
                     append_flag(g_link_flags, sizeof(g_link_flags), flags, NULL);
                 }

@@ -1,6 +1,8 @@
-
 #include "plugin_manager.h"
 
+#include "../constants.h"
+#include "../diagnostics/diagnostics.h"
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,11 +17,74 @@ typedef struct PluginNode
 
 static PluginNode *head = NULL;
 
-#include "../platform/os.h"
-
 void zptr_plugin_mgr_init(void)
 {
     head = NULL;
+}
+
+// Diagnostic wrappers for plugins
+static void plugin_error(const ZApi *api, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char msg[MAX_ERROR_MSG_LEN];
+    vsnprintf(msg, sizeof(msg), fmt, args);
+    va_end(args);
+
+    Token t = {0};
+    t.file = api->filename;
+    t.line = api->current_line;
+    zerror_at(t, "%s", msg);
+}
+
+static void plugin_warn(const ZApi *api, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char msg[MAX_ERROR_MSG_LEN];
+    vsnprintf(msg, sizeof(msg), fmt, args);
+    va_end(args);
+
+    Token t = {0};
+    t.file = api->filename;
+    t.line = api->current_line;
+    zwarn_at(t, "%s", msg);
+}
+
+static void plugin_note(const ZApi *api, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char msg[MAX_ERROR_MSG_LEN];
+    vsnprintf(msg, sizeof(msg), fmt, args);
+    va_end(args);
+
+    // Using printf for nnote if we don't have a znote_at
+    printf(COLOR_BOLD COLOR_CYAN "  note: " COLOR_RESET "%s:%d: %s\n", api->filename,
+           api->current_line, msg);
+}
+
+void zptr_init_api(ZApi *api, const char *filename, int line, FILE *out, FILE *hoist_out)
+{
+    if (!api)
+    {
+        return;
+    }
+
+    api->api_version = ZEN_PLUGIN_API_VERSION;
+    api->filename = filename ? filename : "input.zc";
+    api->current_line = line;
+    api->out = out;
+    api->hoist_out = hoist_out;
+
+    api->error = plugin_error;
+    api->warn = plugin_warn;
+    api->note = plugin_note;
+
+    api->config.is_debug = g_config.mode_debug;
+    api->config.verbose = g_config.verbose;
+    api->config.target = ZC_OS_NAME;
+    api->config.cc = g_config.cc;
 }
 
 void zptr_register_plugin(ZPlugin *plugin)

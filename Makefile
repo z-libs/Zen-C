@@ -92,7 +92,7 @@ MANDIR = $(PREFIX)/share/man
 SHAREDIR = $(PREFIX)/share/zenc
 INCLUDEDIR = $(PREFIX)/include/zenc
 
-PLUGINS = plugins/befunge.so plugins/brainfuck.so plugins/forth.so plugins/lisp.so plugins/regex.so plugins/sql.so
+PLUGINS = plugins/befunge.so plugins/brainfuck.so plugins/forth.so plugins/lisp.so plugins/sql.so
 
 # APE (Actually Portable Executable) configuration
 COSMOCC = cosmocc
@@ -112,8 +112,9 @@ all: $(TARGET) $(PLUGINS)
 ape: $(ZC_COM) $(ZC_BOOT_COM)
 
 # Build plugins
-plugins/%.so: plugins/%.c
-	$(CC) $(CFLAGS) -shared -fPIC -o $@ $<
+
+plugins/%.so: plugins/%.zc $(TARGET)
+	./zc build $< -shared -o $@
 
 # Link
 $(TARGET): $(OBJS)
