@@ -72,7 +72,7 @@ fn next_token(ptr: char**) -> char* {
         return (char*)0;
     }
     let p = *ptr;
-    while (p[0] != 0 && (p[0] == ' ' || p[0] == '\t' || p[0] == '\n')) {
+    while (p[0] != 0 && (p[0] == ' ' || p[0] == '\t' || p[0] == '\n' || p[0] == '\r')) {
         p = &p[1];
     }
     if (p[0] == 0) {
@@ -80,7 +80,7 @@ fn next_token(ptr: char**) -> char* {
         return (char*)0;
     }
     let start = p;
-    while (p[0] != 0 && p[0] != ' ' && p[0] != '\t' && p[0] != '\n') {
+    while (p[0] != 0 && p[0] != ' ' && p[0] != '\t' && p[0] != '\n' && p[0] != '\r') {
         p = &p[1];
     }
     if (p[0] != 0) {
@@ -159,7 +159,7 @@ fn eval_forth_token(token: char*, scan_ptr: char**, out_ptr: char**, api: ZApi*)
     } else if (strcmp(token, "(") == 0) {
         while (1) {
             let t = next_token(scan_ptr);
-            if (t == (char*)0 || strchr(t, (int)')') != (char*)0) {
+            if (t == (char*)0 || strchr(t, (int)')') != (char*)0 || strchr(t, (int)'\r') != (char*)0) {
                 break;
             }
         }

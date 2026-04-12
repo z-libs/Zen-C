@@ -24,6 +24,7 @@ fn befunge_transpile(body: char*, api: ZApi*) {
     while (p[0] != 0 && (p[0] == 10 || p[0] == 13)) p = &p[1];
     
     while (p[0] != 0) {
+        if (p[0] == 13) { p = &p[1]; continue; } // Skip CR
         if (p[0] == 10) {
             r++; c = 0;
             if (r >= 25) break;
@@ -98,6 +99,7 @@ fn befunge_hover(body: char*, line: int, col: int) -> char* {
     while (p[0] != 0 && (p[0] == 10 || p[0] == 13)) p = &p[1];
 
     while (p[0] != 0) {
+        if (p[0] == 13) { p = &p[1]; continue; } // Skip CR
         if (r == line && c == col) {
             match (int)p[0] {
                 62 => return ">: PC travels Right",
