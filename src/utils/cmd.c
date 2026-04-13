@@ -263,9 +263,9 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
         arg_list_add_fmt(list, "-I%s", g_config.input_dir);
 
         // Only use -iquote for GCC, Clang, and Emscripten (TCC does not support it)
-        if (z_path_match_compiler(g_config.cc, "gcc") || 
+        if (z_path_match_compiler(g_config.cc, "gcc") ||
             z_path_match_compiler(g_config.cc, "g++") ||
-            z_path_match_compiler(g_config.cc, "clang") || 
+            z_path_match_compiler(g_config.cc, "clang") ||
             z_path_match_compiler(g_config.cc, "emcc"))
         {
             arg_list_add(list, "-iquote");

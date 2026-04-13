@@ -231,7 +231,8 @@ int z_path_match_compiler(const char *path, const char *compiler_name)
     {
         // Verify it's a "whole word" match or at least at a boundary
         // Start boundary: beginning of string, or space, or slash
-        int start_ok = (p == path || isspace((unsigned char)p[-1]) || p[-1] == '/' || p[-1] == '\\');
+        int start_ok =
+            (p == path || isspace((unsigned char)p[-1]) || p[-1] == '/' || p[-1] == '\\');
 
         // End boundary: end of string, or space, or '.' (for extensions like .exe)
         int end_ok = (p[name_len] == '\0' || isspace((unsigned char)p[name_len]) ||
