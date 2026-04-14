@@ -523,7 +523,7 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
             {
                 char *inner = body->literal.string_val;
                 char *code =
-                    process_printf_sugar(ctx, body->token, inner, 1, "stdout", NULL, NULL, 0, 0);
+                    process_printf_sugar(ctx, body->token, inner, 1, "stdout", NULL, NULL, 0, 0, 0);
 
                 fprintf(out, "%s;", code);
                 free(code);
