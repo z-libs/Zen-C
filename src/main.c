@@ -759,7 +759,19 @@ int main(int argc, char **argv)
 
     if (g_config.output_file)
     {
-        snprintf(temp_source_buf, sizeof(temp_source_buf), "%s%s", g_config.output_file, ext);
+        size_t out_len = strlen(g_config.output_file);
+        size_t ext_len = strlen(ext);
+        if (out_len >= ext_len && strcmp(g_config.output_file + out_len - ext_len, ext) == 0)
+        {
+            // Already has extension, but we need a unique temp file to avoid clobbering
+            // the output file before codegen is successfully completed.
+            snprintf(temp_source_buf, sizeof(temp_source_buf), "%s.tmp%s", g_config.output_file,
+                     ext);
+        }
+        else
+        {
+            snprintf(temp_source_buf, sizeof(temp_source_buf), "%s%s", g_config.output_file, ext);
+        }
     }
     else
     {
@@ -800,16 +812,20 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (g_config.mode_transpile && g_config.verbose)
+    if (g_config.mode_transpile)
     {
-        if (g_config.output_file)
+        if (g_config.verbose && !g_config.quiet)
         {
-            printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n",
-                   g_config.output_file);
-        }
-        else
-        {
-            printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n", temp_source_file);
+            if (g_config.output_file)
+            {
+                printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n",
+                       g_config.output_file);
+            }
+            else
+            {
+                printf(COLOR_BOLD COLOR_CYAN "  Transpiled" COLOR_RESET " to %s\n",
+                       temp_source_file);
+            }
         }
         // Done, no C compilation
         return 0;
