@@ -67,6 +67,7 @@ jobs:
         sudo apt-get update && sudo apt-get install -y git make gcc
         git clone -b mob https://github.com/TinyCC/tinycc.git
         cd tinycc
+        git checkout $(git rev-list -n 1 --before="2026-04-01" HEAD)
         ./configure
         make
         sudo make install
