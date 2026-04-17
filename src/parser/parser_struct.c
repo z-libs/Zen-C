@@ -916,6 +916,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
     {
         lexer_next(l);
         ASTNode *node = ast_create(NODE_STRUCT);
+        node->token = name_token;
         node->strct.name = name;
         node->strct.is_template = (gp_count > 0);
         node->strct.generic_params = gps;
@@ -1126,6 +1127,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
     }
 
     ASTNode *node = ast_create(NODE_STRUCT);
+    node->token = name_token;
     add_to_struct_list(ctx, node);
 
     node->strct.name = name;
@@ -1193,6 +1195,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
     lexer_next(l);
     Token n = lexer_next(l);
     check_identifier(ctx, n);
+    Token name_token = n;
 
     char *gp = NULL;
     if (lexer_peek(l).type == TOK_LANGLE)
@@ -1382,6 +1385,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
     }
 
     ASTNode *node = ast_create(NODE_ENUM);
+    node->token = name_token;
     node->enm.name = ename;
 
     node->enm.variants = h;
