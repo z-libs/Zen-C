@@ -1,8 +1,8 @@
 // MISRA Rule 8.9 Test
 // An object should be defined at block scope if its identifier only appears in a single function.
 
-var g_single_use: i32 = 10; // Error: MISRA Rule 8.9
-var g_multi_use: i32 = 20;  // OK
+let g_single_use: i32 = 10; // Error: MISRA Rule 8.9
+let g_multi_use: i32 = 20;  // OK
 
 fn func1() {
     g_single_use = 15;

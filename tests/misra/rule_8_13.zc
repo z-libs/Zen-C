@@ -34,7 +34,7 @@ fn main() {
     let val = 10;
     let r0 = test_const_ptr_fail(&val);
 
-    var s: S;
+    let s: S;
     s.x = 42;
     let r1 = s.read_const();
     let r2 = s.read_non_const();

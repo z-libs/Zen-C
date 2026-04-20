@@ -3257,7 +3257,6 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
 
         if (strncmp(tk.start, "var", 3) == 0 && tk.len == 3)
         {
-            zwarn_at_diag(DIAG_STYLE_DEPRECATED_VAR, tk, "'var' is deprecated. Use 'let' instead.");
             return parse_var_decl(ctx, l, 0);
         }
 
@@ -3277,9 +3276,6 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
 
         if (strncmp(tk.start, "const", 5) == 0 && tk.len == 5)
         {
-            zwarn_at_diag(DIAG_STYLE_DEPRECATED_CONST, tk,
-                          "'const' for declarations is deprecated. Use 'def' for constants or 'let "
-                          "x: const T' for read-only variables.");
             return parse_var_decl(ctx, l, 0);
         }
         if (strncmp(tk.start, "return", 6) == 0 && tk.len == 6)
@@ -3638,6 +3634,13 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             Token t = lexer_next(l);
             if (t.type != TOK_STRING && t.type != TOK_FSTRING && t.type != TOK_RAW_STRING)
             {
+                if (t.type == TOK_LPAREN)
+                {
+                    zpanic_at(t,
+                              "Expected string literal after '%.*s'. Note: '%.*s' is a keyword and "
+                              "does NOT use parentheses ().",
+                              (int)tk.len, tk.start, (int)tk.len, tk.start);
+                }
                 zpanic_at(t, "Expected string literal after print/eprint");
             }
 

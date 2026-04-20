@@ -275,6 +275,7 @@ struct ASTNode
             int is_autofree;
             int is_static;
             int is_export;
+            int is_let; // Declared with 'let'
         } var_decl;
 
         struct

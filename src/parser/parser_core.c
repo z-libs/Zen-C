@@ -744,15 +744,10 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             }
             else if (t.len == 3 && strncmp(t.start, "var", 3) == 0)
             {
-                zwarn_at_diag(DIAG_STYLE_DEPRECATED_VAR, t,
-                              "'var' is deprecated. Use 'let' instead.");
                 s = parse_var_decl(ctx, l, attrs.is_export);
             }
             else if (t.len == 5 && strncmp(t.start, "const", 5) == 0)
             {
-                zwarn_at_diag(DIAG_STYLE_DEPRECATED_CONST, t,
-                              "'const' for declarations is deprecated. Use 'def' for constants or "
-                              "'let x: const T' for read-only variables.");
                 s = parse_var_decl(ctx, l, attrs.is_export);
             }
             else if (t.len == 6 && strncmp(t.start, "extern", 6) == 0)

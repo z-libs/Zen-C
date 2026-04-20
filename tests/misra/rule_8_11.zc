@@ -1,7 +1,7 @@
 // MISRA Rule 8.11 Test
 // Array with external linkage shall have explicit size
 
-pub var g_bad_array: [i32; 0]; // Error: MISRA Rule 8.11 (if Zen allows 0-size as unsized)
+pub let g_bad_array: [i32; 0]; // Error: MISRA Rule 8.11 (if Zen allows 0-size as unsized)
 // Actually, Zen C fixed-size arrays ALWAYS have a size if declared as [T; N].
 // But if someone uses a syntax that results in an unsized external array, it should trip.
 

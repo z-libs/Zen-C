@@ -1,5 +1,5 @@
 include "rule_20_10.h"
 
 fn main() {
-    var x = OK_MACRO;
+    let x = OK_MACRO;
 }

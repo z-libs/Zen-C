@@ -345,7 +345,22 @@ static void replace_it_with_var(ASTNode *node, char *var_name)
 
 ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export)
 {
-    Token tk = lexer_next(l); // eat 'var'
+    Token tk = lexer_next(l); // eat 'var', 'let' or 'const'
+
+    int is_decl_let = (tk.len == 3 && strncmp(tk.start, "let", 3) == 0);
+
+    if (!is_decl_let)
+    {
+        if (tk.len == 3 && strncmp(tk.start, "var", 3) == 0)
+        {
+            zpanic_at(tk, "'var' is no longer supported. Use 'let' instead.");
+        }
+        else if (tk.len == 5 && strncmp(tk.start, "const", 5) == 0)
+        {
+            zpanic_at(tk, "'const' for declarations is no longer supported. Use 'def' for "
+                          "constants or 'let x: const T' for read-only variables.");
+        }
+    }
 
     // Destructuring: var {x, y} = ... OR var (a: type, b: type) = ...
     if (lexer_peek(l).type == TOK_LBRACE || lexer_peek(l).type == TOK_LPAREN)
@@ -792,6 +807,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export)
     n->token = name_tok; // Save location
     n->var_decl.name = name;
     n->var_decl.type_str = type;
+    n->var_decl.is_let = is_decl_let;
     n->type_info = type_obj;
 
     // Auto-construct Trait Object

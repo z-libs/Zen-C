@@ -18,7 +18,7 @@ impl Point {
 }
 
 test "const self methods" {
-    var p = Point { x: 10, y: 20 };
+    let p = Point { x: 10, y: 20 };
     assert(p.get_x() == 10, "get_x failed");
     assert(p.get_sum() == 30, "get_sum failed");
 
