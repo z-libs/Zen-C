@@ -2,12 +2,6 @@
 // EXPECT: MISRA Rule Zen 1.4
 // EXPECT: MISRA Rule Zen 1.4
 // EXPECT: MISRA Rule Zen 1.4
-// EXPECT: Rule Zen 1.4
-// EXPECT: Rule Zen 1.4
-// EXPECT: Rule Zen 1.4
-// EXPECT: Rule Zen 1.4
-// EXPECT: Rule Zen 1.4
-// EXPECT: Rule Zen 1.4
 
 // Preprocessor Violations
 #define MAX 10          // Violation: MISRA Rule Zen 1.4
@@ -15,18 +9,4 @@
 #if defined(FOO)        // Violation: MISRA Rule Zen 1.4
 #endif
 
-// Reserved Identifier Violations
-fn test_misra_reserved_idents() {
-    let __illegal = 1;     // EXPECT: Rule Zen 1.4
-    let _Illegal = 2;      // EXPECT: Rule Zen 1.4
-    let _z_internal = 3;   // EXPECT: Rule Zen 1.4
-    let _valid_name = 4;   // OK (one underscore followed by lowercase is fine in Zen)
-}
-
-struct __BadStruct { x: i32 } // EXPECT: Rule Zen 1.4
-enum _BadEnum { A }           // EXPECT: Rule Zen 1.4
-type _z_BadAlias = i32;       // EXPECT: Rule Zen 1.4
-
-fn main() {
-    test_misra_reserved_idents();
-}
+fn main() { }

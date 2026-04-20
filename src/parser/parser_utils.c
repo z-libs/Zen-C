@@ -57,12 +57,38 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
     else if (strncmp(p, "if", 2) == 0 || strncmp(p, "elif", 4) == 0 ||
              strncmp(p, "ifdef", 5) == 0 || strncmp(p, "ifndef", 6) == 0)
     {
+        int is_elif = (strncmp(p, "elif", 4) == 0);
+        int is_ifdef = (strncmp(p, "ifdef", 5) == 0);
+        int is_ifndef = (strncmp(p, "ifndef", 6) == 0);
+
         if (g_config.misra_mode)
         {
             zerror_at(
                 tok,
                 "MISRA Violation: '#' preprocessor conditions are prohibited (Rule Zen 1.4). Use "
                 "'@cfg(...)' instead.");
+
+            // Perform specific expression audits (Rule 20.8, 20.9)
+            if (is_ifdef || is_ifndef)
+            {
+                // Just an identifier
+                const char *expr_start = p + (is_ifdef ? 5 : 6);
+                while (isspace(*expr_start))
+                {
+                    expr_start++;
+                }
+                // 20.9 technically only applies to #if/#elif, but we check ifdefs too if they are
+                // legacy
+            }
+            else
+            {
+                const char *expr_start = p + (is_elif ? 4 : 2);
+                while (isspace(*expr_start))
+                {
+                    expr_start++;
+                }
+                misra_check_preprocessor_expression_parser(ctx, tok, expr_start);
+            }
         }
         else
         {

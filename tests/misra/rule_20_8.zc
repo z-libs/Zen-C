@@ -1,0 +1,18 @@
+// MISRA Rule 20.8 Verification
+// EXPECT: MISRA Rule 20.8
+// EXPECT: MISRA Rule 20.8
+// EXPECT: MISRA Rule Zen 1.4
+
+// Rule Zen 1.4 violation is always reported for #if
+// Rule 20.8 violation is reported for non-boolean evaluation
+
+#if 2          // EXPECT: MISRA Rule 20.8
+#endif
+
+#if (1 + 1)    // EXPECT: MISRA Rule 20.8
+#endif
+
+#if 1          // OK (only Rule Zen 1.4)
+#endif
+
+fn main() { }

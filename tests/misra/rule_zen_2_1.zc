@@ -1,0 +1,22 @@
+// MISRA Rule Zen 2.1 Verification
+// EXPECT: MISRA Rule Zen 2.1
+// EXPECT: MISRA Rule Zen 2.1
+// EXPECT: MISRA Rule Zen 2.1
+// EXPECT: MISRA Rule Zen 2.1
+// EXPECT: MISRA Rule Zen 2.1
+// EXPECT: MISRA Rule Zen 2.1
+
+// Reserved Identifier Violations
+fn test_misra_reserved_idents() {
+    let __illegal = 1;     // EXPECT: Rule Zen 2.1
+    let _Illegal = 2;      // EXPECT: Rule Zen 2.1
+    let _z_internal = 3;   // EXPECT: Rule Zen 2.1
+}
+
+struct __BadStruct { x: i32 } // EXPECT: Rule Zen 2.1
+enum _BadEnum { A }           // EXPECT: Rule Zen 2.1
+type _z_BadAlias = i32;       // EXPECT: Rule Zen 2.1
+
+fn main() {
+    test_misra_reserved_idents();
+}

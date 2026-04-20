@@ -1,9 +1,13 @@
 #include "analysis/typecheck.h"
+#include "analysis/const_fold.h"
 #include "ast/ast.h"
 #include "constants.h"
 #include "platform/misra.h"
+#include "parser/parser.h"
+#include "zprep.h"
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 void emit_misra_preamble(FILE *out)
 {
@@ -473,20 +477,6 @@ void misra_check_initializer_side_effects(TypeChecker *tc, ASTNode *node)
     }
 }
 
-void misra_check_evaluation_order_collision(struct TypeChecker *tc, struct ASTNode *left,
-                                            struct ASTNode *right, Token token)
-{
-    if (!g_config.misra_mode || !left || !right)
-    {
-        return;
-    }
-
-    // This is called with collected sets from typecheck.c
-    // We expect typecheck.c to do the heavy lifting of collection
-    // For now, let's keep the reporting simple if typecheck.c detects a conflict
-}
-
-// ============================================================================
 // SECTION 16: Match/Switch
 // ============================================================================
 
@@ -1087,6 +1077,113 @@ void misra_check_plugin_block(struct TypeChecker *tc, Token token)
     }
 }
 
+void misra_check_preprocessor_expression(struct TypeChecker *tc, Token tok, const char *expression)
+{
+    misra_check_preprocessor_expression_parser(tc ? tc->pctx : NULL, tok, expression);
+}
+
+void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token tok,
+                                                const char *expression)
+{
+    if (!g_config.misra_mode || !expression)
+    {
+        return;
+    }
+
+    // Manual scan for Rule 20.9 (Undefined identifiers)
+    const char *p = expression;
+    while (*p)
+    {
+        while (*p && !isalpha(*p) && *p != '_')
+        {
+            p++;
+        }
+        if (!*p)
+        {
+            break;
+        }
+
+        const char *start = p;
+        while (isalnum(*p) || *p == '_')
+        {
+            p++;
+        }
+        int len = p - start;
+
+        char name[128];
+        if (len >= 128)
+        {
+            len = 127;
+        }
+        strncpy(name, start, len);
+        name[len] = 0;
+
+        // Skip 'defined' operator
+        if (strcmp(name, "defined") == 0)
+        {
+            while (*p && !isalnum(*p) && *p != '_')
+            {
+                p++;
+            }
+            while (*p && (isalnum(*p) || *p == '_'))
+            {
+                p++;
+            }
+            continue;
+        }
+
+        // Rule 20.9 check
+        int is_defined = 0;
+        // 1. Check CLI defines
+        for (int i = 0; i < g_config.cfg_define_count; i++)
+        {
+            if (strcmp(g_config.cfg_defines[i], name) == 0)
+            {
+                is_defined = 1;
+                break;
+            }
+        }
+        // 2. Check Symbol Table (via find_symbol_entry)
+        if (!is_defined && ctx)
+        {
+            if (find_symbol_entry(ctx, name))
+            {
+                is_defined = 1;
+            }
+        }
+
+        if (!is_defined)
+        {
+            char msg[256];
+            snprintf(msg, sizeof(msg),
+                     "MISRA Rule 20.9: Identifier '%s' in preprocessor expression is not defined",
+                     name);
+            zerror_at(tok, msg);
+        }
+    }
+
+    // Rule 20.8 Evaluation (Simplified check for 0/1)
+    // We try to parse and evaluate the expression using Zen's internal constant folder
+    if (ctx)
+    {
+        Lexer l;
+        lexer_init(&l, expression);
+        ASTNode *expr_node = parse_expression(ctx, &l);
+        if (expr_node)
+        {
+            long long val;
+            if (eval_const_int_expr(expr_node, ctx, &val))
+            {
+                if (val != 0 && val != 1)
+                {
+                    zerror_at(tok,
+                              "MISRA Rule 20.8: Controlling expression must evaluate to 0 or 1");
+                }
+            }
+        }
+    }
+}
+
 void misra_check_strict_match(TypeChecker *tc, ASTNode *node)
 {
     if (!g_config.misra_mode || !node || node->type != NODE_MATCH || !node->match_stmt.expr)
@@ -1149,13 +1246,11 @@ void misra_check_reserved_identifier(struct TypeChecker *tc, const char *name, T
         return;
     }
 
-    // Rule Zen 1.4: Reserved identifiers
-    // 1. Standard C: start with __ or _ followed by uppercase
-    // 2. Zen Internal: start with _z_
+    // Rule Zen 2.1: Reserved identifiers
     if ((name[0] == '_' && (name[1] == '_' || (name[1] >= 'A' && name[1] <= 'Z'))) ||
         (strncmp(name, "_z_", 3) == 0))
     {
-        tc_error(tc, token, "MISRA Rule Zen 1.4");
+        tc_error(tc, token, "MISRA Rule Zen 2.1");
     }
 }
 

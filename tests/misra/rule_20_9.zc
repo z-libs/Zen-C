@@ -1,0 +1,19 @@
+// MISRA Rule 20.9 Verification
+// EXPECT: MISRA Rule 20.9
+// EXPECT: MISRA Rule 20.9
+// EXPECT: MISRA Rule Zen 1.4
+
+// Rule Zen 1.4 violation is always reported for #if
+// Rule 20.9 violation is reported for undefined identifiers
+
+#if UNDEFINED_VAR    // EXPECT: MISRA Rule 20.9
+#endif
+
+#define DEFINED_VAR 1
+#if DEFINED_VAR      // OK (only Rule Zen 1.4)
+#endif
+
+#if defined(FOO) || UNDEFINED_VAR2 // EXPECT: MISRA Rule 20.9
+#endif
+
+fn main() { }
