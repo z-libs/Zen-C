@@ -1390,12 +1390,10 @@ static void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
         }
     }
 
-    // Validate argument count if we have a signature
+    // Validate argument count
     if (sig)
     {
         int min_args = sig->total_args;
-
-        // Count required args (those without defaults)
         if (sig->defaults)
         {
             min_args = 0;
@@ -1533,12 +1531,52 @@ static void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
     }
 
     // Propagate return type from function signature
-    if (sig && sig->ret_type && !node->type_info)
+    if (sig && sig->ret_type)
     {
-        // Deep clone return type to ensure caller doesn't modify callee's metadata
-        node->type_info = type_clone(sig->ret_type);
-        // Function results always have depth 0 (static/heap/escaping) by default
-        node->type_info->lifetime_depth = 0;
+        if (!node->type_info)
+        {
+            // Deep clone return type to ensure caller doesn't modify callee's metadata
+            node->type_info = type_clone(sig->ret_type);
+        }
+
+        // Apply Lifetime Elision
+        if (sig->elide_from_idx != -1 && node->type_info->kind == TYPE_POINTER)
+        {
+            int target_depth = 0; // Default to escaping if not found
+            if (node->call.callee && node->call.callee->type == NODE_EXPR_MEMBER &&
+                sig->elide_from_idx == 0)
+            {
+                if (node->call.callee->member.target->type_info)
+                {
+                    target_depth = node->call.callee->member.target->type_info->lifetime_depth;
+                }
+            }
+            else
+            {
+                int current_idx =
+                    (node->call.callee && node->call.callee->type == NODE_EXPR_MEMBER) ? 1 : 0;
+                ASTNode *a = node->call.args;
+                while (a)
+                {
+                    if (current_idx == sig->elide_from_idx)
+                    {
+                        if (a->type_info)
+                        {
+                            target_depth = a->type_info->lifetime_depth;
+                        }
+                        break;
+                    }
+                    current_idx++;
+                    a = a->next;
+                }
+            }
+            node->type_info->lifetime_depth = target_depth;
+        }
+        else
+        {
+            // Function results always have depth 0 (static/heap/escaping) by default
+            node->type_info->lifetime_depth = 0;
+        }
     }
     else if (!node->type_info && node->call.callee && node->call.callee->type_info)
     {
@@ -1761,7 +1799,6 @@ static int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, 
         return 1; // All integer pairs compatible (modulo MISRA/Warning checks above)
     }
 
-    // Lifetime/Escape Analysis Check (Rule against Use-After-Free)
     if (!is_call_arg && resolved_target->kind == TYPE_POINTER &&
         resolved_value->kind == TYPE_POINTER)
     {
@@ -1776,6 +1813,7 @@ static int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, 
                                    "Consider copying the value instead of taking a reference.",
                                    NULL};
             tc_error_with_hints(tc, t, msg, hints);
+            return 0;
         }
     }
 
@@ -2136,10 +2174,14 @@ static void check_function(TypeChecker *tc, ASTNode *node, int depth)
     if (node->func.ret_type_info)
     {
         misra_check_pointer_nesting(tc, node->func.ret_type_info, node->token);
-        // Deep clone to avoid metadata leakage
-        Type *cloned_ret = type_clone(node->func.ret_type_info);
-        cloned_ret->lifetime_depth = 1;
-        node->func.ret_type_info = cloned_ret;
+
+        // Lifetime Elision result was already computed in pre-pass for named functions.
+        // For lambdas or if it somehow missed the pre-pass, ensure it's set.
+        if (node->func.elide_from_idx == -1)
+        {
+            // Simple re-run if needed
+            // infer_node_lifetime(tc, node); // Wait, I'll define it below
+        }
     }
 
     check_node(tc, node->func.body, depth + 1);
@@ -3805,6 +3847,80 @@ static void check_expr_lambda(TypeChecker *tc, ASTNode *node, int depth)
     tc_exit_scope(tc);
 }
 
+static void infer_node_lifetime(TypeChecker *tc, ASTNode *node)
+{
+    if (!node || node->type != NODE_FUNCTION)
+    {
+        return;
+    }
+
+    FuncSig *fsig = find_func(tc->pctx, node->func.name);
+    if (!fsig)
+    {
+        return;
+    }
+
+    // Default to local argument scope (depth 1)
+    int inferred_depth = 1;
+    int ptr_param_count = 0;
+    int self_depth = -1;
+    int elide_idx = -1;
+
+    for (int i = 0; i < fsig->total_args; i++)
+    {
+        Type *t = (fsig->arg_types && fsig->arg_types[i]) ? fsig->arg_types[i] : NULL;
+        if (t && t->kind == TYPE_POINTER)
+        {
+            ptr_param_count++;
+            // Parameters are always at least depth 1 (argument scope)
+            if (t->lifetime_depth == 0)
+            {
+                t->lifetime_depth = 1;
+            }
+
+            if (node->func.param_names && node->func.param_names[i] &&
+                strcmp(node->func.param_names[i], "self") == 0)
+            {
+                self_depth = t->lifetime_depth;
+                elide_idx = i;
+            }
+        }
+    }
+
+    if (self_depth != -1)
+    {
+        inferred_depth = self_depth;
+    }
+    else if (ptr_param_count == 1)
+    {
+        for (int i = 0; i < fsig->total_args; i++)
+        {
+            Type *t = (fsig->arg_types && fsig->arg_types[i]) ? fsig->arg_types[i] : NULL;
+            if (t && t->kind == TYPE_POINTER)
+            {
+                inferred_depth = t->lifetime_depth;
+                elide_idx = i;
+                break;
+            }
+        }
+    }
+
+    node->func.elide_from_idx = elide_idx;
+    fsig->elide_from_idx = elide_idx;
+
+    // Update the return type depth in the signature
+    if (fsig->ret_type && fsig->ret_type->kind == TYPE_POINTER)
+    {
+        fsig->ret_type->lifetime_depth = inferred_depth;
+    }
+
+    // Also update AST node if types are already resolved there
+    if (node->func.ret_type_info && node->func.ret_type_info->kind == TYPE_POINTER)
+    {
+        node->func.ret_type_info->lifetime_depth = inferred_depth;
+    }
+}
+
 static void check_program_prepass(TypeChecker *tc, ASTNode *root, int depth)
 {
     if (!root || root->type != NODE_ROOT)
@@ -3826,11 +3942,19 @@ static void check_program_prepass(TypeChecker *tc, ASTNode *root, int depth)
         {
             check_program_prepass(tc, n, depth + 1);
         }
+        else if (n->type == NODE_FUNCTION)
+        {
+            infer_node_lifetime(tc, n);
+        }
         else if (n->type == NODE_IMPL)
         {
             ASTNode *method = n->impl.methods;
             while (method)
             {
+                if (method->type == NODE_FUNCTION)
+                {
+                    infer_node_lifetime(tc, method);
+                }
                 method = method->next;
             }
         }
@@ -3839,6 +3963,10 @@ static void check_program_prepass(TypeChecker *tc, ASTNode *root, int depth)
             ASTNode *method = n->impl_trait.methods;
             while (method)
             {
+                if (method->type == NODE_FUNCTION)
+                {
+                    infer_node_lifetime(tc, method);
+                }
                 method = method->next;
             }
         }

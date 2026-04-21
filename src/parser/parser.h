@@ -99,6 +99,7 @@ typedef struct FuncSig
     int required;         ///< 1 if return value must be used.
     int is_pure;          ///< 1 if marked @pure.
     char *link_name;      ///< Overriding C identifier (from @link_name).
+    int elide_from_idx;   ///< Index of parameter for lifetime elision (-1 if none)
     struct FuncSig *next; ///< Next function in registry.
 } FuncSig;
 
