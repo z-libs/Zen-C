@@ -25,7 +25,7 @@ char *repl_transpile(const char *zen_c_code)
 
     char *c_code = NULL;
     size_t sz = 0;
-#if ZC_OS_WINDOWS
+#if ZC_OS_WINDOWS || defined(__COSMOPOLITAN__)
     FILE *mem = z_tmpfile();
 #else
     FILE *mem = open_memstream(&c_code, &sz);
@@ -37,7 +37,7 @@ char *repl_transpile(const char *zen_c_code)
 
     codegen_node(&ctx, root, mem);
 
-#if ZC_OS_WINDOWS
+#if ZC_OS_WINDOWS || defined(__COSMOPOLITAN__)
     sz = (size_t)ftell(mem);
     fseek(mem, 0, SEEK_SET);
     c_code = malloc(sz + 1);
