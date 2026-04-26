@@ -10,7 +10,7 @@ fn _z_internal_alloc_bytes(size: usize) -> void* {
 
 @cfg(not(misra))
 fn _z_internal_alloc_bytes(size: usize) -> void* {
-    return malloc(size);
+    return calloc(1, size);
 }
 
 @cfg(misra)
@@ -36,8 +36,11 @@ fn _z_internal_realloc_bytes(ptr: void*, old_size: usize, new_size: usize) -> vo
 
 @cfg(not(misra))
 fn _z_internal_realloc_bytes(ptr: void*, old_size: usize, new_size: usize) -> void* {
-    (void)old_size;
-    return realloc(ptr, new_size);
+    let new_ptr = realloc(ptr, new_size);
+    if (new_ptr != NULL && new_size > old_size) {
+        memset((char*)new_ptr + old_size, 0, new_size - old_size);
+    }
+    return new_ptr;
 }
 
 @cfg(misra)

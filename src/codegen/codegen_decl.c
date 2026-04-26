@@ -1202,6 +1202,29 @@ void emit_globals(ParserContext *ctx, ASTNode *node, FILE *out)
                 codegen_expression(ctx, node->var_decl.init_expr, out);
             }
             fprintf(out, ";\n");
+            if (g_config.use_cpp && node->type == NODE_VAR_DECL)
+            {
+                char *tname =
+                    node->var_decl.type_str
+                        ? xstrdup(node->var_decl.type_str)
+                        : (node->var_decl.init_expr ? infer_type(ctx, node->var_decl.init_expr)
+                                                    : NULL);
+                if (tname)
+                {
+                    char *ct = tname;
+                    if (strncmp(ct, "struct ", 7) == 0)
+                    {
+                        ct += 7;
+                    }
+                    ASTNode *def = find_struct_def(ctx, ct);
+                    if (def && def->type_info && def->type_info->traits.has_drop)
+                    {
+                        fprintf(out, "int __z_drop_flag_%s = %d;\n", node->var_decl.name,
+                                node->var_decl.init_expr ? 1 : 0);
+                    }
+                    free(tname);
+                }
+            }
             if (node->cfg_condition)
             {
                 fprintf(out, "#endif\n");

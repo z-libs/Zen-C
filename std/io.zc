@@ -72,7 +72,7 @@ fn readln() -> char* {
     let std_in = stdin;
 
     while (true) {
-        c = fgetc(std_in);
+        c = fgetc((FILE*)std_in);
         // Explicit cast to avoid -1 becoming UINT64_MAX in some contexts if treated as unsigned
         let eof_c: c_int = -1; 
         if (c == eof_c) {
@@ -118,7 +118,7 @@ fn _utf8_seq_len(first_byte: byte) -> usize {
 
 fn read_rune() -> rune {
     let std_in = stdin;
-    let c1 = fgetc(std_in);
+    let c1 = fgetc((FILE*)std_in);
     if (c1 == -1) {
         return (rune)0;
     }
@@ -132,16 +132,16 @@ fn read_rune() -> rune {
     let val: uint32_t = 0;
     if (len == 2) {
         val = (uint32_t)(first & 0x1F) << 6;
-        val = val | (uint32_t)((byte)fgetc(std_in) & 0x3F);
+        val = val | (uint32_t)((byte)fgetc((FILE*)std_in) & 0x3F);
     } else if (len == 3) {
         val = (uint32_t)(first & 0x0F) << 12;
-        val = val | ((uint32_t)((byte)fgetc(std_in) & 0x3F) << 6);
-        val = val | (uint32_t)((byte)fgetc(std_in) & 0x3F);
+        val = val | ((uint32_t)((byte)fgetc((FILE*)std_in) & 0x3F) << 6);
+        val = val | (uint32_t)((byte)fgetc((FILE*)std_in) & 0x3F);
     } else if (len == 4) {
         val = (uint32_t)(first & 0x07) << 18;
-        val = val | ((uint32_t)((byte)fgetc(std_in) & 0x3F) << 12);
-        val = val | ((uint32_t)((byte)fgetc(std_in) & 0x3F) << 6);
-        val = val | (uint32_t)((byte)fgetc(std_in) & 0x3F);
+        val = val | ((uint32_t)((byte)fgetc((FILE*)std_in) & 0x3F) << 12);
+        val = val | ((uint32_t)((byte)fgetc((FILE*)std_in) & 0x3F) << 6);
+        val = val | (uint32_t)((byte)fgetc((FILE*)std_in) & 0x3F);
     }
     return (rune)val;
 }

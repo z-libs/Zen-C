@@ -373,22 +373,57 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
 static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs, FILE *out)
 {
     (void)ctx;
-    fprintf(out, "// Global Generic Drop Dispatch\n");
-    fprintf(out, "#define _z_drop(x) _Generic((x)");
-
-    ASTNode *s = structs;
-    while (s)
+    if (g_config.use_cpp)
     {
-        if (s->type == NODE_STRUCT && s->type_info && s->type_info->traits.has_drop &&
-            !s->strct.is_template)
-        {
-            char *sname = s->strct.name;
-            fprintf(out, ", \\\n    %s: %s__Drop__glue((void*)&(x))", sname, sname);
-        }
-        s = s->next;
-    }
+        fprintf(out, "// Global Generic Drop Dispatch (C++ Overloads)\n");
+        fprintf(out, "#ifdef __cplusplus\n");
+        fprintf(out, "} // end extern \"C\"\n");
+        fprintf(out, "template<typename T> inline void _z_drop(T& x) { (void)x; }\n");
+        fprintf(out, "template<typename T> inline void _z_drop(T* x) { (void)x; }\n");
 
-    fprintf(out, ", \\\n    default: (void)0)\n\n");
+        ASTNode *s = structs;
+        while (s)
+        {
+            if (s->type == NODE_STRUCT && s->type_info && s->type_info->traits.has_drop &&
+                !s->strct.is_template)
+            {
+                if (s->cfg_condition)
+                {
+                    fprintf(out, "#if %s\n", s->cfg_condition);
+                }
+                char *sname = s->strct.name;
+                fprintf(out, "inline void _z_drop(%s& x) { %s__Drop__glue(&x); }\n", sname, sname);
+                fprintf(out, "inline void _z_drop(%s* x) { if(x) %s__Drop__glue(x); }\n", sname,
+                        sname);
+                if (s->cfg_condition)
+                {
+                    fprintf(out, "#endif\n");
+                }
+            }
+            s = s->next;
+        }
+        fprintf(out, "extern \"C\" {\n");
+        fprintf(out, "#endif\n\n");
+    }
+    else
+    {
+        fprintf(out, "// Global Generic Drop Dispatch\n");
+        fprintf(out, "#define _z_drop(x) _Generic((x)");
+
+        ASTNode *s = structs;
+        while (s)
+        {
+            if (s->type == NODE_STRUCT && s->type_info && s->type_info->traits.has_drop &&
+                !s->strct.is_template)
+            {
+                char *sname = s->strct.name;
+                fprintf(out, ", \\\n    %s: %s__Drop__glue((void*)&(x))", sname, sname);
+            }
+            s = s->next;
+        }
+
+        fprintf(out, ", \\\n    default: (void)0)\n\n");
+    }
 }
 
 // Main entry point for code generation.

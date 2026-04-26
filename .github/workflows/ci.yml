@@ -121,6 +121,24 @@ jobs:
         name: failed-test-artifacts-${{ matrix.name }}
         path: "**/test_out_*"
 
+  test-cpp:
+    name: C++ Interoperability
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Dependencies
+      run: sudo apt-get update && sudo apt-get install -y libtcc-dev g++
+    - name: Build
+      run: make ZC_HAS_JIT=1
+    - name: Run C++ Tests
+      run: ./tests/scripts/run_tests.sh --cpp
+    - name: Upload Failed Test Artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-test-artifacts-cpp
+        path: "**/test_out_*"
+
   test-lsp:
     name: LSP Tests
     runs-on: ubuntu-latest

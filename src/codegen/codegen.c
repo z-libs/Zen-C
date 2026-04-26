@@ -724,27 +724,27 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
             int is_drop_assignment = 0;
             char *clean_type = NULL;
-            if (is_assignment && strcmp(node->binary.op, "=") == 0 && g_config.use_cpp)
+            if (is_assignment && strcmp(node->binary.op, "=") == 0 && g_config.use_cpp &&
+                node->binary.left->type == NODE_EXPR_VAR)
             {
                 char *type_name = infer_type(ctx, node->binary.left);
                 if (type_name)
                 {
-                    clean_type = xstrdup(type_name);
-                    char *ptr = strchr(clean_type, '*');
-                    if (ptr)
+                    // If it's a pointer, it's not a drop assignment of the base type
+                    if (strchr(type_name, '*') == NULL)
                     {
-                        *ptr = '\0';
-                    }
-                    char *base = clean_type;
-                    if (strncmp(base, "struct ", 7) == 0)
-                    {
-                        base += 7;
-                    }
-                    ASTNode *def = find_struct_def(ctx, base);
-                    if (def && def->type_info && def->type_info->traits.has_drop)
-                    {
-                        is_drop_assignment = 1;
-                        memmove(clean_type, base, strlen(base) + 1);
+                        clean_type = xstrdup(type_name);
+                        char *base = clean_type;
+                        if (strncmp(base, "struct ", 7) == 0)
+                        {
+                            base += 7;
+                        }
+                        ASTNode *def = find_struct_def(ctx, base);
+                        if (def && def->type_info && def->type_info->traits.has_drop)
+                        {
+                            is_drop_assignment = 1;
+                            memmove(clean_type, base, strlen(base) + 1);
+                        }
                     }
                     free(type_name);
                 }
@@ -753,6 +753,10 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             if (is_drop_assignment)
             {
                 fprintf(out, "({ ");
+                fprintf(out, "ZC_AUTO _z_tmp = (");
+                codegen_expression_with_move(ctx, node->binary.right, out);
+                fprintf(out, "); ");
+
                 fprintf(out, "__typeof__((");
                 codegen_expression(ctx, node->binary.left, out);
                 fprintf(out, "))* _z_dest = &(");
@@ -769,9 +773,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     fprintf(out, "%s__Drop__glue(_z_dest); ", clean_type);
                 }
 
-                fprintf(out, "*_z_dest = (");
-                codegen_expression_with_move(ctx, node->binary.right, out);
-                fprintf(out, "); ");
+                fprintf(out, "*_z_dest = _z_tmp; ");
 
                 if (node->binary.left->type == NODE_EXPR_VAR)
                 {
@@ -2345,9 +2347,26 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     }
                     if (!skip)
                     {
-                        fprintf(out, "_s.%s = ", f->var_decl.name);
-                        codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
-                        fprintf(out, "; ");
+                        if (f->var_decl.init_expr &&
+                            f->var_decl.init_expr->type == NODE_EXPR_ARRAY_LITERAL)
+                        {
+                            // C++ does not allow assigning to raw arrays. Unroll it.
+                            ASTNode *elem = f->var_decl.init_expr->array_literal.elements;
+                            int idx = 0;
+                            while (elem)
+                            {
+                                fprintf(out, "_s.%s[%d] = ", f->var_decl.name, idx++);
+                                codegen_expression(ctx, elem, out);
+                                fprintf(out, "; ");
+                                elem = elem->next;
+                            }
+                        }
+                        else
+                        {
+                            fprintf(out, "_s.%s = ", f->var_decl.name);
+                            codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
+                            fprintf(out, "; ");
+                        }
                     }
                     f = f->next;
                 }

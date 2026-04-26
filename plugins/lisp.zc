@@ -260,12 +260,12 @@ fn lisp_transpile(input_body: char*, api: ZApi*) {
         let h = api.hoist_out;
         fputs(f"""/* Lisp Runtime */
 typedef enum {{ L_NUM, L_PAIR, L_NIL }} LType;
-typedef struct LVal {{ LType type; union {{ long num; struct {{ struct LVal *car; struct LVal *cdr; }} pair; }}; }} *LVal;
-static struct LVal _nil = {{ L_NIL }}; static LVal LNIL = &_nil;
+typedef struct z_LVal {{ LType type; union {{ long num; struct {{ struct z_LVal *car; struct z_LVal *cdr; }} pair; }}; }} *LVal;
+static struct z_LVal _nil = {{ L_NIL }}; static LVal LNIL = &_nil;
 static LVal nil = &_nil;
-static LVal l_num(long n) {{ LVal v = malloc(sizeof(struct LVal)); v->type=L_NUM; v->num=n; return v; }}
+static LVal l_num(long n) {{ LVal v = (LVal)malloc(sizeof(struct z_LVal)); v->type=L_NUM; v->num=n; return v; }}
 static LVal l_nil() {{ return LNIL; }}
-static LVal l_cons(LVal a, LVal b) {{ LVal v = malloc(sizeof(struct LVal)); v->type=L_PAIR; v->pair.car=a; v->pair.cdr=b; return v; }}
+static LVal l_cons(LVal a, LVal b) {{ LVal v = (LVal)malloc(sizeof(struct z_LVal)); v->type=L_PAIR; v->pair.car=a; v->pair.cdr=b; return v; }}
 static LVal l_car(LVal v) {{ return (v && v->type==L_PAIR) ? v->pair.car : LNIL; }}
 static LVal l_cdr(LVal v) {{ return (v && v->type==L_PAIR) ? v->pair.cdr : LNIL; }}
 static int l_truthy(LVal v) {{ return (v && v->type!=L_NIL); }}
