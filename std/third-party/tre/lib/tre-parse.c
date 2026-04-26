@@ -112,7 +112,7 @@ static reg_errcode_t tre_new_item(tre_mem_t mem, int min, int max, int *i, int *
             return REG_ESPACE;
         }
         *max_i *= 2;
-        new_items = xrealloc(array, sizeof(*items) * *max_i);
+        new_items = (decltype(new_items))xrealloc(array, sizeof(*items) * *max_i);
         if (new_items == NULL)
         {
             return REG_ESPACE;
@@ -164,7 +164,7 @@ static int tre_compare_items(const void *a, const void *b)
 {
     const tre_ast_node_t *node_a = *(tre_ast_node_t *const *)a;
     const tre_ast_node_t *node_b = *(tre_ast_node_t *const *)b;
-    tre_literal_t *l_a = node_a->obj, *l_b = node_b->obj;
+    tre_literal_t *l_a = (decltype(l_a))node_a->obj, *l_b = (decltype(l_b))node_b->obj;
     long a_min = l_a->code_min, b_min = l_b->code_min;
 
     if (a_min < b_min)
@@ -503,7 +503,7 @@ static reg_errcode_t tre_parse_bracket(tre_parse_ctx_t *ctx, tre_ast_node_t **re
     int num_neg_classes = 0;
 
     /* Start off with an array of `max_i' elements. */
-    items = xmalloc(sizeof(*items) * max_i);
+    items = (decltype(items))xmalloc(sizeof(*items) * max_i);
     if (items == NULL)
     {
         return REG_ESPACE;
@@ -535,7 +535,7 @@ static reg_errcode_t tre_parse_bracket(tre_parse_ctx_t *ctx, tre_ast_node_t **re
     for (j = 0; j < i && status == REG_OK; j++)
     {
         long min, max;
-        tre_literal_t *l = items[j]->obj;
+        tre_literal_t *l = (decltype(l))items[j]->obj;
         min = l->code_min;
         max = l->code_max;
 
@@ -576,7 +576,7 @@ static reg_errcode_t tre_parse_bracket(tre_parse_ctx_t *ctx, tre_ast_node_t **re
             DPRINT(("creating %ld - %ld\n", l->code_min, l->code_max));
             if (num_neg_classes > 0)
             {
-                l->neg_classes =
+                l->neg_classes = (decltype(l->neg_classes))
                     tre_mem_alloc(ctx->mem, (sizeof(l->neg_classes) * (num_neg_classes + 1)));
                 if (l->neg_classes == NULL)
                 {
@@ -625,10 +625,10 @@ static reg_errcode_t tre_parse_bracket(tre_parse_ctx_t *ctx, tre_ast_node_t **re
         }
         else
         {
-            tre_literal_t *l = n->obj;
+            tre_literal_t *l = (decltype(l))n->obj;
             if (num_neg_classes > 0)
             {
-                l->neg_classes =
+                l->neg_classes = (decltype(l->neg_classes))
                     tre_mem_alloc(ctx->mem, (sizeof(l->neg_classes) * (num_neg_classes + 1)));
                 if (l->neg_classes == NULL)
                 {
@@ -998,7 +998,7 @@ static reg_errcode_t tre_parse_bound(tre_parse_ctx_t *ctx, tre_ast_node_t **resu
         if (approx || costs_set || counts_set)
         {
             int *params;
-            tre_iteration_t *iter = (*result)->obj;
+            tre_iteration_t *iter = (decltype(iter))(*result)->obj;
 
             if (costs_set || counts_set)
             {
@@ -1049,7 +1049,7 @@ static reg_errcode_t tre_parse_bound(tre_parse_ctx_t *ctx, tre_ast_node_t **resu
             }
 
             ctx->have_approx = 1;
-            params = tre_mem_alloc(ctx->mem, sizeof(*params) * TRE_PARAM_LAST);
+            params = (decltype(params))tre_mem_alloc(ctx->mem, sizeof(*params) * TRE_PARAM_LAST);
             if (!params)
             {
                 return REG_ESPACE;
@@ -1122,7 +1122,7 @@ reg_errcode_t tre_parse(tre_parse_ctx_t *ctx)
        call stack, and efficiency (both in lines of code and speed).  */
     while (status == REG_OK && tre_stack_num_items(stack) > bottom)
     {
-        symbol = tre_stack_pop_int(stack);
+        symbol = (decltype(symbol))tre_stack_pop_int(stack);
         switch (symbol)
         {
         case PARSE_RE:
@@ -1212,7 +1212,7 @@ reg_errcode_t tre_parse(tre_parse_ctx_t *ctx)
 
         case PARSE_POST_CATENATION:
         {
-            tre_ast_node_t *tree = tre_stack_pop_voidptr(stack);
+            tre_ast_node_t *tree = (decltype(tree))tre_stack_pop_voidptr(stack);
             tre_ast_node_t *tmp_node;
             tmp_node = tre_ast_new_catenation(ctx->mem, tree, result);
             if (!tmp_node)
@@ -1257,7 +1257,7 @@ reg_errcode_t tre_parse(tre_parse_ctx_t *ctx)
         case PARSE_POST_UNION:
         {
             tre_ast_node_t *tmp_node;
-            tre_ast_node_t *tree = tre_stack_pop_voidptr(stack);
+            tre_ast_node_t *tree = (decltype(tree))tre_stack_pop_voidptr(stack);
             tmp_node = tre_ast_new_union(ctx->mem, tree, result);
             if (!tmp_node)
             {

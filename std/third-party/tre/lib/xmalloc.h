@@ -57,6 +57,12 @@ void xmalloc_configure(int fail_after);
 
 #include <stdlib.h>
 
+#ifndef decltype
+#ifndef __cplusplus
+#define decltype(x) __typeof__(x)
+#endif
+#endif
+
 #define xmalloc(size) malloc(size)
 #define xcalloc(nmemb, size) calloc(nmemb, size)
 #define xfree(ptr) free(ptr)
@@ -64,6 +70,12 @@ void xmalloc_configure(int fail_after);
 
 #endif /* !MALLOC_DEBUGGING */
 #endif /* !XMALLOC_INTERNAL */
+
+#ifndef decltype
+#ifndef __cplusplus
+#define decltype(x) __typeof__(x)
+#endif
+#endif
 
 #endif /* _XMALLOC_H */
 

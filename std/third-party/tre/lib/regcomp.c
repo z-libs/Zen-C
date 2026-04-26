@@ -26,7 +26,7 @@ int tre_regncomp(regex_t *preg, const char *regex, size_t n, int cflags)
     tre_char_t *wregex;
     size_t wlen;
 
-    wregex = xmalloc(sizeof(tre_char_t) * (n + 1));
+    wregex = (decltype(wregex))xmalloc(sizeof(tre_char_t) * (n + 1));
     if (wregex == NULL)
     {
         return REG_ESPACE;
@@ -77,11 +77,11 @@ int tre_regncomp(regex_t *preg, const char *regex, size_t n, int cflags)
                     return REG_BADPAT;
                 }
                 break;
-            case -1:
+            case (size_t)-1:
                 DPRINT(("mbrtowc: error %d: %s.\n", errno, strerror(errno)));
                 xfree(wregex);
                 return REG_BADPAT;
-            case -2:
+            case (size_t)-2:
                 /* The last character wasn't complete.  Let's not call it a
                fatal error. */
                 consumed = n;
@@ -117,7 +117,7 @@ int tre_regncompb(regex_t *preg, const char *regex, size_t n, int cflags)
     tre_char_t *wregex;
     size_t i;
 
-    wregex = xmalloc(sizeof(tre_char_t) * n);
+    wregex = (decltype(wregex))xmalloc(sizeof(tre_char_t) * n);
     if (wregex == NULL)
     {
         return REG_ESPACE;
@@ -159,7 +159,7 @@ int tre_regcompb(regex_t *preg, const char *regex, int cflags)
     {
         return REG_ESPACE;
     }
-    wregex = xmalloc(sizeof(tre_char_t) * (n + 1));
+    wregex = (decltype(wregex))xmalloc(sizeof(tre_char_t) * (n + 1));
     if (wregex == NULL)
     {
         return REG_ESPACE;

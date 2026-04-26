@@ -52,7 +52,10 @@ impl Regex {
 
     fn compile_with_flags(pattern: char*, flags: int) -> Regex {
         let preg = alloc_bytes(1024);
-        let status = tre_regcomp(preg, pattern, flags);
+        let status: int = 0;
+        raw {
+            status = tre_regcomp((regex_t*)preg, pattern, flags);
+        }
         if (status != 0) {
             dealloc<void>(preg);
             return Regex { preg: NULL, pattern: NULL, flags: flags };
@@ -66,7 +69,11 @@ impl Regex {
 
     fn match(self, text: char*) -> bool {
         if (self.preg == NULL) { return false; }
-        return tre_regexec(self.preg, text, 0, 0, 0) == 0;
+        let res: bool = false;
+        raw {
+            res = (tre_regexec((regex_t*)self->preg, text, 0, 0, 0) == 0);
+        }
+        return res;
     }
 
     fn match_full(self, text: char*) -> bool {
@@ -77,7 +84,11 @@ impl Regex {
         if (self.preg == NULL) { return false; }
         let len = strlen(text);
         if (offset < 0 || offset > len) { return false; }
-        return tre_regexec(self.preg, text + offset, 0, 0, 0) == 0;
+        let res: bool = false;
+        raw {
+            res = (tre_regexec((regex_t*)self->preg, text + offset, 0, 0, 0) == 0);
+        }
+        return res;
     }
 
     fn is_match(self, text: char*) -> bool {
@@ -88,7 +99,11 @@ impl Regex {
         if (self.preg == NULL) { return Option<Match>::None(); }
         
         let pmatch: ZRegMatch[1];
-        if (tre_regexec(self.preg, text, 1, (void*)pmatch, 0) == 0) {
+        let res: int = -1;
+        raw {
+            res = tre_regexec((regex_t*)self->preg, text, 1, (regmatch_t*)pmatch, 0);
+        }
+        if (res == 0) {
             let start = pmatch[0].rm_so;
             let end = pmatch[0].rm_eo;
             if (start != -1) {
@@ -113,7 +128,11 @@ impl Regex {
         let t_len = strlen(text);
         while (pos < t_len) {
             let sub = text + pos;
-            if (tre_regexec(self.preg, sub, 0, 0, 0) == 0) {
+            let res: bool = false;
+            raw {
+                res = (tre_regexec((regex_t*)self->preg, sub, 0, 0, 0) == 0);
+            }
+            if (res) {
                 count = count + 1;
                 pos = pos + 1;
             } else {
@@ -134,7 +153,11 @@ impl Regex {
         let pos = 0;
         while (pos < t_len) {
             let sub = text + pos;
-            if (tre_regexec(self.preg, sub, 0, 0, 0) == 0) {
+            let res: bool = false;
+            raw {
+                res = (tre_regexec((regex_t*)self->preg, sub, 0, 0, 0) == 0);
+            }
+            if (res) {
                 if (pos > last_pos) {
                     let before = text + last_pos;
                     let part_len = pos - last_pos;
@@ -174,7 +197,9 @@ impl Regex {
 
     fn destroy(self) {
         if (self.preg != NULL) {
-            tre_regfree(self.preg);
+            raw {
+                tre_regfree((regex_t*)self->preg);
+            }
             dealloc<void>(self.preg);
         }
     }

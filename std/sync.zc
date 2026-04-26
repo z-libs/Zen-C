@@ -11,25 +11,25 @@ struct Mutex {
 impl Mutex {
     fn new() -> Mutex {
         let ptr = alloc_bytes(64); 
-        pthread_mutex_init(ptr, NULL);
+        pthread_mutex_init((pthread_mutex_t*)ptr, NULL);
         return Mutex { handle: ptr };
     }
     
     fn lock(self) {
-        pthread_mutex_lock(self.handle);
+        pthread_mutex_lock((pthread_mutex_t*)self.handle);
     }
     
     fn unlock(self) {
-        pthread_mutex_unlock(self.handle);
+        pthread_mutex_unlock((pthread_mutex_t*)self.handle);
     }
     
     fn try_lock(self) -> bool {
-        return pthread_mutex_trylock(self.handle) == 0;
+        return pthread_mutex_trylock((pthread_mutex_t*)self.handle) == 0;
     }
     
     fn free(self) {
         if (self.handle != NULL) {
-            pthread_mutex_destroy(self.handle);
+            pthread_mutex_destroy((pthread_mutex_t*)self.handle);
             dealloc<void>(self.handle);
             self.handle = NULL;
         }
@@ -43,25 +43,25 @@ struct CondVar {
 impl CondVar {
     fn new() -> CondVar {
         let ptr = alloc_bytes(64); 
-        pthread_cond_init(ptr, NULL);
+        pthread_cond_init((pthread_cond_t*)ptr, NULL);
         return CondVar { handle: ptr };
     }
     
     fn wait(self, mutex: Mutex*) {
-        pthread_cond_wait(self.handle, (*mutex).handle);
+        pthread_cond_wait((pthread_cond_t*)self.handle, (pthread_mutex_t*)(*mutex).handle);
     }
     
     fn signal(self) {
-        pthread_cond_signal(self.handle);
+        pthread_cond_signal((pthread_cond_t*)self.handle);
     }
     
     fn broadcast(self) {
-        pthread_cond_broadcast(self.handle);
+        pthread_cond_broadcast((pthread_cond_t*)self.handle);
     }
     
     fn free(self) {
         if (self.handle != NULL) {
-            pthread_cond_destroy(self.handle);
+            pthread_cond_destroy((pthread_cond_t*)self.handle);
             dealloc<void>(self.handle);
             self.handle = NULL;
         }
@@ -75,33 +75,33 @@ struct RwLock {
 impl RwLock {
     fn new() -> RwLock {
         let ptr = alloc_bytes(64); 
-        pthread_rwlock_init(ptr, NULL);
+        pthread_rwlock_init((pthread_rwlock_t*)ptr, NULL);
         return RwLock { handle: ptr };
     }
     
     fn rdlock(self) {
-        pthread_rwlock_rdlock(self.handle);
+        pthread_rwlock_rdlock((pthread_rwlock_t*)self.handle);
     }
     
     fn wrlock(self) {
-        pthread_rwlock_wrlock(self.handle);
+        pthread_rwlock_wrlock((pthread_rwlock_t*)self.handle);
     }
     
     fn unlock(self) {
-        pthread_rwlock_unlock(self.handle);
+        pthread_rwlock_unlock((pthread_rwlock_t*)self.handle);
     }
     
     fn try_rdlock(self) -> bool {
-        return pthread_rwlock_tryrdlock(self.handle) == 0;
+        return pthread_rwlock_tryrdlock((pthread_rwlock_t*)self.handle) == 0;
     }
     
     fn try_wrlock(self) -> bool {
-        return pthread_rwlock_trywrlock(self.handle) == 0;
+        return pthread_rwlock_trywrlock((pthread_rwlock_t*)self.handle) == 0;
     }
     
     fn free(self) {
         if (self.handle != NULL) {
-            pthread_rwlock_destroy(self.handle);
+            pthread_rwlock_destroy((pthread_rwlock_t*)self.handle);
             dealloc<void>(self.handle);
             self.handle = NULL;
         }
@@ -180,7 +180,7 @@ impl Barrier {
     @cfg(not(apple))
     fn new(count: int) -> Barrier {
         let ptr = alloc_bytes(64); 
-        pthread_barrier_init(ptr, NULL, count);
+        pthread_barrier_init((pthread_barrier_t*)ptr, NULL, count);
         return Barrier { handle: ptr };
     }
     
@@ -208,7 +208,7 @@ impl Barrier {
 
     @cfg(not(apple))
     fn wait(self) -> bool {
-        let ret = pthread_barrier_wait(self.handle);
+        let ret = pthread_barrier_wait((pthread_barrier_t*)self.handle);
         if (ret == 0 || ret == -1) {
             return true;
         }
@@ -229,7 +229,7 @@ impl Barrier {
     @cfg(not(apple))
     fn free(self) {
         if (self.handle != NULL) {
-            pthread_barrier_destroy(self.handle);
+            pthread_barrier_destroy((pthread_barrier_t*)self.handle);
             dealloc<void>(self.handle);
             self.handle = NULL;
         }
@@ -266,7 +266,7 @@ impl Semaphore {
     @cfg(not(apple))
     fn new(value: int) -> Semaphore {
         let ptr = alloc_bytes(32);
-        sem_init(ptr, 0, value);
+        sem_init((sem_t*)ptr, 0, value);
         return Semaphore { handle: ptr };
     }
     
@@ -283,7 +283,7 @@ impl Semaphore {
 
     @cfg(not(apple))
     fn wait(self) {
-        sem_wait(self.handle);
+        sem_wait((sem_t*)self.handle);
     }
     
     @cfg(apple)
@@ -301,7 +301,7 @@ impl Semaphore {
 
     @cfg(not(apple))
     fn try_wait(self) -> bool {
-        return sem_trywait(self.handle) == 0;
+        return sem_trywait((sem_t*)self.handle) == 0;
     }
     
     @cfg(apple)
@@ -315,7 +315,7 @@ impl Semaphore {
 
     @cfg(not(apple))
     fn post(self) {
-        sem_post(self.handle);
+        sem_post((sem_t*)self.handle);
     }
     
     @cfg(apple)
@@ -330,7 +330,7 @@ impl Semaphore {
     @cfg(not(apple))
     fn value(self) -> int {
         let val: int = 0;
-        sem_getvalue(self.handle, &val);
+        sem_getvalue((sem_t*)self.handle, &val);
         return val;
     }
     
@@ -348,7 +348,7 @@ impl Semaphore {
     @cfg(not(apple))
     fn free(self) {
         if (self.handle != NULL) {
-            sem_destroy(self.handle);
+            sem_destroy((sem_t*)self.handle);
             dealloc<void>(self.handle);
             self.handle = NULL;
         }

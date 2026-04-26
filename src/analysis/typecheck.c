@@ -2462,6 +2462,11 @@ static void check_struct_init(TypeChecker *tc, ASTNode *node, int depth)
             def_field = def_field->next;
         }
 
+        if (found)
+        {
+            field_init->type_info = expected_type;
+        }
+
         if (found && expected_type && field_init->var_decl.init_expr->type == NODE_LAMBDA)
         {
             field_init->var_decl.init_expr->type_info = expected_type;

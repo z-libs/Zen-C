@@ -67,7 +67,7 @@ impl Command {
         let buf = alloc_n<char>(buf_size);
         
         while (true) {
-            let fgets_res = fgets(buf, (c_int)buf_size, fp);
+            let fgets_res = fgets(buf, (c_int)buf_size, (FILE*)fp);
             if (fgets_res == NULL) break;
             
             let chunk = String::from(buf);

@@ -7,7 +7,7 @@ struct StringOfString {
 }
 
 async fn fetch_struct() -> String {
-    let str = String { data: malloc(sizeof(char) * 6) };
+    let str = String { data: (char*)malloc(sizeof(char) * 6) };
     strcpy(str.data, "Hello");
     return str;
 }

@@ -133,7 +133,7 @@ typedef struct tre_backtrack_struct
         if (!stack->next)                                                                          \
         {                                                                                          \
             tre_backtrack_t s;                                                                     \
-            s = tre_bt_mem_alloc(mem, sizeof(*s));                                                 \
+            s = (decltype(s))tre_bt_mem_alloc(mem, sizeof(*s));                                                 \
             if (!s)                                                                                \
             {                                                                                      \
                 tre_bt_mem_destroy(mem);                                                           \
@@ -147,7 +147,7 @@ typedef struct tre_backtrack_struct
             }                                                                                      \
             s->prev = stack;                                                                       \
             s->next = NULL;                                                                        \
-            s->item.tags = tre_bt_mem_alloc(mem, sizeof(*tags) * tnfa->num_tags);                  \
+            s->item.tags = (decltype(s->item.tags))tre_bt_mem_alloc(mem, sizeof(*tags) * tnfa->num_tags);                  \
             if (!s->item.tags)                                                                     \
             {                                                                                      \
                 tre_bt_mem_destroy(mem);                                                           \
@@ -202,11 +202,11 @@ reg_errcode_t tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
 {
     /* State variables required by GET_NEXT_WCHAR. */
     tre_char_t prev_c = 0, next_c = 0;
-    const char *str_byte = string;
+    const char *str_byte = (decltype(str_byte))string;
     ssize_t pos = 0;
     unsigned int pos_add_next = 1;
 #ifdef TRE_WCHAR
-    const wchar_t *str_wide = string;
+    const wchar_t *str_wide = (decltype(str_wide))string;
 #ifdef TRE_MBSTATE
     mbstate_t mbstate;
 #endif /* TRE_MBSTATE */
@@ -266,7 +266,7 @@ reg_errcode_t tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
     {
         return REG_ESPACE;
     }
-    stack = tre_bt_mem_alloc(mem, sizeof(*stack));
+    stack = (decltype(stack))tre_bt_mem_alloc(mem, sizeof(*stack));
     if (!stack)
     {
         ret = REG_ESPACE;
@@ -279,13 +279,13 @@ reg_errcode_t tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
     DPRINT(("len = %zd\n", len));
 
 #ifdef TRE_USE_ALLOCA
-    tags = alloca(sizeof(*tags) * tnfa->num_tags);
-    pmatch = alloca(sizeof(*pmatch) * tnfa->num_submatches);
-    states_seen = alloca(sizeof(*states_seen) * tnfa->num_states);
+    tags = (decltype(tags))alloca(sizeof(*tags) * tnfa->num_tags);
+    pmatch = (decltype(pmatch))alloca(sizeof(*pmatch) * tnfa->num_submatches);
+    states_seen = (decltype(states_seen))alloca(sizeof(*states_seen) * tnfa->num_states);
 #else  /* !TRE_USE_ALLOCA */
     if (tnfa->num_tags)
     {
-        tags = xmalloc(sizeof(*tags) * tnfa->num_tags);
+        tags = (decltype(tags))xmalloc(sizeof(*tags) * tnfa->num_tags);
         if (!tags)
         {
             ret = REG_ESPACE;
@@ -294,7 +294,7 @@ reg_errcode_t tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
     }
     if (tnfa->num_submatches)
     {
-        pmatch = xmalloc(sizeof(*pmatch) * tnfa->num_submatches);
+        pmatch = (decltype(pmatch))xmalloc(sizeof(*pmatch) * tnfa->num_submatches);
         if (!pmatch)
         {
             ret = REG_ESPACE;
@@ -303,7 +303,7 @@ reg_errcode_t tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
     }
     if (tnfa->num_states)
     {
-        states_seen = xmalloc(sizeof(*states_seen) * tnfa->num_states);
+        states_seen = (decltype(states_seen))xmalloc(sizeof(*states_seen) * tnfa->num_states);
         if (!states_seen)
         {
             ret = REG_ESPACE;

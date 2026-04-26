@@ -154,7 +154,7 @@ test "test_swap" {
 test "test_autofree" {
     println "Testing autofree...";
     {
-        autofree let p = malloc(1024);
+        autofree let p: char* = (char*)malloc(1024);
         if (p == NULL) { eprintln "Malloc failed!"; }
         strcpy(p, "Auto-freed string");
         print f"Allocated: {p}"; println "";

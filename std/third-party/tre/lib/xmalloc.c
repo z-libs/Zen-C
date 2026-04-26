@@ -67,11 +67,11 @@ static hashTable *hash_table_new(void)
 {
     hashTable *tbl;
 
-    tbl = malloc(sizeof(*tbl));
+    tbl = (hashTable *)malloc(sizeof(*tbl));
 
     if (tbl != NULL)
     {
-        tbl->table = calloc(TABLE_SIZE, sizeof(*tbl->table));
+        tbl->table = (hashTableItem **)calloc(TABLE_SIZE, sizeof(*tbl->table));
 
         if (tbl->table == NULL)
         {
@@ -117,7 +117,7 @@ static void hash_table_add(hashTable *tbl, void *ptr, size_t bytes, const char *
         }
     }
 
-    new_item = malloc(sizeof(*new_item));
+    new_item = (hashTableItem *)malloc(sizeof(*new_item));
     assert(new_item != NULL);
     new_item->ptr = ptr;
     new_item->bytes = bytes;
@@ -137,12 +137,12 @@ static void hash_table_add(hashTable *tbl, void *ptr, size_t bytes, const char *
     xmalloc_current += bytes;
     if (xmalloc_current > xmalloc_peak)
     {
-        xmalloc_peak = xmalloc_current;
+        xmalloc_peak = (decltype(xmalloc_peak))xmalloc_current;
     }
     xmalloc_current_blocks++;
     if (xmalloc_current_blocks > xmalloc_peak_blocks)
     {
-        xmalloc_peak_blocks = xmalloc_current_blocks;
+        xmalloc_peak_blocks = (decltype(xmalloc_peak_blocks))xmalloc_current_blocks;
     }
 }
 
@@ -232,7 +232,7 @@ int xmalloc_dump_leaks(void)
 
     for (i = 0; i < TABLE_SIZE; i++)
     {
-        item = xmalloc_table->table[i];
+        item = (decltype(item))xmalloc_table->table[i];
         while (item != NULL)
         {
             printf("%s:%d: %s: %zu bytes at %p not freed\n", item->file, item->line, item->func,

@@ -105,11 +105,11 @@ reg_errcode_t tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, 
 {
     /* State variables required by GET_NEXT_WCHAR. */
     tre_char_t prev_c = 0, next_c = 0;
-    const char *str_byte = string;
+    const char *str_byte = (decltype(str_byte))string;
     ssize_t pos = -1;
     unsigned int pos_add_next = 1;
 #ifdef TRE_WCHAR
-    const wchar_t *str_wide = string;
+    const wchar_t *str_wide = (decltype(str_wide))string;
 #ifdef TRE_MBSTATE
     mbstate_t mbstate;
 #endif /* TRE_MBSTATE */
@@ -175,9 +175,9 @@ reg_errcode_t tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, 
 
         /* Allocate the memory. */
 #ifdef TRE_USE_ALLOCA
-        buf = alloca(total_bytes);
+        buf = (decltype(buf))alloca(total_bytes);
 #else  /* !TRE_USE_ALLOCA */
-        buf = xmalloc(total_bytes);
+        buf = (decltype(buf))xmalloc(total_bytes);
 #endif /* !TRE_USE_ALLOCA */
         if (buf == NULL)
         {
@@ -186,23 +186,23 @@ reg_errcode_t tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, 
         memset(buf, 0, total_bytes);
 
         /* Get the various pointers within tmp_buf (properly aligned). */
-        tmp_tags = (void *)buf;
+        tmp_tags = (decltype(tmp_tags))buf;
         tmp_buf = buf + tbytes;
         tmp_buf += ALIGN(tmp_buf, long);
-        reach_next = (void *)tmp_buf;
+        reach_next = (decltype(reach_next))tmp_buf;
         tmp_buf += rbytes;
         tmp_buf += ALIGN(tmp_buf, long);
-        reach = (void *)tmp_buf;
+        reach = (decltype(reach))tmp_buf;
         tmp_buf += rbytes;
         tmp_buf += ALIGN(tmp_buf, long);
-        reach_pos = (void *)tmp_buf;
+        reach_pos = (decltype(reach_pos))tmp_buf;
         tmp_buf += pbytes;
         tmp_buf += ALIGN(tmp_buf, long);
         for (i = 0; i < tnfa->num_states; i++)
         {
-            reach[i].tags = (void *)tmp_buf;
+            reach[i].tags = (decltype(reach[i].tags))tmp_buf;
             tmp_buf += xbytes;
-            reach_next[i].tags = (void *)tmp_buf;
+            reach_next[i].tags = (decltype(reach_next[i].tags))tmp_buf;
             tmp_buf += xbytes;
         }
     }
@@ -220,7 +220,7 @@ reg_errcode_t tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, 
 
         if (len >= 0)
         {
-            str_byte = memchr(orig_str, first, (size_t)len);
+            str_byte = (const char *)memchr(orig_str, first, (size_t)len);
         }
         else
         {

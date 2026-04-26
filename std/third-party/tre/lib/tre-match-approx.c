@@ -241,11 +241,11 @@ reg_errcode_t tre_tnfa_run_approx(const tre_tnfa_t *tnfa, const void *string, ss
 {
     /* State variables required by GET_NEXT_WCHAR. */
     tre_char_t prev_c = 0, next_c = 0;
-    const char *str_byte = string;
+    const char *str_byte = (decltype(str_byte))string;
     ssize_t pos = -1;
     unsigned int pos_add_next = 1;
 #ifdef TRE_WCHAR
-    const wchar_t *str_wide = string;
+    const wchar_t *str_wide = (decltype(str_wide))string;
 #ifdef TRE_MBSTATE
     mbstate_t mbstate;
 #endif /* !TRE_WCHAR */
@@ -323,9 +323,9 @@ reg_errcode_t tre_tnfa_run_approx(const tre_tnfa_t *tnfa, const void *string, ss
 
         /* Allocate the memory. */
 #ifdef TRE_USE_ALLOCA
-        buf = alloca(total_bytes);
+        buf = (decltype(buf))alloca(total_bytes);
 #else  /* !TRE_USE_ALLOCA */
-        buf = xmalloc((unsigned)total_bytes);
+        buf = (decltype(buf))xmalloc((unsigned)total_bytes);
 #endif /* !TRE_USE_ALLOCA */
         if (!buf)
         {
@@ -334,26 +334,26 @@ reg_errcode_t tre_tnfa_run_approx(const tre_tnfa_t *tnfa, const void *string, ss
         memset(buf, 0, (size_t)total_bytes);
 
         /* Allocate `tmp_tags' from `buf'. */
-        tmp_tags = (void *)buf;
+        tmp_tags = (decltype(tmp_tags))buf;
         buf_cursor = buf + tag_bytes;
         buf_cursor += ALIGN(buf_cursor, long);
 
         /* Allocate `reach' from `buf'. */
-        reach = (void *)buf_cursor;
+        reach = (decltype(reach))buf_cursor;
         buf_cursor += reach_bytes;
         buf_cursor += ALIGN(buf_cursor, long);
 
         /* Allocate `reach_next' from `buf'. */
-        reach_next = (void *)buf_cursor;
+        reach_next = (decltype(reach_next))buf_cursor;
         buf_cursor += reach_bytes;
         buf_cursor += ALIGN(buf_cursor, long);
 
         /* Allocate tag arrays for `reach' and `reach_next' from `buf'. */
         for (i = 0; i < tnfa->num_states; i++)
         {
-            reach[i].tags = (void *)buf_cursor;
+            reach[i].tags = (decltype(reach[i].tags))buf_cursor;
             buf_cursor += tag_bytes;
-            reach_next[i].tags = (void *)buf_cursor;
+            reach_next[i].tags = (decltype(reach_next[i].tags))buf_cursor;
             buf_cursor += tag_bytes;
         }
         assert(buf_cursor <= buf + total_bytes);

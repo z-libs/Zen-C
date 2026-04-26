@@ -305,7 +305,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
 {
     if (node->lambda.is_bare)
     {
-        fprintf(out, "((void*)_lambda_%d)", node->lambda.lambda_id);
+        fprintf(out, "_lambda_%d", node->lambda.lambda_id);
         return;
     }
 
@@ -795,26 +795,45 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
 
                 fprintf(out, " %s ", node->binary.op);
-                if (g_config.misra_mode)
+                if (g_config.misra_mode ||
+                    (g_config.use_cpp && is_assignment && strcmp(node->binary.op, "=") == 0))
                 {
-                    char *c_type = NULL;
-                    if (node->binary.left->type_info)
+                    int should_cast = g_config.misra_mode;
+                    if (!should_cast && node->binary.left->type_info)
                     {
-                        c_type = type_to_c_string(node->binary.left->type_info);
+                        TypeKind k = node->binary.left->type_info->kind;
+                        if (k == TYPE_POINTER || k == TYPE_ENUM ||
+                            is_enum_type_name(ctx, node->binary.left->type_info->name))
+                        {
+                            should_cast = 1;
+                        }
                     }
-                    if (c_type && strcmp(c_type, "unknown") != 0 && strcmp(c_type, "void") != 0)
+
+                    if (should_cast)
                     {
-                        fprintf(out, "(%s)(", c_type);
-                        codegen_expression_with_move(ctx, node->binary.right, out);
-                        fprintf(out, ")");
-                        free(c_type);
+                        char *c_type = NULL;
+                        if (node->binary.left->type_info)
+                        {
+                            c_type = type_to_c_string(node->binary.left->type_info);
+                        }
+                        if (c_type && strcmp(c_type, "unknown") != 0 && strcmp(c_type, "void") != 0)
+                        {
+                            fprintf(out, "(%s)(", c_type);
+                            codegen_expression_with_move(ctx, node->binary.right, out);
+                            fprintf(out, ")");
+                            free(c_type);
+                        }
+                        else
+                        {
+                            if (c_type)
+                            {
+                                free(c_type);
+                            }
+                            codegen_expression_with_move(ctx, node->binary.right, out);
+                        }
                     }
                     else
                     {
-                        if (c_type)
-                        {
-                            free(c_type);
-                        }
                         codegen_expression_with_move(ctx, node->binary.right, out);
                     }
                 }
@@ -1471,7 +1490,27 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
                 else
                 {
-                    codegen_expression_with_move(ctx, arg, out);
+                    if (g_config.use_cpp && sig && arg_idx < sig->total_args)
+                    {
+                        Type *param_t = sig->arg_types[arg_idx];
+                        if (param_t &&
+                            (param_t->kind == TYPE_POINTER || param_t->kind == TYPE_ENUM))
+                        {
+                            char *c_type = type_to_c_string(param_t);
+                            fprintf(out, "(%s)(", c_type);
+                            codegen_expression_with_move(ctx, arg, out);
+                            fprintf(out, ")");
+                            free(c_type);
+                        }
+                        else
+                        {
+                            codegen_expression_with_move(ctx, arg, out);
+                        }
+                    }
+                    else
+                    {
+                        codegen_expression_with_move(ctx, arg, out);
+                    }
                 }
 
                 if (arg && arg->next)
@@ -2334,7 +2373,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             if (in_func && !is_vector)
             {
-                fprintf(out, "({ %s _s = {0}; ", struct_name);
+                fprintf(out, "({ %s _s = %s; ", struct_name, g_config.use_cpp ? "{}" : "{0}");
                 ASTNode *f = node->struct_init.fields;
                 while (f)
                 {
@@ -2363,8 +2402,21 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                         else
                         {
-                            fprintf(out, "_s.%s = ", f->var_decl.name);
-                            codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
+                            if (g_config.use_cpp)
+                            {
+                                // In C++ mode, we need explicit casts for pointer and enum
+                                // assignments. Using __typeof__(_s.field) is a robust way to cast
+                                // to the correct type.
+                                fprintf(out, "_s.%s = (__typeof__(_s.%s))(", f->var_decl.name,
+                                        f->var_decl.name);
+                                codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
+                                fprintf(out, ")");
+                            }
+                            else
+                            {
+                                fprintf(out, "_s.%s = ", f->var_decl.name);
+                                codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
+                            }
                             fprintf(out, "; ");
                         }
                     }

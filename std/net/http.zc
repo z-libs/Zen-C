@@ -96,7 +96,7 @@ struct Server {
 
 impl Server {
     fn new(port: int, handler: fn*(Request*, Response*)) -> Server {
-        return Server { port: port, handler: (void*)handler };
+        return Server { port: port, handler: handler };
     }
 
     fn start(self) {

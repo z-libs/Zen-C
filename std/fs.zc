@@ -42,7 +42,7 @@ impl File {
 
     fn close(self) {
         if (self.handle) {
-            fclose(self.handle);
+            fclose((FILE*)self.handle);
             self.handle = NULL;
         }
     }
@@ -52,16 +52,16 @@ impl File {
             return Result<String>::Err("File not open");
         }
         
-        fseek(self.handle, 0, Z_SEEK_END);
-        let size = ftell(self.handle);
-        fseek(self.handle, 0, Z_SEEK_SET);
+        fseek((FILE*)self.handle, 0, Z_SEEK_END);
+        let size = ftell((FILE*)self.handle);
+        fseek((FILE*)self.handle, 0, Z_SEEK_SET);
         
         let buffer: char* = alloc_n<char>((usize)size + 1);
         if (buffer == NULL) {
             return Result<String>::Err("Out of memory");
         }
         
-        let read = fread(buffer, 1, size, self.handle);
+        let read = fread(buffer, 1, size, (FILE*)self.handle);
         buffer[read] = 0;
         
         let s = String::new(buffer);
@@ -96,7 +96,7 @@ impl File {
         }
         
         let len = strlen(content);
-        let written = fwrite(content, 1, len, self.handle);
+        let written = fwrite(content, 1, len, (FILE*)self.handle);
         if (written != len) {
             return Result<bool>::Err("Write incomplete");
         }

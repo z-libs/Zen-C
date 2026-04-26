@@ -184,6 +184,23 @@ ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
             // If target_trait had a *, we might need to wrap in &addr?
             if (strchr(target_trait, '*'))
             {
+                if (g_config.use_cpp)
+                {
+                    // C++ does not allow taking the address of a compound literal.
+                    // Use a statement expression with a local variable instead.
+                    char *ptr_code = xmalloc(1024);
+                    snprintf(ptr_code, 1024, "({ static %s _ztrait = %s; &_ztrait; })",
+                             wrapper->type_info->name, code);
+                    ASTNode *raw_ptr = ast_create(NODE_RAW_STMT);
+                    raw_ptr->token = source_expr->token;
+                    raw_ptr->raw_stmt.content = ptr_code;
+
+                    Type *ptr_type = type_new(TYPE_POINTER);
+                    ptr_type->inner = trait_type;
+                    raw_ptr->type_info = ptr_type;
+                    return raw_ptr;
+                }
+
                 ASTNode *addr = ast_create(NODE_EXPR_UNARY);
                 addr->unary.op = xstrdup("&");
                 addr->unary.operand = wrapper;

@@ -27,12 +27,12 @@ tre_mem_t tre_mem_new_impl(int provided, void *provided_block)
     tre_mem_t mem;
     if (provided)
     {
-        mem = provided_block;
+        mem = (decltype(mem))provided_block;
         memset(mem, 0, sizeof(*mem));
     }
     else
     {
-        mem = xcalloc(1, sizeof(*mem));
+        mem = (decltype(mem))xcalloc(1, sizeof(*mem));
     }
     if (mem == NULL)
     {
@@ -71,7 +71,7 @@ void *tre_mem_alloc_impl(tre_mem_t mem, int provided, void *provided_block, int 
 #ifdef MALLOC_DEBUGGING
     if (!provided)
     {
-        ptr = xmalloc(1);
+        ptr = (decltype(ptr))xmalloc(1);
         if (ptr == NULL)
         {
             DPRINT(("tre_mem_alloc: xmalloc forced failure\n"));
@@ -96,7 +96,7 @@ void *tre_mem_alloc_impl(tre_mem_t mem, int provided, void *provided_block, int 
                 mem->failed = 1;
                 return NULL;
             }
-            mem->ptr = provided_block;
+            mem->ptr = (decltype(mem->ptr))provided_block;
             mem->n = TRE_MEM_BLOCK_SIZE;
         }
         else
@@ -111,7 +111,7 @@ void *tre_mem_alloc_impl(tre_mem_t mem, int provided, void *provided_block, int 
                 block_size = TRE_MEM_BLOCK_SIZE;
             }
             DPRINT(("tre_mem_alloc: allocating new %zu byte block\n", block_size));
-            l = xmalloc(sizeof(*l));
+            l = (decltype(l))xmalloc(sizeof(*l));
             if (l == NULL)
             {
                 mem->failed = 1;
@@ -134,7 +134,7 @@ void *tre_mem_alloc_impl(tre_mem_t mem, int provided, void *provided_block, int 
                 mem->blocks = l;
             }
             mem->current = l;
-            mem->ptr = l->data;
+            mem->ptr = (decltype(mem->ptr))l->data;
             mem->n = block_size;
         }
     }

@@ -7,15 +7,15 @@ struct StringOfString {
 }
 
 async fn fetch_struct() -> String {
-    let str = String { data: malloc(sizeof(char) * 6) };
+    let str = String { data: (char*)malloc(sizeof(char) * 6) };
     strcpy(str.data, "World");
     return str;
 }
 
 async fn fetch_struct2() -> StringOfString* {
-    let str_ptr: String* = malloc(sizeof(String));
+    let str_ptr: String* = (String*)malloc(sizeof(String));
     *str_ptr = await fetch_struct();
-    let ptr: StringOfString* = malloc(sizeof(StringOfString));
+    let ptr: StringOfString* = (StringOfString*)malloc(sizeof(StringOfString));
     *ptr = StringOfString { str: str_ptr };
     return ptr;
 }

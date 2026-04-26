@@ -79,6 +79,21 @@ void emit_mangled_name(ParserContext *ctx, FILE *out, const char *base, const ch
     free(merged);
 }
 
+int is_enum_type_name(ParserContext *ctx, const char *name)
+{
+    if (!name || !ctx)
+    {
+        return 0;
+    }
+    const char *clean = name;
+    if (strncmp(clean, "struct ", 7) == 0)
+    {
+        clean += 7;
+    }
+    ASTNode *def = find_struct_def(ctx, clean);
+    return (def && def->type == NODE_ENUM);
+}
+
 // Helper to emit C declaration (handle arrays, function pointers correctly)
 void emit_c_decl(ParserContext *ctx, FILE *out, const char *type_str, const char *name)
 {

@@ -32,10 +32,10 @@ tre_stack_t *tre_stack_new(size_t size, size_t max_size)
 {
     tre_stack_t *s;
 
-    s = xmalloc(sizeof(*s));
+    s = (decltype(s))xmalloc(sizeof(*s));
     if (s != NULL)
     {
-        s->stack = xmalloc(sizeof(*s->stack) * size);
+        s->stack = (decltype(s->stack))xmalloc(sizeof(*s->stack) * size);
         if (s->stack == NULL)
         {
             xfree(s);
@@ -83,7 +83,7 @@ static reg_errcode_t tre_stack_push(tre_stack_t *s, union tre_stack_item value)
             {
                 new_size = s->max_size;
             }
-            new_buffer = xrealloc(s->stack, sizeof(*new_buffer) * new_size);
+            new_buffer = (decltype(new_buffer))xrealloc(s->stack, sizeof(*new_buffer) * new_size);
             if (new_buffer == NULL)
             {
                 DPRINT(("tre_stack_push: realloc failed.\n"));

@@ -693,7 +693,14 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             // Call Impl
             if (returns_struct)
             {
-                fprintf(out, "    %s *res_ptr = malloc(sizeof(%s));\n", rt, rt);
+                if (g_config.use_cpp)
+                {
+                    fprintf(out, "    %s *res_ptr = (%s*)malloc(sizeof(%s));\n", rt, rt, rt);
+                }
+                else
+                {
+                    fprintf(out, "    %s *res_ptr = malloc(sizeof(%s));\n", rt, rt);
+                }
                 fprintf(out, "    *res_ptr = ");
             }
             else if (rt && strcmp(rt, "void") != 0 && strcmp(rt, "Async") != 0)
@@ -741,8 +748,18 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             // 4. Define Public Wrapper (Spawns Thread)
             fprintf(out, "Async %s(%s)\n", final_name, node->func.args);
             fprintf(out, "{\n");
-            fprintf(out, "    struct %s_Args* args = malloc(sizeof(struct %s_Args));\n", final_name,
-                    final_name);
+            if (g_config.use_cpp)
+            {
+                fprintf(
+                    out,
+                    "    struct %s_Args* args = (struct %s_Args*)malloc(sizeof(struct %s_Args));\n",
+                    final_name, final_name, final_name);
+            }
+            else
+            {
+                fprintf(out, "    struct %s_Args* args = malloc(sizeof(struct %s_Args));\n",
+                        final_name, final_name);
+            }
             for (int i = 0; i < arg_count; i++)
             {
                 fprintf(out, "    args->%s = %s;\n", arg_names[i], arg_names[i]);
@@ -1291,7 +1308,20 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                 if (node->var_decl.init_expr)
                 {
                     fprintf(out, " = ");
-                    codegen_expression(ctx, node->var_decl.init_expr, out);
+                    if (g_config.use_cpp && node->type_info &&
+                        (node->type_info->kind == TYPE_POINTER ||
+                         node->type_info->kind == TYPE_ENUM))
+                    {
+                        char *ct = type_to_c_string(node->type_info);
+                        fprintf(out, "(%s)(", ct);
+                        codegen_expression(ctx, node->var_decl.init_expr, out);
+                        fprintf(out, ")");
+                        free(ct);
+                    }
+                    else
+                    {
+                        codegen_expression(ctx, node->var_decl.init_expr, out);
+                    }
                 }
                 else if (node->type_info)
                 {
@@ -1392,7 +1422,17 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                     emit_var_decl_type(ctx, out, inferred, node->var_decl.name);
                     add_symbol(ctx, node->var_decl.name, inferred, NULL, 0);
                     fprintf(out, " = ");
-                    codegen_expression(ctx, node->var_decl.init_expr, out);
+                    if (g_config.use_cpp && inferred &&
+                        (strchr(inferred, '*') || is_enum_type_name(ctx, inferred)))
+                    {
+                        fprintf(out, "(%s)(", inferred);
+                        codegen_expression(ctx, node->var_decl.init_expr, out);
+                        fprintf(out, ")");
+                    }
+                    else
+                    {
+                        codegen_expression(ctx, node->var_decl.init_expr, out);
+                    }
                     fprintf(out, ";\n");
 
                     if (node->var_decl.init_expr &&
@@ -2056,8 +2096,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                 elem_type = xstrdup("void*");
             }
 
-            fprintf(out, "    { %s *_tmp_arr = malloc(%d * sizeof(%s));\n", elem_type, count,
-                    elem_type);
+            fprintf(out, "    { %s *_tmp_arr = (%s*)malloc(%d * sizeof(%s));\n", elem_type,
+                    elem_type, count, elem_type);
 
             ASTNode *elem = arr->array_literal.elements;
             int idx = 0;

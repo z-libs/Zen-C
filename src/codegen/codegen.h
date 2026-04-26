@@ -62,6 +62,7 @@ int is_struct_return_type(const char *ret_type);
 int z_is_struct_type(Type *t);
 void emit_mangled_name(ParserContext *ctx, FILE *out, const char *base, const char *method);
 int is_simple_enum(ParserContext *ctx, const char *enum_name);
+int is_enum_type_name(ParserContext *ctx, const char *name);
 
 // Declaration emission  (codegen_decl.c).
 /**

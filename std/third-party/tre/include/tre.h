@@ -9,6 +9,12 @@
 #ifndef TRE_H
 #define TRE_H 1
 
+#ifndef decltype
+#ifndef __cplusplus
+#define decltype(x) __typeof__(x)
+#endif
+#endif
+
 #ifdef USE_LOCAL_TRE_H
 /* Make certain to use the header(s) from the TRE package that this
    file is part of by giving the full path to the header from this directory. */

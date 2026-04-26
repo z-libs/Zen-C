@@ -1199,7 +1199,26 @@ void emit_globals(ParserContext *ctx, ASTNode *node, FILE *out)
             if (node->var_decl.init_expr)
             {
                 fprintf(out, " = ");
-                codegen_expression(ctx, node->var_decl.init_expr, out);
+                char *tname =
+                    node->var_decl.type_str
+                        ? xstrdup(node->var_decl.type_str)
+                        : (node->var_decl.init_expr ? infer_type(ctx, node->var_decl.init_expr)
+                                                    : NULL);
+                if (g_config.use_cpp && tname &&
+                    (strchr(tname, '*') || is_enum_type_name(ctx, tname)))
+                {
+                    fprintf(out, "(%s)(", tname);
+                    codegen_expression(ctx, node->var_decl.init_expr, out);
+                    fprintf(out, ")");
+                }
+                else
+                {
+                    codegen_expression(ctx, node->var_decl.init_expr, out);
+                }
+                if (tname)
+                {
+                    free(tname);
+                }
             }
             fprintf(out, ";\n");
             if (g_config.use_cpp && node->type == NODE_VAR_DECL)
@@ -1639,7 +1658,10 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node, FILE *out)
             }
             fprintf(out, "static void _z_test_%d() {\n", test_count);
             int saved = defer_count;
+            char *saved_ret = g_current_func_ret_type;
+            g_current_func_ret_type = "void";
             codegen_walker(ctx, cur->test_stmt.body, out);
+            g_current_func_ret_type = saved_ret;
             // Run defers
             for (int i = defer_count - 1; i >= saved; i--)
             {
