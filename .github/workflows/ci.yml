@@ -229,12 +229,12 @@ jobs:
         name: zc-boot-portable
         path: out/bin/zc-boot.com
 
-    - name: Smoke Test APE
+    - name: Test APE (Full Suite)
       run: |
         chmod +x out/bin/zc.com
-        ./out/bin/zc.com --version
-        echo 'fn main() { print f"Hello from APE!\n"; }' > smoke.zc
-        ./out/bin/zc.com run smoke.zc
+        # Replace the local zc with the portable one to force run_tests.sh to use it
+        cp out/bin/zc.com ./zc
+        ./tests/scripts/run_tests.sh
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/v')
