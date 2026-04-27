@@ -22,6 +22,62 @@ static int is_ident_char(char c)
     return isalnum(c) || c == '_';
 }
 
+static int lexer_scan_string_internal(Lexer *l, const char *s, char quote, int is_raw,
+                                      int prefix_len)
+{
+    int is_multi = 0;
+    if (quote == '"' && s[prefix_len + 1] == '"' && s[prefix_len + 2] == '"')
+    {
+        is_multi = 1;
+    }
+
+    int len = prefix_len + (is_multi ? 3 : 1);
+    while (s[len])
+    {
+        if (is_multi && s[len] == quote && s[len + 1] == quote && s[len + 2] == quote)
+        {
+            len += 3;
+            break;
+        }
+        else if (!is_multi && s[len] == quote)
+        {
+            len++;
+            break;
+        }
+
+        if (s[len] == '\\' && !is_multi)
+        {
+            if (is_raw)
+            {
+                if (s[len + 1] == quote)
+                {
+                    len++; // Skip escaped quote
+                }
+            }
+            else
+            {
+                len++; // Skip escape char
+            }
+        }
+        len++;
+    }
+
+    // Update lexer line/col
+    for (int i = 0; i < len; i++)
+    {
+        if (s[i] == '\n')
+        {
+            l->line++;
+            l->col = 1;
+        }
+        else
+        {
+            l->col++;
+        }
+    }
+    return len;
+}
+
 Token lexer_next(Lexer *l)
 {
     const char *s = l->src + l->pos;
@@ -280,46 +336,7 @@ Token lexer_next(Lexer *l)
 
     if (s[0] == 'f' && s[1] == '"')
     {
-        int is_multi = (s[2] == '"' && s[3] == '"');
-        int len = is_multi ? 4 : 2;
-        while (s[len])
-        {
-            if (is_multi && s[len] == '"' && s[len + 1] == '"' && s[len + 2] == '"')
-            {
-                break;
-            }
-            else if (!is_multi && s[len] == '"')
-            {
-                break;
-            }
-
-            if (s[len] == '\\' && !is_multi)
-            {
-                len++;
-            }
-            len++;
-        }
-        if (is_multi && s[len] == '"' && s[len + 1] == '"' && s[len + 2] == '"')
-        {
-            len += 3;
-        }
-        else if (!is_multi && s[len] == '"')
-        {
-            len++;
-        }
-
-        for (int i = 0; i < len; i++)
-        {
-            if (s[i] == '\n')
-            {
-                l->line++;
-                l->col = 1;
-            }
-            else
-            {
-                l->col++;
-            }
-        }
+        int len = lexer_scan_string_internal(l, s, '"', 0, 1);
         l->pos += len;
         return (Token){TOK_FSTRING, s, len, start_line, start_col, g_current_filename};
     }
@@ -328,51 +345,7 @@ Token lexer_next(Lexer *l)
     if (s[0] == 'r' && (s[1] == '"' || s[1] == '\''))
     {
         char quote = s[1];
-        int is_multi = (quote == '"' && s[2] == '"' && s[3] == '"');
-        int len = is_multi ? 4 : 2;
-
-        // In raw strings, only escape the quote itself
-        while (s[len])
-        {
-            if (is_multi && s[len] == '"' && s[len + 1] == '"' && s[len + 2] == '"')
-            {
-                break;
-            }
-            else if (!is_multi && s[len] == quote)
-            {
-                break;
-            }
-
-            if (s[len] == '\\' && s[len + 1] == quote && !is_multi)
-            {
-                len += 2; // Skip escaped quote
-            }
-            else
-            {
-                len++;
-            }
-        }
-        if (is_multi && s[len] == '"' && s[len + 1] == '"' && s[len + 2] == '"')
-        {
-            len += 3;
-        }
-        else if (!is_multi && s[len] == quote)
-        {
-            len++;
-        }
-
-        for (int i = 0; i < len; i++)
-        {
-            if (s[i] == '\n')
-            {
-                l->line++;
-                l->col = 1;
-            }
-            else
-            {
-                l->col++;
-            }
-        }
+        int len = lexer_scan_string_internal(l, s, quote, 1, 1);
         l->pos += len;
         return (Token){TOK_RAW_STRING, s, len, start_line, start_col, g_current_filename};
     }
@@ -487,46 +460,7 @@ Token lexer_next(Lexer *l)
     // Strings
     if (*s == '"')
     {
-        int is_multi = (s[1] == '"' && s[2] == '"');
-        int len = is_multi ? 3 : 1;
-        while (s[len])
-        {
-            if (is_multi && s[len] == '"' && s[len + 1] == '"' && s[len + 2] == '"')
-            {
-                break;
-            }
-            else if (!is_multi && s[len] == '"')
-            {
-                break;
-            }
-
-            if (s[len] == '\\' && !is_multi)
-            {
-                len++;
-            }
-            len++;
-        }
-        if (is_multi && s[len] == '"' && s[len + 1] == '"' && s[len + 2] == '"')
-        {
-            len += 3;
-        }
-        else if (!is_multi && s[len] == '"')
-        {
-            len++;
-        }
-
-        for (int i = 0; i < len; i++)
-        {
-            if (s[i] == '\n')
-            {
-                l->line++;
-                l->col = 1;
-            }
-            else
-            {
-                l->col++;
-            }
-        }
+        int len = lexer_scan_string_internal(l, s, '"', 0, 0);
         l->pos += len;
         return (Token){TOK_STRING, s, len, start_line, start_col, g_current_filename};
     }

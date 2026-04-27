@@ -557,6 +557,55 @@ void lsp_hover(const char *uri, int line, int col, int id)
     send_json_response(root);
 }
 
+static void enqueue_node_children(ASTNode *curr, ASTNode **queue, int *q_tail, int q_limit)
+{
+    if (!curr)
+    {
+        return;
+    }
+    if (curr->type == NODE_BLOCK)
+    {
+        ASTNode *stmt = curr->block.statements;
+        while (stmt)
+        {
+            if (*q_tail < q_limit)
+            {
+                queue[(*q_tail)++] = stmt;
+            }
+            stmt = stmt->next;
+        }
+    }
+    else if (curr->type == NODE_IF)
+    {
+        if (curr->if_stmt.then_body && *q_tail < q_limit)
+        {
+            queue[(*q_tail)++] = curr->if_stmt.then_body;
+        }
+        if (curr->if_stmt.else_body && *q_tail < q_limit)
+        {
+            queue[(*q_tail)++] = curr->if_stmt.else_body;
+        }
+    }
+    else if (curr->type == NODE_WHILE)
+    {
+        if (curr->while_stmt.body && *q_tail < q_limit)
+        {
+            queue[(*q_tail)++] = curr->while_stmt.body;
+        }
+    }
+    else if (curr->type == NODE_FOR)
+    {
+        if (curr->for_stmt.init && *q_tail < q_limit)
+        {
+            queue[(*q_tail)++] = curr->for_stmt.init;
+        }
+        if (curr->for_stmt.body && *q_tail < q_limit)
+        {
+            queue[(*q_tail)++] = curr->for_stmt.body;
+        }
+    }
+}
+
 // Helper to find local in function
 static ASTNode *find_local_in_func(ASTNode *func, const char *name)
 {
@@ -591,46 +640,9 @@ static ASTNode *find_local_in_func(ASTNode *func, const char *name)
                 return curr;
             }
         }
-        else if (curr->type == NODE_BLOCK)
+        else
         {
-            ASTNode *stmt = curr->block.statements;
-            while (stmt)
-            {
-                if (q_tail < 1024)
-                {
-                    queue[q_tail++] = stmt;
-                }
-                stmt = stmt->next;
-            }
-        }
-        else if (curr->type == NODE_IF)
-        {
-            if (curr->if_stmt.then_body && q_tail < 1024)
-            {
-                queue[q_tail++] = curr->if_stmt.then_body;
-            }
-            if (curr->if_stmt.else_body && q_tail < 1024)
-            {
-                queue[q_tail++] = curr->if_stmt.else_body;
-            }
-        }
-        else if (curr->type == NODE_WHILE)
-        {
-            if (curr->while_stmt.body && q_tail < 1024)
-            {
-                queue[q_tail++] = curr->while_stmt.body;
-            }
-        }
-        else if (curr->type == NODE_FOR)
-        {
-            if (curr->for_stmt.init && q_tail < 1024)
-            {
-                queue[q_tail++] = curr->for_stmt.init;
-            }
-            if (curr->for_stmt.body && q_tail < 1024)
-            {
-                queue[q_tail++] = curr->for_stmt.body;
-            }
+            enqueue_node_children(curr, queue, &q_tail, 1024);
         }
     }
     return NULL;
@@ -769,29 +781,7 @@ static LSPContext lsp_get_completion_context(const char *source, int line, int c
         }
 
         // Add children to queue
-        if (curr->type == NODE_BLOCK)
-        {
-            ASTNode *it = curr->block.statements;
-            while (it)
-            {
-                if (q_tail < 1024)
-                {
-                    queue[q_tail++] = it;
-                }
-                it = it->next;
-            }
-        }
-        else if (curr->type == NODE_IF)
-        {
-            if (q_tail < 1024)
-            {
-                queue[q_tail++] = curr->if_stmt.then_body;
-            }
-            if (curr->if_stmt.else_body && q_tail < 1024)
-            {
-                queue[q_tail++] = curr->if_stmt.else_body;
-            }
-        }
+        enqueue_node_children(curr, queue, &q_tail, 1024);
     }
 
     return CTX_FUNCTION;

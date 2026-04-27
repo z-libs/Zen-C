@@ -4486,10 +4486,35 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
     add_instantiated_func(ctx, new_impl);
 }
 
+static void register_enum_constructor(ParserContext *ctx, const char *m, const char *var_name,
+                                      int tag_id, Type *payload, Token token, int is_export)
+{
+    size_t mangled_var_sz = strlen(m) + strlen(var_name) + 3;
+    char *mangled_var = xmalloc(mangled_var_sz);
+    snprintf(mangled_var, mangled_var_sz, "%s__%s", m, var_name);
+    register_enum_variant(ctx, m, mangled_var, tag_id);
+
+    Type *ret_t = type_new(TYPE_ENUM);
+    ret_t->name = xstrdup(m);
+
+    if (payload)
+    {
+        Type **at = xmalloc(sizeof(Type *));
+        at[0] = payload;
+        register_func(ctx, ctx->global_scope, mangled_var, 1, NULL, at, ret_t, 0, 0, 0, NULL, token,
+                      is_export);
+    }
+    else
+    {
+        register_func(ctx, ctx->global_scope, mangled_var, 0, NULL, NULL, ret_t, 0, 0, 0, NULL,
+                      token, is_export);
+    }
+    free(mangled_var);
+}
+
 void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
                          const char *unmangled_arg, Token token)
 {
-
     // Ignore generic placeholders
     if (strlen(arg) == 1 && isupper(arg[0]))
     {
@@ -4545,7 +4570,6 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
                                       : xstrdup(arg); // Fallback to arg if unmangled is generic
     ni->struct_node = NULL;                           // Placeholder to break cycles
     ni->next = ctx->instantiations;
-
     ctx->instantiations = ni;
 
     ASTNode *struct_node_copy = NULL;
@@ -4616,33 +4640,10 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
             const char *subst_arg = unmangled_arg ? unmangled_arg : arg;
             nv->variant.payload = replace_type_formal(
                 v->variant.payload, t->struct_node->enm.generic_param, subst_arg, NULL, NULL);
-            size_t mangled_var_sz = strlen(m) + strlen(nv->variant.name) + 3;
-            char *mangled_var = xmalloc(mangled_var_sz);
-            snprintf(mangled_var, mangled_var_sz, "%s__%s", m, nv->variant.name);
-            register_enum_variant(ctx, m, mangled_var, nv->variant.tag_id);
 
-            // Register Constructor Function Signature for the instantiated variant
-            if (nv->variant.payload)
-            {
-                Type **at = xmalloc(sizeof(Type *));
-                at[0] = nv->variant.payload;
-                Type *ret_t = type_new(TYPE_ENUM);
-                ret_t->name = xstrdup(m);
+            register_enum_constructor(ctx, m, nv->variant.name, nv->variant.tag_id,
+                                      nv->variant.payload, token, i->enm.is_export);
 
-                register_func(ctx, ctx->global_scope, mangled_var, 1, NULL, at, ret_t, 0, 0, 0,
-                              NULL, token, i->enm.is_export);
-            }
-            else
-            {
-                // For variants without payload, we still need to register it as a zero-arg function
-                // so that MyOption::None() works and is consistent.
-                Type *ret_t = type_new(TYPE_ENUM);
-                ret_t->name = xstrdup(m);
-                register_func(ctx, ctx->global_scope, mangled_var, 0, NULL, NULL, ret_t, 0, 0, 0,
-                              NULL, token, i->enm.is_export);
-            }
-
-            free(mangled_var);
             if (!h)
             {
                 h = nv;
@@ -4822,6 +4823,24 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
 
         ASTNode *h = 0, *tl = 0;
         ASTNode *v = t->struct_node->enm.variants;
+
+        // Construct comma-separated concrete args string
+        size_t c_args_len = 1;
+        for (int j = 0; j < arg_count; j++)
+        {
+            c_args_len += strlen(args[j]) + 1;
+        }
+        char *c_args = xmalloc(c_args_len);
+        c_args[0] = 0;
+        for (int j = 0; j < arg_count; j++)
+        {
+            if (j > 0)
+            {
+                strcat(c_args, ",");
+            }
+            strcat(c_args, args[j]);
+        }
+
         while (v)
         {
             ASTNode *nv = ast_create(NODE_ENUM_VARIANT);
@@ -4830,61 +4849,16 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
 
             // Use multi-parameter substitution for payload
             Type *payload = v->variant.payload;
+            nv->variant.payload = NULL;
             if (payload)
             {
-                // We need to apply all substitutions
-
-                // Actually, for multi-param enums, we should check how they are stored.
-                // If it's Result<T, E>, generic_param is "T,E".
-                // We use replace_type_formal which handles "T,E" as p and "int,float" as c.
-
-                // Construct comma-separated concrete args string
-                size_t c_args_len = 1;
-                for (int j = 0; j < arg_count; j++)
-                {
-                    c_args_len += strlen(args[j]) + 1;
-                }
-                char *c_args = xmalloc(c_args_len);
-                c_args[0] = 0;
-                for (int j = 0; j < arg_count; j++)
-                {
-                    if (j > 0)
-                    {
-                        strcat(c_args, ",");
-                    }
-                    strcat(c_args, args[j]);
-                }
-
                 nv->variant.payload = replace_type_formal(
                     payload, t->struct_node->enm.generic_param, c_args, NULL, NULL);
-                free(c_args);
             }
 
-            size_t mangled_var_sz = strlen(m) + strlen(nv->variant.name) + 3;
-            char *mangled_var = xmalloc(mangled_var_sz);
-            snprintf(mangled_var, mangled_var_sz, "%s__%s", m, nv->variant.name);
-            register_enum_variant(ctx, m, mangled_var, nv->variant.tag_id);
+            register_enum_constructor(ctx, m, nv->variant.name, nv->variant.tag_id,
+                                      nv->variant.payload, token, i->enm.is_export);
 
-            // Register Constructor Function Signature for the instantiated variant
-            if (nv->variant.payload)
-            {
-                Type **at = xmalloc(sizeof(Type *));
-                at[0] = nv->variant.payload;
-                Type *ret_t = type_new(TYPE_ENUM);
-                ret_t->name = xstrdup(m);
-
-                register_func(ctx, ctx->global_scope, mangled_var, 1, NULL, at, ret_t, 0, 0, 0,
-                              NULL, token, i->enm.is_export);
-            }
-            else
-            {
-                Type *ret_t = type_new(TYPE_ENUM);
-                ret_t->name = xstrdup(m);
-                register_func(ctx, ctx->global_scope, mangled_var, 0, NULL, NULL, ret_t, 0, 0, 0,
-                              NULL, token, i->enm.is_export);
-            }
-
-            free(mangled_var);
             if (!h)
             {
                 h = nv;
@@ -4896,6 +4870,7 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
             tl = nv;
             v = v->next;
         }
+        free(c_args);
         i->enm.variants = h;
         ni->struct_node = i;
         register_struct_def(ctx, m, i);
@@ -4986,6 +4961,74 @@ char *parse_condition_raw(ParserContext *ctx, Lexer *l)
         c[len] = 0;
         return c;
     }
+}
+
+typedef struct
+{
+    char *final_struct;
+    char *final_cast;
+} MixinResolution;
+
+static MixinResolution resolve_mixin_method(ParserContext *ctx, const char *struct_name,
+                                            const char *method_name, int is_ptr)
+{
+    MixinResolution res = {xstrdup(struct_name), NULL};
+
+    char target_func_raw[MAX_FUNC_NAME_LEN];
+    sprintf(target_func_raw, "%s__%s", struct_name, method_name);
+    char *target_func = merge_underscores(target_func_raw);
+
+    if (!find_func(ctx, target_func))
+    {
+        ASTNode *mixin_def = find_struct_def(ctx, struct_name);
+        if (mixin_def && mixin_def->type == NODE_STRUCT && mixin_def->strct.used_structs)
+        {
+            for (int k = 0; k < mixin_def->strct.used_struct_count; k++)
+            {
+                char mixin_func_raw[128];
+                sprintf(mixin_func_raw, "%s__%s", mixin_def->strct.used_structs[k], method_name);
+                char *mixin_func = merge_underscores(mixin_func_raw);
+                if (find_func(ctx, mixin_func))
+                {
+                    free(res.final_struct);
+                    res.final_struct = xstrdup(mixin_def->strct.used_structs[k]);
+                    char cast_buf[128];
+                    if (is_ptr)
+                    {
+                        sprintf(cast_buf, "(%s*)", res.final_struct);
+                    }
+                    else
+                    {
+                        sprintf(cast_buf, "(%s*)&", res.final_struct);
+                    }
+                    res.final_cast = xstrdup(cast_buf);
+                    free(mixin_func);
+                    break;
+                }
+                free(mixin_func);
+            }
+        }
+    }
+    free(target_func);
+    return res;
+}
+
+static MixinResolution resolve_method_from_type_str(ParserContext *ctx, const char *vtype,
+                                                    const char *method)
+{
+    char ptr_check[64];
+    strncpy(ptr_check, vtype, 63);
+    ptr_check[63] = 0;
+    int is_ptr = (strchr(ptr_check, '*') != NULL);
+    if (is_ptr)
+    {
+        char *p = strchr(ptr_check, '*');
+        if (p)
+        {
+            *p = 0;
+        }
+    }
+    return resolve_mixin_method(ctx, ptr_check, method, is_ptr);
 }
 
 char *rewrite_expr_methods(ParserContext *ctx, char *raw)
@@ -5105,63 +5148,13 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                 src++;
                 paren_depth++;
 
-                char ptr_check[64];
-                strcpy(ptr_check, vtype);
-                int is_ptr = (strchr(ptr_check, '*') != NULL);
-                if (is_ptr)
-                {
-                    char *p = strchr(ptr_check, '*');
-                    if (p)
-                    {
-                        *p = 0;
-                    }
-                }
+                int is_ptr = (strchr(vtype, '*') != NULL);
 
                 // Mixin Lookup Logic
-                char target_func_raw[MAX_FUNC_NAME_LEN];
-                sprintf(target_func_raw, "%s__%s", ptr_check, method);
-                char *target_func = merge_underscores(target_func_raw);
-
-                char *final_cast = NULL;
+                MixinResolution res = resolve_method_from_type_str(ctx, vtype, method);
+                char *final_cast = res.final_cast;
                 char *final_method = xstrdup(method);
-                char *final_struct = xstrdup(ptr_check);
-
-                // Check if method exists on primary struct
-                if (!find_func(ctx, target_func))
-                {
-                    // Not found, check mixins
-                    ASTNode *mixin_def = find_struct_def(ctx, ptr_check);
-                    if (mixin_def && mixin_def->type == NODE_STRUCT &&
-                        mixin_def->strct.used_structs)
-                    {
-                        for (int k = 0; k < mixin_def->strct.used_struct_count; k++)
-                        {
-                            char mixin_func_raw[128];
-                            sprintf(mixin_func_raw, "%s__%s", mixin_def->strct.used_structs[k],
-                                    method);
-                            char *mixin_func = merge_underscores(mixin_func_raw);
-                            if (find_func(ctx, mixin_func))
-                            {
-                                // Found in mixin!
-                                free(final_struct);
-                                final_struct = xstrdup(mixin_def->strct.used_structs[k]);
-
-                                // Create cast string: (Mixin*) or (Mixin*)&
-                                char cast_buf[128];
-                                if (is_ptr)
-                                {
-                                    sprintf(cast_buf, "(%s*)", final_struct);
-                                }
-                                else
-                                {
-                                    sprintf(cast_buf, "(%s*)&", final_struct);
-                                }
-                                final_cast = xstrdup(cast_buf);
-                                break;
-                            }
-                        }
-                    }
-                }
+                char *final_struct = res.final_struct;
 
                 if (final_cast)
                 {
@@ -5222,62 +5215,12 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
             else
             {
                 dest -= strlen(acc);
-                char ptr_check[64];
-                strcpy(ptr_check, vtype);
-                int is_ptr = (strchr(ptr_check, '*') != NULL);
-                if (is_ptr)
-                {
-                    char *p = strchr(ptr_check, '*');
-                    if (p)
-                    {
-                        *p = 0;
-                    }
-                }
+                int is_ptr = (strchr(vtype, '*') != NULL);
                 // Mixin Lookup Logic (No Parens)
-                char target_func_raw[MAX_FUNC_NAME_LEN];
-                sprintf(target_func_raw, "%s__%s", ptr_check, method);
-                char *target_func = merge_underscores(target_func_raw);
-
-                char *final_cast = NULL;
+                MixinResolution res = resolve_method_from_type_str(ctx, vtype, method);
+                char *final_cast = res.final_cast;
                 char *final_method = xstrdup(method);
-                char *final_struct = xstrdup(ptr_check);
-
-                // Check if method exists on primary struct
-                if (!find_func(ctx, target_func))
-                {
-                    // Not found, check mixins
-                    ASTNode *mixin_def = find_struct_def(ctx, ptr_check);
-                    if (mixin_def && mixin_def->type == NODE_STRUCT &&
-                        mixin_def->strct.used_structs)
-                    {
-                        for (int k = 0; k < mixin_def->strct.used_struct_count; k++)
-                        {
-                            char mixin_func_raw[128];
-                            sprintf(mixin_func_raw, "%s__%s", mixin_def->strct.used_structs[k],
-                                    method);
-                            char *mixin_func = merge_underscores(mixin_func_raw);
-                            if (find_func(ctx, mixin_func))
-                            {
-                                // Found in mixin!
-                                free(final_struct);
-                                final_struct = xstrdup(mixin_def->strct.used_structs[k]);
-
-                                // Create cast string: (Mixin*) or (Mixin*)&
-                                char cast_buf[128];
-                                if (is_ptr)
-                                {
-                                    sprintf(cast_buf, "(%s*)", final_struct);
-                                }
-                                else
-                                {
-                                    sprintf(cast_buf, "(%s*)&", final_struct);
-                                }
-                                final_cast = xstrdup(cast_buf);
-                                break;
-                            }
-                        }
-                    }
-                }
+                char *final_struct = res.final_struct;
 
                 if (final_cast)
                 {

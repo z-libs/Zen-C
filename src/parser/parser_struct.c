@@ -66,6 +66,27 @@ static void auto_import_std_mem(ParserContext *ctx)
     free(resolved);
 }
 
+static void mangle_method_name(char *out, size_t out_sz, const char *struct_name,
+                               const char *trait_name, const char *method_name)
+{
+    if (trait_name)
+    {
+        snprintf(out, out_sz, "%s__%s__%s", struct_name, trait_name, method_name);
+    }
+    else
+    {
+        snprintf(out, out_sz, "%s__%s", struct_name, method_name);
+    }
+}
+
+static void patch_and_fix_self(ParserContext *ctx, ASTNode *f, const char *full_struct_name)
+{
+    (void)ctx;
+    char *na = patch_self_args(f->func.args, full_struct_name);
+    free(f->func.args);
+    f->func.args = na;
+}
+
 // Trait Parsing
 ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
 {
@@ -405,15 +426,12 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 // Mangle: Type_Trait_Method
                 {
                     char tmp[MAX_MANGLED_NAME_LEN];
-                    snprintf(tmp, sizeof(tmp), "%s__%s__%s", name2, name1, f->func.name);
+                    mangle_method_name(tmp, sizeof(tmp), name2, name1, f->func.name);
                     free(f->func.name);
                     f->func.name = merge_underscores(tmp);
                 }
 
-                // Use full_target_name (Vec<T>) for self patching
-                char *na = patch_self_args(f->func.args, full_target_name);
-                free(f->func.args);
-                f->func.args = na;
+                patch_and_fix_self(ctx, f, full_target_name);
 
                 if (attrs.cfg_condition)
                 {
@@ -456,13 +474,12 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     // Mangle: Type_Trait_Method
                     {
                         char tmp[MAX_MANGLED_NAME_LEN];
-                        snprintf(tmp, sizeof(tmp), "%s__%s__%s", name2, name1, f->func.name);
+                        mangle_method_name(tmp, sizeof(tmp), name2, name1, f->func.name);
                         free(f->func.name);
                         f->func.name = merge_underscores(tmp);
                     }
 
-                    char *na = patch_self_args(f->func.args, full_target_name);
-                    f->func.args = na;
+                    patch_and_fix_self(ctx, f, full_target_name);
                     f->link_name = attrs.link_name;
                     f->cfg_condition = attrs.cfg_condition;
                     f->func.pure = attrs.is_pure;
@@ -608,20 +625,14 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 {
                     ASTNode *f = parse_function(ctx, l, 0, 0, attrs.link_name, 0);
                     ATTACH_DOC_COMMENT(ctx, f);
-                    // Standard Mangle for template: Box_method
                     {
-                        char *tmp = xmalloc(strlen(name1) + strlen(f->func.name) + 3);
-                        snprintf(tmp, strlen(name1) + strlen(f->func.name) + 3, "%s__%s", name1,
-                                 f->func.name);
+                        char tmp[MAX_MANGLED_NAME_LEN];
+                        mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
                         free(f->func.name);
                         f->func.name = merge_underscores(tmp);
-                        free(tmp);
                     }
 
-                    // Update args string
-                    char *na = patch_self_args(f->func.args, full_struct_name);
-                    free(f->func.args);
-                    f->func.args = na;
+                    patch_and_fix_self(ctx, f, full_struct_name);
 
                     // Manual Type construction for self: Foo<T>*
                     if (f->func.arg_count > 0 && f->func.param_names &&
@@ -659,17 +670,13 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                         ASTNode *f = parse_function(ctx, l, 1, 0, attrs.link_name, 0);
                         f->func.is_async = 1;
                         {
-                            char *tmp = xmalloc(strlen(name1) + strlen(f->func.name) + 3);
-                            snprintf(tmp, strlen(name1) + strlen(f->func.name) + 3, "%s__%s", name1,
-                                     f->func.name);
+                            char tmp[MAX_MANGLED_NAME_LEN];
+                            mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
                             free(f->func.name);
                             f->func.name = merge_underscores(tmp);
-                            free(tmp);
                         }
 
-                        char *na = patch_self_args(f->func.args, full_struct_name);
-                        free(f->func.args);
-                        f->func.args = na;
+                        patch_and_fix_self(ctx, f, full_struct_name);
 
                         if (f->func.arg_count > 0 && f->func.param_names &&
                             strcmp(f->func.param_names[0], "self") == 0)
@@ -746,19 +753,14 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 {
                     ASTNode *f = parse_function(ctx, l, 0, 0, attrs.link_name, 0);
 
-                    // Standard Mangle: Struct_method
                     {
-                        size_t tmp_len = strlen(name1) + strlen(f->func.name) + 3;
-                        char *tmp = xmalloc(tmp_len);
-                        snprintf(tmp, tmp_len, "%s__%s", name1, f->func.name);
+                        char tmp[MAX_MANGLED_NAME_LEN];
+                        mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
                         free(f->func.name);
                         f->func.name = merge_underscores(tmp);
-                        free(tmp);
                     }
 
-                    char *na = patch_self_args(f->func.args, name1);
-                    free(f->func.args);
-                    f->func.args = na;
+                    patch_and_fix_self(ctx, f, name1);
 
                     if (attrs.cfg_condition)
                     {
@@ -798,16 +800,12 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                         ASTNode *f = parse_function(ctx, l, 1, 0, attrs.link_name, 0);
                         f->func.is_async = 1;
                         {
-                            size_t tmp_len = strlen(name1) + strlen(f->func.name) + 3;
-                            char *tmp = xmalloc(tmp_len);
-                            snprintf(tmp, tmp_len, "%s__%s", name1, f->func.name);
+                            char tmp[MAX_MANGLED_NAME_LEN];
+                            mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
                             free(f->func.name);
                             f->func.name = merge_underscores(tmp);
-                            free(tmp);
                         }
-                        char *na = patch_self_args(f->func.args, name1);
-                        free(f->func.args);
-                        f->func.args = na;
+                        patch_and_fix_self(ctx, f, name1);
 
                         if (attrs.cfg_condition)
                         {

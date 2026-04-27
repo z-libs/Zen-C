@@ -60,6 +60,8 @@ int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 #include <stdlib.h>
 #include <string.h>
 
+static void check_move_usage(ParserContext *ctx, ASTNode *node, Token t);
+
 static ASTNode *find_function_definition(ParserContext *ctx, const char *name)
 {
     StructRef *curr = ctx->parsed_funcs_list;
@@ -116,6 +118,102 @@ static void get_struct_name(ParserContext *ctx, ASTNode *node, char **out_struct
             }
         }
     }
+}
+
+typedef struct
+{
+    ASTNode *head;
+    ASTNode *tail;
+    char **arg_names;
+    int arg_count;
+    int has_named;
+} CallArgs;
+
+static CallArgs parse_call_args(ParserContext *ctx, Lexer *l, FuncSig *sig)
+{
+    CallArgs res = {NULL, NULL, NULL, 0, 0};
+    (void)ctx;
+
+    if (lexer_peek(l).type != TOK_RPAREN)
+    {
+        while (1)
+        {
+            char *arg_name = NULL;
+            Token t1 = lexer_peek(l);
+            if (t1.type == TOK_IDENT)
+            {
+                Token t2 = lexer_peek2(l);
+                if (t2.type == TOK_COLON)
+                {
+                    arg_name = token_strdup(t1);
+                    res.has_named = 1;
+                    lexer_next(l); // eat IDENT
+                    lexer_next(l); // eat :
+                }
+            }
+
+            ASTNode *arg = parse_expression(ctx, l);
+            check_move_usage(ctx, arg, arg ? arg->token : t1);
+
+            if (arg && arg->type == NODE_EXPR_VAR)
+            {
+                Type *inner_t = find_symbol_type_info(ctx, arg->var_ref.name);
+                if (!inner_t)
+                {
+                    ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+                    if (s)
+                    {
+                        inner_t = s->type_info;
+                    }
+                }
+
+                if (!is_type_copy(ctx, inner_t))
+                {
+                    ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
+                    if (s)
+                    {
+                        s->is_moved = 1;
+                    }
+                }
+            }
+
+            // Implicit trait cast logic
+            if (sig && res.arg_count < sig->total_args && arg)
+            {
+                Type *expected = sig->arg_types[res.arg_count];
+                if (expected && expected->name && is_trait(expected->name))
+                {
+                    arg = transform_to_trait_object(ctx, expected->name, arg);
+                }
+            }
+
+            if (!res.head)
+            {
+                res.head = arg;
+                res.tail = arg;
+            }
+            else
+            {
+                res.tail->next = arg;
+                res.tail = arg;
+            }
+
+            res.arg_names = xrealloc(res.arg_names, (res.arg_count + 1) * sizeof(char *));
+            res.arg_names[res.arg_count] = arg_name;
+            res.arg_count++;
+
+            if (lexer_peek(l).type == TOK_COMMA)
+            {
+                lexer_next(l);
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    return res;
 }
 
 ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
@@ -309,6 +407,62 @@ static int type_is_unsigned(Type *t)
              (0 == strcmp(t->name, "uint8_t") || 0 == strcmp(t->name, "uint16_t") ||
               0 == strcmp(t->name, "uint32_t") || 0 == strcmp(t->name, "uint64_t") ||
               0 == strcmp(t->name, "size_t"))));
+}
+
+static char *infer_printf_format(ParserContext *ctx, ASTNode **args, int ac)
+{
+    char *fmt = xmalloc(MAX_SHORT_MSG_LEN);
+    fmt[0] = 0;
+    for (int i = 0; i < ac; i++)
+    {
+        Type *inner_t = args[i]->type_info;
+        if (!inner_t && args[i]->type == NODE_EXPR_VAR)
+        {
+            inner_t = find_symbol_type_info(ctx, args[i]->var_ref.name);
+        }
+
+        if (!inner_t)
+        {
+            strcat(fmt, "%d"); // Fallback
+        }
+        else
+        {
+            if (inner_t->kind == TYPE_INT || inner_t->kind == TYPE_I32 ||
+                inner_t->kind == TYPE_BOOL)
+            {
+                strcat(fmt, "%d");
+            }
+            else if (inner_t->kind == TYPE_F64)
+            {
+                strcat(fmt, "%lf");
+            }
+            else if (inner_t->kind == TYPE_F32 || inner_t->kind == TYPE_FLOAT)
+            {
+                strcat(fmt, "%f");
+            }
+            else if (inner_t->kind == TYPE_STRING ||
+                     (inner_t->kind == TYPE_ARRAY && inner_t->inner &&
+                      (inner_t->inner->kind == TYPE_CHAR || inner_t->inner->kind == TYPE_U8 ||
+                       inner_t->inner->kind == TYPE_I8)))
+            {
+                strcat(fmt, "%s");
+            }
+            else if (inner_t->kind == TYPE_CHAR || inner_t->kind == TYPE_I8 ||
+                     inner_t->kind == TYPE_U8 || inner_t->kind == TYPE_BYTE)
+            {
+                strcat(fmt, " %c"); // Space skip whitespace
+            }
+            else
+            {
+                strcat(fmt, "%d");
+            }
+        }
+        if (i < ac - 1)
+        {
+            strcat(fmt, " ");
+        }
+    }
+    return fmt;
 }
 
 static void __attribute__((unused)) check_format_string(ASTNode *call, Token t)
@@ -1789,12 +1943,11 @@ static ASTNode *parse_char_literal(Token t)
     return node;
 }
 
-// Parse sizeof expression: sizeof(type) or sizeof(expr)
-static ASTNode *parse_sizeof_expr(ParserContext *ctx, Lexer *l, Token sizeof_tk)
+static ASTNode *parse_size_or_typeof(ParserContext *ctx, Lexer *l, Token tk, int is_typeof)
 {
     if (lexer_peek(l).type != TOK_LPAREN)
     {
-        zpanic_at(lexer_peek(l), "Expected ( after sizeof");
+        zpanic_at(lexer_peek(l), is_typeof ? "Expected ( after typeof" : "Expected ( after sizeof");
     }
     lexer_next(l);
 
@@ -1830,13 +1983,16 @@ static ASTNode *parse_sizeof_expr(ParserContext *ctx, Lexer *l, Token sizeof_tk)
     {
         lexer_next(l);
         char *ts = type_to_string(ty);
-        node = ast_create(NODE_EXPR_SIZEOF);
-        node->token = sizeof_tk;
+        node = ast_create(is_typeof ? NODE_TYPEOF : NODE_EXPR_SIZEOF);
+        node->token = tk;
         node->size_of.target_type = ts;
         node->size_of.target_type_info = ty;
         node->size_of.is_type = 1;
         node->size_of.expr = NULL;
-        node->type_info = type_new(TYPE_USIZE);
+        if (!is_typeof)
+        {
+            node->type_info = type_new(TYPE_USIZE);
+        }
     }
     else
     {
@@ -1850,87 +2006,34 @@ static ASTNode *parse_sizeof_expr(ParserContext *ctx, Lexer *l, Token sizeof_tk)
         ASTNode *ex = parse_expression(ctx, l);
         if (lexer_next(l).type != TOK_RPAREN)
         {
-            zpanic_at(lexer_peek(l), "Expected ) after sizeof identifier");
+            zpanic_at(lexer_peek(l), is_typeof ? "Expected ) after typeof expression"
+                                               : "Expected ) after sizeof expression");
         }
-        node = ast_create(NODE_EXPR_SIZEOF);
-        node->token = sizeof_tk;
+        node = ast_create(is_typeof ? NODE_TYPEOF : NODE_EXPR_SIZEOF);
+        node->token = tk;
         node->size_of.target_type = NULL;
         node->size_of.target_type_info = NULL;
         node->size_of.is_type = 0;
         node->size_of.expr = ex;
-        node->type_info = type_new(TYPE_USIZE);
+        if (!is_typeof)
+        {
+            node->type_info = type_new(TYPE_USIZE);
+        }
     }
     return node;
+}
+
+// Parse sizeof expression: sizeof(type) or sizeof(expr)
+static ASTNode *parse_sizeof_expr(ParserContext *ctx, Lexer *l, Token sizeof_tk)
+{
+    return parse_size_or_typeof(ctx, l, sizeof_tk, 0);
 }
 
 // Parse typeof expression: typeof(type) or typeof(expr)
 static ASTNode *parse_typeof_expr(ParserContext *ctx, Lexer *l)
 {
-    if (lexer_peek(l).type != TOK_LPAREN)
-    {
-        zpanic_at(lexer_peek(l), "Expected ( after typeof");
-    }
-    lexer_next(l);
-
-    int pos = l->pos;
-    int col = l->col;
-    int line = l->line;
-    TypeUsage *old_pending = ctx->pending_type_validations;
-    SliceType *old_slices = ctx->used_slices;
-    TupleType *old_tuples = ctx->used_tuples;
-
-    Type *ty = parse_type_formal(ctx, l);
-
-    int is_actually_var = 0;
-    if (ty->kind != TYPE_UNKNOWN)
-    {
-        Type *base = ty;
-        while (base->inner)
-        {
-            base = base->inner;
-        }
-        if (base->kind == TYPE_STRUCT && base->name)
-        {
-            if (!is_primitive_type_name(base->name) && !find_struct_def(ctx, base->name) &&
-                !find_type_alias_node(ctx, base->name) && find_symbol_entry(ctx, base->name))
-            {
-                is_actually_var = 1;
-            }
-        }
-    }
-
-    ASTNode *node;
-    if (ty->kind != TYPE_UNKNOWN && !is_actually_var && lexer_peek(l).type == TOK_RPAREN)
-    {
-        lexer_next(l);
-        char *ts = type_to_string(ty);
-        node = ast_create(NODE_TYPEOF);
-        node->size_of.target_type = ts;
-        node->size_of.target_type_info = ty;
-        node->size_of.is_type = 1;
-        node->size_of.expr = NULL;
-    }
-    else
-    {
-        ctx->pending_type_validations = old_pending;
-        ctx->used_slices = old_slices;
-        ctx->used_tuples = old_tuples;
-
-        l->pos = pos;
-        l->col = col;
-        l->line = line;
-        ASTNode *ex = parse_expression(ctx, l);
-        if (lexer_next(l).type != TOK_RPAREN)
-        {
-            zpanic_at(lexer_peek(l), "Expected ) after typeof expression");
-        }
-        node = ast_create(NODE_TYPEOF);
-        node->size_of.target_type = NULL;
-        node->size_of.target_type_info = NULL;
-        node->size_of.is_type = 0;
-        node->size_of.expr = ex;
-    }
-    return node;
+    Token t = lexer_peek(l);
+    return parse_size_or_typeof(ctx, l, t, 1);
 }
 
 // Parse intrinsic expression: @type_name(T), @fields(T)
@@ -3351,58 +3454,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
             }
             else
             {
-                char fmt[MAX_SHORT_MSG_LEN];
-                fmt[0] = 0;
-                for (int i = 0; i < ac; i++)
-                {
-                    Type *inner_t = args[i]->type_info;
-                    if (!inner_t && args[i]->type == NODE_EXPR_VAR)
-                    {
-                        inner_t = find_symbol_type_info(ctx, args[i]->var_ref.name);
-                    }
-
-                    if (!inner_t)
-                    {
-                        strcat(fmt, "%d"); // Fallback
-                    }
-                    else
-                    {
-                        if (inner_t->kind == TYPE_INT || inner_t->kind == TYPE_I32 ||
-                            inner_t->kind == TYPE_BOOL)
-                        {
-                            strcat(fmt, "%d");
-                        }
-                        else if (inner_t->kind == TYPE_F64)
-                        {
-                            strcat(fmt, "%lf");
-                        }
-                        else if (inner_t->kind == TYPE_F32 || inner_t->kind == TYPE_FLOAT)
-                        {
-                            strcat(fmt, "%f");
-                        }
-                        else if (inner_t->kind == TYPE_STRING ||
-                                 (inner_t->kind == TYPE_ARRAY && inner_t->inner &&
-                                  (inner_t->inner->kind == TYPE_CHAR ||
-                                   inner_t->inner->kind == TYPE_U8 ||
-                                   inner_t->inner->kind == TYPE_I8)))
-                        {
-                            strcat(fmt, "%s");
-                        }
-                        else if (inner_t->kind == TYPE_CHAR || inner_t->kind == TYPE_I8 ||
-                                 inner_t->kind == TYPE_U8 || inner_t->kind == TYPE_BYTE)
-                        {
-                            strcat(fmt, " %c"); // Space skip whitespace
-                        }
-                        else
-                        {
-                            strcat(fmt, "%d");
-                        }
-                    }
-                    if (i < ac - 1)
-                    {
-                        strcat(fmt, " ");
-                    }
-                }
+                char *fmt = infer_printf_format(ctx, args, ac);
 
                 node = ast_create(NODE_EXPR_CALL);
                 node->token = t;
@@ -3428,102 +3480,20 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     tail = addr;
                 }
                 node->call.args = head;
+                free(fmt);
             }
             free(acc);
         }
         else if (sig && lexer_peek(l).type == TOK_LPAREN)
         {
-            lexer_next(l);
-            ASTNode *head = NULL, *tail = NULL;
-            int args_provided = 0;
-            char **arg_names = NULL;
-            int arg_names_cap = 0;
-            int has_named = 0;
+            (void)lexer_next(l);
+            CallArgs args_call = parse_call_args(ctx, l, sig);
+            ASTNode *head = args_call.head;
+            ASTNode *tail = args_call.tail;
+            char **arg_names = args_call.arg_names;
+            int args_provided = args_call.arg_count;
+            int has_named = args_call.has_named;
 
-            if (lexer_peek(l).type != TOK_RPAREN)
-            {
-                while (1)
-                {
-                    char *arg_name = NULL;
-
-                    Token t1 = lexer_peek(l);
-                    if (t1.type == TOK_IDENT)
-                    {
-                        Token t2 = lexer_peek2(l);
-                        if (t2.type == TOK_COLON)
-                        {
-                            arg_name = token_strdup(t1);
-                            has_named = 1;
-                            lexer_next(l);
-                            lexer_next(l);
-                        }
-                    }
-
-                    ASTNode *arg = parse_expression(ctx, l);
-
-                    // Move Semantics Logic
-                    check_move_usage(ctx, arg, arg ? arg->token : t1);
-                    if (arg && arg->type == NODE_EXPR_VAR)
-                    {
-                        Type *inner_t = find_symbol_type_info(ctx, arg->var_ref.name);
-                        if (!inner_t)
-                        {
-                            ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
-                            if (s)
-                            {
-                                inner_t = s->type_info;
-                            }
-                        }
-
-                        if (!is_type_copy(ctx, inner_t))
-                        {
-                            ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
-                            if (s)
-                            {
-                                s->is_moved = 1;
-                            }
-                        }
-                    }
-
-                    // Implicit trait cast logic
-                    if (sig && args_provided < sig->total_args && arg)
-                    {
-                        Type *expected = sig->arg_types[args_provided];
-
-                        if (expected && expected->name && is_trait(expected->name))
-                        {
-                            arg = transform_to_trait_object(ctx, expected->name, arg);
-                        }
-                    }
-
-                    if (!head)
-                    {
-                        head = arg;
-                    }
-                    else
-                    {
-                        tail->next = arg;
-                    }
-                    tail = arg;
-                    args_provided++;
-
-                    if (args_provided > arg_names_cap)
-                    {
-                        arg_names_cap = arg_names_cap ? arg_names_cap * 2 : 8;
-                        arg_names = xrealloc(arg_names, arg_names_cap * sizeof(char *));
-                    }
-                    arg_names[args_provided - 1] = arg_name;
-
-                    if (lexer_peek(l).type == TOK_COMMA)
-                    {
-                        lexer_next(l);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
             if (lexer_next(l).type != TOK_RPAREN)
             {
                 zpanic_at(lexer_peek(l), "Expected )");
@@ -3703,82 +3673,13 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
         }
         else if (!sig && !find_symbol_entry(ctx, acc) && lexer_peek(l).type == TOK_LPAREN)
         {
-            lexer_next(l); // eat (
-            ASTNode *head = NULL, *tail = NULL;
-            char **arg_names = NULL;
-            int args_provided = 0;
-            int has_named = 0;
+            (void)lexer_next(l); // eat (
+            CallArgs args_call = parse_call_args(ctx, l, NULL);
+            ASTNode *head = args_call.head;
+            char **arg_names = args_call.arg_names;
+            int has_named = args_call.has_named;
+            int args_provided = args_call.arg_count;
 
-            if (lexer_peek(l).type != TOK_RPAREN)
-            {
-                while (1)
-                {
-                    char *arg_name = NULL;
-
-                    // Check for named argument: name: value
-                    Token t1 = lexer_peek(l);
-                    if (t1.type == TOK_IDENT)
-                    {
-                        Token t2 = lexer_peek2(l);
-                        if (t2.type == TOK_COLON)
-                        {
-                            arg_name = token_strdup(t1);
-                            has_named = 1;
-                            lexer_next(l);
-                            lexer_next(l);
-                        }
-                    }
-
-                    ASTNode *arg = parse_expression(ctx, l);
-
-                    // Move Semantics Logic
-                    check_move_usage(ctx, arg, arg ? arg->token : t1);
-                    if (arg && arg->type == NODE_EXPR_VAR)
-                    {
-                        Type *inner_t = find_symbol_type_info(ctx, arg->var_ref.name);
-                        if (!inner_t)
-                        {
-                            ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
-                            if (s)
-                            {
-                                inner_t = s->type_info;
-                            }
-                        }
-
-                        if (!is_type_copy(ctx, inner_t))
-                        {
-                            ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
-                            if (s)
-                            {
-                                s->is_moved = 1;
-                            }
-                        }
-                    }
-
-                    if (!head)
-                    {
-                        head = arg;
-                    }
-                    else
-                    {
-                        tail->next = arg;
-                    }
-                    tail = arg;
-                    args_provided++;
-
-                    arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
-                    arg_names[args_provided - 1] = arg_name;
-
-                    if (lexer_peek(l).type == TOK_COMMA)
-                    {
-                        lexer_next(l);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
             if (lexer_next(l).type != TOK_RPAREN)
             {
                 zpanic_at(lexer_peek(l), "Expected )");
@@ -3793,6 +3694,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
             node->call.args = head;
             node->call.arg_names = has_named ? arg_names : NULL;
             node->call.arg_count = args_provided;
+            node->resolved_type = xstrdup("unknown");
 
             GenericFuncTemplate *tpl = find_func_template(ctx, acc);
             if (tpl && tpl->func_node && args_provided > 0 && head)
@@ -4344,97 +4246,21 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
     {
         if (lexer_peek(l).type == TOK_LPAREN)
         {
-            Token op = lexer_next(l); // consume '('
-            ASTNode *head = NULL, *tail = NULL;
-            char **arg_names = NULL;
-            int arg_count = 0;
-            int has_named = 0;
+            (void)lexer_next(l); // consume '('
+            CallArgs args = parse_call_args(ctx, l, NULL);
 
-            if (lexer_peek(l).type != TOK_RPAREN)
+            if (lexer_next(l).type != TOK_RPAREN)
             {
-                while (1)
-                {
-                    char *arg_name = NULL;
-
-                    // Check for named argument: IDENT : expr
-                    Token t1 = lexer_peek(l);
-                    if (t1.type == TOK_IDENT)
-                    {
-                        Token t2 = lexer_peek2(l);
-                        if (t2.type == TOK_COLON)
-                        {
-                            arg_name = token_strdup(t1);
-                            has_named = 1;
-                            lexer_next(l); // eat IDENT
-                            lexer_next(l); // eat :
-                        }
-                    }
-
-                    ASTNode *arg = parse_expression(ctx, l);
-
-                    // Move Semantics Logic
-                    check_move_usage(ctx, arg, arg ? arg->token : t1);
-                    if (arg && arg->type == NODE_EXPR_VAR)
-                    {
-                        Type *inner_t = find_symbol_type_info(ctx, arg->var_ref.name);
-                        if (!inner_t)
-                        {
-                            ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
-                            if (s)
-                            {
-                                inner_t = s->type_info;
-                            }
-                        }
-
-                        if (!is_type_copy(ctx, inner_t))
-                        {
-                            ZenSymbol *s = find_symbol_entry(ctx, arg->var_ref.name);
-                            if (s)
-                            {
-                                s->is_moved = 1;
-                            }
-                        }
-                    }
-
-                    if (!head)
-                    {
-                        head = arg;
-                    }
-                    else
-                    {
-                        tail->next = arg;
-                    }
-                    tail = arg;
-
-                    arg_names = xrealloc(arg_names, (arg_count + 1) * sizeof(char *));
-                    arg_names[arg_count] = arg_name;
-                    arg_count++;
-
-                    if (lexer_peek(l).type == TOK_COMMA)
-                    {
-                        lexer_next(l);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
-            {
-                Token inner_t = lexer_next(l);
-                if (inner_t.type != TOK_RPAREN)
-                {
-                    zpanic_at(inner_t, "Expected ) after call arguments");
-                }
+                zpanic_at(lexer_peek(l), "Expected ) after call arguments");
             }
 
             ASTNode *call = ast_create(NODE_EXPR_CALL);
             call->token = t;
             call->call.callee = node;
-            call->call.args = head;
-            call->call.arg_names = has_named ? arg_names : NULL;
-            call->call.arg_count = arg_count;
-            check_format_string(call, op);
+            call->call.args = args.head;
+            call->call.arg_names = args.has_named ? args.arg_names : NULL;
+            call->call.arg_count = args.arg_count;
+            check_format_string(call, t);
 
             // Try to infer type if callee has function type info
             call->resolved_type = xstrdup("unknown"); // Default (was int)

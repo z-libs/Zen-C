@@ -1205,3 +1205,134 @@ int is_simple_enum(ParserContext *ctx, const char *enum_name)
     }
     return 1;
 }
+const char *map_to_c_type(const char *t)
+{
+    if (strcmp(t, "c_int") == 0)
+    {
+        return "int";
+    }
+    if (strcmp(t, "c_uint") == 0)
+    {
+        return "unsigned int";
+    }
+    if (strcmp(t, "c_long") == 0)
+    {
+        return "long";
+    }
+    if (strcmp(t, "c_ulong") == 0)
+    {
+        return "unsigned long";
+    }
+    if (strcmp(t, "c_longlong") == 0)
+    {
+        return "long long";
+    }
+    if (strcmp(t, "c_ulonglong") == 0)
+    {
+        return "unsigned long long";
+    }
+    if (strcmp(t, "c_short") == 0)
+    {
+        return "short";
+    }
+    if (strcmp(t, "c_ushort") == 0)
+    {
+        return "unsigned short";
+    }
+    if (strcmp(t, "c_char") == 0)
+    {
+        return "char";
+    }
+    if (strcmp(t, "c_uchar") == 0)
+    {
+        return "unsigned char";
+    }
+    if (strcmp(t, "uint") == 0)
+    {
+        return "unsigned int";
+    }
+
+    return normalize_type_name(t);
+}
+
+void handle_node_await_internal(ParserContext *ctx, ASTNode *node, FILE *out)
+{
+    char *ret_type = "void*";
+    int free_ret = 0;
+    if (node->type_info)
+    {
+        char *t = type_to_c_string(node->type_info);
+        if (t)
+        {
+            ret_type = t;
+            free_ret = 1;
+        }
+    }
+    else if (node->resolved_type)
+    {
+        ret_type = node->resolved_type;
+    }
+
+    if (strcmp(ret_type, "Async") == 0 || strcmp(ret_type, "void*") == 0)
+    {
+        char *inf = infer_type(ctx, node);
+        if (inf && strcmp(inf, "Async") != 0 && strcmp(inf, "void*") != 0)
+        {
+            if (free_ret)
+            {
+                free(ret_type);
+            }
+            ret_type = inf;
+            free_ret = 0;
+        }
+    }
+
+    int needs_long_cast = 0;
+    int returns_struct = 0;
+    if (strstr(ret_type, "*") == NULL && strcmp(ret_type, "string") != 0 &&
+        strcmp(ret_type, "void") != 0 && strcmp(ret_type, "Async") != 0)
+    {
+        if (is_struct_return_type(ret_type))
+        {
+            returns_struct = 1;
+        }
+        else
+        {
+            needs_long_cast = 1;
+        }
+        if (strncmp(ret_type, "struct", 6) == 0)
+        {
+            returns_struct = 1;
+        }
+    }
+
+    fprintf(out, "({ Async _a = ");
+    codegen_expression(ctx, node->unary.operand, out);
+    fprintf(out, "; void* _r; pthread_join(_a.thread, &_r); ");
+    if (strcmp(ret_type, "void") == 0)
+    {
+        fprintf(out, "})");
+    }
+    else
+    {
+        if (returns_struct)
+        {
+            fprintf(out, "%s _val = *(%s*)_r; free(_r); _val; })", ret_type, ret_type);
+        }
+        else
+        {
+            if (needs_long_cast)
+            {
+                fprintf(out, "(%s)(uintptr_t)_r; })", ret_type);
+            }
+            else
+            {
+                fprintf(out, "(%s)_r; })", ret_type);
+            }
+        }
+    }
+    if (free_ret)
+    {
+        free(ret_type);
+    }
+}

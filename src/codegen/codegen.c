@@ -2103,56 +2103,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_EXPR_CAST:
     {
         const char *t = node->cast.target_type;
-        const char *mapped = t;
-        if (strcmp(t, "c_int") == 0)
-        {
-            mapped = "int";
-        }
-        else if (strcmp(t, "c_uint") == 0)
-        {
-            mapped = "unsigned int";
-        }
-        else if (strcmp(t, "c_long") == 0)
-        {
-            mapped = "long";
-        }
-        else if (strcmp(t, "c_ulong") == 0)
-        {
-            mapped = "unsigned long";
-        }
-        else if (strcmp(t, "c_longlong") == 0)
-        {
-            mapped = "long long";
-        }
-        else if (strcmp(t, "c_ulonglong") == 0)
-        {
-            mapped = "unsigned long long";
-        }
-        else if (strcmp(t, "c_short") == 0)
-        {
-            mapped = "short";
-        }
-        else if (strcmp(t, "c_ushort") == 0)
-        {
-            mapped = "unsigned short";
-        }
-        else if (strcmp(t, "c_char") == 0)
-        {
-            mapped = "char";
-        }
-        else if (strcmp(t, "c_uchar") == 0)
-        {
-            mapped = "unsigned char";
-        }
-        const char *norm = normalize_type_name(t);
-        if (norm != t)
-        {
-            mapped = norm;
-        }
-        else if (strcmp(t, "uint") == 0)
-        {
-            mapped = "unsigned int";
-        }
+        const char *mapped = map_to_c_type(t);
 
         fprintf(out, "((%s)(", mapped);
         Type *src_type = node->cast.expr->type_info;
@@ -2203,60 +2154,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         else if (node->size_of.target_type)
         {
             const char *t = node->size_of.target_type;
-            const char *mapped = t;
-            if (strcmp(t, "c_int") == 0)
-            {
-                mapped = "int";
-            }
-            else if (strcmp(t, "c_uint") == 0)
-            {
-                mapped = "unsigned int";
-            }
-            else if (strcmp(t, "c_long") == 0)
-            {
-                mapped = "long";
-            }
-            else if (strcmp(t, "c_ulong") == 0)
-            {
-                mapped = "unsigned long";
-            }
-            else if (strcmp(t, "c_longlong") == 0)
-            {
-                mapped = "long long";
-            }
-            else if (strcmp(t, "c_ulonglong") == 0)
-            {
-                mapped = "unsigned long long";
-            }
-            else if (strcmp(t, "c_short") == 0)
-            {
-                mapped = "short";
-            }
-            else if (strcmp(t, "c_ushort") == 0)
-            {
-                mapped = "unsigned short";
-            }
-            else if (strcmp(t, "c_char") == 0)
-            {
-                mapped = "char";
-            }
-            else if (strcmp(t, "c_uchar") == 0)
-            {
-                mapped = "unsigned char";
-            }
-            else
-            {
-                const char *norm = normalize_type_name(t);
-                if (norm != t)
-                {
-                    mapped = norm;
-                }
-                else if (strcmp(t, "uint") == 0)
-                {
-                    mapped = "unsigned int";
-                }
-            }
-
+            const char *mapped = map_to_c_type(t);
             fprintf(out, "sizeof(%s)", mapped);
         }
         else
@@ -2612,87 +2510,8 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         fprintf(out, "))");
         break;
     case NODE_AWAIT:
-    {
-        char *ret_type = "void*";
-        int free_ret = 0;
-        if (node->type_info)
-        {
-            char *t = type_to_c_string(node->type_info);
-            if (t)
-            {
-                ret_type = t;
-                free_ret = 1;
-            }
-        }
-        else if (node->resolved_type)
-        {
-            ret_type = node->resolved_type;
-        }
-
-        if (strcmp(ret_type, "Async") == 0 || strcmp(ret_type, "void*") == 0)
-        {
-            char *inf = infer_type(ctx, node);
-            if (inf && strcmp(inf, "Async") != 0 && strcmp(inf, "void*") != 0)
-            {
-                if (free_ret)
-                {
-                    free(ret_type);
-                }
-                ret_type = inf;
-                free_ret = 0;
-            }
-        }
-
-        int needs_long_cast = 0;
-        int returns_struct = 0;
-        if (strstr(ret_type, "*") == NULL && strcmp(ret_type, "string") != 0 &&
-            strcmp(ret_type, "void") != 0 && strcmp(ret_type, "Async") != 0)
-        {
-            if (is_struct_return_type(ret_type))
-            {
-                returns_struct = 1;
-            }
-            else
-            {
-                needs_long_cast = 1;
-            }
-            if (strncmp(ret_type, "struct", 6) == 0)
-            {
-                returns_struct = 1;
-            }
-        }
-
-        fprintf(out, "({ Async _a = ");
-        codegen_expression(ctx, node->unary.operand, out);
-        fprintf(out, "; void* _r; pthread_join(_a.thread, &_r); ");
-        if (strcmp(ret_type, "void") == 0)
-        {
-            fprintf(out, "})");
-        }
-        else
-        {
-            if (returns_struct)
-            {
-                fprintf(out, "%s _val = *(%s*)_r; free(_r); _val; })", ret_type, ret_type);
-            }
-            else
-            {
-                if (needs_long_cast)
-                {
-                    fprintf(out, "(%s)(long)_r; })", ret_type);
-                }
-                else
-                {
-                    fprintf(out, "(%s)_r; })", ret_type);
-                }
-            }
-        }
-        if (free_ret)
-        {
-            free(ret_type);
-        }
+        handle_node_await_internal(ctx, node, out);
         break;
-    }
     default:
         break;
     }
