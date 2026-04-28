@@ -176,7 +176,7 @@ $(ZC_COM_BIN): $(ZC_ENTRY_O) $(SRCS) src/plugins/static_plugins.c $(PLUGIN_APE_O
 		PLUGINS= \
 		CC=$(COSMOCC) \
 		OBJ_DIR=obj-ape \
-		DEFINES='$(subst ",\",$(DEFINES)) -DZC_STATIC_PLUGINS' \
+		DEFINES='$(DEFINES) -DZC_STATIC_PLUGINS' \
 		LIBS="$(abspath $(ZC_ENTRY_O)) $(PLUGIN_APE_OBJS) -Wl,--wrap=main" \
 		SRCS="$(SRCS) src/plugins/static_plugins.c" \
 		TARGET="$(abspath $@)";
