@@ -29,7 +29,7 @@ jobs:
       uses: benchmark-action/github-action-benchmark@v1
       with:
         name: Zen Compiler Benchmarks
-        tool: 'customGeneric'
+        tool: 'customSmallerIsBetter'
         output-file-path: benchmarks_result.json
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
