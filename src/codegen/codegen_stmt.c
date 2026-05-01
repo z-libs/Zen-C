@@ -2500,8 +2500,37 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         break;
     }
     default:
-        codegen_expression(ctx, node, out);
-        fprintf(out, ";\n");
+    {
+        // Check if expression returns a Drop type that needs cleanup.
+        // Without this, bare calls like `MyInt::new()` leak memory (issue #406).
+        int expr_has_drop = 0;
+        char *inferred = infer_type(ctx, node);
+        if (inferred) {
+            char *ct = inferred;
+            if (strncmp(ct, "struct ", 7) == 0) ct += 7;
+            ASTNode *def = find_struct_def(ctx, ct);
+            if (def && def->type_info) {
+                expr_has_drop = def->type_info->traits.has_drop;
+            } else if (node->type_info) {
+                TypeKind k = node->type_info->kind;
+                if (k == TYPE_STRUCT || k == TYPE_ENUM)
+                    expr_has_drop = node->type_info->traits.has_drop;
+            }
+            free(inferred);
+        } else if (node->type_info) {
+            TypeKind k = node->type_info->kind;
+            if (k == TYPE_STRUCT || k == TYPE_ENUM)
+                expr_has_drop = node->type_info->traits.has_drop;
+        }
+        if (expr_has_drop) {
+            int id = tmp_counter++;
+            fprintf(out, "    ZC_AUTO _z_tmp_%d = ", id);
+            codegen_expression(ctx, node, out);
+            fprintf(out, ";\n    _z_drop(_z_tmp_%d);\n", id);
+        } else {
+            codegen_expression(ctx, node, out);
+            fprintf(out, ";\n");
+        }
         if (node->type == NODE_EXPR_CALL && node->call.callee && pending_closure_free_count > 0)
         {
             int is_thread_spawn = 0;
@@ -2524,6 +2553,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             }
         }
         emit_pending_closure_frees(out);
+        break;
+    }
     }
 }
 

@@ -1,0 +1,38 @@
+// Regression test for issue #406:
+// Bare expressions returning Drop types should still call drop.
+// Before the fix, `MyResource::new();` would leak memory because
+// the return value was neither assigned nor dropped.
+
+import "std/mem.zc"
+
+let DROP_CALLED = 0;
+
+struct MyResource {
+    id: int;
+}
+
+impl Drop for MyResource {
+    fn drop(self) {
+        DROP_CALLED = DROP_CALLED + 1;
+    }
+}
+
+impl MyResource {
+    fn new(id: int) -> MyResource {
+        return MyResource { id: id };
+    }
+}
+
+test "drop_unassigned_call" {
+    DROP_CALLED = 0;
+
+    // Bare call — return value is not assigned.
+    // The generated code must store the result in a temp and call _z_drop.
+    MyResource::new(42);
+
+    if (DROP_CALLED != 1) {
+        println "Error: Drop was not called for unassigned expression!";
+        println "  Expected DROP_CALLED=1, got {DROP_CALLED}";
+        exit(1);
+    }
+}
