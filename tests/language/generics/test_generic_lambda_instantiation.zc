@@ -1,0 +1,31 @@
+
+struct Box<T> {
+    val: T;
+}
+
+fn apply<T>(b: Box<T>, f: fn(T) -> T) -> T {
+    return f(b.val);
+}
+
+test "generic lambda" {
+    let b = Box<int>{ val: 42 };
+    // Lambda using T (int)
+    let res = apply<int>(b, (x: int) => {
+        return x + 1;
+    });
+    assert(res == 43, "Lambda with concrete type failed");
+}
+
+fn test_generic_lambda<T>(val: T) -> T {
+    let b = Box<T>{ val: val };
+    // Lambda inside generic function
+    let f = (x: T) => {
+        return x;
+    };
+    return f(b.val);
+}
+
+test "lambda inside generic function" {
+    let res = test_generic_lambda<int>(100);
+    assert(res == 100, "Lambda inside generic function failed");
+}

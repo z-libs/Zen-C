@@ -1328,7 +1328,10 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l)
     lambda->lambda.is_expression = 0;
     lambda->type_info = t;
     lambda->resolved_type = type_to_string(t);
-    register_lambda(ctx, lambda);
+    if (ctx->known_generics_count == 0)
+    {
+        register_lambda(ctx, lambda);
+    }
     analyze_lambda_captures(ctx, lambda);
 
     exit_scope(ctx);
@@ -7777,7 +7780,10 @@ ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_nam
     lambda->lambda.return_type = type_to_string(t->inner);
     lambda->lambda.lambda_id = ctx->lambda_counter++;
     lambda->lambda.is_expression = 1;
-    register_lambda(ctx, lambda);
+    if (ctx->known_generics_count == 0)
+    {
+        register_lambda(ctx, lambda);
+    }
     analyze_lambda_captures(ctx, lambda);
     exit_scope(ctx);
     return lambda;
@@ -7845,7 +7851,10 @@ ASTNode *parse_arrow_lambda_multi(ParserContext *ctx, Lexer *l, char **param_nam
     lambda->lambda.return_type = xstrdup("unknown");
     lambda->lambda.lambda_id = ctx->lambda_counter++;
     lambda->lambda.is_expression = 1;
-    register_lambda(ctx, lambda);
+    if (ctx->known_generics_count == 0)
+    {
+        register_lambda(ctx, lambda);
+    }
     analyze_lambda_captures(ctx, lambda);
     exit_scope(ctx);
     return lambda;

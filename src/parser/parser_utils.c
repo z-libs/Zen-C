@@ -2571,6 +2571,10 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
     }
     else
     {
+        char *t1 = replace_in_string(final_res, param, concrete);
+        free(final_res);
+        final_res = t1;
+
         char *clean_c = sanitize_mangled_name(concrete);
         char *tmp = replace_mangled_part(final_res, param, clean_c);
         free(final_res);
@@ -2936,12 +2940,13 @@ Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os,
         }
     }
 
-    if (t->kind == TYPE_POINTER || t->kind == TYPE_ARRAY)
+    if (t->kind == TYPE_POINTER || t->kind == TYPE_ARRAY || t->kind == TYPE_FUNCTION ||
+        t->kind == TYPE_VECTOR)
     {
         n->inner = replace_type_formal(t->inner, p, c, os, ns);
     }
 
-    if (n->arg_count > 0 && t->args)
+    if (t->arg_count > 0 && t->args)
     {
         n->args = xmalloc(sizeof(Type *) * t->arg_count);
         for (int i = 0; i < t->arg_count; i++)
@@ -3099,16 +3104,6 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             // parse_and_convert_args populated both.
             // We need to update new_node->func.defaults.
             new_node->func.defaults = new_defaults_strs;
-        }
-
-        if (n->func.arg_types)
-        {
-            new_node->func.arg_types = xmalloc(sizeof(Type *) * n->func.arg_count);
-            for (int i = 0; i < n->func.arg_count; i++)
-            {
-                new_node->func.arg_types[i] =
-                    replace_type_formal(n->func.arg_types[i], p, c, os, ns);
-            }
         }
 
         new_node->func.body = copy_ast_replacing(n->func.body, p, c, os, ns);
@@ -3443,9 +3438,12 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             }
             else
             {
-                char *t1 = replace_mangled_part(s1, p, c);
+                char *t1 = replace_in_string(s1, p, c);
                 free(s1);
                 s1 = t1;
+                char *t2 = replace_mangled_part(s1, p, c);
+                free(s1);
+                s1 = t2;
             }
 
             if (os && ns)
@@ -3489,6 +3487,81 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             new_node->size_of.target_type_info =
                 replace_type_formal(n->size_of.target_type_info, p, c, os, ns);
         }
+        break;
+    case NODE_LAMBDA:
+        // Use a new lambda ID for each instantiation to ensure unique C function names
+        new_node->lambda.lambda_id = g_parser_ctx->lambda_counter++;
+        new_node->lambda.num_params = n->lambda.num_params;
+        if (n->lambda.num_params > 0)
+        {
+            new_node->lambda.param_names = xmalloc(sizeof(char *) * n->lambda.num_params);
+            new_node->lambda.param_types = xmalloc(sizeof(char *) * n->lambda.num_params);
+            for (int i = 0; i < n->lambda.num_params; i++)
+            {
+                new_node->lambda.param_names[i] = xstrdup(n->lambda.param_names[i]);
+                new_node->lambda.param_types[i] =
+                    replace_type_str(n->lambda.param_types[i], p, c, os, ns);
+            }
+        }
+        new_node->lambda.return_type = replace_type_str(n->lambda.return_type, p, c, os, ns);
+        new_node->lambda.num_captures = n->lambda.num_captures;
+        if (n->lambda.num_captures > 0)
+        {
+            new_node->lambda.captured_vars = xmalloc(sizeof(char *) * n->lambda.num_captures);
+            new_node->lambda.captured_types = xmalloc(sizeof(char *) * n->lambda.num_captures);
+            new_node->lambda.captured_types_info = xmalloc(sizeof(Type *) * n->lambda.num_captures);
+            if (n->lambda.capture_modes)
+            {
+                new_node->lambda.capture_modes = xmalloc(sizeof(int) * n->lambda.num_captures);
+            }
+
+            for (int i = 0; i < n->lambda.num_captures; i++)
+            {
+                new_node->lambda.captured_vars[i] = xstrdup(n->lambda.captured_vars[i]);
+                new_node->lambda.captured_types[i] =
+                    replace_type_str(n->lambda.captured_types[i], p, c, os, ns);
+                new_node->lambda.captured_types_info[i] =
+                    replace_type_formal(n->lambda.captured_types_info[i], p, c, os, ns);
+                if (n->lambda.capture_modes)
+                {
+                    new_node->lambda.capture_modes[i] = n->lambda.capture_modes[i];
+                }
+            }
+        }
+        new_node->lambda.body = copy_ast_replacing(n->lambda.body, p, c, os, ns);
+        new_node->lambda.is_bare = n->lambda.is_bare;
+        register_lambda(g_parser_ctx, new_node);
+        break;
+    case NODE_DESTRUCT_VAR:
+        if (n->destruct.count > 0)
+        {
+            new_node->destruct.names = xmalloc(sizeof(char *) * n->destruct.count);
+            new_node->destruct.types = xmalloc(sizeof(char *) * n->destruct.count);
+            new_node->destruct.type_infos = xmalloc(sizeof(Type *) * n->destruct.count);
+            if (n->destruct.field_names)
+            {
+                new_node->destruct.field_names = xmalloc(sizeof(char *) * n->destruct.count);
+            }
+
+            for (int i = 0; i < n->destruct.count; i++)
+            {
+                new_node->destruct.names[i] = xstrdup(n->destruct.names[i]);
+                new_node->destruct.types[i] = replace_type_str(n->destruct.types[i], p, c, os, ns);
+                new_node->destruct.type_infos[i] =
+                    replace_type_formal(n->destruct.type_infos[i], p, c, os, ns);
+                if (n->destruct.field_names && n->destruct.field_names[i])
+                {
+                    new_node->destruct.field_names[i] = xstrdup(n->destruct.field_names[i]);
+                }
+                else if (n->destruct.field_names)
+                {
+                    new_node->destruct.field_names[i] = NULL;
+                }
+            }
+        }
+        new_node->destruct.init_expr = copy_ast_replacing(n->destruct.init_expr, p, c, os, ns);
+        new_node->destruct.struct_name = replace_type_str(n->destruct.struct_name, p, c, os, ns);
+        new_node->destruct.else_block = copy_ast_replacing(n->destruct.else_block, p, c, os, ns);
         break;
     default:
         break;
