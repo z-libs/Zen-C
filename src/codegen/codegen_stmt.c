@@ -2509,8 +2509,13 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             char *ct = inferred;
             if (strncmp(ct, "struct ", 7) == 0) ct += 7;
             ASTNode *def = find_struct_def(ctx, ct);
-            expr_has_drop = (def && def->type_info) ? def->type_info->traits.has_drop
-                            : (node->type_info ? node->type_info->traits.has_drop : 0);
+            if (def && def->type_info) {
+                expr_has_drop = def->type_info->traits.has_drop;
+            } else if (node->type_info) {
+                TypeKind k = node->type_info->kind;
+                if (k == TYPE_STRUCT || k == TYPE_ENUM)
+                    expr_has_drop = node->type_info->traits.has_drop;
+            }
             free(inferred);
         } else if (node->type_info) {
             TypeKind k = node->type_info->kind;
