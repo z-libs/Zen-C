@@ -51,6 +51,7 @@ else
 endif
 
 SRCS = src/main.c \
+       src/driver/driver.c \
        src/parser/parser_core.c \
        src/parser/parser_expr.c \
        src/parser/parser_stmt.c \
