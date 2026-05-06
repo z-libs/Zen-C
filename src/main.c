@@ -576,6 +576,7 @@ int main(int argc, char **argv)
     // Parse context init
     ParserContext ctx;
     memset(&ctx, 0, sizeof(ctx));
+    ctx.compiler = &g_compiler;
     g_parser_ctx = &ctx;
 
     // Scan for build directives (e.g. //> link: -lm)

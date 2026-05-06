@@ -15,7 +15,13 @@
 #include "utils/zvec.h"
 ZVEC_GENERATE_IMPL(char *, Str)
 
-// ** MEMORY OVERRIDES (Arena) **
+#include "utils/zalloc.h"
+
+void *xmalloc(size_t size) __attribute__((returns_nonnull));
+void *xrealloc(void *ptr, size_t new_size) __attribute__((returns_nonnull));
+void *xcalloc(size_t n, size_t size) __attribute__((returns_nonnull));
+char *xstrdup(const char *s) __attribute__((returns_nonnull));
+
 #define free(ptr) ((void)0)          ///< Free memory.
 #define malloc(sz) xmalloc(sz)       ///< Allocate memory.
 #define realloc(p, s) xrealloc(p, s) ///< Reallocate memory.
@@ -84,6 +90,7 @@ extern char *g_current_filename; ///< Current filename.
 typedef struct ZenCompiler
 {
     CompilerConfig config;
+    zarena arena; ///< Primary memory arena for the compilation session.
     int error_count;
     int warning_count;
     char link_flags[1024]; // MAX_FLAGS_SIZE
@@ -221,26 +228,7 @@ void clear_registered_traits();
 int is_trait(const char *name);
 int is_trait_ptr(const char *name);
 
-/**
- * @brief Allocate memory.
- */
-void *xmalloc(size_t size) __attribute__((returns_nonnull));
-
-/**
- * @brief Reallocate memory.
- */
-void *xrealloc(void *ptr, size_t new_size) __attribute__((returns_nonnull));
-
-/**
- * @brief Allocate and zero memory.
- */
-void *xcalloc(size_t n, size_t size) __attribute__((returns_nonnull));
-
-/**
- * @brief Duplicate a string.
- */
-char *xstrdup(const char *s) __attribute__((returns_nonnull));
-void arena_reset(void);
+void arena_reset(zarena *a);
 
 /**
  * @brief Resolve a source file path using include paths and root path.

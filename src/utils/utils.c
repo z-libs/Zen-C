@@ -11,53 +11,35 @@ ParserContext *g_parser_ctx = NULL;
 // ** Arena Implementation **
 #define ARENA_BLOCK_SIZE (1024 * 1024)
 
-typedef struct ArenaBlock
+void arena_init(zarena *a)
 {
-    struct ArenaBlock *next;
-    size_t used;
-    size_t cap;
-    char data[];
-} ArenaBlock;
-
-static ArenaBlock *current_block = NULL;
-
-void arena_reset(void)
-{
-    ArenaBlock *b = current_block;
-    while (b)
-    {
-        ArenaBlock *next = b->next;
-        (free)(b);
-        b = next;
-    }
-    current_block = NULL;
+    zarena_init(a);
 }
 
-static void *arena_alloc_raw(size_t size)
+void arena_reset(zarena *a)
 {
-    size_t actual_size = size + sizeof(size_t);
-    actual_size = (actual_size + 7) & ~7;
+    zarena_reset(a);
+}
 
-    if (!current_block || (current_block->used + actual_size > current_block->cap))
+void *arena_alloc(zarena *a, size_t size)
+{
+    // We add a size_t header to support xrealloc's size lookup.
+    // To maintain alignment, we ensure the total header size is 16 bytes.
+    size_t total = size + 16;
+    void *ptr = zarena_alloc_align(a, total, 16);
+    if (!ptr)
     {
-        size_t block_size = actual_size > ARENA_BLOCK_SIZE ? actual_size : ARENA_BLOCK_SIZE;
-#undef malloc
-        ArenaBlock *new_block = malloc(sizeof(ArenaBlock) + block_size);
-        if (!new_block)
-        {
-            zfatal("Out of memory");
-        }
-
-        new_block->cap = block_size;
-        new_block->used = 0;
-        new_block->next = current_block;
-        current_block = new_block;
+        return NULL;
     }
 
-    void *ptr = current_block->data + current_block->used;
-    current_block->used += actual_size;
     *(size_t *)ptr = size;
-    return (char *)ptr + sizeof(size_t);
+    return (char *)ptr + 16;
+}
+
+// Backward compatibility using global g_compiler.arena
+void *arena_alloc_raw(size_t size)
+{
+    return arena_alloc(&g_compiler.arena, size);
 }
 
 #include <time.h>
@@ -73,7 +55,10 @@ void *xcalloc(size_t n, size_t size)
 {
     size_t total = n * size;
     void *p = arena_alloc_raw(total);
-    memset(p, 0, total);
+    if (p)
+    {
+        memset(p, 0, total);
+    }
     return p;
 }
 
@@ -83,14 +68,21 @@ void *xrealloc(void *ptr, size_t new_size)
     {
         return xmalloc(new_size);
     }
-    size_t *header = (size_t *)((char *)ptr - sizeof(size_t));
+
+    // Header is 16 bytes before the returned pointer
+    size_t *header = (size_t *)((char *)ptr - 16);
     size_t old_size = *header;
+
     if (new_size <= old_size)
     {
         return ptr;
     }
+
     void *new_ptr = xmalloc(new_size);
-    memcpy(new_ptr, ptr, old_size);
+    if (new_ptr)
+    {
+        memcpy(new_ptr, ptr, old_size);
+    }
     return new_ptr;
 }
 

@@ -199,7 +199,8 @@ static void collect_symbols(ASTNode *node, SymbolSet *reads, SymbolSet *writes)
 }
 static void check_side_effect_collision(TypeChecker *tc, ASTNode *left, ASTNode *right, Token token)
 {
-    if (!g_config.misra_mode || !left || !right)
+    CompilerConfig *cfg = &tc->pctx->compiler->config;
+    if (!cfg->misra_mode || !left || !right)
     {
         return;
     }
@@ -265,7 +266,8 @@ static void check_side_effect_collision(TypeChecker *tc, ASTNode *left, ASTNode 
 static void check_all_args_side_effects(TypeChecker *tc, ASTNode *receiver, ASTNode *args,
                                         Token token)
 {
-    if (!g_config.misra_mode)
+    CompilerConfig *cfg = &tc->pctx->compiler->config;
+    if (!cfg->misra_mode)
     {
         return;
     }
@@ -406,7 +408,8 @@ static void tc_exit_scope(TypeChecker *tc)
 
 static void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t, int is_immutable)
 {
-    if (g_config.misra_mode)
+    CompilerConfig *cfg = &tc->pctx->compiler->config;
+    if (cfg->misra_mode)
     {
         misra_check_shadowing(tc, name, t);
         misra_check_typographic_ambiguity(tc, name, t);
@@ -672,7 +675,8 @@ static void check_expr_unary(TypeChecker *tc, ASTNode *node, int depth)
         else if (resolved->inner)
         {
             node->type_info = resolved->inner;
-            if (g_config.misra_mode)
+            CompilerConfig *cfg = &tc->pctx->compiler->config;
+            if (cfg->misra_mode)
             {
                 misra_check_file_dereference(tc, operand_type, node->token);
             }

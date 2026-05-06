@@ -15,6 +15,7 @@ static int is_unmangle_primitive(const char *base);
 
 void parser_audit_preprocessor(ParserContext *ctx, Token tok)
 {
+    CompilerConfig *cfg = &ctx->compiler->config;
     const char *p = tok.start;
     while (isspace(*p) || *p == '#')
     {
@@ -23,7 +24,7 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
 
     if (strncmp(p, "define", 6) == 0)
     {
-        if (g_config.misra_mode)
+        if (cfg->misra_mode)
         {
             zerror_at(tok,
                       "MISRA Violation: '#' directives are prohibited (MISRA Rule Zen 1.4). Use "
@@ -75,7 +76,7 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
     }
     else if (strncmp(p, "include", 7) == 0)
     {
-        if (g_config.misra_mode)
+        if (cfg->misra_mode)
         {
             zerror_at(
                 tok,
@@ -94,7 +95,7 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
         int is_ifdef = (strncmp(p, "ifdef", 5) == 0);
         int is_ifndef = (strncmp(p, "ifndef", 6) == 0);
 
-        if (g_config.misra_mode)
+        if (cfg->misra_mode)
         {
             zerror_at(tok, "MISRA Violation: '#' preprocessor conditions are prohibited (MISRA "
                            "Rule Zen 1.4). Use "
@@ -160,7 +161,7 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
              strncmp(p, "warning", 7) == 0 || strncmp(p, "pragma", 6) == 0)
     {
         int is_undef = (strncmp(p, "undef", 5) == 0);
-        if (g_config.misra_mode)
+        if (cfg->misra_mode)
         {
             zerror_at(tok, "MISRA Violation: '#' directives are prohibited (MISRA Rule Zen 1.4).");
 
@@ -208,6 +209,7 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
 
 void try_parse_macro_const(ParserContext *ctx, const char *content)
 {
+    CompilerConfig *cfg = &ctx->compiler->config;
     Lexer l;
     lexer_init(&l, content);
     l.emit_comments = 0;
@@ -250,7 +252,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
         {
             if (*(p_scan + 1) == '#')
             {
-                if (g_config.misra_mode)
+                if (cfg->misra_mode)
                 {
                     zerror_at(name, "MISRA Rule 20.10: '##' operator used in macro");
                 }
@@ -258,7 +260,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
             }
             else
             {
-                if (g_config.misra_mode)
+                if (cfg->misra_mode)
                 {
                     zerror_at(name, "MISRA Rule 20.10: '#' operator used in macro");
                 }
@@ -269,7 +271,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
 
     if (*(name.start + name.len) == '(')
     {
-        if (g_config.misra_mode)
+        if (cfg->misra_mode)
         {
             // Advanced audit for function-like macros (20.11, 20.12)
             const char *pm = name.start + name.len;
@@ -451,7 +453,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
         }
 
         // MISRA Rule 20.10: The # and ## preprocessor operators should not be used
-        if (g_config.misra_mode && ct.type == TOK_OP)
+        if (cfg->misra_mode && ct.type == TOK_OP)
         {
             if (ct.len == 1 && *ct.start == '#')
             {
