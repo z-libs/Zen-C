@@ -604,10 +604,10 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
             fflush(out);
         }
 
-        for (int i = 0; i < g_config.cfg_define_count; i++)
+        for (int i = 0; i < g_config.cfg_defines.length; i++)
         {
             fprintf(out, "#ifndef ZC_CFG_%s\n#define ZC_CFG_%s 1\n#endif\n",
-                    g_config.cfg_defines[i], g_config.cfg_defines[i]);
+                    g_config.cfg_defines.data[i], g_config.cfg_defines.data[i]);
         }
 
         emit_includes_and_aliases(kids, out, &visited);

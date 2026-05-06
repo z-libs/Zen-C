@@ -46,23 +46,20 @@ void lsp_project_init(const char *root_path)
 
     // Add root path and std/ to include paths to resolve 'std.zc' etc.
     // Ensure we don't overflow the include_paths array (limit is 64)
-    if (g_config.include_path_count < 62)
+    zvec_push_Str(&g_config.include_paths, xstrdup(root_path));
+
+    // In LSP mode, the workspace root should also be considered the root path for stdlib
+    // resolution
+    if (root_path)
     {
-        g_config.include_paths[g_config.include_path_count++] = xstrdup(root_path);
+        g_config.root_path = xstrdup(root_path);
+    }
 
-        // In LSP mode, the workspace root should also be considered the root path for stdlib
-        // resolution
-        if (root_path)
-        {
-            g_config.root_path = xstrdup(root_path);
-        }
-
-        if (g_config.root_path)
-        {
-            char std_path[MAX_PATH_LEN];
-            snprintf(std_path, sizeof(std_path), "%s/std", g_config.root_path);
-            g_config.include_paths[g_config.include_path_count++] = xstrdup(std_path);
-        }
+    if (g_config.root_path)
+    {
+        char std_path[MAX_PATH_LEN];
+        snprintf(std_path, sizeof(std_path), "%s/std", g_config.root_path);
+        zvec_push_Str(&g_config.include_paths, xstrdup(std_path));
     }
 
     fprintf(stderr, "zls: Project initialized at %s\n", root_path);

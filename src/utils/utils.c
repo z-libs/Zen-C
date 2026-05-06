@@ -214,9 +214,9 @@ char *z_resolve_path(const char *fn, const char *relative_to)
     }
 
     // 4. Include paths (-I)
-    for (int i = 0; i < g_config.include_path_count; i++)
+    for (int i = 0; i < g_config.include_paths.length; i++)
     {
-        snprintf(path, sizeof(path), "%s/%s", g_config.include_paths[i], fn);
+        snprintf(path, sizeof(path), "%s/%s", g_config.include_paths.data[i], fn);
         if (access(path, R_OK) == 0)
         {
             return z_realpath_arena(path);
@@ -640,16 +640,13 @@ void scan_build_directives(ParserContext *ctx, const char *src)
 
                     append_flag(g_cflags, sizeof(g_cflags), "-D", def_val);
 
-                    if (g_config.cfg_define_count < 64)
+                    char *name = xstrdup(def_val);
+                    char *eq = strchr(name, '=');
+                    if (eq)
                     {
-                        char *name = xstrdup(def_val);
-                        char *eq = strchr(name, '=');
-                        if (eq)
-                        {
-                            *eq = '\0';
-                        }
-                        g_config.cfg_defines[g_config.cfg_define_count++] = name;
+                        *eq = '\0';
                     }
+                    zvec_push_Str(&g_config.cfg_defines, name);
                 }
             }
             else if (0 == strncmp(directive, "shell:", 6))

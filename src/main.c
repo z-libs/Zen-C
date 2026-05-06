@@ -38,8 +38,8 @@ int main(int argc, char **argv)
     signal(SIGABRT, handle_crash);
     signal(SIGFPE, handle_crash);
 
-    int i, ef;
-    size_t k;
+    int i;
+    size_t ef, k;
     const char *optimization_level = NULL;
     char *env_root;
     char *input_file_copy;
@@ -124,16 +124,16 @@ int main(int argc, char **argv)
 
     if (ZC_OS_WINDOWS)
     {
-        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("windows");
+        zvec_push_Str(&g_config.cfg_defines, xstrdup("windows"));
     }
     else if (ZC_OS_LINUX)
     {
-        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("linux");
+        zvec_push_Str(&g_config.cfg_defines, xstrdup("linux"));
     }
     else if (ZC_OS_MACOS)
     {
-        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("apple");
-        g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("macos");
+        zvec_push_Str(&g_config.cfg_defines, xstrdup("apple"));
+        zvec_push_Str(&g_config.cfg_defines, xstrdup("macos"));
     }
 
     if (argc < 2)
@@ -283,20 +283,14 @@ int main(int argc, char **argv)
         {
             g_config.misra_mode = 1;
             g_config.use_typecheck = 1;
-            if (g_config.cfg_define_count < 64)
-            {
-                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("misra");
-                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("ZC_MISRA");
-            }
+            zvec_push_Str(&g_config.cfg_defines, xstrdup("misra"));
+            zvec_push_Str(&g_config.cfg_defines, xstrdup("ZC_MISRA"));
         }
         else if (strcmp(arg, "--freestanding") == 0)
         {
             g_config.is_freestanding = 1;
-            if (g_config.cfg_define_count < 64)
-            {
-                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("freestanding");
-                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("ZC_FREESTANDING");
-            }
+            zvec_push_Str(&g_config.cfg_defines, xstrdup("freestanding"));
+            zvec_push_Str(&g_config.cfg_defines, xstrdup("ZC_FREESTANDING"));
         }
         else if (strcmp(arg, "--warn-errors") == 0)
         {
@@ -399,14 +393,7 @@ int main(int argc, char **argv)
             if (i_path)
             {
                 append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
-                if (g_config.include_path_count < 64)
-                {
-                    g_config.include_paths[g_config.include_path_count++] = xstrdup(i_path);
-                }
-                else
-                {
-                    zwarn("maximum include paths (64) exceeded, ignoring '%s'", i_path);
-                }
+                zvec_push_Str(&g_config.include_paths, xstrdup(i_path));
             }
         }
         else if (strncmp(arg, "-L", 2) == 0 || strncmp(arg, "-l", 2) == 0)
@@ -459,20 +446,13 @@ int main(int argc, char **argv)
             }
             if (def)
             {
-                if (g_config.cfg_define_count < 64)
+                char *name = xstrdup(def);
+                char *eq = strchr(name, '=');
+                if (eq)
                 {
-                    char *name = xstrdup(def);
-                    char *eq = strchr(name, '=');
-                    if (eq)
-                    {
-                        *eq = '\0';
-                    }
-                    g_config.cfg_defines[g_config.cfg_define_count++] = name;
+                    *eq = '\0';
                 }
-                else
-                {
-                    zwarn("maximum defined macros (64) exceeded, ignoring '%s'", def);
-                }
+                zvec_push_Str(&g_config.cfg_defines, name);
             }
             append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-D", def);
         }
@@ -518,14 +498,7 @@ int main(int argc, char **argv)
             }
             else
             {
-                if (g_config.extra_file_count < 64)
-                {
-                    g_config.extra_files[g_config.extra_file_count++] = arg;
-                }
-                else
-                {
-                    zwarn("maximum extra source files (64) exceeded, ignoring '%s'", arg);
-                }
+                zvec_push_Str(&g_config.extra_files, arg);
             }
         }
     }
@@ -579,24 +552,15 @@ int main(int argc, char **argv)
     // Backend detection for @cfg purposes
     if (z_path_match_compiler(g_config.cc, "tcc"))
     {
-        if (g_config.cfg_define_count < 64)
-        {
-            g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("__TINYC__");
-        }
+        zvec_push_Str(&g_config.cfg_defines, xstrdup("__TINYC__"));
     }
     else if (z_path_match_compiler(g_config.cc, "clang"))
     {
-        if (g_config.cfg_define_count < 64)
-        {
-            g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("__clang__");
-        }
+        zvec_push_Str(&g_config.cfg_defines, xstrdup("__clang__"));
     }
     else if (z_path_match_compiler(g_config.cc, "zig"))
     {
-        if (g_config.cfg_define_count < 64)
-        {
-            g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("__ZIG__");
-        }
+        zvec_push_Str(&g_config.cfg_defines, xstrdup("__ZIG__"));
     }
 
     init_builtins();
@@ -645,7 +609,7 @@ int main(int argc, char **argv)
     }
 
     // Parse extra input files and merge into AST
-    if (g_config.extra_file_count > 0)
+    if (g_config.extra_files.length > 0)
     {
         // Mark primary file as imported to prevent re-parsing
         primary_real = realpath(g_config.input_file, NULL);
@@ -655,24 +619,17 @@ int main(int argc, char **argv)
             free(primary_real);
         }
 
-        for (ef = 0; ef < g_config.extra_file_count; ef++)
+        for (ef = 0; ef < g_config.extra_files.length; ef++)
         {
-            const char *extra_path = g_config.extra_files[ef];
+            const char *extra_path = g_config.extra_files.data[ef];
             char *real_path = realpath(extra_path, NULL);
             const char *path = real_path ? real_path : extra_path;
 
             const char *ext = strrchr(path, '.');
             if (ext && ZC_IS_BACKEND_EXT(ext))
             {
-                if (g_config.c_file_count < 64)
-                {
-                    g_config.c_files[g_config.c_file_count++] =
-                        real_path ? xstrdup(real_path) : xstrdup(extra_path);
-                }
-                else
-                {
-                    zwarn("maximum C files (64) exceeded, ignoring '%s'", extra_path);
-                }
+                zvec_push_Str(&g_config.c_files,
+                              real_path ? xstrdup(real_path) : xstrdup(extra_path));
                 if (real_path)
                 {
                     free(real_path);

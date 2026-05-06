@@ -218,18 +218,18 @@ int levenshtein(const char *s1, const char *s2);
 
 // Diagnostics (errors and warnings) are in diagnostics/diagnostics.h
 #include "diagnostics/diagnostics.h"
+#include "utils/zvec.h"
+ZVEC_GENERATE_IMPL(char *, Str)
 
 /**
  * @brief Compiler configuration and flags.
  */
 typedef struct
 {
-    char *input_file;      ///< Input source file path.
-    char *extra_files[64]; ///< Additional input files.
-    int extra_file_count;  ///< Number of extra input files.
-    char *c_files[64];     ///< Additional C/C++/OBJ files to be passed directly to backend.
-    int c_file_count;      ///< Number of C/C++/OBJ files.
-    char *output_file;     ///< Output binary file path.
+    char *input_file;     ///< Input source file path.
+    zvec_Str extra_files; ///< Additional input files.
+    zvec_Str c_files;     ///< Additional C/C++/OBJ files to be passed directly to backend.
+    char *output_file;    ///< Output binary file path.
 
     // Modes.
     int mode_run;        ///< 1 if 'run' command (compile & execute).
@@ -269,12 +269,10 @@ typedef struct
     char **c_type_whitelist;     ///< List of C types to suppress warnings for (from zenc.json).
 
     // User-defined -D flags tracked for @cfg() evaluation.
-    char *cfg_defines[64]; ///< Define names from -D flags.
-    int cfg_define_count;  ///< Number of tracked -D defines.
+    zvec_Str cfg_defines; ///< Define names from -D flags.
 
     // User-defined -I flags tracked for import resolution.
-    char *include_paths[64]; ///< Include paths for module resolution.
-    int include_path_count;  ///< Number of tracked -I paths.
+    zvec_Str include_paths; ///< Include paths for module resolution.
 
     char *root_path; ///< Detected Zen-C root directory.
     char *input_dir; ///< Directory of the primary input file.
