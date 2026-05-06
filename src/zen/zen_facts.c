@@ -186,7 +186,7 @@ void zzen_at(Token t, const char *msg, const char *url)
 {
     fprintf(stderr, COLOR_GREEN "zen: " COLOR_RESET COLOR_BOLD "%s" COLOR_RESET "\n", msg);
 
-    extern char *g_current_filename;
+    // g_current_filename is available via zprep.h
     if (t.line > 0)
     {
         fprintf(stderr, COLOR_BLUE "  --> " COLOR_RESET "%s:%d:%d\n",
@@ -231,7 +231,7 @@ int zen_trigger_at(ZenTrigger t, Token location)
         return 0;
     }
 
-    extern int g_warning_count;
+    // g_warning_count is available via zprep.h
     if (g_warning_count > 0)
     {
         return 0;
@@ -289,7 +289,7 @@ void zen_trigger_global(void)
         return;
     }
 
-    extern int g_warning_count;
+    // g_warning_count is available via zprep.h
     if (g_warning_count > 0)
     {
         return;

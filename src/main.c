@@ -43,7 +43,6 @@ int main(int argc, char **argv)
     const char *optimization_level = NULL;
     char *env_root;
     char *input_file_copy;
-    double start_time;
     char *primary_real;
     char temp_source_buf[MAX_PATH_LEN];
     const char *ext_p;
@@ -592,7 +591,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    start_time = z_get_monotonic_time();
+    g_start_time = z_get_monotonic_time();
 
     if (!g_config.quiet)
     {
@@ -1028,7 +1027,7 @@ int main(int argc, char **argv)
     zen_trigger_global();
 
     double end_time = z_get_monotonic_time();
-    double time_taken = end_time - start_time;
+    double time_taken = end_time - g_start_time;
 
     if (!g_config.quiet)
     {

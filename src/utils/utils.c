@@ -292,12 +292,8 @@ char *load_file(const char *fn)
     return b;
 }
 
-// ** Build Directives **
-char g_link_flags[MAX_FLAGS_SIZE] = "";
-char g_cflags[MAX_FLAGS_SIZE] = "";
-int g_warning_count = 0;
-int g_error_count = 0;
-CompilerConfig g_config = {0};
+// ** Global Compiler State **
+ZenCompiler g_compiler = {0};
 
 void append_flag(char *dest, size_t max_size, const char *prefix, const char *val)
 {

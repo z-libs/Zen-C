@@ -12,6 +12,8 @@
 
 // ** ANSI COLORS **
 #include "utils/colors.h"
+#include "utils/zvec.h"
+ZVEC_GENERATE_IMPL(char *, Str)
 
 // ** MEMORY OVERRIDES (Arena) **
 #define free(ptr) ((void)0)          ///< Free memory.
@@ -19,8 +21,84 @@
 #define realloc(p, s) xrealloc(p, s) ///< Reallocate memory.
 #define calloc(n, s) xcalloc(n, s)   ///< Allocate and zero memory.
 
+/**
+ * @brief Compiler configuration and flags.
+ */
+typedef struct
+{
+    char *input_file;     ///< Input source file path.
+    zvec_Str extra_files; ///< Additional input files.
+    zvec_Str c_files;     ///< Additional C/C++/OBJ files to be passed directly to backend.
+    char *output_file;    ///< Output binary file path.
+
+    // Modes.
+    int mode_run;        ///< 1 if 'run' command (compile & execute).
+    int mode_debug;      ///< 1 if `debug` command (emits source mappings and implies mode_run).
+    int mode_check;      ///< 1 if 'check' command (syntax/type check only).
+    int mode_transpile;  ///< 1 if 'transpile' command (to C).
+    int emit_c;          ///< 1 if --emit-c (keep generated C file).
+    int verbose;         ///< 1 if --verbose.
+    int quiet;           ///< 1 if --quiet.
+    int zen_mode;        ///< 1 if --zen (enable zen facts/easter eggs).
+    int mode_doc;        ///< 1 if 'doc' command (generate documentation).
+    int repl_mode;       ///< 1 if --repl (internal flag for REPL usage).
+    int is_freestanding; ///< 1 if --freestanding (no stdlib).
+    int use_cpp;         ///< 1 if --cpp (emit C++ compatible code).
+    int use_cuda;        ///< 1 if --cuda (emit CUDA-compatible code).
+    int use_objc;        ///< 1 if --objc (emit Objective-C compatible code).
+    int mode_lsp;        ///< 1 if 'lsp' command (Language Server Protocol).
+    int json_output;     ///< 1 if --json (emit structured JSON diagnostics).
+    int use_typecheck;   ///< 1 if --check (enable manual semantic analysis).
+    int warn_as_errors;  ///< 1 if --warn-errors or -Werror (treat Zen C warnings as errors).
+    int no_suppress_warnings; ///< 1 if --no-suppress-warnings (disable default C warning
+                              ///< suppressions).
+    int warn_pedantic;        ///< 1 if -Wpedantic or --pedantic (show extra diagnostics).
+    int misra_mode;           ///< 1 if --misra (emit MISRA C compliant code).
+    uint64_t diag_mask;       ///< Bitmask of enabled diagnostics.
+
+    int keep_comments; ///< 1 if --keep-comments (preserve comments in output).
+    int recursive_doc; ///< 1 if doc generation should be recursive (default 1).
+
+    // GCC Flags accumulator.
+    char gcc_flags[4096]; ///< Flags passed to the backend compiler.
+
+    // C Compiler selection (default: gcc)
+    char cc[64]; ///< Backend compiler command (e.g. "gcc", "clang").
+
+    char **c_function_whitelist; ///< List of C functions to suppress warnings for (from zenc.json).
+    char **c_type_whitelist;     ///< List of C types to suppress warnings for (from zenc.json).
+
+    // User-defined -D flags tracked for @cfg() evaluation.
+    zvec_Str cfg_defines; ///< Define names from -D flags.
+
+    // User-defined -I flags tracked for import resolution.
+    zvec_Str include_paths; ///< Include paths for module resolution.
+
+    char *root_path; ///< Detected Zen-C root directory.
+    char *input_dir; ///< Directory of the primary input file.
+} CompilerConfig;
+
 // ** GLOBAL STATE **
 extern char *g_current_filename; ///< Current filename.
+
+typedef struct ZenCompiler
+{
+    CompilerConfig config;
+    int error_count;
+    int warning_count;
+    char link_flags[1024]; // MAX_FLAGS_SIZE
+    char cflags[1024];
+    double start_time;
+} ZenCompiler;
+
+extern ZenCompiler g_compiler;
+
+#define g_config g_compiler.config
+#define g_link_flags g_compiler.link_flags
+#define g_cflags g_compiler.cflags
+#define g_error_count g_compiler.error_count
+#define g_warning_count g_compiler.warning_count
+#define g_start_time g_compiler.start_time
 
 /**
  * @brief Token types for the Lexer.
@@ -199,11 +277,6 @@ void append_flag(char *dest, size_t max_size, const char *prefix, const char *va
 #define MAX_PATH_SIZE 1024
 #define MAX_PATTERN_SIZE 1024
 
-// ** Build Directives **
-extern char g_link_flags[MAX_FLAGS_SIZE];
-extern char g_cflags[MAX_FLAGS_SIZE];
-extern int g_warning_count;
-
 struct ParserContext;
 
 /**
@@ -218,67 +291,8 @@ int levenshtein(const char *s1, const char *s2);
 
 // Diagnostics (errors and warnings) are in diagnostics/diagnostics.h
 #include "diagnostics/diagnostics.h"
-#include "utils/zvec.h"
-ZVEC_GENERATE_IMPL(char *, Str)
 
-/**
- * @brief Compiler configuration and flags.
- */
-typedef struct
-{
-    char *input_file;     ///< Input source file path.
-    zvec_Str extra_files; ///< Additional input files.
-    zvec_Str c_files;     ///< Additional C/C++/OBJ files to be passed directly to backend.
-    char *output_file;    ///< Output binary file path.
-
-    // Modes.
-    int mode_run;        ///< 1 if 'run' command (compile & execute).
-    int mode_debug;      ///< 1 if `debug` command (emits source mappings and implies mode_run).
-    int mode_check;      ///< 1 if 'check' command (syntax/type check only).
-    int mode_transpile;  ///< 1 if 'transpile' command (to C).
-    int emit_c;          ///< 1 if --emit-c (keep generated C file).
-    int verbose;         ///< 1 if --verbose.
-    int quiet;           ///< 1 if --quiet.
-    int zen_mode;        ///< 1 if --zen (enable zen facts/easter eggs).
-    int mode_doc;        ///< 1 if 'doc' command (generate documentation).
-    int repl_mode;       ///< 1 if --repl (internal flag for REPL usage).
-    int is_freestanding; ///< 1 if --freestanding (no stdlib).
-    int use_cpp;         ///< 1 if --cpp (emit C++ compatible code).
-    int use_cuda;        ///< 1 if --cuda (emit CUDA-compatible code).
-    int use_objc;        ///< 1 if --objc (emit Objective-C compatible code).
-    int mode_lsp;        ///< 1 if 'lsp' command (Language Server Protocol).
-    int json_output;     ///< 1 if --json (emit structured JSON diagnostics).
-    int use_typecheck;   ///< 1 if --check (enable manual semantic analysis).
-    int warn_as_errors;  ///< 1 if --warn-errors or -Werror (treat Zen C warnings as errors).
-    int no_suppress_warnings; ///< 1 if --no-suppress-warnings (disable default C warning
-                              ///< suppressions).
-    int warn_pedantic;        ///< 1 if -Wpedantic or --pedantic (show extra diagnostics).
-    int misra_mode;           ///< 1 if --misra (emit MISRA C compliant code).
-    uint64_t diag_mask;       ///< Bitmask of enabled diagnostics.
-
-    int keep_comments; ///< 1 if --keep-comments (preserve comments in output).
-    int recursive_doc; ///< 1 if doc generation should be recursive (default 1).
-
-    // GCC Flags accumulator.
-    char gcc_flags[4096]; ///< Flags passed to the backend compiler.
-
-    // C Compiler selection (default: gcc)
-    char cc[64]; ///< Backend compiler command (e.g. "gcc", "clang").
-
-    char **c_function_whitelist; ///< List of C functions to suppress warnings for (from zenc.json).
-    char **c_type_whitelist;     ///< List of C types to suppress warnings for (from zenc.json).
-
-    // User-defined -D flags tracked for @cfg() evaluation.
-    zvec_Str cfg_defines; ///< Define names from -D flags.
-
-    // User-defined -I flags tracked for import resolution.
-    zvec_Str include_paths; ///< Include paths for module resolution.
-
-    char *root_path; ///< Detected Zen-C root directory.
-    char *input_dir; ///< Directory of the primary input file.
-} CompilerConfig;
-
-extern CompilerConfig g_config;
+// g_config is now a macro pointing to g_compiler.config
 
 /**
  * @brief Load all configurations (system, hidden project, visible project).

@@ -7,8 +7,7 @@
 // Forward declaration
 struct ParserContext;
 
-extern int g_error_count;
-extern int g_warning_count;
+// Globals are now managed via g_compiler (see zprep.h)
 
 // ** Core Error Functions **
 
