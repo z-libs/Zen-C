@@ -26,12 +26,12 @@ int func_defer_boundary = 0;
 int pending_closure_frees[MAX_PENDING_CLOSURE_FREES];
 int pending_closure_free_count = 0;
 
-void emit_pending_closure_frees(FILE *out)
+void emit_pending_closure_frees(ParserContext *ctx)
 {
     for (int i = 0; i < pending_closure_free_count; i++)
     {
-        fprintf(out, "free(_z_closure_ctx_stash[%d]); _z_closure_ctx_stash[%d] = NULL;\n",
-                pending_closure_frees[i], pending_closure_frees[i]);
+        EMIT(ctx, "free(_z_closure_ctx_stash[%d]); _z_closure_ctx_stash[%d] = NULL;\n",
+             pending_closure_frees[i], pending_closure_frees[i]);
     }
     pending_closure_free_count = 0;
 }
@@ -57,7 +57,7 @@ char *strip_template_suffix(const char *name)
 }
 
 // Helper to emit a mangled name (Type__Method) with standardized underscores.
-void emit_mangled_name(ParserContext *ctx, FILE *out, const char *base, const char *method)
+void emit_mangled_name(ParserContext *ctx, const char *base, const char *method)
 {
     if (!base || !method)
     {
@@ -70,11 +70,11 @@ void emit_mangled_name(ParserContext *ctx, FILE *out, const char *base, const ch
     ZenSymbol *sym = ctx ? find_symbol_in_all(ctx, merged) : NULL;
     if (sym && sym->link_name)
     {
-        fprintf(out, "%s", sym->link_name);
+        EMIT(ctx, "%s", sym->link_name);
     }
     else
     {
-        fprintf(out, "%s", merged);
+        EMIT(ctx, "%s", merged);
     }
     free(merged);
 }
@@ -95,7 +95,7 @@ int is_enum_type_name(ParserContext *ctx, const char *name)
 }
 
 // Helper to emit C declaration (handle arrays, function pointers correctly)
-void emit_c_decl(ParserContext *ctx, FILE *out, const char *type_str, const char *name)
+void emit_c_decl(ParserContext *ctx, const char *type_str, const char *name)
 {
     char *bracket = strchr(type_str, '[');
     char *generic = strchr(type_str, '<');
@@ -107,13 +107,13 @@ void emit_c_decl(ParserContext *ctx, FILE *out, const char *type_str, const char
         if (end_paren)
         {
             int prefix_len = end_paren - type_str;
-            fprintf(out, "%.*s%s%s", prefix_len, type_str, name, end_paren);
+            EMIT(ctx, "%.*s%s%s", prefix_len, type_str, name, end_paren);
         }
         else
         {
             // Fallback if malformed (shouldn't happen)
             int prefix_len = fn_ptr - type_str + 2;
-            fprintf(out, "%.*s%s%s", prefix_len, type_str, name, fn_ptr + 2);
+            EMIT(ctx, "%.*s%s%s", prefix_len, type_str, name, fn_ptr + 2);
         }
     }
     else if (generic && (!bracket || generic < bracket))
@@ -135,7 +135,7 @@ void emit_c_decl(ParserContext *ctx, FILE *out, const char *type_str, const char
 
                 if (find_struct_def(ctx, mangled_candidate))
                 {
-                    fprintf(out, "%s %s", mangled_candidate, name);
+                    EMIT(ctx, "%s %s", mangled_candidate, name);
                     success = 1;
                 }
             }
@@ -144,33 +144,33 @@ void emit_c_decl(ParserContext *ctx, FILE *out, const char *type_str, const char
         if (!success)
         {
             int base_len = generic - type_str;
-            fprintf(out, "%.*s %s", base_len, type_str, name);
+            EMIT(ctx, "%.*s %s", base_len, type_str, name);
         }
         else if (gt[1] == '*')
         {
-            fprintf(out, "*");
+            EMIT(ctx, "*");
         }
 
         if (bracket)
         {
-            fprintf(out, "%s", bracket);
+            EMIT(ctx, "%s", bracket);
         }
     }
     else if (bracket)
     {
         int base_len = bracket - type_str;
-        fprintf(out, "%.*s %s%s", base_len, type_str, name, bracket);
+        EMIT(ctx, "%.*s %s%s", base_len, type_str, name, bracket);
     }
     else
     {
-        fprintf(out, "%s %s", type_str, name);
+        EMIT(ctx, "%s %s", type_str, name);
     }
 }
 
 // Helper to emit variable declarations with array types.
-void emit_var_decl_type(ParserContext *ctx, FILE *out, const char *type_str, const char *var_name)
+void emit_var_decl_type(ParserContext *ctx, const char *type_str, const char *var_name)
 {
-    emit_c_decl(ctx, out, type_str, var_name);
+    emit_c_decl(ctx, type_str, var_name);
 }
 
 // Get field type from struct.
@@ -802,7 +802,7 @@ char *replace_string_type(const char *args)
 }
 
 // Helper to emit auto type or fallback.
-void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t, FILE *out)
+void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t)
 {
     (void)t;
     char *inferred = NULL;
@@ -813,25 +813,25 @@ void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t, FILE *out)
 
     if (inferred && strcmp(inferred, "__auto_type") != 0 && strcmp(inferred, "unknown") != 0)
     {
-        fprintf(out, "%s", inferred);
+        EMIT(ctx, "%s", inferred);
     }
     else
     {
         if (z_path_match_compiler(g_config.cc, "tcc") && init_expr)
         {
-            fprintf(out, "__typeof__((");
-            codegen_expression(ctx, init_expr, out);
-            fprintf(out, "))");
+            EMIT(ctx, "__typeof__((");
+            codegen_expression(ctx, init_expr);
+            EMIT(ctx, "))");
         }
         else
         {
-            fprintf(out, "ZC_AUTO");
+            EMIT(ctx, "ZC_AUTO");
         }
     }
 }
 
 // Emit function signature using Type info for correct C codegen
-void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const char *name_override)
+void emit_func_signature(ParserContext *ctx, ASTNode *func, const char *name_override)
 {
     if (!func || func->type != NODE_FUNCTION)
     {
@@ -841,7 +841,7 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
     // Emit MISRA static linkage
     if (g_config.misra_mode && !func->func.is_export && strcmp(func->func.name, "main") != 0)
     {
-        fprintf(out, "static ");
+        EMIT(ctx, "static ");
     }
 
     // Emit CUDA qualifiers (for both forward declarations and definitions)
@@ -849,15 +849,15 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
     {
         if (func->func.cuda_global)
         {
-            fprintf(out, "__global__ ");
+            EMIT(ctx, "__global__ ");
         }
         if (func->func.cuda_device)
         {
-            fprintf(out, "__device__ ");
+            EMIT(ctx, "__device__ ");
         }
         if (func->func.cuda_host)
         {
-            fprintf(out, "__host__ ");
+            EMIT(ctx, "__host__ ");
         }
     }
 
@@ -868,13 +868,13 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
 
     if (strcmp(final_name, "z_plugin_init") != 0)
     {
-        fprintf(out, "ZC_FUNC ");
+        EMIT(ctx, "ZC_FUNC ");
     }
 
     // Return type
     if (func->func.is_async)
     {
-        fprintf(out, "Async ");
+        EMIT(ctx, "Async ");
     }
     else
     {
@@ -897,25 +897,25 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
         if (fn_ptr)
         {
             int prefix_len = fn_ptr - ret_str + 2; // Include "(*"
-            fprintf(out, "%.*s%s(", prefix_len, ret_str, final_name);
+            EMIT(ctx, "%.*s%s(", prefix_len, ret_str, final_name);
             ret_suffix = xstrdup(fn_ptr + 2);
         }
         else
         {
-            fprintf(out, "%s %s(", ret_str, final_name);
+            EMIT(ctx, "%s %s(", ret_str, final_name);
         }
         free(ret_str);
     }
 
     if (func->func.is_async)
     {
-        fprintf(out, "%s(", final_name);
+        EMIT(ctx, "%s(", final_name);
     }
 
     // Args
     if (func->func.arg_count == 0 && !func->func.is_varargs)
     {
-        fprintf(out, "void");
+        EMIT(ctx, "void");
     }
     else
     {
@@ -923,7 +923,7 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
         {
             if (i > 0)
             {
-                fprintf(out, ", ");
+                EMIT(ctx, ", ");
             }
 
             char *type_str = NULL;
@@ -949,28 +949,28 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
             }
 
             // check if array type
-            emit_c_decl(ctx, out, type_str, name);
+            emit_c_decl(ctx, type_str, name);
             free(type_str);
         }
         if (func->func.is_varargs)
         {
             if (func->func.arg_count > 0)
             {
-                fprintf(out, ", ");
+                EMIT(ctx, ", ");
             }
-            fprintf(out, "...");
+            EMIT(ctx, "...");
         }
     }
-    fprintf(out, ")");
+    EMIT(ctx, ")");
 
     if (ret_suffix)
     {
-        fprintf(out, "%s", ret_suffix);
+        EMIT(ctx, "%s", ret_suffix);
         free(ret_suffix);
     }
 }
 
-int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
+int emit_move_invalidation(ParserContext *ctx, ASTNode *node)
 {
     if (!node)
     {
@@ -1044,7 +1044,7 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
 
             if (strcmp(node->var_ref.name, "self") != 0)
             {
-                fprintf(out, "%s__z_drop_flag_%s = 0", df_prefix, node->var_ref.name);
+                EMIT(ctx, "%s__z_drop_flag_%s = 0", df_prefix, node->var_ref.name);
                 return 1;
             }
             return 0;
@@ -1052,11 +1052,11 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
         else if (node->type == NODE_EXPR_MEMBER)
         {
             // For members: memset(&foo.bar, 0, sizeof(foo.bar))
-            fprintf(out, "memset(&");
-            codegen_expression(ctx, node, out);
-            fprintf(out, ", 0, sizeof(");
-            codegen_expression(ctx, node, out);
-            fprintf(out, "))");
+            EMIT(ctx, "memset(&");
+            codegen_expression(ctx, node);
+            EMIT(ctx, ", 0, sizeof(");
+            codegen_expression(ctx, node);
+            EMIT(ctx, "))");
             return 1;
         }
     }
@@ -1064,7 +1064,7 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node, FILE *out)
 }
 
 // Emits expression, wrapping it in a move-invalidation block if it's a consuming variable usage
-void codegen_expression_with_move(ParserContext *ctx, ASTNode *node, FILE *out)
+void codegen_expression_with_move(ParserContext *ctx, ASTNode *node)
 {
     if (!node)
     {
@@ -1115,26 +1115,26 @@ void codegen_expression_with_move(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             if (node->type == NODE_EXPR_VAR)
             {
-                fprintf(out, "({ ");
-                emit_move_invalidation(ctx, node, out);
-                fprintf(out, "; ");
-                codegen_expression(ctx, node, out);
-                fprintf(out, "; })");
+                EMIT(ctx, "({ ");
+                emit_move_invalidation(ctx, node);
+                EMIT(ctx, "; ");
+                codegen_expression(ctx, node);
+                EMIT(ctx, "; })");
             }
             else
             {
-                fprintf(out, "({ __typeof__(");
-                codegen_expression(ctx, node, out);
-                fprintf(out, ") _mv = ");
-                codegen_expression(ctx, node, out);
-                fprintf(out, "; ");
-                emit_move_invalidation(ctx, node, out);
-                fprintf(out, "; _mv; })");
+                EMIT(ctx, "({ __typeof__(");
+                codegen_expression(ctx, node);
+                EMIT(ctx, ") _mv = ");
+                codegen_expression(ctx, node);
+                EMIT(ctx, "; ");
+                emit_move_invalidation(ctx, node);
+                EMIT(ctx, "; _mv; })");
             }
             return;
         }
     }
-    codegen_expression(ctx, node, out);
+    codegen_expression(ctx, node);
 }
 
 int is_struct_return_type(const char *ret_type)
@@ -1256,7 +1256,7 @@ const char *map_to_c_type(const char *t)
     return normalize_type_name(t);
 }
 
-void handle_node_await_internal(ParserContext *ctx, ASTNode *node, FILE *out)
+void handle_node_await_internal(ParserContext *ctx, ASTNode *node)
 {
     char *ret_type = "void*";
     int free_ret = 0;
@@ -1307,28 +1307,28 @@ void handle_node_await_internal(ParserContext *ctx, ASTNode *node, FILE *out)
         }
     }
 
-    fprintf(out, "({ Async _a = ");
-    codegen_expression(ctx, node->unary.operand, out);
-    fprintf(out, "; void* _r; pthread_join(_a.thread, &_r); ");
+    EMIT(ctx, "({ Async _a = ");
+    codegen_expression(ctx, node->unary.operand);
+    EMIT(ctx, "; void* _r; pthread_join(_a.thread, &_r); ");
     if (strcmp(ret_type, "void") == 0)
     {
-        fprintf(out, "})");
+        EMIT(ctx, "})");
     }
     else
     {
         if (returns_struct)
         {
-            fprintf(out, "%s _val = *(%s*)_r; free(_r); _val; })", ret_type, ret_type);
+            EMIT(ctx, "%s _val = *(%s*)_r; free(_r); _val; })", ret_type, ret_type);
         }
         else
         {
             if (needs_long_cast)
             {
-                fprintf(out, "(%s)(uintptr_t)_r; })", ret_type);
+                EMIT(ctx, "(%s)(uintptr_t)_r; })", ret_type);
             }
             else
             {
-                fprintf(out, "(%s)_r; })", ret_type);
+                EMIT(ctx, "(%s)_r; })", ret_type);
             }
         }
     }

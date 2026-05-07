@@ -1963,8 +1963,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
     {
         if (g_config.misra_mode)
         {
-            zerror_at(lexer_peek(l), "MISRA Rule 15.6"
-                                     "compound-statement body");
+            zerror_at(lexer_peek(l), "MISRA Rule 15.6compound-statement body");
         }
         body = parse_statement(ctx, l);
     }
@@ -2316,7 +2315,10 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
             FILE *ms = tmpfile();
             if (ms)
             {
-                codegen_expression(ctx, expr_node, ms);
+                FILE *saved_out = ctx->emitter.out;
+                emitter_init(&ctx->emitter, ms);
+                codegen_expression(ctx, expr_node);
+                emitter_init(&ctx->emitter, saved_out);
                 len = ftell(ms);
                 fseek(ms, 0, SEEK_SET);
                 expr_buf = xmalloc(len + 1);
@@ -2355,12 +2357,12 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
             {
                 if (is_expr)
                 {
-                    append_to_gen_fmt(&gen, &gen_cap,
-                                      "({ ZC_AUTO_INIT(_z_interp_val, %s); snprintf(_fs_t_%d, "
-                                      "2048, \"%%%s\", _z_interp_val); strncat(_fs_buf_%d, "
-                                      "_fs_t_%d, 8192 - strlen(_fs_buf_%d) - 1); "
-                                      "_z_drop(_z_interp_val); }); ",
-                                      rw_expr, fs_id, fmt, fs_id, fs_id, fs_id);
+                    append_to_gen_fmt(
+                        &gen, &gen_cap,
+                        "({ ZC_AUTO_INIT(_z_interp_val, %s); snprintf(_fs_t_%d, 2048, \"%%%s\", "
+                        "_z_interp_val); strncat(_fs_buf_%d, _fs_t_%d, 8192 - strlen(_fs_buf_%d) - "
+                        "1); _z_drop(_z_interp_val); }); ",
+                        rw_expr, fs_id, fmt, fs_id, fs_id, fs_id);
                 }
                 else
                 {
@@ -2476,9 +2478,9 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                                         &gen, &gen_cap,
                                         "({ ZC_AUTO_INIT(_z_interp_val, %s); snprintf(_fs_t_%d, "
                                         "2048, \"%%.*s\", (int)(_z_interp_val)%slen, "
-                                        "(_z_interp_val)%sdata); strncat(_fs_buf_%d, "
-                                        "_fs_t_%d, 8192 - strlen(_fs_buf_%d) - 1); "
-                                        "_z_drop(_z_interp_val); }); ",
+                                        "(_z_interp_val)%sdata); strncat(_fs_buf_%d, _fs_t_%d, "
+                                        "8192 - strlen(_fs_buf_%d) - 1); _z_drop(_z_interp_val); "
+                                        "}); ",
                                         rw_expr, fs_id, acc, acc, fs_id, fs_id);
                                 }
                                 else
@@ -2486,9 +2488,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                                     append_to_gen_fmt(
                                         &gen, &gen_cap,
                                         "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, "
-                                        "\"%%.*s\", "
-                                        "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); "
-                                        "_z_drop(_z_interp_val); }); ",
+                                        "\"%%.*s\", (int)(_z_interp_val)%slen, "
+                                        "(_z_interp_val)%sdata); _z_drop(_z_interp_val); }); ",
                                         rw_expr, target, acc, acc);
                                 }
                             }
@@ -2531,8 +2532,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                                 {
                                     append_to_gen_fmt(
                                         &gen, &gen_cap,
-                                        "sprintf(_fs_t_%d, \"%%.*s\", (int)(%s)%slen, "
-                                        "(%s)%sdata); strcat(_fs_buf_%d, _fs_t_%d); ",
+                                        "sprintf(_fs_t_%d, \"%%.*s\", (int)(%s)%slen, (%s)%sdata); "
+                                        "strcat(_fs_buf_%d, _fs_t_%d); ",
                                         fs_id, rw_expr, acc, rw_expr, acc, fs_id, fs_id);
                                 }
                                 else
@@ -2551,8 +2552,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                                         &gen, &gen_cap,
                                         "({ ZC_AUTO_INIT(_z_interp_val, %s); sprintf(_fs_t_%d, "
                                         "\"%%.*s\", (int)(_z_interp_val)%slen, "
-                                        "(_z_interp_val)%sdata); strcat(_fs_buf_%d, "
-                                        "_fs_t_%d); _z_drop(_z_interp_val); }); ",
+                                        "(_z_interp_val)%sdata); strcat(_fs_buf_%d, _fs_t_%d); "
+                                        "_z_drop(_z_interp_val); }); ",
                                         rw_expr, fs_id, acc, acc, fs_id, fs_id);
                                 }
                                 else
@@ -2560,9 +2561,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                                     append_to_gen_fmt(
                                         &gen, &gen_cap,
                                         "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, "
-                                        "\"%%.*s\", "
-                                        "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); "
-                                        "_z_drop(_z_interp_val); }); ",
+                                        "\"%%.*s\", (int)(_z_interp_val)%slen, "
+                                        "(_z_interp_val)%sdata); _z_drop(_z_interp_val); }); ",
                                         rw_expr, target, acc, acc);
                                 }
                             }
@@ -2630,9 +2630,9 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                         {
                             append_to_gen_fmt(
                                 &gen, &gen_cap,
-                                "({ ZC_AUTO_INIT(_z_interp_val, %s); sprintf(_fs_t_%d, "
-                                "\"%%%s\", _z_bool_str(_z_interp_val)); strcat(_fs_buf_%d, "
-                                "_fs_t_%d); _z_drop(_z_interp_val); }); ",
+                                "({ ZC_AUTO_INIT(_z_interp_val, %s); sprintf(_fs_t_%d, \"%%%s\", "
+                                "_z_bool_str(_z_interp_val)); strcat(_fs_buf_%d, _fs_t_%d); "
+                                "_z_drop(_z_interp_val); }); ",
                                 rw_expr, fs_id, format_spec + 1, fs_id, fs_id);
                         }
                         else
@@ -2640,8 +2640,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                             append_to_gen_fmt(
                                 &gen, &gen_cap,
                                 "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
-                                "_z_bool_str(_z_interp_val)); _z_drop(_z_interp_val); "
-                                "}); ",
+                                "_z_bool_str(_z_interp_val)); _z_drop(_z_interp_val); }); ",
                                 rw_expr, target, format_spec + 1);
                         }
                     }
@@ -2652,10 +2651,10 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                     {
                         if (is_expr)
                         {
-                            append_to_gen_fmt(&gen, &gen_cap,
-                                              "sprintf(_fs_t_%d, \"%%%s\", %s); "
-                                              "strcat(_fs_buf_%d, _fs_t_%d); ",
-                                              fs_id, format_spec + 1, rw_expr, fs_id, fs_id);
+                            append_to_gen_fmt(
+                                &gen, &gen_cap,
+                                "sprintf(_fs_t_%d, \"%%%s\", %s); strcat(_fs_buf_%d, _fs_t_%d); ",
+                                fs_id, format_spec + 1, rw_expr, fs_id, fs_id);
                         }
                         else
                         {
@@ -2669,8 +2668,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                         {
                             append_to_gen_fmt(
                                 &gen, &gen_cap,
-                                "({ ZC_AUTO_INIT(_z_interp_val, %s); sprintf(_fs_t_%d, "
-                                "\"%%%s\", _z_interp_val); strcat(_fs_buf_%d, _fs_t_%d); "
+                                "({ ZC_AUTO_INIT(_z_interp_val, %s); sprintf(_fs_t_%d, \"%%%s\", "
+                                "_z_interp_val); strcat(_fs_buf_%d, _fs_t_%d); "
                                 "_z_drop(_z_interp_val); }); ",
                                 rw_expr, fs_id, format_spec + 1, fs_id, fs_id);
                         }
@@ -2724,8 +2723,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                             append_to_gen_fmt(
                                 &gen, &gen_cap,
                                 "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%s\", "
-                                "(char*)%s(%s_z_interp_val)); _z_drop(_z_interp_val); "
-                                "}); ",
+                                "(char*)%s(%s_z_interp_val)); _z_drop(_z_interp_val); }); ",
                                 rw_expr, target, mangled_to_string, to_string_is_ptr ? "" : "&");
                         }
                     }
@@ -2755,9 +2753,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                             append_to_gen_fmt(
                                 &gen, &gen_cap,
                                 "({ ZC_AUTO_INIT(_z_interp_val, %s); sprintf(_fs_t_%d, "
-                                "_z_str(_z_interp_val), _z_arg(_z_interp_val)); "
-                                "strcat(_fs_buf_%d, _fs_t_%d); "
-                                "_z_drop(_z_interp_val); }); ",
+                                "_z_str(_z_interp_val), _z_arg(_z_interp_val)); strcat(_fs_buf_%d, "
+                                "_fs_t_%d); _z_drop(_z_interp_val); }); ",
                                 rw_expr, fs_id, fs_id, fs_id);
                         }
                         else
@@ -2930,7 +2927,9 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     }
 
     ZApi api;
-    zptr_init_api(&api, g_current_filename, start_tok.line, capture, ctx->hoist_out);
+    zptr_init_api(&api, g_current_filename, start_tok.line);
+    api.out = capture;
+    api.hoist_out = ctx->hoist_out;
 
     found->fn(body, &api);
 
@@ -4451,9 +4450,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     Token t = lexer_next(l);
     if (t.type != TOK_STRING && t.type != TOK_RAW_STRING)
     {
-        zpanic_at(t,
-                  "Expected string (filename) after 'from' in selective import, got "
-                  "type %d",
+        zpanic_at(t, "Expected string (filename) after 'from' in selective import, got type %d",
                   t.type);
     }
     char *fn = token_get_string_content(t);
@@ -4707,23 +4704,27 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
         return NULL; // Prevent crash in LSP mode
     }
 
-    emit_preamble(ctx, f);
-    fprintf(
-        f,
-        "size_t _z_check_bounds(size_t index, size_t size) { if (index >= size) { fprintf(stderr, "
-        "\"Index out of bounds: %%zu >= %%zu\\n\", index, size); exit(1); } return index; }\n");
+    FILE *saved_emitter_out = ctx->emitter.out;
+    emitter_init(&ctx->emitter, f);
+    emitter_init(&cctx.emitter, f);
+    emit_preamble(ctx);
+    EMIT(ctx, "%s",
+         "size_t _z_check_bounds(size_t index, size_t size) { if (index >= size) { fprintf(stderr, "
+         "\"Index out of bounds: %zu >= %zu\\n\", index, size); exit(1); } return index; }\n");
 
     // Comptime helper functions
-    fprintf(f, "void yield(const char* s) { printf(\"%%s\", s); }\n");
-    fprintf(f, "void code(const char* s) { printf(\"%%s\", s); }\n"); // Alias for yield
-    fprintf(f, "void compile_error(const char* s) { "
-               "fprintf(stderr, \"Compile-time error: %%s\\n\", s); exit(1); }\n");
-    fprintf(f, "void compile_warn(const char* s) { "
-               "fprintf(stderr, \"Compile-time warning: %%s\\n\", s); }\n");
+    EMIT(ctx, "%s", "void yield(const char* s) { printf(\"%s\", s); }\n");
+    EMIT(ctx, "%s", "void code(const char* s) { printf(\"%s\", s); }\n"); // Alias for yield
+    EMIT(ctx, "%s",
+         "void compile_error(const char* s) { fprintf(stderr, \"Compile-time error: %s\\n\", s); "
+         "exit(1); }\n");
+    EMIT(ctx, "%s",
+         "void compile_warn(const char* s) { fprintf(stderr, \"Compile-time warning: %s\\n\", s); "
+         "}\n");
 
     // Build metadata constants
-    fprintf(f, "#define __COMPTIME_TARGET__ \"%s\"\n", z_get_system_name());
-    fprintf(f, "#define __COMPTIME_FILE__ \"%s\"\n", g_current_filename);
+    EMIT(ctx, "#define __COMPTIME_TARGET__ \"%s\"\n", z_get_system_name());
+    EMIT(ctx, "#define __COMPTIME_FILE__ \"%s\"\n", g_current_filename);
 
     VisitedModules *visited = NULL;
     ASTNode *curr = nodes;
@@ -4737,24 +4738,24 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
 
         if (curr->type == NODE_INCLUDE)
         {
-            emit_includes_and_aliases(curr, f, &visited);
+            emit_includes_and_aliases(ctx, curr, &visited);
         }
         else if (curr->type == NODE_STRUCT)
         {
-            emit_struct_defs(&cctx, curr, f, &visited);
+            emit_struct_defs(&cctx, curr, &visited);
         }
         else if (curr->type == NODE_ENUM)
         {
-            emit_enum_protos(&cctx, curr, f);
+            emit_enum_protos(&cctx, curr);
         }
         else if (curr->type == NODE_CONST)
         {
-            emit_globals(&cctx, curr, f, &visited);
+            emit_globals(&cctx, curr, &visited);
         }
 
         else if (curr->type == NODE_FUNCTION)
         {
-            codegen_node_single(&cctx, curr, f);
+            codegen_node_single(&cctx, curr);
         }
         else if (curr->type == NODE_IMPL)
         {
@@ -4783,31 +4784,32 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
             ASTNode *fn = ref->node;
             if (fn && fn->type == NODE_FUNCTION && fn->func.is_comptime)
             {
-                emit_func_signature(ctx, f, fn, NULL);
-                fprintf(f, ";\n");
-                codegen_node_single(ctx, fn, f);
+                emit_func_signature(ctx, fn, NULL);
+                EMIT(ctx, ";\n");
+                codegen_node_single(ctx, fn);
             }
             ref = ref->next;
         }
     }
 
-    fprintf(f, "int main() {\n");
+    EMIT(ctx, "int main() {\n");
     curr = stmts;
     while (curr)
     {
         if (curr->type >= NODE_EXPR_BINARY && curr->type <= NODE_EXPR_SLICE)
         {
-            codegen_expression(&cctx, curr, f);
-            fprintf(f, ";\n");
+            codegen_expression(&cctx, curr);
+            EMIT(ctx, ";\n");
         }
         else
         {
-            codegen_node_single(&cctx, curr, f);
+            codegen_node_single(&cctx, curr);
         }
         curr = curr->next;
     }
-    fprintf(f, "return 0;\n}\n");
+    EMIT(ctx, "return 0;\n}\n");
     fclose(f);
+    emitter_init(&ctx->emitter, saved_emitter_out);
 
     char cmdbuf[MAX_PATH_LEN * 3];
     char bin[MAX_PATH_LEN];

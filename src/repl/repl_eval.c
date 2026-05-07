@@ -35,7 +35,8 @@ char *repl_transpile(const char *zen_c_code)
         return NULL;
     }
 
-    codegen_node(&ctx, root, mem);
+    emitter_init(&ctx.emitter, mem);
+    codegen_node(&ctx, root);
 
 #if ZC_OS_WINDOWS || defined(__COSMOPOLITAN__)
     sz = (size_t)ftell(mem);
@@ -408,24 +409,13 @@ char *repl_generate_plot_code(const char *expr)
     size_t sz = strlen(expr) + 3072;
     char *code = malloc(sz);
     snprintf(code, sz,
-             "{\n"
-             "    let _z_data = %s;\n"
-             "    let _z_max = 1;\n"
-             "    let _z_count = 0;\n"
-             "    for val in _z_data {\n"
-             "        if val > _z_max { _z_max = val; }\n"
-             "        _z_count = _z_count + 1;\n"
-             "    }\n"
-             "    println \"\\n  Visualizing: %s ({_z_count} values)\";\n"
-             "    println \"  ----------------------------------------\";\n"
-             "    for val in _z_data {\n"
-             "        let bar_len = (val * 40) / _z_max;\n"
-             "        print \"  {val} | \";\n"
-             "        for j in 0..bar_len { print \"#\"; }\n"
-             "        println \"\";\n"
-             "    }\n"
-             "    println \"  ----------------------------------------\\n\";\n"
-             "}\n",
+             "{\n    let _z_data = %s;\n    let _z_max = 1;\n    let _z_count = 0;\n    for val in "
+             "_z_data {\n        if val > _z_max { _z_max = val; }\n        _z_count = _z_count + "
+             "1;\n    }\n    println \"\\n  Visualizing: %s ({_z_count} values)\";\n    println \" "
+             " ----------------------------------------\";\n    for val in _z_data {\n        let "
+             "bar_len = (val * 40) / _z_max;\n        print \"  {val} | \";\n        for j in "
+             "0..bar_len { print \"#\"; }\n        println \"\";\n    }\n    println \"  "
+             "----------------------------------------\\n\";\n}\n",
              expr, expr);
 
     return code;

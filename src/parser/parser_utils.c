@@ -4478,7 +4478,10 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
         FILE *mem_stream = tmpfile();
         if (mem_stream)
         {
-            codegen_expression(ctx, expr_node, mem_stream);
+            FILE *saved_out = ctx->emitter.out;
+            emitter_init(&ctx->emitter, mem_stream);
+            codegen_expression(ctx, expr_node);
+            emitter_init(&ctx->emitter, saved_out);
             code_len = ftell(mem_stream);
             code_buffer = xmalloc(code_len + 1);
             fseek(mem_stream, 0, SEEK_SET);

@@ -423,12 +423,14 @@ static void free_emitted_list(EmittedContent *list)
     }
 }
 
-static void emit_raw_statements_internal(ASTNode *node, FILE *out, VisitedModules **visited,
-                                         int depth, int preproc_only, EmittedContent **emitted_raw)
+static void emit_raw_statements_internal(ParserContext *ctx, ASTNode *node,
+                                         VisitedModules **visited, int depth, int preproc_only,
+                                         EmittedContent **emitted_raw)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_raw_statements_internal (circular imports?)");
+        zfatal(
+            "Infinite recursion detected in emit_raw_statements_internal (ctx, circular imports?)");
     }
     while (node)
     {
@@ -437,7 +439,7 @@ static void emit_raw_statements_internal(ASTNode *node, FILE *out, VisitedModule
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_raw_statements_internal(node->import_stmt.module_root, out, visited, depth + 1,
+                emit_raw_statements_internal(ctx, node->import_stmt.module_root, visited, depth + 1,
                                              preproc_only, emitted_raw);
             }
             node = node->next;
@@ -445,7 +447,7 @@ static void emit_raw_statements_internal(ASTNode *node, FILE *out, VisitedModule
         }
         else if (node->type == NODE_ROOT)
         {
-            emit_raw_statements_internal(node->root.children, out, visited, depth + 1, preproc_only,
+            emit_raw_statements_internal(ctx, node->root.children, visited, depth + 1, preproc_only,
                                          emitted_raw);
             node = node->next;
             continue;
@@ -466,7 +468,7 @@ static void emit_raw_statements_internal(ASTNode *node, FILE *out, VisitedModule
             {
                 if (!is_content_emitted(*emitted_raw, node->raw_stmt.content))
                 {
-                    fprintf(out, "%s\n", node->raw_stmt.content);
+                    EMIT(ctx, "%s\n", node->raw_stmt.content);
                     mark_content_emitted(emitted_raw, node->raw_stmt.content);
                 }
             }
@@ -475,7 +477,7 @@ static void emit_raw_statements_internal(ASTNode *node, FILE *out, VisitedModule
     }
 }
 
-static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out)
+static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs)
 {
     ASTNode *s = structs;
     while (s)
@@ -485,18 +487,18 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
         {
             if (s->cfg_condition)
             {
-                fprintf(out, "#if %s\n", s->cfg_condition);
+                EMIT(ctx, "#if %s\n", s->cfg_condition);
             }
 
             char *sname = s->strct.name;
-            fprintf(out, "// Auto-Generated RAII Glue for %s\n", sname);
-            fprintf(out, "void %s__Drop__glue(%s *self) {\n", sname, sname);
+            EMIT(ctx, "// Auto-Generated RAII Glue for %s\n", sname);
+            EMIT(ctx, "void %s__Drop__glue(%s *self) {\n", sname, sname);
 
             char glue_mangled[MAX_MANGLED_NAME_LEN];
             snprintf(glue_mangled, sizeof(glue_mangled), "%s__Drop__drop", sname);
             if (find_func(ctx, glue_mangled))
             {
-                fprintf(out, "    %s__Drop__drop(self);\n", sname);
+                EMIT(ctx, "    %s__Drop__drop(self);\n", sname);
             }
 
             ASTNode *field = s->strct.fields;
@@ -508,33 +510,32 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
                     ASTNode *fdef = find_struct_def(ctx, ft->name);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
-                        fprintf(out, "    %s__Drop__glue(&self->%s);\n", ft->name,
-                                field->field.name);
+                        EMIT(ctx, "    %s__Drop__glue(&self->%s);\n", ft->name, field->field.name);
                     }
                 }
                 field = field->next;
             }
-            fprintf(out, "}\n\n");
+            EMIT(ctx, "}\n\n");
             if (s->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
-            fprintf(out, "\n");
+            EMIT(ctx, "\n");
         }
         s = s->next;
     }
 }
 
-static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs, FILE *out)
+static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs)
 {
     (void)ctx;
     if (g_config.use_cpp)
     {
-        fprintf(out, "// Global Generic Drop Dispatch (C++ Overloads)\n");
-        fprintf(out, "#ifdef __cplusplus\n");
-        fprintf(out, "} // end extern \"C\"\n");
-        fprintf(out, "template<typename T> inline void _z_drop(T& x) { (void)x; }\n");
-        fprintf(out, "template<typename T> inline void _z_drop(T* x) { (void)x; }\n");
+        EMIT(ctx, "// Global Generic Drop Dispatch (C++ Overloads)\n");
+        EMIT(ctx, "#ifdef __cplusplus\n");
+        EMIT(ctx, "} // end extern \"C\"\n");
+        EMIT(ctx, "template<typename T> inline void _z_drop(T& x) { (void)x; }\n");
+        EMIT(ctx, "template<typename T> inline void _z_drop(T* x) { (void)x; }\n");
 
         ASTNode *s = structs;
         while (s)
@@ -544,26 +545,26 @@ static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs, FILE *
             {
                 if (s->cfg_condition)
                 {
-                    fprintf(out, "#if %s\n", s->cfg_condition);
+                    EMIT(ctx, "#if %s\n", s->cfg_condition);
                 }
                 char *sname = s->strct.name;
-                fprintf(out, "inline void _z_drop(%s& x) { %s__Drop__glue(&x); }\n", sname, sname);
-                fprintf(out, "inline void _z_drop(%s* x) { if(x) %s__Drop__glue(x); }\n", sname,
-                        sname);
+                EMIT(ctx, "inline void _z_drop(%s& x) { %s__Drop__glue(&x); }\n", sname, sname);
+                EMIT(ctx, "inline void _z_drop(%s* x) { if(x) %s__Drop__glue(x); }\n", sname,
+                     sname);
                 if (s->cfg_condition)
                 {
-                    fprintf(out, "#endif\n");
+                    EMIT(ctx, "#endif\n");
                 }
             }
             s = s->next;
         }
-        fprintf(out, "extern \"C\" {\n");
-        fprintf(out, "#endif\n\n");
+        EMIT(ctx, "extern \"C\" {\n");
+        EMIT(ctx, "#endif\n\n");
     }
     else
     {
-        fprintf(out, "// Global Generic Drop Dispatch\n");
-        fprintf(out, "#define _z_drop(x) _Generic((x)");
+        EMIT(ctx, "// Global Generic Drop Dispatch\n");
+        EMIT(ctx, "#define _z_drop(x) _Generic((x)");
 
         ASTNode *s = structs;
         while (s)
@@ -572,17 +573,17 @@ static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs, FILE *
                 !s->strct.is_template)
             {
                 char *sname = s->strct.name;
-                fprintf(out, ", \\\n    %s: %s__Drop__glue((void*)&(x))", sname, sname);
+                EMIT(ctx, ", \\\n    %s: %s__Drop__glue((void*)&(x))", sname, sname);
             }
             s = s->next;
         }
 
-        fprintf(out, ", \\\n    default: (void)0)\n\n");
+        EMIT(ctx, ", \\\n    default: (void)0)\n\n");
     }
 }
 
 // Main entry point for code generation.
-void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
+void codegen_node(ParserContext *ctx, ASTNode *node)
 {
     if (node->type == NODE_ROOT)
     {
@@ -600,20 +601,19 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (!ctx->skip_preamble)
         {
-            emit_preamble(ctx, out);
-            fflush(out);
+            emit_preamble(ctx);
         }
 
         for (int i = 0; i < g_config.cfg_defines.length; i++)
         {
-            fprintf(out, "#ifndef ZC_CFG_%s\n#define ZC_CFG_%s 1\n#endif\n",
-                    g_config.cfg_defines.data[i], g_config.cfg_defines.data[i]);
+            EMIT(ctx, "#ifndef ZC_CFG_%s\n#define ZC_CFG_%s 1\n#endif\n",
+                 g_config.cfg_defines.data[i], g_config.cfg_defines.data[i]);
         }
 
-        emit_includes_and_aliases(kids, out, &visited);
+        emit_includes_and_aliases(ctx, kids, &visited);
         if (g_config.use_cpp)
         {
-            fprintf(out, "\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n");
+            EMIT(ctx, "\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n");
         }
 
         if (ctx->hoist_out)
@@ -624,7 +624,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
             size_t n;
             while (ctx->hoist_out && (n = fread(buf, 1, sizeof(buf), ctx->hoist_out)) > 0)
             {
-                fwrite(buf, 1, n, out);
+                emitter_write(&(ctx)->emitter, buf, 1 * n);
             }
             fseek(ctx->hoist_out, pos, SEEK_SET);
         }
@@ -741,34 +741,34 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
         // Topologically sort.
         ASTNode *sorted = topo_sort_structs(ctx, merged);
 
-        print_type_defs(ctx, out, sorted);
+        print_type_defs(ctx, sorted);
         if (!g_config.use_cpp)
         {
-            emit_enum_protos(ctx, sorted, out);
+            emit_enum_protos(ctx, sorted);
         }
-        emit_global_aliases(ctx, out);
+        emit_global_aliases(ctx);
 
         visited = NULL;
-        emit_type_aliases(kids, out, &visited);
+        emit_type_aliases(ctx, kids, &visited);
 
         visited = NULL;
-        emit_trait_defs(kids, out, &visited);
+        emit_trait_defs(ctx, kids, &visited);
 
         // Track emitted raw statements to prevent duplicates
         EmittedContent *emitted_raw = NULL;
 
         // First pass: emit ONLY preprocessor directives before struct defs
         VisitedModules *raw_visited_1 = NULL;
-        emit_raw_statements_internal(kids, out, &raw_visited_1, 0, 1, &emitted_raw);
+        emit_raw_statements_internal(ctx, kids, &raw_visited_1, 0, 1, &emitted_raw);
 
         if (sorted)
         {
-            emit_struct_defs(ctx, sorted, out, &visited);
+            emit_struct_defs(ctx, sorted, &visited);
         }
 
         // Second pass: emit non-preprocessor raw statements after struct defs
         VisitedModules *raw_visited_2 = NULL;
-        emit_raw_statements_internal(kids, out, &raw_visited_2, 0, 0, &emitted_raw);
+        emit_raw_statements_internal(ctx, kids, &raw_visited_2, 0, 0, &emitted_raw);
 
         // Emit type aliases was here (moved up)
 
@@ -880,21 +880,21 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
         }
 
         visited = NULL;
-        emit_trait_wrappers(kids, out, &visited);
+        emit_trait_wrappers(ctx, kids, &visited);
 
         visited = NULL;
-        emit_protos(ctx, merged_funcs, out, &visited);
+        emit_protos(ctx, merged_funcs, &visited);
 
         visited = NULL;
-        emit_globals(ctx, merged_globals, out, &visited);
+        emit_globals(ctx, merged_globals, &visited);
 
-        emit_impl_vtables(ctx, out);
-        emit_auto_drop_glues(ctx, sorted, out);
-        emit_generic_drop_macro(ctx, sorted, out);
+        emit_impl_vtables(ctx);
+        emit_auto_drop_glues(ctx, sorted);
+        emit_generic_drop_macro(ctx, sorted);
 
-        emit_lambda_defs(ctx, out);
+        emit_lambda_defs(ctx);
 
-        int test_count = emit_tests_and_runner(ctx, kids, out);
+        int test_count = emit_tests_and_runner(ctx, kids);
 
         ASTNode *iter = merged_funcs;
         while (iter)
@@ -998,12 +998,12 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
             }
             if (iter->cfg_condition)
             {
-                fprintf(out, "#if %s\n", iter->cfg_condition);
+                EMIT(ctx, "#if %s\n", iter->cfg_condition);
             }
-            codegen_node_single(ctx, iter, out);
+            codegen_node_single(ctx, iter);
             if (iter->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
             iter = iter->next;
         }
@@ -1022,12 +1022,12 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (!has_user_main && test_count > 0)
         {
-            fprintf(out, "\nint main() { _z_run_tests(); return 0; }\n");
+            EMIT(ctx, "\nint main() { _z_run_tests(); return 0; }\n");
         }
 
         if (g_config.use_cpp)
         {
-            fprintf(out, "\n#ifdef __cplusplus\n}\n#endif\n");
+            EMIT(ctx, "\n#ifdef __cplusplus\n}\n#endif\n");
         }
 
         // Clean up emitted content tracking list

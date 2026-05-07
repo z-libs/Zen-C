@@ -66,7 +66,7 @@ static void plugin_note(const ZApi *api, const char *fmt, ...)
            api->current_line, msg);
 }
 
-void zptr_init_api(ZApi *api, const char *filename, int line, FILE *out, FILE *hoist_out)
+void zptr_init_api(ZApi *api, const char *filename, int line)
 {
     if (!api)
     {
@@ -76,8 +76,6 @@ void zptr_init_api(ZApi *api, const char *filename, int line, FILE *out, FILE *h
     api->api_version = ZEN_PLUGIN_API_VERSION;
     api->filename = filename ? filename : "input.zc";
     api->current_line = line;
-    api->out = out;
-    api->hoist_out = hoist_out;
 
     api->error = plugin_error;
     api->warn = plugin_warn;
@@ -274,13 +272,11 @@ ZPlugin *zptr_find_plugin(const char *name)
     (void)name;
     return NULL;
 }
-void zptr_init_api(ZApi *api, const char *filename, int line, FILE *out, FILE *hoist_out)
+void zptr_init_api(ZApi *api, const char *filename, int line)
 {
     (void)api;
     (void)filename;
     (void)line;
-    (void)out;
-    (void)hoist_out;
 }
 void zptr_plugin_mgr_cleanup(void)
 {

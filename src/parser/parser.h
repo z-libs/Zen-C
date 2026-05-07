@@ -4,6 +4,7 @@
 
 #include "ast.h"
 #include "zprep.h"
+#include "../utils/emitter.h"
 
 // Operator precedence for expression parsing
 
@@ -364,6 +365,7 @@ struct ParserContext
     int extern_symbol_count; ///< Count of external symbols.
 
     // Codegen state:
+    Emitter emitter;    ///< Emitter for code generation.
     FILE *hoist_out;    ///< File stream for hoisting code (e.g. from plugins).
     int skip_preamble;  ///< If 1, codegen won't emit standard preamble (includes etc).
     int is_repl;        ///< 1 if running in REPL mode.
@@ -758,7 +760,7 @@ const char *resolve_plugin(ParserContext *ctx, const char *name_or_alias);
 /**
  * @brief Prints type definitions to a file.
  */
-void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes);
+void print_type_defs(ParserContext *ctx, ASTNode *nodes);
 
 // String manipulation
 

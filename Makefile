@@ -67,6 +67,7 @@ SRCS = src/main.c \
        src/codegen/codegen_decl.c \
        src/codegen/codegen_main.c \
        src/codegen/codegen_utils.c \
+       src/utils/emitter.c \
        src/utils/utils.c \
        src/utils/colors.c \
        src/utils/cmd.c \

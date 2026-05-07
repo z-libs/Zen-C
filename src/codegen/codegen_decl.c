@@ -10,288 +10,232 @@
 #include <string.h>
 #include "../platform/misra.h"
 
-static void emit_freestanding_preamble(FILE *out)
+static void emit_freestanding_preamble(ParserContext *ctx)
 {
-    fputs("#include <stddef.h>\n#include <stdint.h>\n#include "
-          "<stdbool.h>\n#include <stdarg.h>\n",
-          out);
-    fputs("#ifdef __has_builtin\n"
-          "#if __has_builtin(__builtin_pow)\n"
-          "#define _zc_pow __builtin_pow\n"
-          "#endif\n"
-          "#endif\n"
-          "#ifndef _zc_pow\n"
-          "extern double pow(double, double);\n"
-          "#define _zc_pow pow\n"
-          "#endif\n",
-          out);
-    fputs(ZC_TCC_COMPAT_STR, out);
-    fputs("typedef size_t usize;\ntypedef char* string;\ntypedef intptr_t any;\n", out);
-    fputs("#define U0 void\n#define I8 int8_t\n#define U8 uint8_t\n#define I16 "
-          "int16_t\n#define U16 uint16_t\n",
-          out);
-    fputs("#define I32 int32_t\n#define U32 uint32_t\n#define I64 "
-          "int64_t\n#define U64 "
-          "uint64_t\n",
-          out);
-    fputs("#define F32 float\n#define F64 double\n", out);
-    fputs("static inline const char* _z_bool_str(_Bool b) { return b ? \"true\" : \"false\"; }\n",
-          out);
-    fputs("#ifdef __SIZEOF_INT128__\n", out);
-    fputs("static inline const char *_z_u128_str(unsigned __int128 val) {\n"
-          "    static _Thread_local char buf[40];\n"
-          "    if (val == 0) return \"0\";\n"
-          "    int i = 38;\n"
-          "    buf[39] = 0;\n"
-          "    while (val > 0) { buf[i--] = (char)((val % 10) + '0'); val /= 10; }\n"
-          "    return &buf[i + 1];\n"
-          "}\n"
-          "static inline const char *_z_i128_str(__int128 val) {\n"
-          "    static _Thread_local char buf[41];\n"
-          "    if (val == 0) return \"0\";\n"
-          "    int neg = val < 0;\n"
-          "    unsigned __int128 uval = neg ? -val : val;\n"
-          "    int i = 39;\n"
-          "    buf[40] = 0;\n"
-          "    while (uval > 0) { buf[i--] = (char)((uval % 10) + '0'); uval /= 10; }\n"
-          "    if (neg) buf[i--] = '-';\n"
-          "    return &buf[i + 1];\n"
-          "}\n"
-          "#define _z_128_map ,__int128: \"%s\", unsigned __int128: \"%s\"\n"
-          "#define _z_safe_i128(x) _Generic((x), __int128: (x), default: (__int128)0)\n"
-          "#define _z_safe_u128(x) _Generic((x), unsigned __int128: (x), default: (unsigned "
-          "__int128)0)\n"
-          "#define _z_128_arg_map(x) ,__int128: _z_i128_str(_z_safe_i128(x)), unsigned __int128: "
-          "_z_u128_str(_z_safe_u128(x))\n",
-          out);
-    fputs("#else\n", out);
-    fputs("#define _z_128_map\n", out);
-    fputs("#define _z_128_arg_map(x)\n", out);
-    fputs("#endif\n", out);
-    fputs("#define _z_str(x) _Generic((x), _Bool: \"%s\", char: \"%c\", "
-          "signed char: \"%c\", unsigned char: \"%u\", short: \"%d\", "
-          "unsigned short: \"%u\", int: \"%d\", unsigned int: \"%u\", "
-          "long: \"%ld\", unsigned long: \"%lu\", long long: \"%lld\", "
-          "unsigned long long: \"%llu\", float: \"%f\", double: \"%f\", "
-          "char*: \"%s\", const char*: \"%s\", void*: \"%p\" _z_128_map)\n",
-          out);
-    fputs("#define _z_safe_bool(x) _Generic((x), _Bool: (x), default: (_Bool)0)\n"
-          "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(_z_safe_bool(x)) _z_128_arg_map(x), "
-          "default: (x))\n",
-          out);
-    fputs("typedef struct { void *func; void *ctx; void (*drop)(void*); } z_closure_T;\n", out);
-    fputs("static void *_z_closure_ctx_stash[256];\n", out);
+    EMIT(ctx, "%s",
+         "#include <stddef.h>\n#include <stdint.h>\n#include <stdbool.h>\n#include <stdarg.h>\n");
+    EMIT(ctx, "%s",
+         "#ifdef __has_builtin\n#if __has_builtin(__builtin_pow)\n#define _zc_pow "
+         "__builtin_pow\n#endif\n#endif\n#ifndef _zc_pow\nextern double pow(double, "
+         "double);\n#define _zc_pow pow\n#endif\n");
+    EMIT(ctx, "%s", ZC_TCC_COMPAT_STR);
+    EMIT(ctx, "%s", "typedef size_t usize;\ntypedef char* string;\ntypedef intptr_t any;\n");
+    EMIT(ctx, "%s",
+         "#define U0 void\n#define I8 int8_t\n#define U8 uint8_t\n#define I16 int16_t\n#define U16 "
+         "uint16_t\n");
+    EMIT(ctx, "%s",
+         "#define I32 int32_t\n#define U32 uint32_t\n#define I64 int64_t\n#define U64 uint64_t\n");
+    EMIT(ctx, "%s", "#define F32 float\n#define F64 double\n");
+    EMIT(ctx, "%s",
+         "static inline const char* _z_bool_str(_Bool b) { return b ? \"true\" : \"false\"; }\n");
+    EMIT(ctx, "%s", "#ifdef __SIZEOF_INT128__\n");
+    EMIT(ctx, "%s",
+         "static inline const char *_z_u128_str(unsigned __int128 val) {\n    static _Thread_local "
+         "char buf[40];\n    if (val == 0) return \"0\";\n    int i = 38;\n    buf[39] = 0;\n    "
+         "while (val > 0) { buf[i--] = (char)((val % 10) + '0'); val /= 10; }\n    return &buf[i + "
+         "1];\n}\nstatic inline const char *_z_i128_str(__int128 val) {\n    static _Thread_local "
+         "char buf[41];\n    if (val == 0) return \"0\";\n    int neg = val < 0;\n    unsigned "
+         "__int128 uval = neg ? -val : val;\n    int i = 39;\n    buf[40] = 0;\n    while (uval > "
+         "0) { buf[i--] = (char)((uval % 10) + '0'); uval /= 10; }\n    if (neg) buf[i--] = '-';\n "
+         "   return &buf[i + 1];\n}\n#define _z_128_map ,__int128: \"%s\", unsigned __int128: "
+         "\"%s\"\n#define _z_safe_i128(x) _Generic((x), __int128: (x), default: "
+         "(__int128)0)\n#define _z_safe_u128(x) _Generic((x), unsigned __int128: (x), default: "
+         "(unsigned __int128)0)\n#define _z_128_arg_map(x) ,__int128: "
+         "_z_i128_str(_z_safe_i128(x)), unsigned __int128: _z_u128_str(_z_safe_u128(x))\n");
+    EMIT(ctx, "%s", "#else\n");
+    EMIT(ctx, "%s", "#define _z_128_map\n");
+    EMIT(ctx, "%s", "#define _z_128_arg_map(x)\n");
+    EMIT(ctx, "%s", "#endif\n");
+    EMIT(ctx, "%s",
+         "#define _z_str(x) _Generic((x), _Bool: \"%s\", char: \"%c\", signed char: \"%c\", "
+         "unsigned char: \"%u\", short: \"%d\", unsigned short: \"%u\", int: \"%d\", unsigned int: "
+         "\"%u\", long: \"%ld\", unsigned long: \"%lu\", long long: \"%lld\", unsigned long long: "
+         "\"%llu\", float: \"%f\", double: \"%f\", char*: \"%s\", const char*: \"%s\", void*: "
+         "\"%p\" _z_128_map)\n");
+    EMIT(ctx, "%s",
+         "#define _z_safe_bool(x) _Generic((x), _Bool: (x), default: (_Bool)0)\n#define _z_arg(x) "
+         "_Generic((x), _Bool: _z_bool_str(_z_safe_bool(x)) _z_128_arg_map(x), default: (x))\n");
+    EMIT(ctx, "%s",
+         "typedef struct { void *func; void *ctx; void (*drop)(void*); } z_closure_T;\n");
+    EMIT(ctx, "%s", "static void *_z_closure_ctx_stash[256];\n");
 
     // In true freestanding, explicit definitions of z_malloc/etc are removed.
     // The user must implement them if they use features requiring them.
     // Most primitives (integers, pointers) work without them.
 }
 
-void emit_preamble(ParserContext *ctx, FILE *out)
+void emit_preamble(ParserContext *ctx)
 {
     if (g_config.misra_mode)
     {
-        emit_misra_preamble(out);
+        emit_misra_preamble(ctx->emitter.out);
         return;
     }
     if (g_config.is_freestanding)
     {
-        emit_freestanding_preamble(out);
+        emit_freestanding_preamble(ctx);
         return;
     }
     else
     {
         // Standard hosted preamble.
-        fputs("#ifndef _GNU_SOURCE\n#define _GNU_SOURCE\n#endif\n", out);
-        fputs("#include <stdio.h>\n#include <stdlib.h>\n#include "
-              "<stddef.h>\n#include <string.h>\n",
-              out);
-        fputs("#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n", out);
-        fputs("#ifdef __has_builtin\n"
-              "#if __has_builtin(__builtin_pow)\n"
-              "#define _zc_pow __builtin_pow\n"
-              "#endif\n"
-              "#endif\n"
-              "#ifndef _zc_pow\n"
-              "extern double pow(double, double);\n"
-              "#define _zc_pow pow\n"
-              "#endif\n",
-              out);
-        fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
-        fputs("#define ZC_SIMD(T, N) T __attribute__((vector_size(N * sizeof(T))))\n", out);
+        EMIT(ctx, "%s", "#ifndef _GNU_SOURCE\n#define _GNU_SOURCE\n#endif\n");
+        EMIT(ctx, "%s",
+             "#include <stdio.h>\n#include <stdlib.h>\n#include <stddef.h>\n#include <string.h>\n");
+        EMIT(ctx, "%s", "#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n");
+        EMIT(ctx, "%s",
+             "#ifdef __has_builtin\n#if __has_builtin(__builtin_pow)\n#define _zc_pow "
+             "__builtin_pow\n#endif\n#endif\n#ifndef _zc_pow\nextern double pow(double, "
+             "double);\n#define _zc_pow pow\n#endif\n");
+        EMIT(ctx, "%s", "#include <unistd.h>\n#include <fcntl.h>\n"); // POSIX functions
+        EMIT(ctx, "%s", "#define ZC_SIMD(T, N) T __attribute__((vector_size(N * sizeof(T))))\n");
 
         // C++ compatibility
         if (g_config.use_cpp)
         {
             // For C++: define ZC_AUTO as auto, include compat.h macros inline
-            fputs("#define ZC_AUTO auto\n", out);
-            fputs("#define ZC_AUTO_INIT(var, init) auto var = (init)\n", out);
-            fputs("#define ZC_CAST(T, x) static_cast<T>(x)\n", out);
-            fputs("#define null nullptr\n", out);
+            EMIT(ctx, "%s", "#define ZC_AUTO auto\n");
+            EMIT(ctx, "%s", "#define ZC_AUTO_INIT(var, init) auto var = (init)\n");
+            EMIT(ctx, "%s", "#define ZC_CAST(T, x) static_cast<T>(x)\n");
+            EMIT(ctx, "%s", "#define null nullptr\n");
             // C++ _z_str via overloads
-            fputs("inline const char* _z_bool_str(bool b) { return b ? \"true\" : \"false\"; }\n",
-                  out);
-            fputs("inline const char* _z_str(bool)               { return \"%s\"; }\n", out);
-            fputs("inline const char* _z_arg(bool b)             { return _z_bool_str(b); }\n",
-                  out);
-            fputs("template<typename T> inline T _z_arg(T x)     { return x; }\n", out);
-            fputs("inline const char* _z_str(char)               { return \"%c\"; }\n", out);
-            fputs("inline const char* _z_str(signed char)        { return \"%d\"; }\n", out);
-            fputs("inline const char* _z_str(unsigned char)      { return \"%u\"; }\n", out);
-            fputs("inline const char* _z_str(short)               { return \"%d\"; }\n", out);
-            fputs("inline const char* _z_str(unsigned short)      { return \"%u\"; }\n", out);
-            fputs("inline const char* _z_str(int)                { return \"%d\"; }\n", out);
-            fputs("inline const char* _z_str(unsigned int)       { return \"%u\"; }\n", out);
-            fputs("inline const char* _z_str(long)               { return \"%ld\"; }\n", out);
-            fputs("inline const char* _z_str(unsigned long)      { return \"%lu\"; }\n", out);
-            fputs("inline const char* _z_str(long long)          { return \"%lld\"; }\n", out);
-            fputs("inline const char* _z_str(unsigned long long) { return \"%llu\"; }\n", out);
-            fputs("inline const char* _z_str(float)              { return \"%f\"; }\n", out);
-            fputs("inline const char* _z_str(double)             { return \"%f\"; }\n", out);
-            fputs("inline const char* _z_str(char*)              { return \"%s\"; }\n", out);
-            fputs("inline const char* _z_str(const char*)        { return \"%s\"; }\n", out);
-            fputs("inline const char* _z_str(void*)              { return \"%p\"; }\n", out);
+            EMIT(ctx, "%s",
+                 "inline const char* _z_bool_str(bool b) { return b ? \"true\" : \"false\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(bool)               { return \"%s\"; }\n");
+            EMIT(ctx, "%s",
+                 "inline const char* _z_arg(bool b)             { return _z_bool_str(b); }\n");
+            EMIT(ctx, "%s", "template<typename T> inline T _z_arg(T x)     { return x; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(char)               { return \"%c\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(signed char)        { return \"%d\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(unsigned char)      { return \"%u\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(short)               { return \"%d\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(unsigned short)      { return \"%u\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(int)                { return \"%d\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(unsigned int)       { return \"%u\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(long)               { return \"%ld\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(unsigned long)      { return \"%lu\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(long long)          { return \"%lld\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(unsigned long long) { return \"%llu\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(float)              { return \"%f\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(double)             { return \"%f\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(char*)              { return \"%s\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(const char*)        { return \"%s\"; }\n");
+            EMIT(ctx, "%s", "inline const char* _z_str(void*)              { return \"%p\"; }\n");
         }
         else
         {
             // C mode
-            fputs("#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202300L\n", out);
-            fputs("#define ZC_AUTO auto\n", out);
-            fputs("#define ZC_AUTO_INIT(var, init) auto var = (init)\n", out);
-            fputs("#else\n", out);
-            fputs("#define ZC_AUTO __auto_type\n", out);
-            fputs("#define ZC_AUTO_INIT(var, init) __auto_type var = (init)\n", out);
-            fputs("#endif\n", out);
-            fputs("#define ZC_CAST(T, x) ((T)(x))\n", out);
-            fputs(ZC_TCC_COMPAT_STR, out);
-            fputs("static inline const char* _z_bool_str(_Bool b) { return b ? \"true\" : "
-                  "\"false\"; }\n",
-                  out);
-            fputs(ZC_C_GENERIC_STR, out);
-            fputs(ZC_C_ARG_GENERIC_STR, out);
+            EMIT(ctx, "%s", "#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202300L\n");
+            EMIT(ctx, "%s", "#define ZC_AUTO auto\n");
+            EMIT(ctx, "%s", "#define ZC_AUTO_INIT(var, init) auto var = (init)\n");
+            EMIT(ctx, "%s", "#else\n");
+            EMIT(ctx, "%s", "#define ZC_AUTO __auto_type\n");
+            EMIT(ctx, "%s", "#define ZC_AUTO_INIT(var, init) __auto_type var = (init)\n");
+            EMIT(ctx, "%s", "#endif\n");
+            EMIT(ctx, "%s", "#define ZC_CAST(T, x) ((T)(x))\n");
+            EMIT(ctx, "%s", ZC_TCC_COMPAT_STR);
+            EMIT(ctx, "%s",
+                 "static inline const char* _z_bool_str(_Bool b) { return b ? \"true\" : "
+                 "\"false\"; }\n");
+            EMIT(ctx, "%s", ZC_C_GENERIC_STR);
+            EMIT(ctx, "%s", ZC_C_ARG_GENERIC_STR);
         }
 
-        fputs("typedef size_t usize;\ntypedef char* string;\ntypedef intptr_t any;\n", out);
+        EMIT(ctx, "%s", "typedef size_t usize;\ntypedef char* string;\ntypedef intptr_t any;\n");
         if (ctx->has_async)
         {
-            fputs("#include <pthread.h>\n", out);
-            fputs("typedef struct { pthread_t thread; void *result; } Async;\n", out);
+            EMIT(ctx, "%s", "#include <pthread.h>\n");
+            EMIT(ctx, "%s", "typedef struct { pthread_t thread; void *result; } Async;\n");
         }
-        fputs("#ifdef ZC_STATIC_PLUGIN\n"
-              "#define ZC_FUNC static\n"
-              "#define ZC_GLOBAL static\n"
-              "#else\n"
-              "#define ZC_FUNC\n"
-              "#define ZC_GLOBAL\n"
-              "#endif\n",
-              out);
-        fputs("typedef struct { void *func; void *ctx; void (*drop)(void*); } z_closure_T;\n", out);
-        fputs("static void *_z_closure_ctx_stash[256];\n", out);
-        fputs("typedef void U0;\ntypedef int8_t I8;\ntypedef uint8_t U8;\ntypedef "
-              "int16_t I16;\ntypedef uint16_t U16;\n",
-              out);
-        fputs("typedef int32_t I32;\ntypedef uint32_t U32;\ntypedef int64_t I64;\ntypedef "
-              "uint64_t U64;\n",
-              out);
-        fputs("#define F32 float\n#define F64 double\n", out);
+        EMIT(ctx, "%s",
+             "#ifdef ZC_STATIC_PLUGIN\n#define ZC_FUNC static\n#define ZC_GLOBAL "
+             "static\n#else\n#define ZC_FUNC\n#define ZC_GLOBAL\n#endif\n");
+        EMIT(ctx, "%s",
+             "typedef struct { void *func; void *ctx; void (*drop)(void*); } z_closure_T;\n");
+        EMIT(ctx, "%s", "static void *_z_closure_ctx_stash[256];\n");
+        EMIT(ctx, "%s",
+             "typedef void U0;\ntypedef int8_t I8;\ntypedef uint8_t U8;\ntypedef int16_t "
+             "I16;\ntypedef uint16_t U16;\n");
+        EMIT(ctx, "%s",
+             "typedef int32_t I32;\ntypedef uint32_t U32;\ntypedef int64_t I64;\ntypedef uint64_t "
+             "U64;\n");
+        EMIT(ctx, "%s", "#define F32 float\n#define F64 double\n");
 
         // Memory Mapping.
         if (g_config.use_cpp)
         {
             // C++ needs explicit casts for void* conversions
-            fputs("#define z_malloc(sz) static_cast<char*>(malloc(sz))\n", out);
-            fputs("#define z_realloc(p, sz) static_cast<char*>(realloc(p, sz))\n", out);
+            EMIT(ctx, "%s", "#define z_malloc(sz) static_cast<char*>(malloc(sz))\n");
+            EMIT(ctx, "%s", "#define z_realloc(p, sz) static_cast<char*>(realloc(p, sz))\n");
         }
         else
         {
-            fputs("#define z_malloc malloc\n#define z_realloc realloc\n", out);
+            EMIT(ctx, "%s", "#define z_malloc malloc\n#define z_realloc realloc\n");
         }
-        fputs("#define z_free free\n#define z_print printf\n", out);
-        fputs("static void __zenc_panic(const char* msg) { fprintf(stderr, \"Panic: %s\\n\", "
-              "msg); exit(1); }\n",
-              out);
-        fputs("#if defined(__APPLE__)\n"
-              "#define _ZC_SEC __attribute__((used,section(\"__DATA,__zarch\")))\n"
-              "#elif defined(_WIN32)\n"
-              "#define _ZC_SEC __attribute__((used))\n"
-              "#else\n"
-              "#define _ZC_SEC __attribute__((used,section(\".note.zarch\")))\n"
-              "#endif\n",
-              out);
-        fputs("static const unsigned char _zc_abi_v1[] _ZC_SEC = {"
-              "0x07,0xd5,"
-              "0x59,0x30,0x7c,0x7f,0x66,0x75,0x30,0x69,"
-              "0x7f,0x65,0x3c,0x30,0x59,0x7c,0x79,0x7e,"
-              "0x73,0x71};\n",
-              out);
+        EMIT(ctx, "%s", "#define z_free free\n#define z_print printf\n");
+        EMIT(ctx, "%s",
+             "static void __zenc_panic(const char* msg) { fprintf(stderr, \"Panic: %s\\n\", msg); "
+             "exit(1); }\n");
+        EMIT(ctx, "%s",
+             "#if defined(__APPLE__)\n#define _ZC_SEC "
+             "__attribute__((used,section(\"__DATA,__zarch\")))\n#elif defined(_WIN32)\n#define "
+             "_ZC_SEC __attribute__((used))\n#else\n#define _ZC_SEC "
+             "__attribute__((used,section(\".note.zarch\")))\n#endif\n");
+        EMIT(ctx, "%s",
+             "static const unsigned char _zc_abi_v1[] _ZC_SEC = "
+             "{0x07,0xd5,0x59,0x30,0x7c,0x7f,0x66,0x75,0x30,0x69,0x7f,0x65,0x3c,0x30,0x59,0x7c,"
+             "0x79,0x7e,0x73,0x71};\n");
 
-        fputs("static void _z_autofree_impl(void *p) { void **pp = (void**)p; if(*pp) { "
-              "z_free(*pp); *pp "
-              "= NULL; } }\n",
-              out);
-        fputs("#define __zenc_assert(cond, ...) if (!(cond)) { fprintf(stderr, "
-              "\"\\\"Assertion failed: \\\" \" "
-              "__VA_ARGS__); exit(1); }\n",
-              out);
+        EMIT(ctx, "%s",
+             "static void _z_autofree_impl(void *p) { void **pp = (void**)p; if(*pp) { "
+             "z_free(*pp); *pp = NULL; } }\n");
+        EMIT(ctx, "%s",
+             "#define __zenc_assert(cond, ...) if (!(cond)) { fprintf(stderr, \"\\\"Assertion "
+             "failed: \\\" \" __VA_ARGS__); exit(1); }\n");
 
         // C++ compatible readln helper
         if (g_config.use_cpp)
         {
-            fputs(
-                "static string _z_readln_raw() { "
-                "size_t cap = 64; size_t len = 0; "
-                "char *line = static_cast<char*>(malloc(cap)); "
-                "if(!line) return NULL; "
-                "int c; "
-                "while((c = fgetc(stdin)) != EOF) { "
-                "if(c == '\\n') break; "
-                "if(len + 1 >= cap) { cap *= 2; char *n = static_cast<char*>(realloc(line, cap)); "
-                "if(!n) { free(line); return NULL; } line = n; } "
-                "line[len++] = c; } "
-                "if(len == 0 && c == EOF) { free(line); return NULL; } "
-                "line[len] = 0; return line; }\n",
-                out);
+            EMIT(ctx, "%s",
+                 "static string _z_readln_raw() { size_t cap = 64; size_t len = 0; char *line = "
+                 "static_cast<char*>(malloc(cap)); if(!line) return NULL; int c; while((c = "
+                 "fgetc(stdin)) != EOF) { if(c == '\\n') break; if(len + 1 >= cap) { cap *= 2; "
+                 "char *n = static_cast<char*>(realloc(line, cap)); if(!n) { free(line); return "
+                 "NULL; } line = n; } line[len++] = c; } if(len == 0 && c == EOF) { free(line); "
+                 "return NULL; } line[len] = 0; return line; }\n");
         }
         else
         {
-            fputs("static string _z_readln_raw() { "
-                  "size_t cap = 64; size_t len = 0; "
-                  "char *line = z_malloc(cap); "
-                  "if(!line) return NULL; "
-                  "int c; "
-                  "while((c = fgetc(stdin)) != EOF) { "
-                  "if(c == '\\n') break; "
-                  "if(len + 1 >= cap) { cap *= 2; char *n = z_realloc(line, cap); "
-                  "if(!n) { z_free(line); return NULL; } line = n; } "
-                  "line[len++] = c; } "
-                  "if(len == 0 && c == EOF) { z_free(line); return NULL; } "
-                  "line[len] = 0; return line; }\n",
-                  out);
+            EMIT(
+                ctx, "%s",
+                "static string _z_readln_raw() { size_t cap = 64; size_t len = 0; char *line = "
+                "z_malloc(cap); if(!line) return NULL; int c; while((c = fgetc(stdin)) != EOF) { "
+                "if(c == '\\n') break; if(len + 1 >= cap) { cap *= 2; char *n = z_realloc(line, "
+                "cap); if(!n) { z_free(line); return NULL; } line = n; } line[len++] = c; } if(len "
+                "== 0 && c == EOF) { z_free(line); return NULL; } line[len] = 0; return line; }\n");
         }
-        fputs("static int _z_scan_helper(const char *fmt, ...) { char *l = "
-              "_z_readln_raw(); if(!l) return "
-              "0; va_list ap; va_start(ap, fmt); int r = vsscanf(l, fmt, ap); "
-              "va_end(ap); "
-              "z_free(l); return r; }\n",
-              out);
+        EMIT(ctx, "%s",
+             "static int _z_scan_helper(const char *fmt, ...) { char *l = _z_readln_raw(); if(!l) "
+             "return 0; va_list ap; va_start(ap, fmt); int r = vsscanf(l, fmt, ap); va_end(ap); "
+             "z_free(l); return r; }\n");
 
         // REPL helpers: suppress/restore stdout.
-        fputs("static int _z_orig_stdout = -1;\n", out);
-        fputs("static void _z_suppress_stdout() {\n", out);
-        fputs("    fflush(stdout);\n", out);
-        fputs("    if (_z_orig_stdout == -1) _z_orig_stdout = dup(STDOUT_FILENO);\n", out);
-        fputs("    int nullfd = open(\"/dev/null\", O_WRONLY);\n", out);
-        fputs("    dup2(nullfd, STDOUT_FILENO);\n", out);
-        fputs("    close(nullfd);\n", out);
-        fputs("}\n", out);
-        fputs("static void _z_restore_stdout() {\n", out);
-        fputs("    fflush(stdout);\n", out);
-        fputs("    if (_z_orig_stdout != -1) {\n", out);
-        fputs("        dup2(_z_orig_stdout, STDOUT_FILENO);\n", out);
-        fputs("        close(_z_orig_stdout);\n", out);
-        fputs("        _z_orig_stdout = -1;\n", out);
-        fputs("    }\n", out);
-        fputs("}\n", out);
+        EMIT(ctx, "%s", "static int _z_orig_stdout = -1;\n");
+        EMIT(ctx, "%s", "static void _z_suppress_stdout() {\n");
+        EMIT(ctx, "%s", "    fflush(stdout);\n");
+        EMIT(ctx, "%s", "    if (_z_orig_stdout == -1) _z_orig_stdout = dup(STDOUT_FILENO);\n");
+        EMIT(ctx, "%s", "    int nullfd = open(\"/dev/null\", O_WRONLY);\n");
+        EMIT(ctx, "%s", "    dup2(nullfd, STDOUT_FILENO);\n");
+        EMIT(ctx, "%s", "    close(nullfd);\n");
+        EMIT(ctx, "%s", "}\n");
+        EMIT(ctx, "%s", "static void _z_restore_stdout() {\n");
+        EMIT(ctx, "%s", "    fflush(stdout);\n");
+        EMIT(ctx, "%s", "    if (_z_orig_stdout != -1) {\n");
+        EMIT(ctx, "%s", "        dup2(_z_orig_stdout, STDOUT_FILENO);\n");
+        EMIT(ctx, "%s", "        close(_z_orig_stdout);\n");
+        EMIT(ctx, "%s", "        _z_orig_stdout = -1;\n");
+        EMIT(ctx, "%s", "    }\n");
+        EMIT(ctx, "%s", "}\n");
     }
 }
 
@@ -330,12 +274,12 @@ static void free_visited_modules(VisitedModules *visited)
     (void)visited;
 }
 
-static void emit_includes_and_aliases_internal(ASTNode *node, FILE *out, VisitedModules **visited,
-                                               int depth)
+static void emit_includes_and_aliases_internal(ParserContext *ctx, ASTNode *node,
+                                               VisitedModules **visited, int depth)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_includes_and_aliases (circular imports?)");
+        zfatal("Infinite recursion detected in emit_includes_and_aliases (ctx, circular imports?)");
     }
     while (node)
     {
@@ -344,7 +288,7 @@ static void emit_includes_and_aliases_internal(ASTNode *node, FILE *out, Visited
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_includes_and_aliases_internal(node->import_stmt.module_root, out, visited,
+                emit_includes_and_aliases_internal(ctx, node->import_stmt.module_root, visited,
                                                    depth + 1);
             }
             node = node->next;
@@ -354,41 +298,41 @@ static void emit_includes_and_aliases_internal(ASTNode *node, FILE *out, Visited
         {
             if (node->include.is_system)
             {
-                fprintf(out, "#include <%s>\n", node->include.path);
+                EMIT(ctx, "#include <%s>\n", node->include.path);
             }
             else
             {
-                fprintf(out, "#include \"%s\"\n", node->include.path);
+                EMIT(ctx, "#include \"%s\"\n", node->include.path);
             }
         }
         else if (node->type == NODE_AST_COMMENT)
         {
-            fprintf(out, "%s\n", node->comment.content);
+            EMIT(ctx, "%s\n", node->comment.content);
         }
         node = node->next;
     }
 }
 
-void emit_includes_and_aliases(ASTNode *node, FILE *out, VisitedModules **visited)
+void emit_includes_and_aliases(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
     if (visited)
     {
-        emit_includes_and_aliases_internal(node, out, visited, 0);
+        emit_includes_and_aliases_internal(ctx, node, visited, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_includes_and_aliases_internal(node, out, &local_visited, 0);
+        emit_includes_and_aliases_internal(ctx, node, &local_visited, 0);
     }
 }
 
 // Emit type aliases (after struct defs so the aliased types exist)
-static void emit_type_aliases_internal(ASTNode *node, FILE *out, VisitedModules **visited,
+static void emit_type_aliases_internal(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
                                        int depth)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_type_aliases (circular imports?)");
+        zfatal("Infinite recursion detected in emit_type_aliases (ctx, circular imports?)");
     }
     while (node)
     {
@@ -397,14 +341,14 @@ static void emit_type_aliases_internal(ASTNode *node, FILE *out, VisitedModules 
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_type_aliases_internal(node->import_stmt.module_root, out, visited, depth + 1);
+                emit_type_aliases_internal(ctx, node->import_stmt.module_root, visited, depth + 1);
             }
         }
         else if (node->type == NODE_TYPE_ALIAS)
         {
             if (node->cfg_condition)
             {
-                fprintf(out, "#if %s\n", node->cfg_condition);
+                EMIT(ctx, "#if %s\n", node->cfg_condition);
             }
             char *c_type_str = type_to_c_string(node->type_info);
             // Quick fix for raw function pointers and arrays in typedefs:
@@ -417,43 +361,43 @@ static void emit_type_aliases_internal(ASTNode *node, FILE *out, VisitedModules 
                 {
                     char *ptr = strstr(c_type_str, "(*)");
                     int prefix_len = ptr - c_type_str;
-                    fprintf(out, "typedef %.*s (*%s)%s;\n", prefix_len, c_type_str,
-                            node->type_alias.alias, ptr + 3);
+                    EMIT(ctx, "typedef %.*s (*%s)%s;\n", prefix_len, c_type_str,
+                         node->type_alias.alias, ptr + 3);
                 }
                 else
                 {
-                    fprintf(out, "typedef %s %s;\n", c_type_str, node->type_alias.alias);
+                    EMIT(ctx, "typedef %s %s;\n", c_type_str, node->type_alias.alias);
                 }
                 free(c_type_str);
             }
             else
             {
-                fprintf(out, "typedef %s %s;\n", node->type_alias.original_type,
-                        node->type_alias.alias);
+                EMIT(ctx, "typedef %s %s;\n", node->type_alias.original_type,
+                     node->type_alias.alias);
             }
             if (node->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
         }
         node = node->next;
     }
 }
 
-void emit_type_aliases(ASTNode *node, FILE *out, VisitedModules **visited)
+void emit_type_aliases(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
     if (visited)
     {
-        emit_type_aliases_internal(node, out, visited, 0);
+        emit_type_aliases_internal(ctx, node, visited, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_type_aliases_internal(node, out, &local_visited, 0);
+        emit_type_aliases_internal(ctx, node, &local_visited, 0);
     }
 }
 
-void emit_global_aliases(ParserContext *ctx, FILE *out)
+void emit_global_aliases(ParserContext *ctx)
 {
     TypeAlias *ta = ctx->type_aliases;
     while (ta)
@@ -467,30 +411,30 @@ void emit_global_aliases(ParserContext *ctx, FILE *out)
                 {
                     char *ptr = strstr(c_type_str, "(*)");
                     int prefix_len = ptr - c_type_str;
-                    fprintf(out, "typedef %.*s (*%s)%s;\n", prefix_len, c_type_str, ta->alias,
-                            ptr + 3);
+                    EMIT(ctx, "typedef %.*s (*%s)%s;\n", prefix_len, c_type_str, ta->alias,
+                         ptr + 3);
                 }
                 else
                 {
-                    fprintf(out, "typedef %s %s;\n", c_type_str, ta->alias);
+                    EMIT(ctx, "typedef %s %s;\n", c_type_str, ta->alias);
                 }
                 free(c_type_str);
             }
             else
             {
-                fprintf(out, "typedef %s %s;\n", ta->original_type, ta->alias);
+                EMIT(ctx, "typedef %s %s;\n", ta->original_type, ta->alias);
             }
         }
         else
         {
-            fprintf(out, "typedef %s %s;\n", ta->original_type, ta->alias);
+            EMIT(ctx, "typedef %s %s;\n", ta->original_type, ta->alias);
         }
         ta = ta->next;
     }
 }
 
 // Emit enum constructor prototypes
-void emit_enum_protos(ParserContext *ctx, ASTNode *node, FILE *out)
+void emit_enum_protos(ParserContext *ctx, ASTNode *node)
 {
     while (node)
     {
@@ -514,7 +458,7 @@ void emit_enum_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                 const char *final_name = node->link_name ? node->link_name : node->enm.name;
                 if (node->cfg_condition)
                 {
-                    fprintf(out, "#if %s\n", node->cfg_condition);
+                    EMIT(ctx, "#if %s\n", node->cfg_condition);
                 }
                 ASTNode *v = node->enm.variants;
                 while (v)
@@ -530,35 +474,35 @@ void emit_enum_protos(ParserContext *ctx, ASTNode *node, FILE *out)
 
                         if (tuple_def)
                         {
-                            fprintf(out, "%s %s__%s(", final_name, final_name, v->variant.name);
+                            EMIT(ctx, "%s %s__%s(", final_name, final_name, v->variant.name);
                             ASTNode *f = tuple_def->strct.fields;
                             int i = 0;
                             while (f)
                             {
                                 char *at = f->field.type;
-                                fprintf(out, "%s _%d%s", at, i, (f->next) ? ", " : "");
+                                EMIT(ctx, "%s _%d%s", at, i, (f->next) ? ", " : "");
                                 f = f->next;
                                 i++;
                             }
-                            fprintf(out, ");\n");
+                            EMIT(ctx, ");\n");
                         }
                         else
                         {
                             char *tstr = type_to_c_string(v->variant.payload);
-                            fprintf(out, "%s %s__%s(%s v);\n", final_name, final_name,
-                                    v->variant.name, tstr);
+                            EMIT(ctx, "%s %s__%s(%s v);\n", final_name, final_name, v->variant.name,
+                                 tstr);
                             free(tstr);
                         }
                     }
                     else
                     {
-                        fprintf(out, "%s %s__%s();\n", final_name, final_name, v->variant.name);
+                        EMIT(ctx, "%s %s__%s();\n", final_name, final_name, v->variant.name);
                     }
                     v = v->next;
                 }
                 if (node->cfg_condition)
                 {
-                    fprintf(out, "#endif\n");
+                    EMIT(ctx, "#endif\n");
                 }
             }
         }
@@ -567,7 +511,7 @@ void emit_enum_protos(ParserContext *ctx, ASTNode *node, FILE *out)
 }
 
 // Emit lambda definitions.
-void emit_lambda_defs(ParserContext *ctx, FILE *out)
+void emit_lambda_defs(ParserContext *ctx)
 {
     LambdaRef *cur = ctx->global_lambdas;
     while (cur)
@@ -578,7 +522,7 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
 
         if (node->lambda.num_captures > 0)
         {
-            fprintf(out, "struct Lambda_%d_Ctx {\n", node->lambda.lambda_id);
+            EMIT(ctx, "struct Lambda_%d_Ctx {\n", node->lambda.lambda_id);
             for (int i = 0; i < node->lambda.num_captures; i++)
             {
                 if (node->lambda.capture_modes && node->lambda.capture_modes[i] == 1)
@@ -592,7 +536,7 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                     {
                         tstr = xstrdup(node->lambda.captured_types[i]);
                     }
-                    fprintf(out, "    %s* %s;\n", tstr, node->lambda.captured_vars[i]);
+                    EMIT(ctx, "    %s* %s;\n", tstr, node->lambda.captured_vars[i]);
                     free(tstr);
                 }
                 else
@@ -606,7 +550,7 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                     {
                         tstr = xstrdup(node->lambda.captured_types[i]);
                     }
-                    fprintf(out, "    %s %s;\n", tstr, node->lambda.captured_vars[i]);
+                    EMIT(ctx, "    %s %s;\n", tstr, node->lambda.captured_vars[i]);
                     free(tstr);
 
                     char *tname = node->lambda.captured_types[i];
@@ -619,16 +563,16 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                     ASTNode *fdef = find_struct_def(ctx, clean);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
-                        fprintf(out, "    int __z_drop_flag_%s;\n", node->lambda.captured_vars[i]);
+                        EMIT(ctx, "    int __z_drop_flag_%s;\n", node->lambda.captured_vars[i]);
                     }
                 }
             }
-            fprintf(out, "};\n\n");
+            EMIT(ctx, "};\n\n");
 
             // Generate Drop function for the closure context
-            fprintf(out, "static void _lambda_%d_drop(void* _ctx) {\n", node->lambda.lambda_id);
-            fprintf(out, "    struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
-                    node->lambda.lambda_id, node->lambda.lambda_id);
+            EMIT(ctx, "static void _lambda_%d_drop(void* _ctx) {\n", node->lambda.lambda_id);
+            EMIT(ctx, "    struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
+                 node->lambda.lambda_id, node->lambda.lambda_id);
 
             for (int i = 0; i < node->lambda.num_captures; i++)
             {
@@ -644,15 +588,14 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                     ASTNode *fdef = find_struct_def(ctx, clean);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
-                        fprintf(out, "    if (ctx->__z_drop_flag_%s) %s__Drop__glue(&ctx->%s);\n",
-                                node->lambda.captured_vars[i], clean,
-                                node->lambda.captured_vars[i]);
+                        EMIT(ctx, "    if (ctx->__z_drop_flag_%s) %s__Drop__glue(&ctx->%s);\n",
+                             node->lambda.captured_vars[i], clean, node->lambda.captured_vars[i]);
                     }
                 }
             }
 
-            fprintf(out, "    free(_ctx);\n");
-            fprintf(out, "}\n\n");
+            EMIT(ctx, "    free(_ctx);\n");
+            EMIT(ctx, "}\n\n");
         }
 
         char *ret_type_str = node->lambda.return_type;
@@ -664,16 +607,16 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
 
         if (strcmp(ret_type_str, "unknown") == 0)
         {
-            fprintf(out, "void* _lambda_%d(", node->lambda.lambda_id);
+            EMIT(ctx, "void* _lambda_%d(", node->lambda.lambda_id);
         }
         else
         {
-            fprintf(out, "%s _lambda_%d(", ret_type_str, node->lambda.lambda_id);
+            EMIT(ctx, "%s _lambda_%d(", ret_type_str, node->lambda.lambda_id);
         }
 
         if (!node->lambda.is_bare)
         {
-            fprintf(out, "void* _ctx");
+            EMIT(ctx, "void* _ctx");
         }
 
         if (node->type_info && node->type_info->inner &&
@@ -693,16 +636,16 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
 
             if (!node->lambda.is_bare || i > 0)
             {
-                fprintf(out, ", ");
+                EMIT(ctx, ", ");
             }
 
             if (strcmp(param_type_str, "unknown") == 0)
             {
-                fprintf(out, "void* %s", node->lambda.param_names[i]);
+                EMIT(ctx, "void* %s", node->lambda.param_names[i]);
             }
             else
             {
-                fprintf(out, "%s %s", param_type_str, node->lambda.param_names[i]);
+                EMIT(ctx, "%s %s", param_type_str, node->lambda.param_names[i]);
             }
             if (node->type_info && node->type_info->args && node->type_info->args[i] &&
                 node->type_info->args[i]->kind != TYPE_UNKNOWN)
@@ -710,12 +653,12 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                 free(param_type_str);
             }
         }
-        fprintf(out, ") {\n");
+        EMIT(ctx, ") {\n");
 
         if (node->lambda.num_captures > 0)
         {
-            fprintf(out, "    struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
-                    node->lambda.lambda_id, node->lambda.lambda_id);
+            EMIT(ctx, "    struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
+                 node->lambda.lambda_id, node->lambda.lambda_id);
         }
 
         g_current_lambda = node;
@@ -731,20 +674,20 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
                     {
                         if (stmt->type != NODE_RETURN)
                         {
-                            fprintf(out, "    return ");
+                            EMIT(ctx, "    return ");
                         }
-                        codegen_node_single(ctx, stmt, out);
+                        codegen_node_single(ctx, stmt);
                     }
                     else
                     {
-                        codegen_node_single(ctx, stmt, out);
+                        codegen_node_single(ctx, stmt);
                     }
                     stmt = stmt->next;
                 }
             }
             else
             {
-                codegen_walker(ctx, node->lambda.body->block.statements, out);
+                codegen_walker(ctx, node->lambda.body->block.statements);
             }
         }
         else if (node->lambda.body)
@@ -752,20 +695,20 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
             if (node->type_info && node->type_info->inner &&
                 node->type_info->inner->kind != TYPE_VOID && node->lambda.body->type != NODE_RETURN)
             {
-                fprintf(out, "    return ");
+                EMIT(ctx, "    return ");
             }
-            codegen_node_single(ctx, node->lambda.body, out);
-            fprintf(out, ";\n");
+            codegen_node_single(ctx, node->lambda.body);
+            EMIT(ctx, ";\n");
         }
         g_current_lambda = NULL;
 
         for (int i = defer_count - 1; i >= 0; i--)
         {
-            emit_source_mapping_duplicate(defer_stack[i], out);
-            codegen_node_single(ctx, defer_stack[i], out);
+            emit_source_mapping_duplicate(ctx, defer_stack[i]);
+            codegen_node_single(ctx, defer_stack[i]);
         }
 
-        fprintf(out, "}\n\n");
+        EMIT(ctx, "}\n\n");
 
         defer_count = saved_defer;
         cur = cur->next;
@@ -773,12 +716,12 @@ void emit_lambda_defs(ParserContext *ctx, FILE *out)
 }
 
 // Emit struct and enum definitions.
-static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *out,
-                                      VisitedModules **visited, int depth)
+static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
+                                      int depth)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_struct_defs (circular imports?)");
+        zfatal("Infinite recursion detected in emit_struct_defs (ctx, circular imports?)");
     }
     while (node)
     {
@@ -787,8 +730,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_struct_defs_internal(ctx, node->import_stmt.module_root, out, visited,
-                                          depth + 1);
+                emit_struct_defs_internal(ctx, node->import_stmt.module_root, visited, depth + 1);
             }
             node = node->next;
             continue;
@@ -798,7 +740,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
         {
             if (node->root.children != node)
             { // Basic cycle check
-                emit_struct_defs_internal(ctx, node->root.children, out, visited, depth + 1);
+                emit_struct_defs_internal(ctx, node->root.children, visited, depth + 1);
             }
             node = node->next;
             continue;
@@ -825,18 +767,18 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
 
             if (node->cfg_condition)
             {
-                fprintf(out, "#if %s\n", node->cfg_condition);
+                EMIT(ctx, "#if %s\n", node->cfg_condition);
             }
 
             if (node->type_info && node->type_info->kind == TYPE_VECTOR)
             {
                 char *inner_c = type_to_c_string(node->type_info->inner);
-                fprintf(out, "typedef ZC_SIMD(%s, %d) %s;\n", inner_c, node->type_info->array_size,
-                        node->strct.name);
+                EMIT(ctx, "typedef ZC_SIMD(%s, %d) %s;\n", inner_c, node->type_info->array_size,
+                     node->strct.name);
                 free(inner_c);
                 if (node->cfg_condition)
                 {
-                    fprintf(out, "#endif\n");
+                    EMIT(ctx, "#endif\n");
                 }
                 node = node->next;
                 continue;
@@ -844,40 +786,40 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
 
             if (node->strct.is_union)
             {
-                fprintf(out, "union");
+                EMIT(ctx, "union");
             }
             else
             {
-                fprintf(out, "struct");
+                EMIT(ctx, "struct");
             }
 
             int has_any_attr = node->strct.is_packed || node->strct.align ||
                                node->strct.is_export || node->strct.attributes;
             if (has_any_attr)
             {
-                fprintf(out, " __attribute__((");
+                EMIT(ctx, " __attribute__((");
                 int first_attr = 1;
                 if (node->strct.is_packed)
                 {
-                    fprintf(out, "packed");
+                    EMIT(ctx, "packed");
                     first_attr = 0;
                 }
                 if (node->strct.align)
                 {
                     if (!first_attr)
                     {
-                        fprintf(out, ", ");
+                        EMIT(ctx, ", ");
                     }
-                    fprintf(out, "aligned(%d)", node->strct.align);
+                    EMIT(ctx, "aligned(%d)", node->strct.align);
                     first_attr = 0;
                 }
                 if (node->strct.is_export)
                 {
                     if (!first_attr)
                     {
-                        fprintf(out, ", ");
+                        EMIT(ctx, ", ");
                     }
-                    fprintf(out, "visibility(\"default\")");
+                    EMIT(ctx, "visibility(\"default\")");
                     first_attr = 0;
                 }
                 if (node->strct.attributes)
@@ -887,51 +829,51 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
                     {
                         if (!first_attr)
                         {
-                            fprintf(out, ", ");
+                            EMIT(ctx, ", ");
                         }
-                        fprintf(out, "%s", custom->name);
+                        EMIT(ctx, "%s", custom->name);
                         if (custom->arg_count > 0)
                         {
-                            fprintf(out, "(");
+                            EMIT(ctx, "(");
                             for (int i = 0; i < custom->arg_count; i++)
                             {
                                 if (i > 0)
                                 {
-                                    fprintf(out, ", ");
+                                    EMIT(ctx, ", ");
                                 }
-                                fprintf(out, "%s", custom->args[i]);
+                                EMIT(ctx, "%s", custom->args[i]);
                             }
-                            fprintf(out, ")");
+                            EMIT(ctx, ")");
                         }
                         first_attr = 0;
                         custom = custom->next;
                     }
                 }
-                fprintf(out, "))");
+                EMIT(ctx, "))");
             }
 
             if (node->strct.name)
             {
-                fprintf(out, " %s", node->link_name ? node->link_name : node->strct.name);
+                EMIT(ctx, " %s", node->link_name ? node->link_name : node->strct.name);
             }
 
-            fprintf(out, " {");
-            fprintf(out, "\n");
+            EMIT(ctx, " {");
+            EMIT(ctx, "\n");
             if (node->strct.fields)
             {
-                codegen_walker(ctx, node->strct.fields, out);
+                codegen_walker(ctx, node->strct.fields);
             }
             else
             {
                 // C requires at least one member in a struct.
-                fprintf(out, "    char _placeholder;\n");
+                EMIT(ctx, "    char _placeholder;\n");
             }
-            fprintf(out, "}");
+            EMIT(ctx, "}");
 
-            fprintf(out, ";\n\n");
+            EMIT(ctx, ";\n\n");
             if (node->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
         }
         else if (node->type == NODE_ENUM)
@@ -939,7 +881,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
             const char *final_name = node->link_name ? node->link_name : node->enm.name;
             if (node->cfg_condition)
             {
-                fprintf(out, "#if %s\n", node->cfg_condition);
+                EMIT(ctx, "#if %s\n", node->cfg_condition);
             }
 
             int has_payload = 0;
@@ -956,48 +898,48 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
 
             if (!has_payload)
             {
-                fprintf(out, "typedef enum { ");
+                EMIT(ctx, "typedef enum { ");
                 v = node->enm.variants;
                 while (v)
                 {
-                    fprintf(out, "%s__%s_Tag, ", final_name, v->variant.name);
+                    EMIT(ctx, "%s__%s_Tag, ", final_name, v->variant.name);
                     v = v->next;
                 }
-                fprintf(out, "} %s;\n\n", final_name);
+                EMIT(ctx, "} %s;\n\n", final_name);
 
                 v = node->enm.variants;
                 while (v)
                 {
-                    fprintf(out, "static inline %s %s__%s() { return %s__%s_Tag; }\n", final_name,
-                            final_name, v->variant.name, final_name, v->variant.name);
+                    EMIT(ctx, "static inline %s %s__%s() { return %s__%s_Tag; }\n", final_name,
+                         final_name, v->variant.name, final_name, v->variant.name);
                     v = v->next;
                 }
-                fprintf(out, "\n");
+                EMIT(ctx, "\n");
             }
 
             else
             {
-                fprintf(out, "typedef enum { ");
+                EMIT(ctx, "typedef enum { ");
                 v = node->enm.variants;
                 while (v)
                 {
-                    fprintf(out, "%s__%s_Tag, ", final_name, v->variant.name);
+                    EMIT(ctx, "%s__%s_Tag, ", final_name, v->variant.name);
                     v = v->next;
                 }
-                fprintf(out, "} %s_Tag;\n", final_name);
-                fprintf(out, "struct %s { %s_Tag tag; union { ", final_name, final_name);
+                EMIT(ctx, "} %s_Tag;\n", final_name);
+                EMIT(ctx, "struct %s { %s_Tag tag; union { ", final_name, final_name);
                 v = node->enm.variants;
                 while (v)
                 {
                     if (v->variant.payload)
                     {
                         char *tstr = type_to_c_string(v->variant.payload);
-                        fprintf(out, "%s %s; ", tstr, v->variant.name);
+                        EMIT(ctx, "%s %s; ", tstr, v->variant.name);
                         free(tstr);
                     }
                     v = v->next;
                 }
-                fprintf(out, "} data; };\n\n");
+                EMIT(ctx, "} data; };\n\n");
 
                 v = node->enm.variants;
                 while (v)
@@ -1014,55 +956,55 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
 
                         if (tuple_def)
                         {
-                            fprintf(out, "%s %s__%s(", final_name, final_name, v->variant.name);
+                            EMIT(ctx, "%s %s__%s(", final_name, final_name, v->variant.name);
                             ASTNode *f = tuple_def->strct.fields;
                             int i = 0;
                             while (f)
                             {
                                 char *at = f->field.type;
-                                fprintf(out, "%s _%d%s", at, i, (f->next) ? ", " : "");
+                                EMIT(ctx, "%s _%d%s", at, i, (f->next) ? ", " : "");
                                 f = f->next;
                                 i++;
                             }
-                            fprintf(out, ") {\n");
+                            EMIT(ctx, ") {\n");
                             if (g_config.use_cpp)
                             {
-                                fprintf(out, "    %s _res = {}; _res.tag = %s__%s_Tag; ",
-                                        final_name, final_name, v->variant.name);
+                                EMIT(ctx, "    %s _res = {}; _res.tag = %s__%s_Tag; ", final_name,
+                                     final_name, v->variant.name);
                                 for (int j = 0; j < i; j++)
                                 {
-                                    fprintf(out, "_res.data.%s.v%d = _%d; ", v->variant.name, j, j);
+                                    EMIT(ctx, "_res.data.%s.v%d = _%d; ", v->variant.name, j, j);
                                 }
-                                fprintf(out, "return _res; }\n");
+                                EMIT(ctx, "return _res; }\n");
                             }
                             else
                             {
-                                fprintf(out, "    return (%s){.tag=%s__%s_Tag, .data.%s={",
-                                        final_name, final_name, v->variant.name, v->variant.name);
+                                EMIT(ctx, "    return (%s){.tag=%s__%s_Tag, .data.%s={", final_name,
+                                     final_name, v->variant.name, v->variant.name);
                                 for (int j = 0; j < i; j++)
                                 {
-                                    fprintf(out, ".v%d=_%d%s", j, j, (j == i - 1) ? "" : ", ");
+                                    EMIT(ctx, ".v%d=_%d%s", j, j, (j == i - 1) ? "" : ", ");
                                 }
-                                fprintf(out, "}}; }\n");
+                                EMIT(ctx, "}}; }\n");
                             }
                         }
                         else
                         {
                             if (g_config.use_cpp)
                             {
-                                fprintf(out,
-                                        "%s %s__%s(%s v) { %s _res = {}; "
-                                        "_res.tag=%s__%s_Tag; _res.data.%s=v; return _res; }\n",
-                                        final_name, final_name, v->variant.name, tstr, final_name,
-                                        final_name, v->variant.name, v->variant.name);
+                                EMIT(ctx,
+                                     "%s %s__%s(%s v) { %s _res = {}; _res.tag=%s__%s_Tag; "
+                                     "_res.data.%s=v; return _res; }\n",
+                                     final_name, final_name, v->variant.name, tstr, final_name,
+                                     final_name, v->variant.name, v->variant.name);
                             }
                             else
                             {
-                                fprintf(out,
-                                        "%s %s__%s(%s v) { return "
-                                        "(%s){.tag=%s__%s_Tag, .data.%s=v}; }\n",
-                                        final_name, final_name, v->variant.name, tstr, final_name,
-                                        final_name, v->variant.name, v->variant.name);
+                                EMIT(ctx,
+                                     "%s %s__%s(%s v) { return (%s){.tag=%s__%s_Tag, .data.%s=v}; "
+                                     "}\n",
+                                     final_name, final_name, v->variant.name, tstr, final_name,
+                                     final_name, v->variant.name, v->variant.name);
                             }
                         }
                         free(tstr);
@@ -1071,19 +1013,17 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
                     {
                         if (g_config.use_cpp)
                         {
-                            fprintf(out,
-                                    "%s %s__%s() { %s _res = {}; "
-                                    "_res.tag=%s__%s_Tag; return _res; }\n",
-                                    final_name, final_name, v->variant.name, final_name, final_name,
-                                    v->variant.name);
+                            EMIT(
+                                ctx,
+                                "%s %s__%s() { %s _res = {}; _res.tag=%s__%s_Tag; return _res; }\n",
+                                final_name, final_name, v->variant.name, final_name, final_name,
+                                v->variant.name);
                         }
                         else
                         {
-                            fprintf(out,
-                                    "%s %s__%s() { return "
-                                    "(%s){.tag=%s__%s_Tag}; }\n",
-                                    final_name, final_name, v->variant.name, final_name, final_name,
-                                    v->variant.name);
+                            EMIT(ctx, "%s %s__%s() { return (%s){.tag=%s__%s_Tag}; }\n", final_name,
+                                 final_name, v->variant.name, final_name, final_name,
+                                 v->variant.name);
                         }
                     }
                     v = v->next;
@@ -1091,7 +1031,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
             }
             if (node->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
         }
 
@@ -1099,16 +1039,16 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, FILE *o
     }
 }
 
-void emit_struct_defs(ParserContext *ctx, ASTNode *node, FILE *out, VisitedModules **visited)
+void emit_struct_defs(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
     if (visited)
     {
-        emit_struct_defs_internal(ctx, node, out, visited, 0);
+        emit_struct_defs_internal(ctx, node, visited, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_struct_defs_internal(ctx, node, out, &local_visited, 0);
+        emit_struct_defs_internal(ctx, node, &local_visited, 0);
     }
 }
 
@@ -1135,11 +1075,12 @@ static char *substitute_proto_self(const char *type_str, const char *replacement
 }
 
 // Emit trait definitions.
-static void emit_trait_defs_internal(ASTNode *node, FILE *out, VisitedModules **visited, int depth)
+static void emit_trait_defs_internal(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
+                                     int depth)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_trait_defs (circular imports?)");
+        zfatal("Infinite recursion detected in emit_trait_defs (ctx, circular imports?)");
     }
     while (node)
     {
@@ -1148,7 +1089,7 @@ static void emit_trait_defs_internal(ASTNode *node, FILE *out, VisitedModules **
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_trait_defs_internal(node->import_stmt.module_root, out, visited, depth + 1);
+                emit_trait_defs_internal(ctx, node->import_stmt.module_root, visited, depth + 1);
             }
             node = node->next;
             continue;
@@ -1162,21 +1103,21 @@ static void emit_trait_defs_internal(ASTNode *node, FILE *out, VisitedModules **
             }
             if (node->cfg_condition)
             {
-                fprintf(out, "#if %s\n", node->cfg_condition);
+                EMIT(ctx, "#if %s\n", node->cfg_condition);
             }
-            fprintf(out, "typedef struct %s_VTable {\n", node->trait.name);
+            EMIT(ctx, "typedef struct %s_VTable {\n", node->trait.name);
             ASTNode *m = node->trait.methods;
             while (m)
             {
                 char *ret_safe = substitute_proto_self(m->func.ret_type, "void*");
                 const char *orig = parse_original_method_name(m->func.name);
-                fprintf(out, "    %s (*%s)(", ret_safe, orig);
+                EMIT(ctx, "    %s (*%s)(", ret_safe, orig);
                 free(ret_safe);
 
                 int has_self = (m->func.args && strstr(m->func.args, "self"));
                 if (!has_self)
                 {
-                    fprintf(out, "void* self");
+                    EMIT(ctx, "void* self");
                 }
 
                 if (m->func.args && strlen(m->func.args) > 0)
@@ -1187,55 +1128,55 @@ static void emit_trait_defs_internal(ASTNode *node, FILE *out, VisitedModules **
                     if (strstr(args_safe, "void* self") == args_safe ||
                         strstr(args_safe, "const void* self") == args_safe)
                     {
-                        fprintf(out, "%s", args_safe);
+                        EMIT(ctx, "%s", args_safe);
                     }
                     else if (strlen(args_safe) > 0)
                     {
                         if (!has_self)
                         {
-                            fprintf(out, ", ");
+                            EMIT(ctx, ", ");
                         }
-                        fprintf(out, "%s", args_safe);
+                        EMIT(ctx, "%s", args_safe);
                     }
                     free(args_safe);
                 }
-                fprintf(out, ");\n");
+                EMIT(ctx, ");\n");
                 m = m->next;
             }
-            fprintf(out, "} %s_VTable;\n", node->trait.name);
-            fprintf(out, "typedef struct %s { void *self; %s_VTable *vtable; } %s;\n",
-                    node->trait.name, node->trait.name, node->trait.name);
+            EMIT(ctx, "} %s_VTable;\n", node->trait.name);
+            EMIT(ctx, "typedef struct %s { void *self; %s_VTable *vtable; } %s;\n",
+                 node->trait.name, node->trait.name, node->trait.name);
 
             if (node->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
-            fprintf(out, "\n");
+            EMIT(ctx, "\n");
         }
         node = node->next;
     }
 }
 
-void emit_trait_defs(ASTNode *node, FILE *out, VisitedModules **visited)
+void emit_trait_defs(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
     if (visited)
     {
-        emit_trait_defs_internal(node, out, visited, 0);
+        emit_trait_defs_internal(ctx, node, visited, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_trait_defs_internal(node, out, &local_visited, 0);
+        emit_trait_defs_internal(ctx, node, &local_visited, 0);
     }
 }
 
 // Emit trait wrapper functions.
-static void emit_trait_wrappers_internal(ASTNode *node, FILE *out, VisitedModules **visited,
-                                         int depth)
+static void emit_trait_wrappers_internal(ParserContext *ctx, ASTNode *node,
+                                         VisitedModules **visited, int depth)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_trait_wrappers (circular imports?)");
+        zfatal("Infinite recursion detected in emit_trait_wrappers (ctx, circular imports?)");
     }
     while (node)
     {
@@ -1244,7 +1185,7 @@ static void emit_trait_wrappers_internal(ASTNode *node, FILE *out, VisitedModule
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_trait_wrappers_internal(node->import_stmt.module_root, out, visited,
+                emit_trait_wrappers_internal(ctx, node->import_stmt.module_root, visited,
                                              depth + 1);
             }
             node = node->next;
@@ -1259,7 +1200,7 @@ static void emit_trait_wrappers_internal(ASTNode *node, FILE *out, VisitedModule
             }
             if (node->cfg_condition)
             {
-                fprintf(out, "#if %s\n", node->cfg_condition);
+                EMIT(ctx, "#if %s\n", node->cfg_condition);
             }
             ASTNode *m = node->trait.methods;
             while (m)
@@ -1268,8 +1209,8 @@ static void emit_trait_wrappers_internal(ASTNode *node, FILE *out, VisitedModule
                 const char *orig = parse_original_method_name(m->func.name);
                 int is_const_self = (m->func.arg_count > 0 && m->func.arg_types &&
                                      m->func.arg_types[0] && m->func.arg_types[0]->is_const);
-                fprintf(out, "%s %s__%s(%s%s* self", ret_sub, node->trait.name, orig,
-                        is_const_self ? "const " : "", node->trait.name);
+                EMIT(ctx, "%s %s__%s(%s%s* self", ret_sub, node->trait.name, orig,
+                     is_const_self ? "const " : "", node->trait.name);
 
                 if (m->func.args && strlen(m->func.args) > 0)
                 {
@@ -1279,25 +1220,25 @@ static void emit_trait_wrappers_internal(ASTNode *node, FILE *out, VisitedModule
                         char *comma = strchr(sa, ',');
                         if (comma)
                         {
-                            fprintf(out, ", %s", comma + 1);
+                            EMIT(ctx, ", %s", comma + 1);
                         }
                     }
                     else if (strlen(sa) > 0)
                     {
-                        fprintf(out, ", %s", sa);
+                        EMIT(ctx, ", %s", sa);
                     }
                     free(sa);
                 }
-                fprintf(out, ") {\n");
+                EMIT(ctx, ") {\n");
 
                 int ret_is_self = (m->func.ret_type && strcasecmp(m->func.ret_type, "Self") == 0);
                 if (ret_is_self)
                 {
-                    fprintf(out, "    void* res = self->vtable->%s(self->self", orig);
+                    EMIT(ctx, "    void* res = self->vtable->%s(self->self", orig);
                 }
                 else
                 {
-                    fprintf(out, "    return self->vtable->%s(self->self", orig);
+                    EMIT(ctx, "    return self->vtable->%s(self->self", orig);
                 }
 
                 if (m->func.args && strlen(m->func.args) > 0)
@@ -1312,58 +1253,58 @@ static void emit_trait_wrappers_internal(ASTNode *node, FILE *out, VisitedModule
                                 char *comma = strchr(call_args, ',');
                                 if (comma)
                                 {
-                                    fprintf(out, ", %s", comma + 1);
+                                    EMIT(ctx, ", %s", comma + 1);
                                 }
                             }
                             else
                             {
-                                fprintf(out, ", %s", call_args);
+                                EMIT(ctx, ", %s", call_args);
                             }
                         }
                     }
                     free(call_args);
                 }
-                fprintf(out, ");\n");
+                EMIT(ctx, ");\n");
 
                 if (ret_is_self)
                 {
-                    fprintf(out, "    return (%s){.self = res, .vtable = self->vtable};\n",
-                            node->trait.name);
+                    EMIT(ctx, "    return (%s){.self = res, .vtable = self->vtable};\n",
+                         node->trait.name);
                 }
-                fprintf(out, "}\n\n");
+                EMIT(ctx, "}\n\n");
                 free(ret_sub);
                 m = m->next;
             }
             if (node->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
-            fprintf(out, "\n");
+            EMIT(ctx, "\n");
         }
         node = node->next;
     }
 }
 
-void emit_trait_wrappers(ASTNode *node, FILE *out, VisitedModules **visited)
+void emit_trait_wrappers(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
     if (visited)
     {
-        emit_trait_wrappers_internal(node, out, visited, 0);
+        emit_trait_wrappers_internal(ctx, node, visited, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_trait_wrappers_internal(node, out, &local_visited, 0);
+        emit_trait_wrappers_internal(ctx, node, &local_visited, 0);
     }
 }
 
 // Emit global variables
-static void emit_globals_internal(ParserContext *ctx, ASTNode *node, FILE *out,
-                                  VisitedModules **visited, int depth)
+static void emit_globals_internal(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
+                                  int depth)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_globals (circular imports?)");
+        zfatal("Infinite recursion detected in emit_globals (ctx, circular imports?)");
     }
     while (node)
     {
@@ -1372,25 +1313,25 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, FILE *out,
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_globals_internal(ctx, node->import_stmt.module_root, out, visited, depth + 1);
+                emit_globals_internal(ctx, node->import_stmt.module_root, visited, depth + 1);
             }
             node = node->next;
             continue;
         }
         if (node->type == NODE_VAR_DECL || node->type == NODE_CONST)
         {
-            fprintf(out, "ZC_GLOBAL ");
+            EMIT(ctx, "ZC_GLOBAL ");
             if (node->cfg_condition)
             {
-                fprintf(out, "#if %s\n", node->cfg_condition);
+                EMIT(ctx, "#if %s\n", node->cfg_condition);
             }
             if (node->type == NODE_CONST)
             {
-                fprintf(out, "const ");
+                EMIT(ctx, "const ");
             }
             if (node->var_decl.type_str)
             {
-                emit_var_decl_type(ctx, out, node->var_decl.type_str, node->var_decl.name);
+                emit_var_decl_type(ctx, node->var_decl.type_str, node->var_decl.name);
             }
             else
             {
@@ -1402,12 +1343,12 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, FILE *out,
 
                 if (inferred && strcmp(inferred, "__auto_type") != 0)
                 {
-                    emit_var_decl_type(ctx, out, inferred, node->var_decl.name);
+                    emit_var_decl_type(ctx, inferred, node->var_decl.name);
                 }
                 else
                 {
-                    emit_auto_type(ctx, node->var_decl.init_expr, node->token, out);
-                    fprintf(out, " %s", node->var_decl.name);
+                    emit_auto_type(ctx, node->var_decl.init_expr, node->token);
+                    EMIT(ctx, " %s", node->var_decl.name);
                 }
                 if (inferred)
                 {
@@ -1416,7 +1357,7 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, FILE *out,
             }
             if (node->var_decl.init_expr)
             {
-                fprintf(out, " = ");
+                EMIT(ctx, " = ");
                 char *tname =
                     node->var_decl.type_str
                         ? xstrdup(node->var_decl.type_str)
@@ -1425,20 +1366,20 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                 if (g_config.use_cpp && tname &&
                     (strchr(tname, '*') || is_enum_type_name(ctx, tname)))
                 {
-                    fprintf(out, "(%s)(", tname);
-                    codegen_expression(ctx, node->var_decl.init_expr, out);
-                    fprintf(out, ")");
+                    EMIT(ctx, "(%s)(", tname);
+                    codegen_expression(ctx, node->var_decl.init_expr);
+                    EMIT(ctx, ")");
                 }
                 else
                 {
-                    codegen_expression(ctx, node->var_decl.init_expr, out);
+                    codegen_expression(ctx, node->var_decl.init_expr);
                 }
                 if (tname)
                 {
                     free(tname);
                 }
             }
-            fprintf(out, ";\n");
+            EMIT(ctx, ";\n");
             if (g_config.use_cpp && node->type == NODE_VAR_DECL)
             {
                 char *tname =
@@ -1456,44 +1397,44 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                     ASTNode *def = find_struct_def(ctx, ct);
                     if (def && def->type_info && def->type_info->traits.has_drop)
                     {
-                        fprintf(out, "int __z_drop_flag_%s = %d;\n", node->var_decl.name,
-                                node->var_decl.init_expr ? 1 : 0);
+                        EMIT(ctx, "int __z_drop_flag_%s = %d;\n", node->var_decl.name,
+                             node->var_decl.init_expr ? 1 : 0);
                     }
                     free(tname);
                 }
             }
             if (node->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
         }
         node = node->next;
     }
 }
 
-void emit_globals(ParserContext *ctx, ASTNode *node, FILE *out, VisitedModules **visited)
+void emit_globals(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
     g_current_func_ret_type = NULL;
     g_current_lambda = NULL;
     if (visited)
     {
-        emit_globals_internal(ctx, node, out, visited, 0);
+        emit_globals_internal(ctx, node, visited, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_globals_internal(ctx, node, out, &local_visited, 0);
+        emit_globals_internal(ctx, node, &local_visited, 0);
         free_visited_modules(local_visited);
     }
 }
 
 // Emit function prototypes
-static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
-                                 VisitedModules **visited, int depth)
+static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
+                                 int depth)
 {
     if (depth > 1024)
     {
-        zfatal("Infinite recursion detected in emit_protos (circular imports?)");
+        zfatal("Infinite recursion detected in emit_protos (ctx, circular imports?)");
     }
     ASTNode *f = node;
     while (f)
@@ -1503,7 +1444,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
             if (!is_module_visited(*visited, f->import_stmt.path))
             {
                 mark_module_visited(visited, f->import_stmt.path);
-                emit_protos_internal(ctx, f->import_stmt.module_root, out, visited, depth + 1);
+                emit_protos_internal(ctx, f->import_stmt.module_root, visited, depth + 1);
             }
             f = f->next;
             continue;
@@ -1543,30 +1484,30 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
 
             if (f->cfg_condition)
             {
-                fprintf(out, "#if %s\n", f->cfg_condition);
+                EMIT(ctx, "#if %s\n", f->cfg_condition);
             }
             if (f->func.is_async)
             {
                 const char *final_name = (f->link_name) ? f->link_name : f->func.name;
-                fprintf(out, "Async %s(%s);\n", final_name, f->func.args);
+                EMIT(ctx, "Async %s(%s);\n", final_name, f->func.args);
                 // Also emit _impl_ prototype
                 if (f->func.ret_type)
                 {
-                    fprintf(out, "%s _impl_%s(%s);\n", f->func.ret_type, final_name, f->func.args);
+                    EMIT(ctx, "%s _impl_%s(%s);\n", f->func.ret_type, final_name, f->func.args);
                 }
                 else
                 {
-                    fprintf(out, "void _impl_%s(%s);\n", final_name, f->func.args);
+                    EMIT(ctx, "void _impl_%s(%s);\n", final_name, f->func.args);
                 }
             }
             else
             {
-                emit_func_signature(ctx, out, f, NULL);
-                fprintf(out, ";\n");
+                emit_func_signature(ctx, f, NULL);
+                EMIT(ctx, ";\n");
             }
             if (f->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
         }
         else if (f->type == NODE_IMPL)
@@ -1629,7 +1570,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
 
             if (f->cfg_condition)
             {
-                fprintf(out, "#if %s\n", f->cfg_condition);
+                EMIT(ctx, "#if %s\n", f->cfg_condition);
             }
             ASTNode *m = f->impl.methods;
             while (m)
@@ -1641,7 +1582,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                 }
                 if (m->cfg_condition)
                 {
-                    fprintf(out, "#if %s\n", m->cfg_condition);
+                    EMIT(ctx, "#if %s\n", m->cfg_condition);
                 }
                 char *fname = m->func.name;
 
@@ -1662,11 +1603,11 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                     sprintf(proto, "%s__%s", effective_name, fname);
                 }
 
-                emit_func_signature(ctx, out, m, proto);
-                fprintf(out, ";\n");
+                emit_func_signature(ctx, m, proto);
+                EMIT(ctx, ";\n");
                 if (m->cfg_condition)
                 {
-                    fprintf(out, "#endif\n");
+                    EMIT(ctx, "#endif\n");
                 }
 
                 free(proto);
@@ -1674,7 +1615,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
             }
             if (f->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
         }
         else if (f->type == NODE_IMPL_TRAIT)
@@ -1722,7 +1663,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
 
             if (f->cfg_condition)
             {
-                fprintf(out, "#if %s\n", f->cfg_condition);
+                EMIT(ctx, "#if %s\n", f->cfg_condition);
             }
             ASTNode *m = f->impl_trait.methods;
             while (m)
@@ -1734,44 +1675,44 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, FILE *out,
                 }
                 if (m->cfg_condition)
                 {
-                    fprintf(out, "#if %s\n", m->cfg_condition);
+                    EMIT(ctx, "#if %s\n", m->cfg_condition);
                 }
-                emit_func_signature(ctx, out, m, NULL);
-                fprintf(out, ";\n");
+                emit_func_signature(ctx, m, NULL);
+                EMIT(ctx, ";\n");
                 if (m->cfg_condition)
                 {
-                    fprintf(out, "#endif\n");
+                    EMIT(ctx, "#endif\n");
                 }
                 m = m->next;
             }
             if (f->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
         }
         else if (f->type == NODE_ROOT)
         {
-            emit_protos_internal(ctx, f->root.children, out, visited, depth + 1);
+            emit_protos_internal(ctx, f->root.children, visited, depth + 1);
         }
         f = f->next;
     }
 }
 
-void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out, VisitedModules **visited)
+void emit_protos(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
     if (visited)
     {
-        emit_protos_internal(ctx, node, out, visited, 0);
+        emit_protos_internal(ctx, node, visited, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_protos_internal(ctx, node, out, &local_visited, 0);
+        emit_protos_internal(ctx, node, &local_visited, 0);
     }
 }
 
 // Emit VTable instances for trait implementations.
-void emit_impl_vtables(ParserContext *ctx, FILE *out)
+void emit_impl_vtables(ParserContext *ctx)
 {
     StructRef *ref = ctx->parsed_impls_list;
     struct
@@ -1879,7 +1820,7 @@ void emit_impl_vtables(ParserContext *ctx, FILE *out)
                 continue;
             }
 
-            fprintf(out, "%s_VTable %s__%s__VTable = {", trait, strct, trait);
+            EMIT(ctx, "%s_VTable %s__%s__VTable = {", trait, strct, trait);
 
             ASTNode *m = node->impl_trait.methods;
             while (m)
@@ -1899,23 +1840,23 @@ void emit_impl_vtables(ParserContext *ctx, FILE *out)
                     orig_name = parse_original_method_name(m->func.name);
                 }
 
-                fprintf(out, ".%s = (__typeof__(((%s_VTable*)0)->%s))%s", orig_name, trait,
-                        orig_name, m->func.name);
+                EMIT(ctx, ".%s = (__typeof__(((%s_VTable*)0)->%s))%s", orig_name, trait, orig_name,
+                     m->func.name);
                 free(prefix);
                 if (m->next)
                 {
-                    fprintf(out, ", ");
+                    EMIT(ctx, ", ");
                 }
                 m = m->next;
             }
-            fprintf(out, "};\n");
+            EMIT(ctx, "};\n");
         }
         ref = ref->next;
     }
 }
 
 // Emit test functions and runner. Returns number of tests emitted.
-int emit_tests_and_runner(ParserContext *ctx, ASTNode *node, FILE *out)
+int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
 {
     ASTNode *cur = node;
     int test_count = 0;
@@ -1925,25 +1866,25 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             if (cur->cfg_condition)
             {
-                fprintf(out, "#if %s\n", cur->cfg_condition);
+                EMIT(ctx, "#if %s\n", cur->cfg_condition);
             }
-            fprintf(out, "static void _z_test_%d() {\n", test_count);
+            EMIT(ctx, "static void _z_test_%d() {\n", test_count);
             int saved = defer_count;
             char *saved_ret = g_current_func_ret_type;
             g_current_func_ret_type = "void";
-            codegen_walker(ctx, cur->test_stmt.body, out);
+            codegen_walker(ctx, cur->test_stmt.body);
             g_current_func_ret_type = saved_ret;
             // Run defers
             for (int i = defer_count - 1; i >= saved; i--)
             {
-                emit_source_mapping_duplicate(defer_stack[i], out);
-                codegen_node_single(ctx, defer_stack[i], out);
+                emit_source_mapping_duplicate(ctx, defer_stack[i]);
+                codegen_node_single(ctx, defer_stack[i]);
             }
             defer_count = saved;
-            fprintf(out, "}\n");
+            EMIT(ctx, "}\n");
             if (cur->cfg_condition)
             {
-                fprintf(out, "#endif\n");
+                EMIT(ctx, "#endif\n");
             }
             test_count++;
         }
@@ -1951,7 +1892,7 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node, FILE *out)
     }
     if (test_count > 0)
     {
-        fprintf(out, "\nvoid _z_run_tests() {\n");
+        EMIT(ctx, "\nvoid _z_run_tests() {\n");
         cur = node;
         int i = 0;
         while (cur)
@@ -1960,25 +1901,25 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node, FILE *out)
             {
                 if (cur->cfg_condition)
                 {
-                    fprintf(out, "#if %s\n", cur->cfg_condition);
+                    EMIT(ctx, "#if %s\n", cur->cfg_condition);
                 }
-                fprintf(out, "    _z_test_%d();\n", i);
+                EMIT(ctx, "    _z_test_%d();\n", i);
                 if (cur->cfg_condition)
                 {
-                    fprintf(out, "#endif\n");
+                    EMIT(ctx, "#endif\n");
                 }
                 i++;
             }
             cur = cur->next;
         }
-        fprintf(out, "}\n\n");
+        EMIT(ctx, "}\n\n");
     }
     return test_count;
 }
 
 // Helper to emit typedefs for mangled pointer types (e.g., StringPtr for String*)
 // used as generic parameters. This resolves "unknown type name StringPtr" errors.
-static void emit_mangled_pointer_typedefs(ParserContext *ctx, FILE *out)
+static void emit_mangled_pointer_typedefs(ParserContext *ctx)
 {
     char *emitted[2048];
     int count = 0;
@@ -2003,7 +1944,7 @@ static void emit_mangled_pointer_typedefs(ParserContext *ctx, FILE *out)
             if (!found && count < 2048)
             {
                 // In C, structs are usually typedef'd, so "typedef String* StringPtr;" is valid.
-                fprintf(out, "typedef %s %s;\n", inst->unmangled_arg, inst->concrete_arg);
+                EMIT(ctx, "typedef %s %s;\n", inst->unmangled_arg, inst->concrete_arg);
                 emitted[count++] = inst->concrete_arg;
             }
         }
@@ -2028,54 +1969,47 @@ static void emit_mangled_pointer_typedefs(ParserContext *ctx, FILE *out)
 }
 
 // Emit type definitions-
-void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
+void print_type_defs(ParserContext *ctx, ASTNode *nodes)
 {
-    emit_mangled_pointer_typedefs(ctx, out);
+    emit_mangled_pointer_typedefs(ctx);
 
     if (!g_config.is_freestanding && !g_config.misra_mode)
     {
-        fprintf(out, "typedef char* string;\n");
+        EMIT(ctx, "typedef char* string;\n");
 
-        fprintf(out, "typedef struct { void **data; int len; int cap; } Vec;\n");
-        fprintf(out, "#define Vec_new() (Vec){.data=0, .len=0, .cap=0}\n");
+        EMIT(ctx, "typedef struct { void **data; int len; int cap; } Vec;\n");
+        EMIT(ctx, "#define Vec_new() (Vec){.data=0, .len=0, .cap=0}\n");
 
         if (g_config.use_cpp)
         {
-            fprintf(out,
-                    "static void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { "
-                    "v->cap = v->cap?v->cap*2:8; "
-                    "v->data = static_cast<void**>(realloc(v->data, v->cap * sizeof(void*))); } "
-                    "v->data[v->len++] = item; }\n");
-            fprintf(out, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = "
-                         "count > 8 ? "
-                         "count : 8; v.data = static_cast<void**>(malloc(v.cap * sizeof(void*))); "
-                         "v.len = 0; va_list "
-                         "args; "
-                         "va_start(args, count); for(int i=0; i<count; i++) { v.data[v.len++] = "
-                         "va_arg(args, void*); } va_end(args); return v; }\n");
+            EMIT(ctx, "static void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { v->cap "
+                      "= v->cap?v->cap*2:8; v->data = static_cast<void**>(realloc(v->data, v->cap "
+                      "* sizeof(void*))); } v->data[v->len++] = item; }\n");
+            EMIT(ctx,
+                 "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = count > 8 ? "
+                 "count : 8; v.data = static_cast<void**>(malloc(v.cap * sizeof(void*))); v.len = "
+                 "0; va_list args; va_start(args, count); for(int i=0; i<count; i++) { "
+                 "v.data[v.len++] = va_arg(args, void*); } va_end(args); return v; }\n");
         }
         else
         {
-            fprintf(out, "static void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { "
-                         "v->cap = v->cap?v->cap*2:8; "
-                         "v->data = z_realloc(v->data, v->cap * sizeof(void*)); } "
-                         "v->data[v->len++] = item; }\n");
-            fprintf(out, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = "
-                         "count > 8 ? "
-                         "count : 8; v.data = z_malloc(v.cap * sizeof(void*)); v.len = 0; va_list "
-                         "args; "
-                         "va_start(args, count); for(int i=0; i<count; i++) { v.data[v.len++] = "
-                         "va_arg(args, void*); } va_end(args); return v; }\n");
+            EMIT(ctx, "static void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { v->cap "
+                      "= v->cap?v->cap*2:8; v->data = z_realloc(v->data, v->cap * sizeof(void*)); "
+                      "} v->data[v->len++] = item; }\n");
+            EMIT(ctx, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = count "
+                      "> 8 ? count : 8; v.data = z_malloc(v.cap * sizeof(void*)); v.len = 0; "
+                      "va_list args; va_start(args, count); for(int i=0; i<count; i++) { "
+                      "v.data[v.len++] = va_arg(args, void*); } va_end(args); return v; }\n");
         }
-        fprintf(out, "#define Vec_push(v, i) _z_vec_push(&(v), (void*)(uintptr_t)(i))\n");
-        fprintf(out, "static inline long _z_check_bounds(long index, long limit) { if(index < 0 || "
-                     "index >= limit) { fprintf(stderr, \"Index out of bounds: %%ld (limit "
-                     "%%ld)\\n\", index, limit); exit(1); } return index; }\n");
+        EMIT(ctx, "#define Vec_push(v, i) _z_vec_push(&(v), (void*)(uintptr_t)(i))\n");
+        EMIT(ctx, "static inline long _z_check_bounds(long index, long limit) { if(index < 0 || "
+                  "index >= limit) { fprintf(stderr, \"Index out of bounds: %%ld (limit "
+                  "%%ld)\\n\", index, limit); exit(1); } return index; }\n");
     }
     else
     {
-        fprintf(out, "static inline long _z_check_bounds(long index, long limit) { if((index < 0) "
-                     "|| (index >= limit)) { __builtin_trap(); } return index; }\n");
+        EMIT(ctx, "static inline long _z_check_bounds(long index, long limit) { if((index < 0) || "
+                  "(index >= limit)) { __builtin_trap(); } return index; }\n");
     }
 
     ASTNode *local = nodes;
@@ -2092,7 +2026,7 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
             {
                 const char *final_name = local->link_name ? local->link_name : local->strct.name;
                 const char *keyword = local->strct.is_union ? "union" : "struct";
-                fprintf(out, "typedef %s %s %s;\n", keyword, final_name, final_name);
+                EMIT(ctx, "typedef %s %s %s;\n", keyword, final_name, final_name);
             }
         }
         if (local->type == NODE_ENUM && !local->enm.is_template && local->enm.name)
@@ -2114,14 +2048,14 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
 
             if (has_payload)
             {
-                fprintf(out, "typedef struct %s %s;\n", final_name, final_name);
+                EMIT(ctx, "typedef struct %s %s;\n", final_name, final_name);
             }
             // Simple enums will be emitted as 'typedef enum' later in emit_struct_defs
         }
 
         local = local->next;
     }
-    fprintf(out, "\n");
+    EMIT(ctx, "\n");
 
     SliceType *rev = NULL;
     SliceType *c = ctx->used_slices;
@@ -2137,10 +2071,10 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
     c = ctx->used_slices;
     while (c)
     {
-        fprintf(out,
-                "typedef struct Slice__%s Slice__%s;\nstruct Slice__%s { %s *data; "
-                "int len; int cap; };\n",
-                c->name, c->name, c->name, c->name);
+        EMIT(ctx,
+             "typedef struct Slice__%s Slice__%s;\nstruct Slice__%s { %s *data; int len; int cap; "
+             "};\n",
+             c->name, c->name, c->name, c->name);
         c = c->next;
     }
 
@@ -2148,8 +2082,8 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
     while (t)
     {
         char *clean_sig = sanitize_mangled_name(t->sig);
-        fprintf(out, "typedef struct Tuple__%s Tuple__%s;\nstruct Tuple__%s { ", clean_sig,
-                clean_sig, clean_sig);
+        EMIT(ctx, "typedef struct Tuple__%s Tuple__%s;\nstruct Tuple__%s { ", clean_sig, clean_sig,
+             clean_sig);
         free(clean_sig);
         char *s = xstrdup(t->sig);
         char *current = s;
@@ -2160,21 +2094,21 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
             if (next_sep)
             {
                 *next_sep = 0;
-                fprintf(out, "%s v%d; ", current, i++);
+                EMIT(ctx, "%s v%d; ", current, i++);
                 current = next_sep + 2;
                 next_sep = strstr(current, "__");
             }
             else
             {
-                fprintf(out, "%s v%d; ", current, i++);
+                EMIT(ctx, "%s v%d; ", current, i++);
                 break;
             }
         }
         free(s);
-        fprintf(out, "};\n");
+        EMIT(ctx, "};\n");
         t = t->next;
     }
-    fprintf(out, "\n");
+    EMIT(ctx, "\n");
 
     // End of type definitions
 }
@@ -2189,14 +2123,14 @@ int should_emit_source_mapping(ASTNode *node)
            node->type != NODE_EXPR_UNARY && node->type != NODE_FIELD;
 }
 
-void emit_source_mapping_duplicate(ASTNode *node, FILE *out)
+void emit_source_mapping_duplicate(ParserContext *ctx, ASTNode *node)
 {
     allow_duplicate_source_mapping++;
-    emit_source_mapping(node, out);
+    emit_source_mapping(ctx, node);
     allow_duplicate_source_mapping--;
 }
 
-void emit_source_mapping(ASTNode *node, FILE *out)
+void emit_source_mapping(ParserContext *ctx, ASTNode *node)
 {
     if (!g_config.mode_debug)
     {
@@ -2230,6 +2164,6 @@ void emit_source_mapping(ASTNode *node, FILE *out)
     if (!g_config.misra_mode)
     {
         char *safe_file = sanitize_path_for_c_string(node->token.file);
-        fprintf(out, "\n#line %i \"%s\"\n", node->token.line, safe_file);
+        EMIT(ctx, "\n#line %i \"%s\"\n", node->token.line, safe_file);
     }
 }

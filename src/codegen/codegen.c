@@ -75,11 +75,11 @@ static const char *get_missing_function_hint(ParserContext *ctx, const char *nam
 }
 
 // Emit literal expression (int, float, string, char)
-static void codegen_literal_expr(ASTNode *node, FILE *out)
+static void codegen_literal_expr(ParserContext *ctx, ASTNode *node)
 {
     if (node->literal.type_kind == LITERAL_STRING || node->literal.type_kind == LITERAL_RAW_STRING)
     {
-        fprintf(out, "\"");
+        EMIT(ctx, "\"");
         for (int i = 0; node->literal.string_val[i]; i++)
         {
             char c = node->literal.string_val[i];
@@ -87,45 +87,45 @@ static void codegen_literal_expr(ASTNode *node, FILE *out)
             {
                 if (c == '\\')
                 {
-                    fprintf(out, "\\\\");
+                    EMIT(ctx, "\\\\");
                 }
                 else if (c == '"')
                 {
-                    fprintf(out, "\\\"");
+                    EMIT(ctx, "\\\"");
                 }
                 else if (c == '\n')
                 {
-                    fprintf(out, "\\n");
+                    EMIT(ctx, "\\n");
                 }
                 else if (c == '\r')
                 {
-                    fprintf(out, "\\r");
+                    EMIT(ctx, "\\r");
                 }
                 else if (c == '\t')
                 {
-                    fprintf(out, "\\t");
+                    EMIT(ctx, "\\t");
                 }
                 else
                 {
-                    fprintf(out, "%c", c);
+                    EMIT(ctx, "%c", c);
                 }
             }
             else
             {
-                fprintf(out, "%c", c);
+                EMIT(ctx, "%c", c);
             }
         }
-        fprintf(out, "\"");
+        EMIT(ctx, "\"");
     }
     else if (node->literal.type_kind == LITERAL_CHAR)
     {
         if (node->literal.int_val > 127)
         {
-            fprintf(out, "%u", (unsigned int)node->literal.int_val);
+            EMIT(ctx, "%u", (unsigned int)node->literal.int_val);
         }
         else
         {
-            fprintf(out, "%s", node->literal.string_val);
+            EMIT(ctx, "%s", node->literal.string_val);
         }
     }
     else if (node->literal.type_kind == LITERAL_FLOAT)
@@ -136,23 +136,23 @@ static void codegen_literal_expr(ASTNode *node, FILE *out)
         {
             strcat(buf, ".0");
         }
-        fprintf(out, "%s", buf);
+        EMIT(ctx, "%s", buf);
     }
     else // LITERAL_INT
     {
         if (node->literal.int_val > 9223372036854775807ULL)
         {
-            fprintf(out, "%lluULL", (unsigned long long)node->literal.int_val);
+            EMIT(ctx, "%lluULL", (unsigned long long)node->literal.int_val);
         }
         else
         {
-            fprintf(out, "%lld", (long long)node->literal.int_val);
+            EMIT(ctx, "%lld", (long long)node->literal.int_val);
         }
     }
 }
 
 // Emit variable reference expression
-static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
+static void codegen_var_expr(ParserContext *ctx, ASTNode *node)
 {
     if (g_current_lambda)
     {
@@ -163,11 +163,11 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                 if (g_current_lambda->lambda.capture_modes &&
                     g_current_lambda->lambda.capture_modes[i] == 1)
                 {
-                    fprintf(out, "(*ctx->%s)", node->var_ref.name);
+                    EMIT(ctx, "(*ctx->%s)", node->var_ref.name);
                 }
                 else
                 {
-                    fprintf(out, "ctx->%s", node->var_ref.name);
+                    EMIT(ctx, "ctx->%s", node->var_ref.name);
                 }
                 return;
             }
@@ -217,13 +217,13 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
             const char *alias = (ta && !ta->is_opaque) ? ta->original_type : NULL;
             if (alias)
             {
-                emit_mangled_name(ctx, out, alias, method_name);
+                emit_mangled_name(ctx, alias, method_name);
                 free(type_name);
                 free(mangled_type);
                 return;
             }
         }
-        emit_mangled_name(ctx, out, mangled_type, method_name);
+        emit_mangled_name(ctx, mangled_type, method_name);
 
         // If it's a no-payload enum variant and we're NOT inside a call expression callee,
         // auto-call the constructor. When g_emitting_callee is set, the parent
@@ -246,7 +246,7 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 if (strcmp(clean_ev, clean_mangled) == 0)
                 {
-                    fprintf(out, "()");
+                    EMIT(ctx, "()");
                 }
             }
         }
@@ -260,7 +260,7 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
     {
         if (node->type_info && node->type_info->kind == TYPE_STRUCT)
         {
-            fprintf(out, "(*self)");
+            EMIT(ctx, "(*self)");
             return;
         }
     }
@@ -284,7 +284,7 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                  strncmp(base, "JsonType", 8) == 0);
             if (is_common_enum || (def && def->type == NODE_ENUM))
             {
-                emit_mangled_name(ctx, out, base, underscore + 1);
+                emit_mangled_name(ctx, base, underscore + 1);
                 return;
             }
         }
@@ -292,20 +292,20 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node, FILE *out)
     ZenSymbol *sym = find_symbol_in_all(ctx, node->var_ref.name);
     if (sym && sym->link_name)
     {
-        fprintf(out, "%s", sym->link_name);
+        EMIT(ctx, "%s", sym->link_name);
     }
     else
     {
-        fprintf(out, "%s", node->var_ref.name);
+        EMIT(ctx, "%s", node->var_ref.name);
     }
 }
 
 // Emit lambda expression
-static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
+static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node)
 {
     if (node->lambda.is_bare)
     {
-        fprintf(out, "_lambda_%d", node->lambda.lambda_id);
+        EMIT(ctx, "_lambda_%d", node->lambda.lambda_id);
         return;
     }
 
@@ -314,18 +314,16 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
         int lid = node->lambda.lambda_id;
         if (g_config.use_cpp)
         {
-            fprintf(
-                out,
-                "({ struct Lambda_%d_Ctx *_z_ctx_%d = (struct Lambda_%d_Ctx*)malloc(sizeof(struct "
-                "Lambda_%d_Ctx));\n",
-                lid, lid, lid, lid);
+            EMIT(ctx,
+                 "({ struct Lambda_%d_Ctx *_z_ctx_%d = (struct Lambda_%d_Ctx*)malloc(sizeof(struct "
+                 "Lambda_%d_Ctx));\n",
+                 lid, lid, lid, lid);
         }
         else
         {
-            fprintf(out,
-                    "({ struct Lambda_%d_Ctx *_z_ctx_%d = malloc(sizeof(struct "
-                    "Lambda_%d_Ctx));\n",
-                    lid, lid, lid);
+            EMIT(ctx,
+                 "({ struct Lambda_%d_Ctx *_z_ctx_%d = malloc(sizeof(struct Lambda_%d_Ctx));\n",
+                 lid, lid, lid);
         }
         for (int i = 0; i < node->lambda.num_captures; i++)
         {
@@ -342,15 +340,13 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                             if (g_current_lambda->lambda.capture_modes &&
                                 g_current_lambda->lambda.capture_modes[k] == 1)
                             {
-                                fprintf(out, "_z_ctx_%d->%s = ctx->%s;\n", lid,
-                                        node->lambda.captured_vars[i],
-                                        node->lambda.captured_vars[i]);
+                                EMIT(ctx, "_z_ctx_%d->%s = ctx->%s;\n", lid,
+                                     node->lambda.captured_vars[i], node->lambda.captured_vars[i]);
                             }
                             else
                             {
-                                fprintf(out, "_z_ctx_%d->%s = &ctx->%s;\n", lid,
-                                        node->lambda.captured_vars[i],
-                                        node->lambda.captured_vars[i]);
+                                EMIT(ctx, "_z_ctx_%d->%s = &ctx->%s;\n", lid,
+                                     node->lambda.captured_vars[i], node->lambda.captured_vars[i]);
                             }
                             found = 1;
                             break;
@@ -359,8 +355,8 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
                 if (!found)
                 {
-                    fprintf(out, "_z_ctx_%d->%s = &%s;\n", lid, node->lambda.captured_vars[i],
-                            node->lambda.captured_vars[i]);
+                    EMIT(ctx, "_z_ctx_%d->%s = &%s;\n", lid, node->lambda.captured_vars[i],
+                         node->lambda.captured_vars[i]);
                 }
             }
             else
@@ -375,7 +371,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                     tstr = xstrdup(node->lambda.captured_types[i]);
                 }
 
-                fprintf(out, "*(%s*)(&_z_ctx_%d->%s) = ", tstr, lid, node->lambda.captured_vars[i]);
+                EMIT(ctx, "*(%s*)(&_z_ctx_%d->%s) = ", tstr, lid, node->lambda.captured_vars[i]);
                 free(tstr);
 
                 ASTNode *var_node = ast_create(NODE_EXPR_VAR);
@@ -392,11 +388,11 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                     var_node->resolved_type = xstrdup("int");
                 }
 
-                codegen_expression_with_move(ctx, var_node, out);
+                codegen_expression_with_move(ctx, var_node);
 
                 ast_free(var_node);
 
-                fprintf(out, ";\n");
+                EMIT(ctx, ";\n");
 
                 if (node->lambda.captured_types && node->lambda.captured_types[i])
                 {
@@ -410,41 +406,39 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                     ASTNode *fdef = find_struct_def(ctx, clean);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
-                        fprintf(out, "_z_ctx_%d->__z_drop_flag_%s = 1;\n", lid,
-                                node->lambda.captured_vars[i]);
+                        EMIT(ctx, "_z_ctx_%d->__z_drop_flag_%s = 1;\n", lid,
+                             node->lambda.captured_vars[i]);
                     }
                 }
             }
         }
         if (g_config.use_cpp)
         {
-            fprintf(out,
-                    "z_closure_T _cl = {(void*)_lambda_%d, _z_ctx_%d, _lambda_%d_drop}; _cl; })",
-                    lid, lid, lid);
+            EMIT(ctx, "z_closure_T _cl = {(void*)_lambda_%d, _z_ctx_%d, _lambda_%d_drop}; _cl; })",
+                 lid, lid, lid);
         }
         else
         {
-            fprintf(
-                out,
-                "(z_closure_T){.func = _lambda_%d, .ctx = _z_ctx_%d, .drop = _lambda_%d_drop}; })",
-                lid, lid, lid);
+            EMIT(ctx,
+                 "(z_closure_T){.func = _lambda_%d, .ctx = _z_ctx_%d, .drop = _lambda_%d_drop}; })",
+                 lid, lid, lid);
         }
     }
     else
     {
         if (g_config.use_cpp)
         {
-            fprintf(out, "(z_closure_T){ (void*)_lambda_%d, NULL, NULL }", node->lambda.lambda_id);
+            EMIT(ctx, "(z_closure_T){ (void*)_lambda_%d, NULL, NULL }", node->lambda.lambda_id);
         }
         else
         {
-            fprintf(out, "((z_closure_T){.func = (void*)_lambda_%d, .ctx = NULL, .drop = NULL})",
-                    node->lambda.lambda_id);
+            EMIT(ctx, "((z_closure_T){.func = (void*)_lambda_%d, .ctx = NULL, .drop = NULL})",
+                 node->lambda.lambda_id);
         }
     }
 }
 
-void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
+void codegen_expression(ParserContext *ctx, ASTNode *node)
 {
     if (!node)
     {
@@ -456,34 +450,34 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     switch (node->type)
     {
     case NODE_MATCH:
-        codegen_match_internal(ctx, node, out, 1);
+        codegen_match_internal(ctx, node, 1);
         break;
     case NODE_EXPR_BINARY:
         if (g_config.misra_mode)
         {
-            fprintf(out, "(");
+            EMIT(ctx, "(");
         }
         if (strncmp(node->binary.op, "??", 2) == 0 && strlen(node->binary.op) == 2)
         {
-            fprintf(out, "({ ");
-            emit_auto_type(ctx, node->binary.left, node->token, out);
-            fprintf(out, " _l = (");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, "); _l ? _l : (");
-            codegen_expression(ctx, node->binary.right, out);
-            fprintf(out, "); })");
+            EMIT(ctx, "({ ");
+            emit_auto_type(ctx, node->binary.left, node->token);
+            EMIT(ctx, " _l = (");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, "); _l ? _l : (");
+            codegen_expression(ctx, node->binary.right);
+            EMIT(ctx, "); })");
         }
         else if (strcmp(node->binary.op, "?\?=") == 0)
         {
-            fprintf(out, "({ if (!(");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, ")) ");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, " = (");
-            codegen_expression(ctx, node->binary.right, out);
-            fprintf(out, "); ");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, "; })");
+            EMIT(ctx, "({ if (!(");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, ")) ");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, " = (");
+            codegen_expression(ctx, node->binary.right);
+            EMIT(ctx, "); ");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, "; })");
         }
         else if ((strcmp(node->binary.op, "==") == 0 || strcmp(node->binary.op, "!=") == 0))
         {
@@ -564,7 +558,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 if (strcmp(node->binary.op, "!=") == 0)
                 {
-                    fprintf(out, "(!");
+                    EMIT(ctx, "(!");
                 }
                 char meth[MAX_TYPE_NAME_LEN];
                 snprintf(meth, sizeof(meth), "%s__Eq__eq", base);
@@ -587,33 +581,33 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     call_name = meth;
                 }
 
-                fprintf(out, "%s(", (sig && sig->link_name) ? sig->link_name : call_name);
+                EMIT(ctx, "%s(", (sig && sig->link_name) ? sig->link_name : call_name);
 
                 if (node->binary.left->type == NODE_EXPR_VAR ||
                     node->binary.left->type == NODE_EXPR_INDEX ||
                     node->binary.left->type == NODE_EXPR_MEMBER)
                 {
-                    fprintf(out, "&");
-                    codegen_expression(ctx, node->binary.left, out);
+                    EMIT(ctx, "&");
+                    codegen_expression(ctx, node->binary.left);
                 }
                 else if (g_config.use_cpp)
                 {
-                    fprintf(out, "({ __typeof__((");
-                    codegen_expression(ctx, node->binary.left, out);
-                    fprintf(out, ")) _tmp = ");
-                    codegen_expression(ctx, node->binary.left, out);
-                    fprintf(out, "; &_tmp; })");
+                    EMIT(ctx, "({ __typeof__((");
+                    codegen_expression(ctx, node->binary.left);
+                    EMIT(ctx, ")) _tmp = ");
+                    codegen_expression(ctx, node->binary.left);
+                    EMIT(ctx, "; &_tmp; })");
                 }
                 else
                 {
-                    fprintf(out, "(__typeof__((");
-                    codegen_expression(ctx, node->binary.left, out);
-                    fprintf(out, "))[]){");
-                    codegen_expression(ctx, node->binary.left, out);
-                    fprintf(out, "}");
+                    EMIT(ctx, "(__typeof__((");
+                    codegen_expression(ctx, node->binary.left);
+                    EMIT(ctx, "))[]){");
+                    codegen_expression(ctx, node->binary.left);
+                    EMIT(ctx, "}");
                 }
 
-                fprintf(out, ", ");
+                EMIT(ctx, ", ");
 
                 int needs_ptr = 1; // Default for Eq on structs
                 if (sig)
@@ -625,34 +619,34 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                   node->binary.right->type == NODE_EXPR_INDEX ||
                                   node->binary.right->type == NODE_EXPR_MEMBER))
                 {
-                    fprintf(out, "&");
-                    codegen_expression(ctx, node->binary.right, out);
+                    EMIT(ctx, "&");
+                    codegen_expression(ctx, node->binary.right);
                 }
                 else if (needs_ptr && g_config.use_cpp)
                 {
-                    fprintf(out, "({ __typeof__((");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, ")) _tmp = ");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, "; &_tmp; })");
+                    EMIT(ctx, "({ __typeof__((");
+                    codegen_expression(ctx, node->binary.right);
+                    EMIT(ctx, ")) _tmp = ");
+                    codegen_expression(ctx, node->binary.right);
+                    EMIT(ctx, "; &_tmp; })");
                 }
                 else if (needs_ptr)
                 {
-                    fprintf(out, "(__typeof__((");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, "))[]){");
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, "}");
+                    EMIT(ctx, "(__typeof__((");
+                    codegen_expression(ctx, node->binary.right);
+                    EMIT(ctx, "))[]){");
+                    codegen_expression(ctx, node->binary.right);
+                    EMIT(ctx, "}");
                 }
                 else
                 {
-                    codegen_expression(ctx, node->binary.right, out);
+                    codegen_expression(ctx, node->binary.right);
                 }
 
-                fprintf(out, ")");
+                EMIT(ctx, ")");
                 if (strcmp(node->binary.op, "!=") == 0)
                 {
-                    fprintf(out, ")");
+                    EMIT(ctx, ")");
                 }
             }
             else if (t1 && (strcmp(t1, "string") == 0))
@@ -660,35 +654,35 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 char *t2 = infer_type(ctx, node->binary.right);
                 if (t2 && (strcmp(t2, "string") == 0))
                 {
-                    fprintf(out, "(strcmp(");
-                    codegen_expression(ctx, node->binary.left, out);
-                    fprintf(out, ", ");
-                    codegen_expression(ctx, node->binary.right, out);
+                    EMIT(ctx, "(strcmp(");
+                    codegen_expression(ctx, node->binary.left);
+                    EMIT(ctx, ", ");
+                    codegen_expression(ctx, node->binary.right);
                     if (strcmp(node->binary.op, "==") == 0)
                     {
-                        fprintf(out, ") == 0)");
+                        EMIT(ctx, ") == 0)");
                     }
                     else
                     {
-                        fprintf(out, ") != 0)");
+                        EMIT(ctx, ") != 0)");
                     }
                 }
                 else
                 {
-                    fprintf(out, "(");
-                    codegen_expression(ctx, node->binary.left, out);
-                    fprintf(out, " %s ", node->binary.op);
-                    codegen_expression(ctx, node->binary.right, out);
-                    fprintf(out, ")");
+                    EMIT(ctx, "(");
+                    codegen_expression(ctx, node->binary.left);
+                    EMIT(ctx, " %s ", node->binary.op);
+                    codegen_expression(ctx, node->binary.right);
+                    EMIT(ctx, ")");
                 }
             }
             else
             {
-                fprintf(out, "(");
-                codegen_expression(ctx, node->binary.left, out);
-                fprintf(out, " %s ", node->binary.op);
-                codegen_expression(ctx, node->binary.right, out);
-                fprintf(out, ")");
+                EMIT(ctx, "(");
+                codegen_expression(ctx, node->binary.left);
+                EMIT(ctx, " %s ", node->binary.op);
+                codegen_expression(ctx, node->binary.right);
+                EMIT(ctx, ")");
             }
             if (t1)
             {
@@ -697,23 +691,23 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         else if (strcmp(node->binary.op, "**") == 0)
         {
-            fprintf(out, "(_zc_pow((double)(");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, "), (double)(");
-            codegen_expression(ctx, node->binary.right, out);
-            fprintf(out, ")))");
+            EMIT(ctx, "(_zc_pow((double)(");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, "), (double)(");
+            codegen_expression(ctx, node->binary.right);
+            EMIT(ctx, ")))");
         }
         else if (strcmp(node->binary.op, "**=") == 0)
         {
-            fprintf(out, "({ ");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, " = _zc_pow((double)(");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, "), (double)(");
-            codegen_expression(ctx, node->binary.right, out);
-            fprintf(out, ")); ");
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, "; })");
+            EMIT(ctx, "({ ");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, " = _zc_pow((double)(");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, "), (double)(");
+            codegen_expression(ctx, node->binary.right);
+            EMIT(ctx, ")); ");
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, "; })");
         }
         else
         {
@@ -752,49 +746,49 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
             if (is_drop_assignment)
             {
-                fprintf(out, "({ ");
-                fprintf(out, "ZC_AUTO _z_tmp = (");
-                codegen_expression_with_move(ctx, node->binary.right, out);
-                fprintf(out, "); ");
+                EMIT(ctx, "({ ");
+                EMIT(ctx, "ZC_AUTO _z_tmp = (");
+                codegen_expression_with_move(ctx, node->binary.right);
+                EMIT(ctx, "); ");
 
-                fprintf(out, "__typeof__((");
-                codegen_expression(ctx, node->binary.left, out);
-                fprintf(out, "))* _z_dest = &(");
-                codegen_expression(ctx, node->binary.left, out);
-                fprintf(out, "); ");
+                EMIT(ctx, "__typeof__((");
+                codegen_expression(ctx, node->binary.left);
+                EMIT(ctx, "))* _z_dest = &(");
+                codegen_expression(ctx, node->binary.left);
+                EMIT(ctx, "); ");
 
                 if (node->binary.left->type == NODE_EXPR_VAR)
                 {
-                    fprintf(out, "if (__z_drop_flag_%s) %s__Drop__glue(_z_dest); ",
-                            node->binary.left->var_ref.name, clean_type);
+                    EMIT(ctx, "if (__z_drop_flag_%s) %s__Drop__glue(_z_dest); ",
+                         node->binary.left->var_ref.name, clean_type);
                 }
                 else
                 {
-                    fprintf(out, "%s__Drop__glue(_z_dest); ", clean_type);
+                    EMIT(ctx, "%s__Drop__glue(_z_dest); ", clean_type);
                 }
 
-                fprintf(out, "*_z_dest = _z_tmp; ");
+                EMIT(ctx, "*_z_dest = _z_tmp; ");
 
                 if (node->binary.left->type == NODE_EXPR_VAR)
                 {
-                    fprintf(out, "__z_drop_flag_%s = 1; ", node->binary.left->var_ref.name);
+                    EMIT(ctx, "__z_drop_flag_%s = 1; ", node->binary.left->var_ref.name);
                 }
 
-                fprintf(out, "*_z_dest; })");
+                EMIT(ctx, "*_z_dest; })");
             }
             else
             {
-                fprintf(out, "(");
+                EMIT(ctx, "(");
                 if (is_assignment)
                 {
-                    codegen_expression(ctx, node->binary.left, out);
+                    codegen_expression(ctx, node->binary.left);
                 }
                 else
                 {
-                    codegen_expression_with_move(ctx, node->binary.left, out);
+                    codegen_expression_with_move(ctx, node->binary.left);
                 }
 
-                fprintf(out, " %s ", node->binary.op);
+                EMIT(ctx, " %s ", node->binary.op);
                 if (g_config.misra_mode ||
                     (g_config.use_cpp && is_assignment && strcmp(node->binary.op, "=") == 0))
                 {
@@ -818,9 +812,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                         if (c_type && strcmp(c_type, "unknown") != 0 && strcmp(c_type, "void") != 0)
                         {
-                            fprintf(out, "(%s)(", c_type);
-                            codegen_expression_with_move(ctx, node->binary.right, out);
-                            fprintf(out, ")");
+                            EMIT(ctx, "(%s)(", c_type);
+                            codegen_expression_with_move(ctx, node->binary.right);
+                            EMIT(ctx, ")");
                             free(c_type);
                         }
                         else
@@ -829,19 +823,19 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                             {
                                 free(c_type);
                             }
-                            codegen_expression_with_move(ctx, node->binary.right, out);
+                            codegen_expression_with_move(ctx, node->binary.right);
                         }
                     }
                     else
                     {
-                        codegen_expression_with_move(ctx, node->binary.right, out);
+                        codegen_expression_with_move(ctx, node->binary.right);
                     }
                 }
                 else
                 {
-                    codegen_expression_with_move(ctx, node->binary.right, out);
+                    codegen_expression_with_move(ctx, node->binary.right);
                 }
-                fprintf(out, ")");
+                EMIT(ctx, ")");
             }
 
             if (clean_type)
@@ -851,22 +845,22 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         if (g_config.misra_mode)
         {
-            fprintf(out, ")");
+            EMIT(ctx, ")");
         }
         break;
     case NODE_EXPR_VAR:
-        codegen_var_expr(ctx, node, out);
+        codegen_var_expr(ctx, node);
         break;
     case NODE_LAMBDA:
-        codegen_lambda_expr(ctx, node, out);
+        codegen_lambda_expr(ctx, node);
         break;
     case NODE_EXPR_LITERAL:
-        codegen_literal_expr(node, out);
+        codegen_literal_expr(ctx, node);
         break;
     case NODE_EXPR_CALL:
     {
         // Always give the ability to step into a function call
-        emit_source_mapping(node, out);
+        emit_source_mapping(ctx, node);
 
         if (node->call.callee->type == NODE_EXPR_MEMBER)
         {
@@ -886,12 +880,12 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 {
                     if (target->type_info->array_size > 0)
                     {
-                        fprintf(out, "%d", target->type_info->array_size);
+                        EMIT(ctx, "%d", target->type_info->array_size);
                     }
                     else
                     {
-                        codegen_expression(ctx, target, out);
-                        fprintf(out, ".len");
+                        codegen_expression(ctx, target);
+                        EMIT(ctx, ".len");
                     }
                     RECURSION_EXIT(ctx);
                     return;
@@ -918,14 +912,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     if (sig)
                     {
                         const char *emit_name = (sig->link_name) ? sig->link_name : mangled;
-                        fprintf(out, "%s(", emit_name);
+                        EMIT(ctx, "%s(", emit_name);
                         ASTNode *arg = node->call.args;
                         int arg_idx = 0;
                         while (arg)
                         {
                             if (arg_idx > 0)
                             {
-                                fprintf(out, ", ");
+                                EMIT(ctx, ", ");
                             }
 
                             Type *param_t =
@@ -935,27 +929,27 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                 strncmp(param_t->name, "Tuple__", 7) == 0 && sig->total_args == 1 &&
                                 node->call.arg_count > 1)
                             {
-                                fprintf(out, "(%s){", param_t->name);
+                                EMIT(ctx, "(%s){", param_t->name);
                                 int first = 1;
                                 while (arg)
                                 {
                                     if (!first)
                                     {
-                                        fprintf(out, ", ");
+                                        EMIT(ctx, ", ");
                                     }
                                     first = 0;
-                                    codegen_expression(ctx, arg, out);
+                                    codegen_expression(ctx, arg);
                                     arg = arg->next;
                                 }
-                                fprintf(out, "}");
+                                EMIT(ctx, "}");
                                 break;
                             }
 
-                            codegen_expression(ctx, arg, out);
+                            codegen_expression(ctx, arg);
                             arg = arg->next;
                             arg_idx++;
                         }
-                        fprintf(out, ")");
+                        EMIT(ctx, ")");
                         RECURSION_EXIT(ctx);
                         return;
                     }
@@ -1081,30 +1075,30 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                     }
 
-                    emit_mangled_name(ctx, out, mangled_base, method);
-                    fprintf(out, "(");
+                    emit_mangled_name(ctx, mangled_base, method);
+                    EMIT(ctx, "(");
                     if (g_config.use_cpp)
                     {
-                        fprintf(out, "({ __typeof__((");
-                        codegen_expression(ctx, target, out);
-                        fprintf(out, ")) _tmp = ");
-                        codegen_expression(ctx, target, out);
-                        fprintf(out, "; &_tmp; })");
+                        EMIT(ctx, "({ __typeof__((");
+                        codegen_expression(ctx, target);
+                        EMIT(ctx, ")) _tmp = ");
+                        codegen_expression(ctx, target);
+                        EMIT(ctx, "; &_tmp; })");
                     }
                     else
                     {
-                        fprintf(out, "((%s[]){", type_mangled);
-                        codegen_expression(ctx, target, out);
-                        fprintf(out, "})");
+                        EMIT(ctx, "((%s[]){", type_mangled);
+                        codegen_expression(ctx, target);
+                        EMIT(ctx, "})");
                     }
                     ASTNode *arg = node->call.args;
                     while (arg)
                     {
-                        fprintf(out, ", ");
-                        codegen_expression_with_move(ctx, arg, out);
+                        EMIT(ctx, ", ");
+                        codegen_expression_with_move(ctx, arg);
                         arg = arg->next;
                     }
-                    fprintf(out, ")");
+                    EMIT(ctx, ")");
                 }
                 else
                 {
@@ -1224,25 +1218,25 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         }
                     }
 
-                    emit_mangled_name(ctx, out, call_base, method);
-                    fprintf(out, "(");
+                    emit_mangled_name(ctx, call_base, method);
+                    EMIT(ctx, "(");
                     if (need_cast)
                     {
-                        fprintf(out, "(%s*)%s", call_base, strchr(type, '*') ? "" : "&");
+                        EMIT(ctx, "(%s*)%s", call_base, strchr(type, '*') ? "" : "&");
                     }
                     else if (!strchr(type, '*'))
                     {
-                        fprintf(out, "&");
+                        EMIT(ctx, "&");
                     }
-                    codegen_expression(ctx, target, out);
+                    codegen_expression(ctx, target);
                     ASTNode *arg = node->call.args;
                     while (arg)
                     {
-                        fprintf(out, ", ");
-                        codegen_expression_with_move(ctx, arg, out);
+                        EMIT(ctx, ", ");
+                        codegen_expression_with_move(ctx, arg);
                         arg = arg->next;
                     }
-                    fprintf(out, ")");
+                    EMIT(ctx, ")");
 
                     if (resolved_method_suffix)
                     {
@@ -1267,7 +1261,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             ASTNode *def = find_struct_def(ctx, node->call.callee->var_ref.name);
             if (def && def->type == NODE_STRUCT)
             {
-                fprintf(out, "(struct %s){0}", node->call.callee->var_ref.name);
+                EMIT(ctx, "(struct %s){0}", node->call.callee->var_ref.name);
                 RECURSION_EXIT(ctx);
                 return;
             }
@@ -1276,9 +1270,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         Type *callee_ti = get_inner_type(node->call.callee->type_info);
         if (callee_ti && callee_ti->kind == TYPE_FUNCTION && !callee_ti->is_raw)
         {
-            fprintf(out, "({ z_closure_T _c = ");
-            codegen_expression(ctx, node->call.callee, out);
-            fprintf(out, "; ");
+            EMIT(ctx, "({ z_closure_T _c = ");
+            codegen_expression(ctx, node->call.callee);
+            EMIT(ctx, "; ");
 
             Type *ft = callee_ti;
             char *ret = type_to_c_string(ft->inner);
@@ -1293,7 +1287,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 ret = xstrdup("void*");
             }
 
-            fprintf(out, "((%s (*)(void*", ret);
+            EMIT(ctx, "((%s (*)(void*", ret);
             for (int i = 0; i < ft->arg_count; i++)
             {
                 char *as = type_to_c_string(ft->args[i]);
@@ -1302,23 +1296,23 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     free(as);
                     as = xstrdup("void*");
                 }
-                fprintf(out, ", %s", as);
+                EMIT(ctx, ", %s", as);
                 free(as);
             }
             if (ft->is_varargs)
             {
-                fprintf(out, ", ...");
+                EMIT(ctx, ", ...");
             }
-            fprintf(out, "))_c.func)(_c.ctx");
+            EMIT(ctx, "))_c.func)(_c.ctx");
 
             ASTNode *arg = node->call.args;
             while (arg)
             {
-                fprintf(out, ", ");
-                codegen_expression_with_move(ctx, arg, out);
+                EMIT(ctx, ", ");
+                codegen_expression_with_move(ctx, arg);
                 arg = arg->next;
             }
-            fprintf(out, "); })");
+            EMIT(ctx, "); })");
             free(ret);
             break;
         }
@@ -1326,7 +1320,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         if (node->call.callee->type == NODE_EXPR_VAR &&
             strcmp(node->call.callee->var_ref.name, "panic") == 0)
         {
-            fprintf(out, "__zenc_panic");
+            EMIT(ctx, "__zenc_panic");
             goto skip_callee_gen;
         }
         else if (node->call.callee->type == NODE_EXPR_VAR)
@@ -1350,7 +1344,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                          strncmp(base, "JsonType", 8) == 0);
                     if (is_common_enum || (def && def->type == NODE_ENUM))
                     {
-                        emit_mangled_name(ctx, out, base, underscore + 1);
+                        emit_mangled_name(ctx, base, underscore + 1);
                         goto skip_callee_gen;
                     }
                 }
@@ -1358,10 +1352,10 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         }
 
         g_emitting_callee = 1;
-        codegen_expression(ctx, node->call.callee, out);
+        codegen_expression(ctx, node->call.callee);
         g_emitting_callee = 0;
     skip_callee_gen:
-        fprintf(out, "(");
+        EMIT(ctx, "(");
 
         if (node->call.arg_names && node->call.callee->type == NODE_EXPR_VAR)
         {
@@ -1371,10 +1365,10 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             {
                 if (!first)
                 {
-                    fprintf(out, ", ");
+                    EMIT(ctx, ", ");
                 }
                 first = 0;
-                codegen_expression_with_move(ctx, arg, out);
+                codegen_expression_with_move(ctx, arg);
                 arg = arg->next;
             }
         }
@@ -1463,10 +1457,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                         arg_t && arg_t->kind == TYPE_ARRAY && arg_t->array_size > 0)
                     {
                         char *inner = type_to_c_string(param_t->inner);
-                        fprintf(out, "(Slice__%s){.data = ", inner);
-                        codegen_expression(ctx, arg, out);
-                        fprintf(out, ", .len = %d, .cap = %d}", arg_t->array_size,
-                                arg_t->array_size);
+                        EMIT(ctx, "(Slice__%s){.data = ", inner);
+                        codegen_expression(ctx, arg);
+                        EMIT(ctx, ", .len = %d, .cap = %d}", arg_t->array_size, arg_t->array_size);
                         free(inner);
                         handled = 1;
                     }
@@ -1474,20 +1467,20 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                              strncmp(param_t->name, "Tuple__", 7) == 0 && sig->total_args == 1 &&
                              node->call.arg_count > 1)
                     {
-                        fprintf(out, "(%s){", param_t->name);
+                        EMIT(ctx, "(%s){", param_t->name);
                         ASTNode *curr = arg;
                         int first_field = 1;
                         while (curr)
                         {
                             if (!first_field)
                             {
-                                fprintf(out, ", ");
+                                EMIT(ctx, ", ");
                             }
                             first_field = 0;
-                            codegen_expression_with_move(ctx, curr, out);
+                            codegen_expression_with_move(ctx, curr);
                             curr = curr->next;
                         }
-                        fprintf(out, "}");
+                        EMIT(ctx, "}");
                         handled = 1;
                         arg = NULL;
                     }
@@ -1509,25 +1502,25 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                             (param_t->kind == TYPE_POINTER || param_t->kind == TYPE_ENUM))
                         {
                             char *c_type = type_to_c_string(param_t);
-                            fprintf(out, "(%s)(", c_type);
-                            codegen_expression_with_move(ctx, arg, out);
-                            fprintf(out, ")");
+                            EMIT(ctx, "(%s)(", c_type);
+                            codegen_expression_with_move(ctx, arg);
+                            EMIT(ctx, ")");
                             free(c_type);
                         }
                         else
                         {
-                            codegen_expression_with_move(ctx, arg, out);
+                            codegen_expression_with_move(ctx, arg);
                         }
                     }
                     else
                     {
-                        codegen_expression_with_move(ctx, arg, out);
+                        codegen_expression_with_move(ctx, arg);
                     }
                 }
 
                 if (arg && arg->next)
                 {
-                    fprintf(out, ", ");
+                    EMIT(ctx, ", ");
                 }
                 if (arg)
                 {
@@ -1536,7 +1529,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 arg_idx++;
             }
         }
-        fprintf(out, ")");
+        EMIT(ctx, ")");
         break;
     }
     case NODE_EXPR_MEMBER:
@@ -1546,14 +1539,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 node->member.target->type_info->kind == TYPE_ARRAY &&
                 node->member.target->type_info->array_size > 0)
             {
-                fprintf(out, "%d", node->member.target->type_info->array_size);
+                EMIT(ctx, "%d", node->member.target->type_info->array_size);
                 break;
             }
         }
 
         if (node->member.target->type_info && node->member.target->type_info->kind == TYPE_VECTOR)
         {
-            codegen_expression(ctx, node->member.target, out);
+            codegen_expression(ctx, node->member.target);
             RECURSION_EXIT(ctx);
             return;
         }
@@ -1567,7 +1560,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 if (is_simple_enum(ctx, tname))
                 {
                     // Simple enum: no .tag member exists, the value IS the tag.
-                    codegen_expression(ctx, node->member.target, out);
+                    codegen_expression(ctx, node->member.target);
                     free(tname);
                     break;
                 }
@@ -1577,18 +1570,18 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (node->member.is_pointer_access == 2)
         {
-            fprintf(out, "({ ");
-            emit_auto_type(ctx, node->member.target, node->token, out);
-            fprintf(out, " _t = (");
-            codegen_expression(ctx, node->member.target, out);
+            EMIT(ctx, "({ ");
+            emit_auto_type(ctx, node->member.target, node->token);
+            EMIT(ctx, " _t = (");
+            codegen_expression(ctx, node->member.target);
             char *field = node->member.field;
             if (field && field[0] >= '0' && field[0] <= '9')
             {
-                fprintf(out, "); _t ? _t->v%s : 0; })", field);
+                EMIT(ctx, "); _t ? _t->v%s : 0; })", field);
             }
             else
             {
-                fprintf(out, "); _t ? _t->%s : 0; })", field);
+                EMIT(ctx, "); _t ? _t->%s : 0; })", field);
             }
         }
         else
@@ -1599,12 +1592,12 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 ASTNode *def = find_struct_def(ctx, node->member.target->var_ref.name);
                 if (def && def->type == NODE_ENUM)
                 {
-                    fprintf(out, "%s__%s", node->member.target->var_ref.name, node->member.field);
+                    EMIT(ctx, "%s__%s", node->member.target->var_ref.name, node->member.field);
                     break;
                 }
             }
 
-            codegen_expression(ctx, node->member.target, out);
+            codegen_expression(ctx, node->member.target);
             char *lt = infer_type(ctx, node->member.target);
             int actually_ptr = 0;
             if (lt && (lt[strlen(lt) - 1] == '*' || strstr(lt, "*")))
@@ -1619,11 +1612,11 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             char *field = node->member.field;
             if (field && field[0] >= '0' && field[0] <= '9')
             {
-                fprintf(out, "%sv%s", actually_ptr ? "->" : ".", field);
+                EMIT(ctx, "%sv%s", actually_ptr ? "->" : ".", field);
             }
             else
             {
-                fprintf(out, "%s%s", actually_ptr ? "->" : ".", field);
+                EMIT(ctx, "%s%s", actually_ptr ? "->" : ".", field);
             }
         }
         break;
@@ -1664,19 +1657,19 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             if (node->index.array->type == NODE_EXPR_VAR)
             {
-                codegen_expression(ctx, node->index.array, out);
-                fprintf(out, ".data[_z_check_bounds(");
-                codegen_expression(ctx, node->index.index, out);
-                fprintf(out, ", ");
-                codegen_expression(ctx, node->index.array, out);
-                fprintf(out, ".len)]");
+                codegen_expression(ctx, node->index.array);
+                EMIT(ctx, ".data[_z_check_bounds(");
+                codegen_expression(ctx, node->index.index);
+                EMIT(ctx, ", ");
+                codegen_expression(ctx, node->index.array);
+                EMIT(ctx, ".len)]");
             }
             else
             {
-                codegen_expression(ctx, node->index.array, out);
-                fprintf(out, ".data[");
-                codegen_expression(ctx, node->index.index, out);
-                fprintf(out, "]");
+                codegen_expression(ctx, node->index.array);
+                EMIT(ctx, ".data[");
+                codegen_expression(ctx, node->index.index);
+                EMIT(ctx, "]");
             }
         }
         else
@@ -1716,23 +1709,23 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 int needs_addr =
                     (sig && sig->total_args > 0 && sig->arg_types[0]->kind == TYPE_POINTER);
 
-                fprintf(out, "%s(", method_name);
+                EMIT(ctx, "%s(", method_name);
                 if (needs_addr)
                 {
-                    fprintf(out, "&");
+                    EMIT(ctx, "&");
                 }
-                codegen_expression(ctx, node->index.array, out);
-                fprintf(out, ", ");
-                codegen_expression(ctx, node->index.index, out);
+                codegen_expression(ctx, node->index.array);
+                EMIT(ctx, ", ");
+                codegen_expression(ctx, node->index.index);
                 // Emit extra indices for multi-index (v[i, j, k])
                 ASTNode *extra = node->index.extra_indices;
                 while (extra)
                 {
-                    fprintf(out, ", ");
-                    codegen_expression(ctx, extra, out);
+                    EMIT(ctx, ", ");
+                    codegen_expression(ctx, extra);
                     extra = extra->next;
                 }
-                fprintf(out, ")");
+                EMIT(ctx, ")");
                 free(struct_name);
             }
             else
@@ -1745,18 +1738,18 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     fixed_size = node->index.array->type_info->array_size;
                 }
 
-                codegen_expression(ctx, node->index.array, out);
-                fprintf(out, "[");
+                codegen_expression(ctx, node->index.array);
+                EMIT(ctx, "[");
                 if (fixed_size > 0)
                 {
-                    fprintf(out, "_z_check_bounds(");
+                    EMIT(ctx, "_z_check_bounds(");
                 }
-                codegen_expression(ctx, node->index.index, out);
+                codegen_expression(ctx, node->index.index);
                 if (fixed_size > 0)
                 {
-                    fprintf(out, ", %d)", fixed_size);
+                    EMIT(ctx, ", %d)", fixed_size);
                 }
-                fprintf(out, "]");
+                EMIT(ctx, "]");
             }
         }
     }
@@ -1783,53 +1776,50 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             tname = type_to_c_string(node->type_info->inner);
         }
 
-        fprintf(out, "({ ");
-        emit_auto_type(ctx, node->slice.array, node->token, out);
-        fprintf(out, " _arr = ");
-        codegen_expression(ctx, node->slice.array, out);
-        fprintf(out, "; int _start = ");
+        EMIT(ctx, "({ ");
+        emit_auto_type(ctx, node->slice.array, node->token);
+        EMIT(ctx, " _arr = ");
+        codegen_expression(ctx, node->slice.array);
+        EMIT(ctx, "; int _start = ");
         if (node->slice.start)
         {
-            codegen_expression(ctx, node->slice.start, out);
+            codegen_expression(ctx, node->slice.start);
         }
         else
         {
-            fprintf(out, "0");
+            EMIT(ctx, "0");
         }
-        fprintf(out, "; int _len = ");
+        EMIT(ctx, "; int _len = ");
 
         if (node->slice.end)
         {
-            codegen_expression(ctx, node->slice.end, out);
-            fprintf(out, " - _start; ");
+            codegen_expression(ctx, node->slice.end);
+            EMIT(ctx, " - _start; ");
         }
         else
         {
             if (known_size > 0)
             {
-                fprintf(out, "%d - _start; ", known_size);
+                EMIT(ctx, "%d - _start; ", known_size);
             }
             else if (is_slice_struct)
             {
-                fprintf(out, "_arr.len - _start; ");
+                EMIT(ctx, "_arr.len - _start; ");
             }
             else
             {
-                fprintf(out, "0; ");
+                EMIT(ctx, "0; ");
             }
         }
 
         if (is_slice_struct)
         {
-            fprintf(out,
-                    "(Slice__%s){ .data = _arr.data + _start, .len = _len, .cap = "
-                    "_len }; })",
-                    tname);
+            EMIT(ctx, "(Slice__%s){ .data = _arr.data + _start, .len = _len, .cap = _len }; })",
+                 tname);
         }
         else
         {
-            fprintf(out, "(Slice__%s){ .data = _arr + _start, .len = _len, .cap = _len }; })",
-                    tname);
+            EMIT(ctx, "(Slice__%s){ .data = _arr + _start, .len = _len, .cap = _len }; })", tname);
         }
         if (tname && strcmp(tname, "unknown") != 0)
         {
@@ -1840,22 +1830,22 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_BLOCK:
     {
         int saved = defer_count;
-        fprintf(out, "({ ");
-        codegen_walker(ctx, node->block.statements, out);
+        EMIT(ctx, "({ ");
+        codegen_walker(ctx, node->block.statements);
         for (int i = defer_count - 1; i >= saved; i--)
         {
-            emit_source_mapping_duplicate(defer_stack[i], out);
-            codegen_node_single(ctx, defer_stack[i], out);
+            emit_source_mapping_duplicate(ctx, defer_stack[i]);
+            codegen_node_single(ctx, defer_stack[i]);
         }
         defer_count = saved;
-        fprintf(out, " })");
+        EMIT(ctx, " })");
         break;
     }
     case NODE_IF:
     {
         // If-expression: emit as GCC statement expression
         // Use typeof on first branch's last expression to declare result type
-        fprintf(out, "({ ");
+        EMIT(ctx, "({ ");
 
         // Find the result expression from then_body for typeof
         ASTNode *then_result = NULL;
@@ -1876,62 +1866,62 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         // Declare result variable using typeof
         if (then_result)
         {
-            fprintf(out, "__typeof__(");
-            codegen_expression(ctx, then_result, out);
-            fprintf(out, ") _ifval; ");
+            EMIT(ctx, "__typeof__(");
+            codegen_expression(ctx, then_result);
+            EMIT(ctx, ") _ifval; ");
         }
         else
         {
-            fprintf(out, "int _ifval; "); // fallback
+            EMIT(ctx, "int _ifval; "); // fallback
         }
 
-        fprintf(out, "if (");
-        codegen_expression(ctx, node->if_stmt.condition, out);
-        fprintf(out, ") { ");
+        EMIT(ctx, "if (");
+        codegen_expression(ctx, node->if_stmt.condition);
+        EMIT(ctx, ") { ");
         if (node->if_stmt.then_body && node->if_stmt.then_body->type == NODE_BLOCK)
         {
             ASTNode *stmt = node->if_stmt.then_body->block.statements;
             while (stmt && stmt->next)
             {
-                codegen_node_single(ctx, stmt, out);
+                codegen_node_single(ctx, stmt);
                 stmt = stmt->next;
             }
             if (stmt)
             {
-                fprintf(out, "_ifval = ");
-                codegen_expression(ctx, stmt, out);
-                fprintf(out, "; ");
+                EMIT(ctx, "_ifval = ");
+                codegen_expression(ctx, stmt);
+                EMIT(ctx, "; ");
             }
         }
         else if (node->if_stmt.then_body)
         {
-            fprintf(out, "_ifval = ");
-            codegen_expression(ctx, node->if_stmt.then_body, out);
-            fprintf(out, "; ");
+            EMIT(ctx, "_ifval = ");
+            codegen_expression(ctx, node->if_stmt.then_body);
+            EMIT(ctx, "; ");
         }
-        fprintf(out, "} else { ");
+        EMIT(ctx, "} else { ");
         if (node->if_stmt.else_body && node->if_stmt.else_body->type == NODE_BLOCK)
         {
             ASTNode *stmt = node->if_stmt.else_body->block.statements;
             while (stmt && stmt->next)
             {
-                codegen_node_single(ctx, stmt, out);
+                codegen_node_single(ctx, stmt);
                 stmt = stmt->next;
             }
             if (stmt)
             {
-                fprintf(out, "_ifval = ");
-                codegen_expression(ctx, stmt, out);
-                fprintf(out, "; ");
+                EMIT(ctx, "_ifval = ");
+                codegen_expression(ctx, stmt);
+                EMIT(ctx, "; ");
             }
         }
         else if (node->if_stmt.else_body)
         {
-            fprintf(out, "_ifval = ");
-            codegen_expression(ctx, node->if_stmt.else_body, out);
-            fprintf(out, "; ");
+            EMIT(ctx, "_ifval = ");
+            codegen_expression(ctx, node->if_stmt.else_body);
+            EMIT(ctx, "; ");
         }
-        fprintf(out, "} _ifval; })");
+        EMIT(ctx, "} _ifval; })");
         break;
     }
     case NODE_TRY:
@@ -1983,29 +1973,25 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             }
         }
 
-        fprintf(out, "({ ");
-        emit_auto_type(ctx, node->try_stmt.expr, node->token, out);
-        fprintf(out, " _try = ");
-        codegen_expression(ctx, node->try_stmt.expr, out);
+        EMIT(ctx, "({ ");
+        emit_auto_type(ctx, node->try_stmt.expr, node->token);
+        EMIT(ctx, " _try = ");
+        codegen_expression(ctx, node->try_stmt.expr);
 
         if (is_enum)
         {
-            fprintf(out,
-                    "; if (_try.tag == %s__Err_Tag) return (%s__Err(_try.data.Err)); "
-                    "_try.data.Ok; })",
-                    search_name, search_name);
+            EMIT(ctx,
+                 "; if (_try.tag == %s__Err_Tag) return (%s__Err(_try.data.Err)); _try.data.Ok; })",
+                 search_name, search_name);
         }
         else
         {
-            fprintf(out,
-                    "; if (!_try.is_ok) return %s__Err(_try.err); "
-                    "_try.val; })",
-                    search_name);
+            EMIT(ctx, "; if (!_try.is_ok) return %s__Err(_try.err); _try.val; })", search_name);
         }
         break;
     }
     case NODE_RAW_STMT:
-        fprintf(out, "%s", node->raw_stmt.content);
+        EMIT(ctx, "%s", node->raw_stmt.content);
         break;
     case NODE_PLUGIN:
     {
@@ -2013,12 +1999,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         if (found)
         {
             ZApi api;
-            zptr_init_api(&api, g_current_filename, node->line, out, ctx->hoist_out);
+            zptr_init_api(&api, g_current_filename, node->line);
+            api.out = ctx->emitter.out;
+            api.hoist_out = ctx->hoist_out;
             found->fn(node->plugin_stmt.body, &api);
         }
         else
         {
-            fprintf(out, "/* Unknown plugin: %s */\n", node->plugin_stmt.plugin_name);
+            EMIT(ctx, "/* Unknown plugin: %s */\n", node->plugin_stmt.plugin_name);
         }
         break;
     }
@@ -2027,76 +2015,76 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             if (g_config.use_cpp)
             {
-                fprintf(out, "({ __typeof__((");
-                codegen_expression(ctx, node->unary.operand, out);
-                fprintf(out, ")) _tmp = ");
-                codegen_expression(ctx, node->unary.operand, out);
-                fprintf(out, "; &_tmp; })");
+                EMIT(ctx, "({ __typeof__((");
+                codegen_expression(ctx, node->unary.operand);
+                EMIT(ctx, ")) _tmp = ");
+                codegen_expression(ctx, node->unary.operand);
+                EMIT(ctx, "; &_tmp; })");
             }
             else
             {
-                fprintf(out, "(__typeof__((");
-                codegen_expression(ctx, node->unary.operand, out);
-                fprintf(out, "))[]){");
-                codegen_expression(ctx, node->unary.operand, out);
-                fprintf(out, "}");
+                EMIT(ctx, "(__typeof__((");
+                codegen_expression(ctx, node->unary.operand);
+                EMIT(ctx, "))[]){");
+                codegen_expression(ctx, node->unary.operand);
+                EMIT(ctx, "}");
             }
         }
         else if (node->unary.op && strcmp(node->unary.op, "?") == 0)
         {
-            fprintf(out, "({ ");
-            emit_auto_type(ctx, node->unary.operand, node->token, out);
-            fprintf(out, " _t = (");
-            codegen_expression(ctx, node->unary.operand, out);
-            fprintf(out, "); if (_t.tag != 0) return _t; _t.data.Ok; })");
+            EMIT(ctx, "({ ");
+            emit_auto_type(ctx, node->unary.operand, node->token);
+            EMIT(ctx, " _t = (");
+            codegen_expression(ctx, node->unary.operand);
+            EMIT(ctx, "); if (_t.tag != 0) return _t; _t.data.Ok; })");
         }
         else if (node->unary.op && strcmp(node->unary.op, "_post++") == 0)
         {
-            fprintf(out, "(");
-            codegen_expression(ctx, node->unary.operand, out);
-            fprintf(out, "++)");
+            EMIT(ctx, "(");
+            codegen_expression(ctx, node->unary.operand);
+            EMIT(ctx, "++)");
         }
         else if (node->unary.op && strcmp(node->unary.op, "_post--") == 0)
         {
-            fprintf(out, "(");
-            codegen_expression(ctx, node->unary.operand, out);
-            fprintf(out, "--)");
+            EMIT(ctx, "(");
+            codegen_expression(ctx, node->unary.operand);
+            EMIT(ctx, "--)");
         }
         else
         {
-            fprintf(out, "(%s", node->unary.op);
-            codegen_expression(ctx, node->unary.operand, out);
-            fprintf(out, ")");
+            EMIT(ctx, "(%s", node->unary.op);
+            codegen_expression(ctx, node->unary.operand);
+            EMIT(ctx, ")");
         }
         break;
     case NODE_VA_START:
-        fprintf(out, "va_start(");
-        codegen_expression(ctx, node->va_start.ap, out);
-        fprintf(out, ", ");
-        codegen_expression(ctx, node->va_start.last_arg, out);
-        fprintf(out, ")");
+        EMIT(ctx, "va_start(");
+        codegen_expression(ctx, node->va_start.ap);
+        EMIT(ctx, ", ");
+        codegen_expression(ctx, node->va_start.last_arg);
+        EMIT(ctx, ")");
         break;
     case NODE_VA_END:
-        fprintf(out, "va_end(");
-        codegen_expression(ctx, node->va_end.ap, out);
-        fprintf(out, ")");
+        EMIT(ctx, "va_end(");
+        codegen_expression(ctx, node->va_end.ap);
+        EMIT(ctx, ")");
         break;
     case NODE_VA_COPY:
-        fprintf(out, "va_copy(");
-        codegen_expression(ctx, node->va_copy.dest, out);
-        fprintf(out, ", ");
-        codegen_expression(ctx, node->va_copy.src, out);
-        fprintf(out, ")");
+        EMIT(ctx, "va_copy(");
+        codegen_expression(ctx, node->va_copy.dest);
+        EMIT(ctx, ", ");
+        codegen_expression(ctx, node->va_copy.src);
+        EMIT(ctx, ")");
         break;
     case NODE_AST_COMMENT:
-        fprintf(out, "%s\n", node->comment.content);
+        EMIT(ctx, "%s\n", node->comment.content);
         break;
     case NODE_VA_ARG:
     {
         char *type_str = type_to_c_string(node->va_arg.type_info);
-        fprintf(out, "va_arg(");
-        codegen_expression(ctx, node->va_arg.ap, out);
-        fprintf(out, ", %s)", type_str);
+        EMIT(ctx, "va_arg(");
+        codegen_expression(ctx, node->va_arg.ap);
+        EMIT(ctx, ", %s)", type_str);
         free(type_str);
         break;
     }
@@ -2105,7 +2093,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         const char *t = node->cast.target_type;
         const char *mapped = map_to_c_type(t);
 
-        fprintf(out, "((%s)(", mapped);
+        EMIT(ctx, "((%s)(", mapped);
         Type *src_type = node->cast.expr->type_info;
         int cast_tag = 0;
         if (src_type && src_type->kind == TYPE_ENUM)
@@ -2133,14 +2121,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (cast_tag)
         {
-            codegen_expression(ctx, node->cast.expr, out);
-            fprintf(out, ".tag");
+            codegen_expression(ctx, node->cast.expr);
+            EMIT(ctx, ".tag");
         }
         else
         {
-            codegen_expression(ctx, node->cast.expr, out);
+            codegen_expression(ctx, node->cast.expr);
         }
-        fprintf(out, "))");
+        EMIT(ctx, "))");
 
         break;
     }
@@ -2148,38 +2136,38 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         if (node->size_of.target_type_info)
         {
             char *mapped = type_to_c_string(node->size_of.target_type_info);
-            fprintf(out, "sizeof(%s)", mapped);
+            EMIT(ctx, "sizeof(%s)", mapped);
             free(mapped);
         }
         else if (node->size_of.target_type)
         {
             const char *t = node->size_of.target_type;
             const char *mapped = map_to_c_type(t);
-            fprintf(out, "sizeof(%s)", mapped);
+            EMIT(ctx, "sizeof(%s)", mapped);
         }
         else
         {
-            fprintf(out, "sizeof(");
-            codegen_expression(ctx, node->size_of.expr, out);
-            fprintf(out, ")");
+            EMIT(ctx, "sizeof(");
+            codegen_expression(ctx, node->size_of.expr);
+            EMIT(ctx, ")");
         }
         break;
     case NODE_TYPEOF:
         if (node->size_of.target_type_info)
         {
             char *mapped = type_to_c_string(node->size_of.target_type_info);
-            fprintf(out, "typeof(%s)", mapped);
+            EMIT(ctx, "typeof(%s)", mapped);
             free(mapped);
         }
         else if (node->size_of.target_type)
         {
-            fprintf(out, "typeof(%s)", node->size_of.target_type);
+            EMIT(ctx, "typeof(%s)", node->size_of.target_type);
         }
         else
         {
-            fprintf(out, "typeof(");
-            codegen_expression(ctx, node->size_of.expr, out);
-            fprintf(out, ")");
+            EMIT(ctx, "typeof(");
+            codegen_expression(ctx, node->size_of.expr);
+            EMIT(ctx, ")");
         }
         break;
 
@@ -2189,39 +2177,39 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         if (node->reflection.kind == 0)
         {
             char *s = type_to_c_string(t);
-            fprintf(out, "\"%s\"", s);
+            EMIT(ctx, "\"%s\"", s);
             free(s);
         }
         else
         {
             if (t->kind != TYPE_STRUCT || !t->name)
             {
-                fprintf(out, "((void*)0)");
+                EMIT(ctx, "((void*)0)");
                 break;
             }
             char *sname = t->name;
             ASTNode *def = find_struct_def(ctx, sname);
             if (!def)
             {
-                fprintf(out, "((void*)0)");
+                EMIT(ctx, "((void*)0)");
                 break;
             }
 
-            fprintf(out,
-                    "({ static struct { char *name; char *type; unsigned long offset; } "
-                    "_fields_%s[] = {",
-                    sname);
+            EMIT(ctx,
+                 "({ static struct { char *name; char *type; unsigned long offset; } _fields_%s[] "
+                 "= {",
+                 sname);
             ASTNode *f = def->strct.fields;
             while (f)
             {
                 if (f->type == NODE_FIELD)
                 {
-                    fprintf(out, "{ \"%s\", \"%s\", __builtin_offsetof(struct %s, %s) }, ",
-                            f->field.name, f->field.type, sname, f->field.name);
+                    EMIT(ctx, "{ \"%s\", \"%s\", __builtin_offsetof(struct %s, %s) }, ",
+                         f->field.name, f->field.type, sname, f->field.name);
                 }
                 f = f->next;
             }
-            fprintf(out, "{ 0 } }; (void*)_fields_%s; })", sname);
+            EMIT(ctx, "{ 0 } }; (void*)_fields_%s; })", sname);
         }
         break;
     }
@@ -2283,7 +2271,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             if (in_func && !is_vector)
             {
-                fprintf(out, "({ %s _s = %s; ", struct_name, g_config.use_cpp ? "{}" : "{0}");
+                EMIT(ctx, "({ %s _s = %s; ", struct_name, g_config.use_cpp ? "{}" : "{0}");
                 ASTNode *f = node->struct_init.fields;
                 while (f)
                 {
@@ -2304,9 +2292,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                             int idx = 0;
                             while (elem)
                             {
-                                fprintf(out, "_s.%s[%d] = ", f->var_decl.name, idx++);
-                                codegen_expression(ctx, elem, out);
-                                fprintf(out, "; ");
+                                EMIT(ctx, "_s.%s[%d] = ", f->var_decl.name, idx++);
+                                codegen_expression(ctx, elem);
+                                EMIT(ctx, "; ");
                                 elem = elem->next;
                             }
                         }
@@ -2317,26 +2305,26 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                                 // In C++ mode, we need explicit casts for pointer and enum
                                 // assignments. Using __typeof__(_s.field) is a robust way to cast
                                 // to the correct type.
-                                fprintf(out, "_s.%s = (__typeof__(_s.%s))(", f->var_decl.name,
-                                        f->var_decl.name);
-                                codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
-                                fprintf(out, ")");
+                                EMIT(ctx, "_s.%s = (__typeof__(_s.%s))(", f->var_decl.name,
+                                     f->var_decl.name);
+                                codegen_expression_with_move(ctx, f->var_decl.init_expr);
+                                EMIT(ctx, ")");
                             }
                             else
                             {
-                                fprintf(out, "_s.%s = ", f->var_decl.name);
-                                codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
+                                EMIT(ctx, "_s.%s = ", f->var_decl.name);
+                                codegen_expression_with_move(ctx, f->var_decl.init_expr);
                             }
-                            fprintf(out, "; ");
+                            EMIT(ctx, "; ");
                         }
                     }
                     f = f->next;
                 }
-                fprintf(out, "_s; })");
+                EMIT(ctx, "_s; })");
             }
             else
             {
-                fprintf(out, "%s { ", struct_name);
+                EMIT(ctx, "%s { ", struct_name);
                 ASTNode *f = node->struct_init.fields;
                 int field_count = 0;
                 ASTNode *tmp = f;
@@ -2352,9 +2340,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     {
                         if (i > 0)
                         {
-                            fprintf(out, ", ");
+                            EMIT(ctx, ", ");
                         }
-                        codegen_expression(ctx, f->var_decl.init_expr, out);
+                        codegen_expression(ctx, f->var_decl.init_expr);
                     }
                 }
                 else
@@ -2364,41 +2352,41 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     {
                         if (!first)
                         {
-                            fprintf(out, ", ");
+                            EMIT(ctx, ", ");
                         }
                         if (is_vector)
                         {
-                            codegen_expression(ctx, f->var_decl.init_expr, out);
+                            codegen_expression(ctx, f->var_decl.init_expr);
                         }
                         else
                         {
-                            fprintf(out, ".%s = ", f->var_decl.name);
-                            codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
+                            EMIT(ctx, ".%s = ", f->var_decl.name);
+                            codegen_expression_with_move(ctx, f->var_decl.init_expr);
                         }
                         first = 0;
                         f = f->next;
                     }
                 }
-                fprintf(out, " }");
+                EMIT(ctx, " }");
             }
         }
         else
         {
             if (is_vector)
             {
-                fprintf(out, "(%s){", struct_name);
+                EMIT(ctx, "(%s){", struct_name);
             }
             else if (is_union)
             {
-                fprintf(out, "(union %s){", struct_name);
+                EMIT(ctx, "(union %s){", struct_name);
             }
             else if (is_zen_struct)
             {
-                fprintf(out, "(struct %s){", struct_name);
+                EMIT(ctx, "(struct %s){", struct_name);
             }
             else
             {
-                fprintf(out, "(%s){", struct_name);
+                EMIT(ctx, "(%s){", struct_name);
             }
 
             ASTNode *f = node->struct_init.fields;
@@ -2416,9 +2404,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 {
                     if (i > 0)
                     {
-                        fprintf(out, ", ");
+                        EMIT(ctx, ", ");
                     }
-                    codegen_expression(ctx, f->var_decl.init_expr, out);
+                    codegen_expression(ctx, f->var_decl.init_expr);
                 }
             }
             else
@@ -2441,42 +2429,42 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     {
                         if (!first)
                         {
-                            fprintf(out, ", ");
+                            EMIT(ctx, ", ");
                         }
                         if (!is_vector)
                         {
-                            fprintf(out, ".%s = ", f->var_decl.name);
+                            EMIT(ctx, ".%s = ", f->var_decl.name);
                         }
-                        codegen_expression_with_move(ctx, f->var_decl.init_expr, out);
+                        codegen_expression_with_move(ctx, f->var_decl.init_expr);
                         first = 0;
                     }
                     f = f->next;
                 }
                 if (first)
                 {
-                    fprintf(out, "0");
+                    EMIT(ctx, "0");
                 }
             }
-            fprintf(out, "}");
+            EMIT(ctx, "}");
         }
         break;
     }
     case NODE_EXPR_ARRAY_LITERAL:
     {
-        fprintf(out, "{");
+        EMIT(ctx, "{");
         ASTNode *elem = node->array_literal.elements;
         int first_arr = 1;
         while (elem)
         {
             if (!first_arr)
             {
-                fprintf(out, ", ");
+                EMIT(ctx, ", ");
             }
-            codegen_expression(ctx, elem, out);
+            codegen_expression(ctx, elem);
             elem = elem->next;
             first_arr = 0;
         }
-        fprintf(out, "}");
+        EMIT(ctx, "}");
         break;
     }
     case NODE_EXPR_TUPLE_LITERAL:
@@ -2484,33 +2472,33 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         char *type = node->resolved_type ? node->resolved_type
                      : node->type_info   ? type_to_string(node->type_info)
                                          : "unknown";
-        fprintf(out, "(%s){", type);
+        EMIT(ctx, "(%s){", type);
         ASTNode *tup_elem = node->tuple_literal.elements;
         int first_tup = 1;
         while (tup_elem)
         {
             if (!first_tup)
             {
-                fprintf(out, ", ");
+                EMIT(ctx, ", ");
             }
-            codegen_expression(ctx, tup_elem, out);
+            codegen_expression(ctx, tup_elem);
             tup_elem = tup_elem->next;
             first_tup = 0;
         }
-        fprintf(out, "}");
+        EMIT(ctx, "}");
         break;
     }
     case NODE_TERNARY:
-        fprintf(out, "((");
-        codegen_expression(ctx, node->ternary.cond, out);
-        fprintf(out, ") ? (");
-        codegen_expression(ctx, node->ternary.true_expr, out);
-        fprintf(out, ") : (");
-        codegen_expression(ctx, node->ternary.false_expr, out);
-        fprintf(out, "))");
+        EMIT(ctx, "((");
+        codegen_expression(ctx, node->ternary.cond);
+        EMIT(ctx, ") ? (");
+        codegen_expression(ctx, node->ternary.true_expr);
+        EMIT(ctx, ") : (");
+        codegen_expression(ctx, node->ternary.false_expr);
+        EMIT(ctx, "))");
         break;
     case NODE_AWAIT:
-        handle_node_await_internal(ctx, node, out);
+        handle_node_await_internal(ctx, node);
         break;
     default:
         break;
@@ -2518,7 +2506,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     RECURSION_EXIT(ctx);
 }
 
-void codegen_expression_bare(ParserContext *ctx, ASTNode *node, FILE *out)
+void codegen_expression_bare(ParserContext *ctx, ASTNode *node)
 {
     if (!node)
     {
@@ -2538,9 +2526,9 @@ void codegen_expression_bare(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (is_simple)
         {
-            codegen_expression(ctx, node->binary.left, out);
-            fprintf(out, " %s ", op);
-            codegen_expression(ctx, node->binary.right, out);
+            codegen_expression(ctx, node->binary.left);
+            EMIT(ctx, " %s ", op);
+            codegen_expression(ctx, node->binary.right);
             RECURSION_EXIT(ctx);
             return;
         }
@@ -2550,20 +2538,20 @@ void codegen_expression_bare(ParserContext *ctx, ASTNode *node, FILE *out)
     {
         if (strcmp(node->unary.op, "_post++") == 0)
         {
-            codegen_expression(ctx, node->unary.operand, out);
-            fprintf(out, "++");
+            codegen_expression(ctx, node->unary.operand);
+            EMIT(ctx, "++");
             RECURSION_EXIT(ctx);
             return;
         }
         if (strcmp(node->unary.op, "_post--") == 0)
         {
-            codegen_expression(ctx, node->unary.operand, out);
-            fprintf(out, "--");
+            codegen_expression(ctx, node->unary.operand);
+            EMIT(ctx, "--");
             RECURSION_EXIT(ctx);
             return;
         }
     }
 
-    codegen_expression(ctx, node, out);
+    codegen_expression(ctx, node);
     RECURSION_EXIT(ctx);
 }
