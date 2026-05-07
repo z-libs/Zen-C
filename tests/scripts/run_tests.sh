@@ -195,6 +195,16 @@ run_test() {
         output=$(set -o pipefail; run_single); exit_code=$?
     fi
 
+    # Capture raw binary output for diagnostics on platform issues
+    local bin_output=""
+    local bin_outfile="${tmp_out}"
+    if [ -f "${tmp_out}" ]; then
+        bin_output=$(cat "${tmp_out}" 2>/dev/null | head -20)
+    elif [ -f "${tmp_out}.exe" ]; then
+        bin_output=$(cat "${tmp_out}.exe" 2>/dev/null | head -20)
+        bin_outfile="${tmp_out}.exe"
+    fi
+
     if grep -q "// EXPECT: FAIL" "$test_file"; then
         if [ $exit_code -ne 0 ]; then
             echo "PASS_EXPECTED_FAIL" > "$result_file.status"
@@ -225,6 +235,20 @@ run_test() {
                 echo "$output"
                 if [ -f "$tmp_out" ]; then
                     echo "Program output preserved at: $tmp_out"
+                fi
+                if [ $exit_code -eq 127 ]; then
+                    local bin_path=""
+                    if [ -f "${tmp_out}" ]; then
+                        bin_path="${tmp_out}"
+                    elif [ -f "${tmp_out}.exe" ]; then
+                        bin_path="${tmp_out}.exe"
+                    fi
+                    if [ -n "$bin_path" ]; then
+                        local bin_sz=$(wc -c < "$bin_path" 2>/dev/null || echo "?")
+                        local magic=$(od -A n -t x1 -N 4 "$bin_path" 2>/dev/null | tr -d ' \n' || echo "?")
+                        echo "Binary: $bin_path ($bin_sz bytes, header: $magic)"
+                    fi
+                    echo "(Exit 127 from the binary may indicate a missing runtime DLL or a platform limitation.)"
                 fi
                 if [ $SHOW_SOURCE -eq 1 ]; then
                     if [ -f "$tmp_out.c" ]; then
