@@ -5,31 +5,33 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-/**
- * @brief Emitter structure for structured code generation.
- *
- * This allows us to redirect output easily (e.g. for f-strings or comptime).
- */
+typedef enum
+{
+    EMITTER_FILE,
+    EMITTER_BUFFER
+} EmitterMode;
+
 typedef struct Emitter
 {
-    FILE *out;
+    EmitterMode mode;
+    union
+    {
+        FILE *file;
+        struct
+        {
+            char *buf;
+            size_t len;
+            size_t cap;
+        } buffer;
+    };
 } Emitter;
 
-/**
- * @brief Initialize an emitter with a file stream.
- */
-void emitter_init(Emitter *e, FILE *out);
-
-/**
- * @brief Emit formatted text to the emitter.
- */
+void emitter_init_file(Emitter *e, FILE *file);
+void emitter_init_buffer(Emitter *e);
 void emitter_printf(Emitter *e, const char *fmt, ...);
-
 void emitter_puts(Emitter *e, const char *s);
-
-/**
- * @brief Write raw bytes to the emitter.
- */
 void emitter_write(Emitter *e, const void *ptr, size_t size);
+char *emitter_take_string(Emitter *e);
+void emitter_release(Emitter *e);
 
 #endif

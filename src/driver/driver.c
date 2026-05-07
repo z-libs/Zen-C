@@ -303,7 +303,7 @@ int driver_compile(ZenCompiler *compiler)
         perror("fopen temp output");
         return 1;
     }
-    emitter_init(&ctx.emitter, out_f);
+    emitter_init_file(&ctx.emitter, out_f);
     codegen_node(&ctx, root);
     fclose(out_f);
 

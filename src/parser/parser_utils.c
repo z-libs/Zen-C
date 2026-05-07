@@ -4474,20 +4474,12 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
 
         // Codegen expression to temporary buffer
         char *code_buffer = NULL;
-        size_t code_len = 0;
-        FILE *mem_stream = tmpfile();
-        if (mem_stream)
         {
-            FILE *saved_out = ctx->emitter.out;
-            emitter_init(&ctx->emitter, mem_stream);
+            Emitter saved = ctx->emitter;
+            emitter_init_buffer(&ctx->emitter);
             codegen_expression(ctx, expr_node);
-            emitter_init(&ctx->emitter, saved_out);
-            code_len = ftell(mem_stream);
-            code_buffer = xmalloc(code_len + 1);
-            fseek(mem_stream, 0, SEEK_SET);
-            fread(code_buffer, 1, code_len, mem_stream);
-            code_buffer[code_len] = 0;
-            fclose(mem_stream);
+            code_buffer = emitter_take_string(&ctx->emitter);
+            ctx->emitter = saved;
         }
 
         if (fmt)

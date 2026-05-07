@@ -68,7 +68,7 @@ void emit_preamble(ParserContext *ctx)
 {
     if (g_config.misra_mode)
     {
-        emit_misra_preamble(ctx->emitter.out);
+        emit_misra_preamble(ctx->emitter.file);
         return;
     }
     if (g_config.is_freestanding)

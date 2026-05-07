@@ -23,34 +23,9 @@ char *repl_transpile(const char *zen_c_code)
         return NULL;
     }
 
-    char *c_code = NULL;
-    size_t sz = 0;
-#if ZC_OS_WINDOWS || defined(__COSMOPOLITAN__)
-    FILE *mem = z_tmpfile();
-#else
-    FILE *mem = open_memstream(&c_code, &sz);
-#endif
-    if (!mem)
-    {
-        return NULL;
-    }
-
-    emitter_init(&ctx.emitter, mem);
+    emitter_init_buffer(&ctx.emitter);
     codegen_node(&ctx, root);
-
-#if ZC_OS_WINDOWS || defined(__COSMOPOLITAN__)
-    sz = (size_t)ftell(mem);
-    fseek(mem, 0, SEEK_SET);
-    c_code = malloc(sz + 1);
-    if (c_code)
-    {
-        fread(c_code, 1, sz, mem);
-        c_code[sz] = 0;
-    }
-#endif
-
-    fclose(mem);
-    return c_code;
+    return emitter_take_string(&ctx.emitter);
 }
 
 int is_header_line(const char *line)

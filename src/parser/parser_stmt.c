@@ -2310,21 +2310,13 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         // Always codegen the base expression first
         if (expr_node)
         {
-            char *expr_buf = NULL;
-            size_t len = 0;
-            FILE *ms = tmpfile();
-            if (ms)
+            Emitter saved = ctx->emitter;
+            emitter_init_buffer(&ctx->emitter);
+            codegen_expression(ctx, expr_node);
+            char *expr_buf = emitter_take_string(&ctx->emitter);
+            ctx->emitter = saved;
+            if (expr_buf)
             {
-                FILE *saved_out = ctx->emitter.out;
-                emitter_init(&ctx->emitter, ms);
-                codegen_expression(ctx, expr_node);
-                emitter_init(&ctx->emitter, saved_out);
-                len = ftell(ms);
-                fseek(ms, 0, SEEK_SET);
-                expr_buf = xmalloc(len + 1);
-                fread(expr_buf, 1, len, ms);
-                expr_buf[len] = 0;
-                fclose(ms);
                 rw_expr = expr_buf;
                 used_codegen = 1;
             }
@@ -4704,9 +4696,9 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
         return NULL; // Prevent crash in LSP mode
     }
 
-    FILE *saved_emitter_out = ctx->emitter.out;
-    emitter_init(&ctx->emitter, f);
-    emitter_init(&cctx.emitter, f);
+    FILE *saved_emitter_out = ctx->emitter.file;
+    emitter_init_file(&ctx->emitter, f);
+    emitter_init_file(&cctx.emitter, f);
     emit_preamble(ctx);
     EMIT(ctx, "%s",
          "size_t _z_check_bounds(size_t index, size_t size) { if (index >= size) { fprintf(stderr, "
@@ -4809,7 +4801,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     }
     EMIT(ctx, "return 0;\n}\n");
     fclose(f);
-    emitter_init(&ctx->emitter, saved_emitter_out);
+    emitter_init_file(&ctx->emitter, saved_emitter_out);
 
     char cmdbuf[MAX_PATH_LEN * 3];
     char bin[MAX_PATH_LEN];
