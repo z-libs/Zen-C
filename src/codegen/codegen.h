@@ -105,27 +105,9 @@ void emit_source_mapping(ParserContext *ctx, ASTNode *node);
  */
 void emit_source_mapping_duplicate(ParserContext *ctx, ASTNode *node);
 
-// Global state (shared across modules).
-extern ASTNode *global_user_structs;  ///< List of user defined structs.
-extern char *g_current_impl_type;     ///< Type currently being implemented (in impl block).
-extern int tmp_counter;               ///< Counter for temporary variables.
-extern int defer_count;               ///< Counter for defer statements in current scope.
-extern ASTNode *defer_stack[];        ///< Stack of deferred nodes.
-extern ASTNode *g_current_lambda;     ///< Current lambda being generated.
-extern char *g_current_func_ret_type; ///< Return type of current function.
-extern Type *g_current_func_ret_type_info;
-
-// Defer boundary tracking for proper defer execution on break/continue/return
+// Defer stack size limit
 #define MAX_DEFER 1024
-#define MAX_LOOP_DEPTH 64
-extern int loop_defer_boundary[]; ///< Defer stack index at start of each loop.
-extern int loop_depth;            ///< Current loop nesting depth.
-extern int func_defer_boundary;   ///< Defer stack index at function entry.
 
-// Closure context free tracking
-#define MAX_PENDING_CLOSURE_FREES 64
-extern int pending_closure_frees[]; ///< Lambda IDs whose ctx needs freeing.
-extern int pending_closure_free_count;
 void emit_pending_closure_frees(ParserContext *ctx);
 
 #endif

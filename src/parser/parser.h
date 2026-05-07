@@ -372,6 +372,24 @@ struct ParserContext
     int has_async;      ///< 1 if async/await features are used in the program.
     int in_defer_block; ///< 1 if currently parsing inside a defer block.
 
+    // Codegen context (mutable state during code generation):
+    struct
+    {
+        ASTNode *global_user_structs; ///< List of user defined structs.
+        char *current_impl_type;      ///< Type currently being implemented (in impl block).
+        int tmp_counter;              ///< Counter for temporary variables.
+        ASTNode *defer_stack[1024];   ///< Stack of deferred nodes (max 1024).
+        int defer_count;              ///< Counter for defer statements in current scope.
+        ASTNode *current_lambda;      ///< Current lambda being generated.
+        char *current_func_ret_type;  ///< Return type of current function.
+        Type *current_func_ret_type_info;
+        int loop_defer_boundary[64];   ///< Defer stack index at start of each loop (max 64).
+        int loop_depth;                ///< Current loop nesting depth.
+        int func_defer_boundary;       ///< Defer stack index at function entry.
+        int pending_closure_frees[64]; ///< Lambda IDs whose ctx needs freeing (max 64).
+        int pending_closure_free_count;
+    } cg;
+
     // Type Validation
     struct TypeUsage *pending_type_validations; ///< List of types to validate after parsing.
     int is_speculative;     ///< Flag to suppress side effects during speculative parsing.

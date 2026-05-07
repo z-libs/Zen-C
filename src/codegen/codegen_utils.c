@@ -11,29 +11,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Global state
-ASTNode *global_user_structs = NULL;
-char *g_current_impl_type = NULL;
-int tmp_counter = 0;
-ASTNode *defer_stack[MAX_DEFER];
-int defer_count = 0;
-ASTNode *g_current_lambda = NULL;
-
-int loop_defer_boundary[MAX_LOOP_DEPTH];
-int loop_depth = 0;
-int func_defer_boundary = 0;
-
-int pending_closure_frees[MAX_PENDING_CLOSURE_FREES];
-int pending_closure_free_count = 0;
-
 void emit_pending_closure_frees(ParserContext *ctx)
 {
-    for (int i = 0; i < pending_closure_free_count; i++)
+    for (int i = 0; i < ctx->cg.pending_closure_free_count; i++)
     {
         EMIT(ctx, "free(_z_closure_ctx_stash[%d]); _z_closure_ctx_stash[%d] = NULL;\n",
-             pending_closure_frees[i], pending_closure_frees[i]);
+             ctx->cg.pending_closure_frees[i], ctx->cg.pending_closure_frees[i]);
     }
-    pending_closure_free_count = 0;
+    ctx->cg.pending_closure_free_count = 0;
 }
 
 // Strip template suffix from a type name (for example, "MyStruct<T>" -> "MyStruct")
@@ -1026,14 +1011,15 @@ int emit_move_invalidation(ParserContext *ctx, ASTNode *node)
         if (node->type == NODE_EXPR_VAR)
         {
             char *df_prefix = "";
-            if (g_current_lambda)
+            if (ctx->cg.current_lambda)
             {
-                for (int i = 0; i < g_current_lambda->lambda.num_captures; i++)
+                for (int i = 0; i < ctx->cg.current_lambda->lambda.num_captures; i++)
                 {
-                    if (strcmp(node->var_ref.name, g_current_lambda->lambda.captured_vars[i]) == 0)
+                    if (strcmp(node->var_ref.name,
+                               ctx->cg.current_lambda->lambda.captured_vars[i]) == 0)
                     {
-                        if (g_current_lambda->lambda.capture_modes &&
-                            g_current_lambda->lambda.capture_modes[i] == 0)
+                        if (ctx->cg.current_lambda->lambda.capture_modes &&
+                            ctx->cg.current_lambda->lambda.capture_modes[i] == 0)
                         {
                             df_prefix = "ctx->";
                         }

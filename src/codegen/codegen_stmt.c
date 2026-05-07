@@ -11,9 +11,6 @@
 #include "ast.h"
 #include "zprep_plugin.h"
 
-char *g_current_func_ret_type = NULL;
-Type *g_current_func_ret_type_info = NULL;
-
 // Helper: emit a single pattern condition (either a value, or a range)
 static void emit_single_pattern_cond(ParserContext *ctx, const char *pat, int id, int is_ptr)
 {
@@ -202,7 +199,7 @@ static bool is_int_type(TypeKind k)
 
 void codegen_match_internal(ParserContext *ctx, ASTNode *node, int use_result)
 {
-    int id = tmp_counter++;
+    int id = ctx->cg.tmp_counter++;
     int is_self = (node->match_stmt.expr->type == NODE_EXPR_VAR &&
                    strcmp(node->match_stmt.expr->var_ref.name, "self") == 0);
 
@@ -537,7 +534,7 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, int use_result)
             {
                 if (body->type == NODE_BLOCK)
                 {
-                    int saved = defer_count;
+                    int saved = ctx->cg.defer_count;
                     EMIT(ctx, "({ ");
                     ASTNode *stmt = body->block.statements;
                     while (stmt)
@@ -546,12 +543,12 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, int use_result)
                         codegen_node_single(ctx, stmt);
                         stmt = stmt->next;
                     }
-                    for (int i = defer_count - 1; i >= saved; i--)
+                    for (int i = ctx->cg.defer_count - 1; i >= saved; i--)
                     {
-                        emit_source_mapping_duplicate(ctx, defer_stack[i]);
-                        codegen_node_single(ctx, defer_stack[i]);
+                        emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+                        codegen_node_single(ctx, ctx->cg.defer_stack[i]);
                     }
-                    defer_count = saved;
+                    ctx->cg.defer_count = saved;
                     EMIT(ctx, " })");
                 }
                 else
@@ -632,23 +629,23 @@ static void handle_node_assert(ParserContext *ctx, ASTNode *node)
 static void handle_node_defer(ParserContext *ctx, ASTNode *node)
 {
     (void)ctx;
-    if (defer_count < MAX_DEFER)
+    if (ctx->cg.defer_count < MAX_DEFER)
     {
-        defer_stack[defer_count++] = node->defer_stmt.stmt;
+        ctx->cg.defer_stack[ctx->cg.defer_count++] = node->defer_stmt.stmt;
     }
 }
 
 static void handle_node_block(ParserContext *ctx, ASTNode *node)
 {
-    int saved = defer_count;
+    int saved = ctx->cg.defer_count;
     EMIT(ctx, "    {\n");
     codegen_walker(ctx, node->block.statements);
-    for (int i = defer_count - 1; i >= saved; i--)
+    for (int i = ctx->cg.defer_count - 1; i >= saved; i--)
     {
-        emit_source_mapping_duplicate(ctx, defer_stack[i]);
-        codegen_node_single(ctx, defer_stack[i]);
+        emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+        codegen_node_single(ctx, ctx->cg.defer_stack[i]);
     }
-    defer_count = saved;
+    ctx->cg.defer_count = saved;
     EMIT(ctx, "    }\n");
 }
 
@@ -677,15 +674,15 @@ static void handle_node_impl(ParserContext *ctx, ASTNode *node)
             }
             m = m->next;
         }
-        g_current_impl_type = (char *)resolved;
+        ctx->cg.current_impl_type = (char *)resolved;
     }
     else
     {
-        g_current_impl_type = sname;
+        ctx->cg.current_impl_type = sname;
     }
 
     codegen_walker(ctx, node->impl.methods);
-    g_current_impl_type = NULL;
+    ctx->cg.current_impl_type = NULL;
 }
 
 static void handle_node_function(ParserContext *ctx, ASTNode *node)
@@ -797,20 +794,20 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
 
         EMIT(ctx, "%s _impl_%s(%s)\n", node->func.ret_type, final_name, node->func.args);
         EMIT(ctx, "{\n");
-        defer_count = 0;
-        char *prev_ret = g_current_func_ret_type;
-        Type *prev_ret_info = g_current_func_ret_type_info;
-        g_current_func_ret_type = node->func.ret_type;
-        g_current_func_ret_type_info = node->func.ret_type_info;
+        ctx->cg.defer_count = 0;
+        char *prev_ret = ctx->cg.current_func_ret_type;
+        Type *prev_ret_info = ctx->cg.current_func_ret_type_info;
+        ctx->cg.current_func_ret_type = node->func.ret_type;
+        ctx->cg.current_func_ret_type_info = node->func.ret_type_info;
 
         codegen_walker(ctx, node->func.body);
 
-        g_current_func_ret_type = prev_ret;
-        g_current_func_ret_type_info = prev_ret_info;
-        for (int i = defer_count - 1; i >= 0; i--)
+        ctx->cg.current_func_ret_type = prev_ret;
+        ctx->cg.current_func_ret_type_info = prev_ret_info;
+        for (int i = ctx->cg.defer_count - 1; i >= 0; i--)
         {
-            emit_source_mapping_duplicate(ctx, defer_stack[i]);
-            codegen_node_single(ctx, defer_stack[i]);
+            emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+            codegen_node_single(ctx, ctx->cg.defer_stack[i]);
         }
         EMIT(ctx, "}\n");
 
@@ -851,7 +848,7 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
         return;
     }
 
-    defer_count = 0;
+    ctx->cg.defer_count = 0;
     EMIT(ctx, "\n");
 
     // Emit GCC attributes before function
@@ -964,10 +961,10 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
         EMIT(ctx, "    %s _misra_ret = 0;\n", safe_ret_type);
         free(safe_ret_type);
     }
-    char *prev_ret = g_current_func_ret_type;
-    Type *prev_ret_info = g_current_func_ret_type_info;
-    g_current_func_ret_type = node->func.ret_type;
-    g_current_func_ret_type_info = node->func.ret_type_info;
+    char *prev_ret = ctx->cg.current_func_ret_type;
+    Type *prev_ret_info = ctx->cg.current_func_ret_type_info;
+    ctx->cg.current_func_ret_type = node->func.ret_type;
+    ctx->cg.current_func_ret_type_info = node->func.ret_type_info;
 
     // Set self_is_pointer flag for codegen of the body
     int prev_self_is_ptr = ctx->self_is_pointer;
@@ -1045,22 +1042,22 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
                 }
                 defer_node->raw_stmt.content = stmt_str;
 
-                if (defer_count < MAX_DEFER)
+                if (ctx->cg.defer_count < MAX_DEFER)
                 {
-                    defer_stack[defer_count++] = defer_node;
+                    ctx->cg.defer_stack[ctx->cg.defer_count++] = defer_node;
                 }
             }
         }
     }
 
     codegen_walker(ctx, node->func.body);
-    for (int i = defer_count - 1; i >= 0; i--)
+    for (int i = ctx->cg.defer_count - 1; i >= 0; i--)
     {
-        emit_source_mapping_duplicate(ctx, defer_stack[i]);
-        codegen_node_single(ctx, defer_stack[i]);
+        emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+        codegen_node_single(ctx, ctx->cg.defer_stack[i]);
     }
-    g_current_func_ret_type = prev_ret;
-    g_current_func_ret_type_info = prev_ret_info;
+    ctx->cg.current_func_ret_type = prev_ret;
+    ctx->cg.current_func_ret_type_info = prev_ret_info;
     ctx->self_is_pointer = prev_self_is_ptr;
 
     if (g_config.misra_mode)
@@ -1108,20 +1105,20 @@ static void handle_node_impl_trait(ParserContext *ctx, ASTNode *node)
             }
             m = m->next;
         }
-        g_current_impl_type = (char *)resolved;
+        ctx->cg.current_impl_type = (char *)resolved;
     }
     else
     {
-        g_current_impl_type = sname;
+        ctx->cg.current_impl_type = sname;
     }
 
     codegen_walker(ctx, node->impl_trait.methods);
-    g_current_impl_type = NULL;
+    ctx->cg.current_impl_type = NULL;
 }
 
 static void handle_node_destruct_var(ParserContext *ctx, ASTNode *node)
 {
-    int id = tmp_counter++;
+    int id = ctx->cg.tmp_counter++;
     EMIT(ctx, "    ");
     emit_auto_type(ctx, node->destruct.init_expr, node->token);
     EMIT(ctx, " _tmp_%d = ", id);
@@ -1209,7 +1206,7 @@ static void handle_node_destruct_var(ParserContext *ctx, ASTNode *node)
 
 static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
 {
-    int saved_closure_frees = pending_closure_free_count;
+    int saved_closure_frees = ctx->cg.pending_closure_free_count;
 
     if (strcmp(node->var_decl.name, "_") == 0 && node->var_decl.init_expr)
     {
@@ -1284,9 +1281,9 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
                 defer_node->raw_stmt.content = stmt_str;
                 defer_node->line = node->line;
 
-                if (defer_count < MAX_DEFER)
+                if (ctx->cg.defer_count < MAX_DEFER)
                 {
-                    defer_stack[defer_count++] = defer_node;
+                    ctx->cg.defer_stack[ctx->cg.defer_count++] = defer_node;
                 }
             }
 
@@ -1392,9 +1389,9 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
                     defer_node->raw_stmt.content = stmt_str;
                     defer_node->line = node->line;
 
-                    if (defer_count < MAX_DEFER)
+                    if (ctx->cg.defer_count < MAX_DEFER)
                     {
-                        defer_stack[defer_count++] = defer_node;
+                        ctx->cg.defer_stack[ctx->cg.defer_count++] = defer_node;
                     }
                 }
 
@@ -1442,7 +1439,7 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
         }
     }
 
-    pending_closure_free_count = saved_closure_frees;
+    ctx->cg.pending_closure_free_count = saved_closure_frees;
 }
 
 static void handle_node_const(ParserContext *ctx, ASTNode *node)
@@ -1548,7 +1545,7 @@ static void handle_node_while(ParserContext *ctx, ASTNode *node)
     {
         EMIT(ctx, "%s:;\n", node->while_stmt.loop_label);
     }
-    loop_defer_boundary[loop_depth++] = defer_count;
+    ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
     EMIT(ctx, "while (");
     codegen_expression(ctx, node->while_stmt.condition);
     EMIT(ctx, ") ");
@@ -1571,7 +1568,7 @@ static void handle_node_while(ParserContext *ctx, ASTNode *node)
             EMIT(ctx, "\n}");
         }
     }
-    loop_depth--;
+    ctx->cg.loop_depth--;
     if (node->while_stmt.loop_label)
     {
         EMIT(ctx, "__break_%s:;\n", node->while_stmt.loop_label);
@@ -1618,7 +1615,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->for_stmt.loop_label);
         }
-        loop_defer_boundary[loop_depth++] = defer_count;
+        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
         EMIT(ctx, "for (");
         if (node->for_stmt.init)
         {
@@ -1674,7 +1671,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                 EMIT(ctx, "\n}");
             }
         }
-        loop_depth--;
+        ctx->cg.loop_depth--;
         if (node->for_stmt.loop_label)
         {
             EMIT(ctx, "__break_%s:;\n", node->for_stmt.loop_label);
@@ -1683,13 +1680,13 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
     }
     case NODE_BREAK:
         // Run defers from current scope down to loop boundary before breaking
-        if (loop_depth > 0)
+        if (ctx->cg.loop_depth > 0)
         {
-            int boundary = loop_defer_boundary[loop_depth - 1];
-            for (int i = defer_count - 1; i >= boundary; i--)
+            int boundary = ctx->cg.loop_defer_boundary[ctx->cg.loop_depth - 1];
+            for (int i = ctx->cg.defer_count - 1; i >= boundary; i--)
             {
-                emit_source_mapping_duplicate(ctx, defer_stack[i]);
-                codegen_node_single(ctx, defer_stack[i]);
+                emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+                codegen_node_single(ctx, ctx->cg.defer_stack[i]);
             }
         }
         if (node->break_stmt.target_label)
@@ -1703,13 +1700,13 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         break;
     case NODE_CONTINUE:
         // Run defers from current scope down to loop boundary before continuing
-        if (loop_depth > 0)
+        if (ctx->cg.loop_depth > 0)
         {
-            int boundary = loop_defer_boundary[loop_depth - 1];
-            for (int i = defer_count - 1; i >= boundary; i--)
+            int boundary = ctx->cg.loop_defer_boundary[ctx->cg.loop_depth - 1];
+            for (int i = ctx->cg.defer_count - 1; i >= boundary; i--)
             {
-                emit_source_mapping_duplicate(ctx, defer_stack[i]);
-                codegen_node_single(ctx, defer_stack[i]);
+                emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+                codegen_node_single(ctx, ctx->cg.defer_stack[i]);
             }
         }
         if (node->continue_stmt.target_label)
@@ -1743,7 +1740,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->do_while_stmt.loop_label);
         }
-        loop_defer_boundary[loop_depth++] = defer_count;
+        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
         EMIT(ctx, "do ");
         if (node->do_while_stmt.loop_label)
         {
@@ -1759,7 +1756,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         EMIT(ctx, " while (");
         codegen_expression(ctx, node->do_while_stmt.condition);
         EMIT(ctx, ");\n");
-        loop_depth--;
+        ctx->cg.loop_depth--;
         if (node->do_while_stmt.loop_label)
         {
             EMIT(ctx, "__break_%s:;\n", node->do_while_stmt.loop_label);
@@ -1774,7 +1771,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->loop_stmt.loop_label);
         }
-        loop_defer_boundary[loop_depth++] = defer_count;
+        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
         EMIT(ctx, "while (1) ");
         if (node->loop_stmt.loop_label)
         {
@@ -1787,7 +1784,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             codegen_node_single(ctx, node->loop_stmt.body);
         }
-        loop_depth--;
+        ctx->cg.loop_depth--;
         if (node->loop_stmt.loop_label)
         {
             EMIT(ctx, "__break_%s:;\n", node->loop_stmt.loop_label);
@@ -1800,7 +1797,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->repeat_stmt.loop_label);
         }
-        loop_defer_boundary[loop_depth++] = defer_count;
+        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
         EMIT(ctx, "for (int _rpt_i = 0; _rpt_i < (%s); _rpt_i++) ", node->repeat_stmt.count);
         if (node->repeat_stmt.loop_label)
         {
@@ -1813,7 +1810,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             codegen_node_single(ctx, node->repeat_stmt.body);
         }
-        loop_depth--;
+        ctx->cg.loop_depth--;
         if (node->repeat_stmt.loop_label)
         {
             EMIT(ctx, "__break_%s:;\n", node->repeat_stmt.loop_label);
@@ -1827,7 +1824,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             EMIT(ctx, "%s:;\n", node->for_range.loop_label);
         }
         // Track loop entry for defer boundary
-        loop_defer_boundary[loop_depth++] = defer_count;
+        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
 
         EMIT(ctx, "for (");
         if (z_path_match_compiler(g_config.cc, "tcc"))
@@ -1885,7 +1882,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             codegen_node_single(ctx, node->for_range.body);
         }
 
-        loop_depth--;
+        ctx->cg.loop_depth--;
         if (node->for_range.loop_label)
         {
             EMIT(ctx, "__break_%s:;\n", node->for_range.loop_label);
@@ -2085,12 +2082,13 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
     case NODE_RETURN:
     {
         // Suppress pending closure frees — returned closures escape the scope
-        pending_closure_free_count = 0;
-        int has_defers = (defer_count > func_defer_boundary);
+        ctx->cg.pending_closure_free_count = 0;
+        int has_defers = (ctx->cg.defer_count > ctx->cg.func_defer_boundary);
         int handled = 0;
 
         if (node->ret.value && node->ret.value->type == NODE_EXPR_ARRAY_LITERAL &&
-            g_current_func_ret_type && strncmp(g_current_func_ret_type, "Slice__", 7) == 0)
+            ctx->cg.current_func_ret_type &&
+            strncmp(ctx->cg.current_func_ret_type, "Slice__", 7) == 0)
         {
             // Heap allocation for slice literals to prevent use-after-return
             ASTNode *arr = node->ret.value;
@@ -2100,9 +2098,10 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             // Prioritize the function return type (Slice_T) to determine the pointer type
             // This prevents "incompatible pointer type" errors in C when returning literals of
             // different types
-            if (g_current_func_ret_type && strncmp(g_current_func_ret_type, "Slice__", 7) == 0)
+            if (ctx->cg.current_func_ret_type &&
+                strncmp(ctx->cg.current_func_ret_type, "Slice__", 7) == 0)
             {
-                elem_type = xstrdup(g_current_func_ret_type + 7);
+                elem_type = xstrdup(ctx->cg.current_func_ret_type + 7);
             }
             else if (arr->array_literal.elements && arr->array_literal.elements->type_info)
             {
@@ -2133,13 +2132,13 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             if (g_config.use_cpp)
             {
                 // Traditional initializer: (Slice){data, len, cap}
-                EMIT(ctx, "    return (%s){_tmp_arr, %d, %d};\n", g_current_func_ret_type, count,
-                     count);
+                EMIT(ctx, "    return (%s){_tmp_arr, %d, %d};\n", ctx->cg.current_func_ret_type,
+                     count, count);
             }
             else
             {
                 EMIT(ctx, "    return (%s){.data = _tmp_arr, .len = %d, .cap = %d};\n",
-                     g_current_func_ret_type, count, count);
+                     ctx->cg.current_func_ret_type, count, count);
             }
             EMIT(ctx, "    }\n");
             handled = 1;
@@ -2195,10 +2194,10 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     {
                         EMIT(ctx, "__z_drop_flag_%s = 0; ", node->ret.value->var_ref.name);
                     }
-                    for (int i = defer_count - 1; i >= func_defer_boundary; i--)
+                    for (int i = ctx->cg.defer_count - 1; i >= ctx->cg.func_defer_boundary; i--)
                     {
-                        emit_source_mapping_duplicate(ctx, defer_stack[i]);
-                        codegen_node_single(ctx, defer_stack[i]);
+                        emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+                        codegen_node_single(ctx, ctx->cg.defer_stack[i]);
                     }
                     EMIT(ctx, "_z_ret_mv; });\n");
 
@@ -2217,16 +2216,17 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             if (has_defers && node->ret.value)
             {
                 EMIT(ctx, "    { ");
-                if (g_current_func_ret_type_info)
+                if (ctx->cg.current_func_ret_type_info)
                 {
-                    char *tstr = type_to_c_string(g_current_func_ret_type_info);
+                    char *tstr = type_to_c_string(ctx->cg.current_func_ret_type_info);
                     EMIT(ctx, "%s", tstr);
                     free(tstr);
                 }
-                else if (g_current_func_ret_type && strcmp(g_current_func_ret_type, "void") != 0 &&
-                         strcmp(g_current_func_ret_type, "unknown") != 0)
+                else if (ctx->cg.current_func_ret_type &&
+                         strcmp(ctx->cg.current_func_ret_type, "void") != 0 &&
+                         strcmp(ctx->cg.current_func_ret_type, "unknown") != 0)
                 {
-                    EMIT(ctx, "%s", g_current_func_ret_type);
+                    EMIT(ctx, "%s", ctx->cg.current_func_ret_type);
                 }
                 else
                 {
@@ -2240,10 +2240,10 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                 }
                 codegen_expression(ctx, node->ret.value);
                 EMIT(ctx, "; ");
-                for (int i = defer_count - 1; i >= func_defer_boundary; i--)
+                for (int i = ctx->cg.defer_count - 1; i >= ctx->cg.func_defer_boundary; i--)
                 {
-                    emit_source_mapping_duplicate(ctx, defer_stack[i]);
-                    codegen_node_single(ctx, defer_stack[i]);
+                    emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+                    codegen_node_single(ctx, ctx->cg.defer_stack[i]);
                 }
                 if (g_config.misra_mode)
                 {
@@ -2256,10 +2256,10 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             }
             else if (has_defers)
             {
-                for (int i = defer_count - 1; i >= func_defer_boundary; i--)
+                for (int i = ctx->cg.defer_count - 1; i >= ctx->cg.func_defer_boundary; i--)
                 {
-                    emit_source_mapping_duplicate(ctx, defer_stack[i]);
-                    codegen_node_single(ctx, defer_stack[i]);
+                    emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+                    codegen_node_single(ctx, ctx->cg.defer_stack[i]);
                 }
                 if (g_config.misra_mode)
                 {
@@ -2274,7 +2274,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             {
                 if (g_config.misra_mode)
                 {
-                    if (g_current_func_ret_type && strcmp(g_current_func_ret_type, "void") != 0)
+                    if (ctx->cg.current_func_ret_type &&
+                        strcmp(ctx->cg.current_func_ret_type, "void") != 0)
                     {
                         EMIT(ctx, "    _misra_ret = ");
                     }
@@ -2441,7 +2442,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
     }
     case NODE_RAW_STMT:
     {
-        if (g_current_lambda)
+        if (ctx->cg.current_lambda)
         {
             Lexer l;
             lexer_init(&l, node->raw_stmt.content);
@@ -2459,11 +2460,11 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                 {
                     char *name = token_strdup(t);
                     int captured = -1;
-                    if (g_current_lambda->lambda.captured_vars)
+                    if (ctx->cg.current_lambda->lambda.captured_vars)
                     {
-                        for (int i = 0; i < g_current_lambda->lambda.num_captures; i++)
+                        for (int i = 0; i < ctx->cg.current_lambda->lambda.num_captures; i++)
                         {
-                            if (strcmp(name, g_current_lambda->lambda.captured_vars[i]) == 0)
+                            if (strcmp(name, ctx->cg.current_lambda->lambda.captured_vars[i]) == 0)
                             {
                                 captured = i;
                                 break;
@@ -2473,8 +2474,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
 
                     if (captured != -1)
                     {
-                        if (g_current_lambda->lambda.capture_modes &&
-                            g_current_lambda->lambda.capture_modes[captured] == 1)
+                        if (ctx->cg.current_lambda->lambda.capture_modes &&
+                            ctx->cg.current_lambda->lambda.capture_modes[captured] == 1)
                         {
                             EMIT(ctx, "(*ctx->%s)", name);
                         }
@@ -2506,7 +2507,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
     default:
         codegen_expression(ctx, node);
         EMIT(ctx, ";\n");
-        if (node->type == NODE_EXPR_CALL && node->call.callee && pending_closure_free_count > 0)
+        if (node->type == NODE_EXPR_CALL && node->call.callee &&
+            ctx->cg.pending_closure_free_count > 0)
         {
             int is_thread_spawn = 0;
             if (node->call.callee->type == NODE_EXPR_VAR && node->call.callee->var_ref.name &&
@@ -2524,7 +2526,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             }
             if (is_thread_spawn)
             {
-                pending_closure_free_count = 0;
+                ctx->cg.pending_closure_free_count = 0;
             }
         }
         emit_pending_closure_frees(ctx);

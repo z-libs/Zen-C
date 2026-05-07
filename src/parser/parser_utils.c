@@ -1950,10 +1950,9 @@ ASTNode *find_struct_def(ParserContext *ctx, const char *name)
         return sym->data.node;
     }
 
-    extern ASTNode *global_user_structs;
-    if (global_user_structs)
+    if (ctx->cg.global_user_structs)
     {
-        ASTNode *s = global_user_structs;
+        ASTNode *s = ctx->cg.global_user_structs;
         while (s)
         {
             if ((s->type == NODE_STRUCT || s->type == NODE_ENUM) &&

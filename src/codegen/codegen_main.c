@@ -594,9 +594,9 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
             kids = kids->root.children;
         }
 
-        g_current_func_ret_type = NULL;
-        g_current_lambda = NULL;
-        global_user_structs = kids;
+        ctx->cg.current_func_ret_type = NULL;
+        ctx->cg.current_lambda = NULL;
+        ctx->cg.global_user_structs = kids;
         VisitedModules *visited = NULL;
 
         if (!ctx->skip_preamble)

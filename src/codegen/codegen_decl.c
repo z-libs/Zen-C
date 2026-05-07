@@ -517,8 +517,8 @@ void emit_lambda_defs(ParserContext *ctx)
     while (cur)
     {
         ASTNode *node = cur->node;
-        int saved_defer = defer_count;
-        defer_count = 0;
+        int saved_defer = ctx->cg.defer_count;
+        ctx->cg.defer_count = 0;
 
         if (node->lambda.num_captures > 0)
         {
@@ -661,7 +661,7 @@ void emit_lambda_defs(ParserContext *ctx)
                  node->lambda.lambda_id, node->lambda.lambda_id);
         }
 
-        g_current_lambda = node;
+        ctx->cg.current_lambda = node;
         if (node->lambda.body && node->lambda.body->type == NODE_BLOCK)
         {
             if (node->lambda.is_expression && node->type_info && node->type_info->inner &&
@@ -700,17 +700,17 @@ void emit_lambda_defs(ParserContext *ctx)
             codegen_node_single(ctx, node->lambda.body);
             EMIT(ctx, ";\n");
         }
-        g_current_lambda = NULL;
+        ctx->cg.current_lambda = NULL;
 
-        for (int i = defer_count - 1; i >= 0; i--)
+        for (int i = ctx->cg.defer_count - 1; i >= 0; i--)
         {
-            emit_source_mapping_duplicate(ctx, defer_stack[i]);
-            codegen_node_single(ctx, defer_stack[i]);
+            emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+            codegen_node_single(ctx, ctx->cg.defer_stack[i]);
         }
 
         EMIT(ctx, "}\n\n");
 
-        defer_count = saved_defer;
+        ctx->cg.defer_count = saved_defer;
         cur = cur->next;
     }
 }
@@ -1414,8 +1414,8 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, VisitedModu
 
 void emit_globals(ParserContext *ctx, ASTNode *node, VisitedModules **visited)
 {
-    g_current_func_ret_type = NULL;
-    g_current_lambda = NULL;
+    ctx->cg.current_func_ret_type = NULL;
+    ctx->cg.current_lambda = NULL;
     if (visited)
     {
         emit_globals_internal(ctx, node, visited, 0);
@@ -1869,18 +1869,18 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
                 EMIT(ctx, "#if %s\n", cur->cfg_condition);
             }
             EMIT(ctx, "static void _z_test_%d() {\n", test_count);
-            int saved = defer_count;
-            char *saved_ret = g_current_func_ret_type;
-            g_current_func_ret_type = "void";
+            int saved = ctx->cg.defer_count;
+            char *saved_ret = ctx->cg.current_func_ret_type;
+            ctx->cg.current_func_ret_type = "void";
             codegen_walker(ctx, cur->test_stmt.body);
-            g_current_func_ret_type = saved_ret;
+            ctx->cg.current_func_ret_type = saved_ret;
             // Run defers
-            for (int i = defer_count - 1; i >= saved; i--)
+            for (int i = ctx->cg.defer_count - 1; i >= saved; i--)
             {
-                emit_source_mapping_duplicate(ctx, defer_stack[i]);
-                codegen_node_single(ctx, defer_stack[i]);
+                emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+                codegen_node_single(ctx, ctx->cg.defer_stack[i]);
             }
-            defer_count = saved;
+            ctx->cg.defer_count = saved;
             EMIT(ctx, "}\n");
             if (cur->cfg_condition)
             {

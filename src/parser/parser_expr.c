@@ -360,8 +360,6 @@ static void validate_named_arguments(Token call_token, const char *func_name, ch
     }
 }
 
-extern ASTNode *global_user_structs;
-
 // Forward declaration
 char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out,
                                     char **allocated_out);
@@ -3117,9 +3115,9 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                         sr = sr->next;
                     }
 
-                    if (!is_struct_init && global_user_structs)
+                    if (!is_struct_init && ctx->cg.global_user_structs)
                     {
-                        ASTNode *gn = global_user_structs;
+                        ASTNode *gn = ctx->cg.global_user_structs;
                         while (gn)
                         {
                             if (gn->type == NODE_STRUCT)

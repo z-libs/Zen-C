@@ -154,14 +154,14 @@ static void codegen_literal_expr(ParserContext *ctx, ASTNode *node)
 // Emit variable reference expression
 static void codegen_var_expr(ParserContext *ctx, ASTNode *node)
 {
-    if (g_current_lambda)
+    if (ctx->cg.current_lambda)
     {
-        for (int i = 0; i < g_current_lambda->lambda.num_captures; i++)
+        for (int i = 0; i < ctx->cg.current_lambda->lambda.num_captures; i++)
         {
-            if (strcmp(node->var_ref.name, g_current_lambda->lambda.captured_vars[i]) == 0)
+            if (strcmp(node->var_ref.name, ctx->cg.current_lambda->lambda.captured_vars[i]) == 0)
             {
-                if (g_current_lambda->lambda.capture_modes &&
-                    g_current_lambda->lambda.capture_modes[i] == 1)
+                if (ctx->cg.current_lambda->lambda.capture_modes &&
+                    ctx->cg.current_lambda->lambda.capture_modes[i] == 1)
                 {
                     EMIT(ctx, "(*ctx->%s)", node->var_ref.name);
                 }
@@ -330,15 +330,15 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node)
             if (node->lambda.capture_modes && node->lambda.capture_modes[i] == 1)
             {
                 int found = 0;
-                if (g_current_lambda)
+                if (ctx->cg.current_lambda)
                 {
-                    for (int k = 0; k < g_current_lambda->lambda.num_captures; k++)
+                    for (int k = 0; k < ctx->cg.current_lambda->lambda.num_captures; k++)
                     {
                         if (strcmp(node->lambda.captured_vars[i],
-                                   g_current_lambda->lambda.captured_vars[k]) == 0)
+                                   ctx->cg.current_lambda->lambda.captured_vars[k]) == 0)
                         {
-                            if (g_current_lambda->lambda.capture_modes &&
-                                g_current_lambda->lambda.capture_modes[k] == 1)
+                            if (ctx->cg.current_lambda->lambda.capture_modes &&
+                                ctx->cg.current_lambda->lambda.capture_modes[k] == 1)
                             {
                                 EMIT(ctx, "_z_ctx_%d->%s = ctx->%s;\n", lid,
                                      node->lambda.captured_vars[i], node->lambda.captured_vars[i]);
@@ -1829,15 +1829,15 @@ void codegen_expression(ParserContext *ctx, ASTNode *node)
     }
     case NODE_BLOCK:
     {
-        int saved = defer_count;
+        int saved = ctx->cg.defer_count;
         EMIT(ctx, "({ ");
         codegen_walker(ctx, node->block.statements);
-        for (int i = defer_count - 1; i >= saved; i--)
+        for (int i = ctx->cg.defer_count - 1; i >= saved; i--)
         {
-            emit_source_mapping_duplicate(ctx, defer_stack[i]);
-            codegen_node_single(ctx, defer_stack[i]);
+            emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
+            codegen_node_single(ctx, ctx->cg.defer_stack[i]);
         }
-        defer_count = saved;
+        ctx->cg.defer_count = saved;
         EMIT(ctx, " })");
         break;
     }
@@ -1927,9 +1927,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node)
     case NODE_TRY:
     {
         char *type_name = "Result";
-        if (g_current_func_ret_type)
+        if (ctx->cg.current_func_ret_type)
         {
-            type_name = g_current_func_ret_type;
+            type_name = ctx->cg.current_func_ret_type;
         }
         else if (node->try_stmt.expr->type_info && node->try_stmt.expr->type_info->name)
         {
@@ -2216,9 +2216,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node)
     case NODE_EXPR_STRUCT_INIT:
     {
         const char *struct_name = node->struct_init.struct_name;
-        if (strcmp(struct_name, "Self") == 0 && g_current_impl_type)
+        if (strcmp(struct_name, "Self") == 0 && ctx->cg.current_impl_type)
         {
-            struct_name = g_current_impl_type;
+            struct_name = ctx->cg.current_impl_type;
         }
 
         int is_zen_struct = 0;
@@ -2245,7 +2245,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node)
         }
 
         // Determine if we are inside a function/lambda to allow statement expressions
-        int in_func = (g_current_func_ret_type != NULL || g_current_lambda != NULL);
+        int in_func = (ctx->cg.current_func_ret_type != NULL || ctx->cg.current_lambda != NULL);
 
         // Find vector size if applicable
         int vec_size = 0;
