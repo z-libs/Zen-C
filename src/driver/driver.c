@@ -355,12 +355,8 @@ int driver_compile(ZenCompiler *compiler)
         char exe_path[1024];
         if (z_is_windows())
         {
-            // Simple windows exe detection
-            if (strstr(outfile, ".exe"))
-            {
-                snprintf(exe_path, sizeof(exe_path), "%s", outfile);
-            }
-            else
+            snprintf(exe_path, sizeof(exe_path), "%s", outfile);
+            if (access(exe_path, F_OK) != 0)
             {
                 snprintf(exe_path, sizeof(exe_path), "%s.exe", outfile);
             }

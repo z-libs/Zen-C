@@ -195,13 +195,8 @@ run_test() {
         output=$(set -o pipefail; run_single); exit_code=$?
     fi
 
-    # Capture raw binary output for diagnostics on platform issues
-    local bin_output=""
     local bin_outfile="${tmp_out}"
-    if [ -f "${tmp_out}" ]; then
-        bin_output=$(cat "${tmp_out}" 2>/dev/null | head -20)
-    elif [ -f "${tmp_out}.exe" ]; then
-        bin_output=$(cat "${tmp_out}.exe" 2>/dev/null | head -20)
+    if [ -f "${tmp_out}.exe" ]; then
         bin_outfile="${tmp_out}.exe"
     fi
 

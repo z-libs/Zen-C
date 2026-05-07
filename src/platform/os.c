@@ -494,6 +494,19 @@ int z_run_command(char *const argv[])
 
     if (!CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
     {
+        DWORD err = GetLastError();
+        LPSTR msg_buf = NULL;
+        FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                           FORMAT_MESSAGE_IGNORE_INSERTS,
+                       NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&msg_buf, 0,
+                       NULL);
+        fprintf(stderr, "error: CreateProcess failed (code %lu): %s\n", (unsigned long)err,
+                msg_buf ? msg_buf : "unknown error");
+        fprintf(stderr, "  command: %s\n", cmd_line);
+        if (msg_buf)
+        {
+            LocalFree(msg_buf);
+        }
         zfree(cmd_line);
         return -1;
     }
