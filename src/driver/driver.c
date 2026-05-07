@@ -14,8 +14,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#if !ZC_OS_WINDOWS
 #include <sys/wait.h>
+#endif
 
 // Forward declarations for functions defined in other modules
 extern char *load_file(const char *fn);
