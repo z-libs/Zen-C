@@ -329,7 +329,7 @@ test-tcc: $(TARGET) $(PLUGINS)
 
 test-lsp: $(TARGET) $(PLUGINS)
 	@echo "=> Building LSP Test Runner"
-	$(CC) $(CFLAGS) tests/compiler/lsp/lsp_test_runner.c src/lsp/cJSON.c -o tests/compiler/lsp/test_runner
+	$(CC) $(CFLAGS) -DZC_NO_ARENA tests/compiler/lsp/lsp_test_runner.c src/lsp/cJSON.c -o tests/compiler/lsp/test_runner
 	@echo "=> Running LSP Tests"
 	./tests/compiler/lsp/test_runner
 
