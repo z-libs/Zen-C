@@ -16,6 +16,22 @@
 #include <stdlib.h>
 #include <assert.h>
 
+/* libc escape hatches: use these for short-lived allocations that bypass the arena.
+   Unlike malloc/free (which are redirected to xmalloc/zfree), these always call
+   the real libc malloc/free/realloc. */
+static inline void *libc_malloc(size_t size)
+{
+    return malloc(size);
+}
+static inline void libc_free(void *ptr)
+{
+    free(ptr);
+}
+static inline void *libc_realloc(void *ptr, size_t size)
+{
+    return realloc(ptr, size);
+}
+
 /* Feature Flags */
 #if !defined(ZALLOC_ARENA_ONLY) && !defined(ZALLOC_POOL_ONLY) && !defined(ZALLOC_DEBUG_ONLY)
 #define ZALLOC_ENABLE_ARENA
