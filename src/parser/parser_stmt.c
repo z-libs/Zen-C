@@ -2450,7 +2450,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                                         "snprintf(_fs_t_%d, 2048, \"%%.*s\", (int)(%s)%slen, "
                                         "(%s)%sdata); strncat(_fs_buf_%d, _fs_t_%d, 8192 - "
                                         "strlen(_fs_buf_%d) - 1); ",
-                                        fs_id, rw_expr, acc, rw_expr, acc, fs_id, fs_id);
+                                        fs_id, rw_expr, acc, rw_expr, acc, fs_id, fs_id, fs_id);
                                 }
                                 else
                                 {
@@ -2471,7 +2471,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                                         "(_z_interp_val)%sdata); strncat(_fs_buf_%d, _fs_t_%d, "
                                         "8192 - strlen(_fs_buf_%d) - 1); _z_drop(_z_interp_val); "
                                         "}); ",
-                                        rw_expr, fs_id, acc, acc, fs_id, fs_id);
+                                        rw_expr, fs_id, acc, acc, fs_id, fs_id, fs_id);
                                 }
                                 else
                                 {

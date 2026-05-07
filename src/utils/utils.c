@@ -761,7 +761,7 @@ int levenshtein(const char *s1, const char *s2)
     }
 
     // Use a single-dimensional array to avoid VLA stack overflow
-    int *matrix = malloc((len1 + 1) * (len2 + 1) * sizeof(int));
+    int *matrix = malloc((size_t)(len1 + 1) * (size_t)(len2 + 1) * sizeof(int));
     if (!matrix)
     {
         return 999;
