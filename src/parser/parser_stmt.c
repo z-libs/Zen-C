@@ -2242,7 +2242,6 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         }
 
         char *rw_expr = NULL;
-        int used_codegen = 0;
         char *mangled_to_string = NULL;
         int to_string_is_ptr = 0;
         char *to_string_struct_name = NULL;
@@ -2318,7 +2317,6 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
             if (expr_buf)
             {
                 rw_expr = expr_buf;
-                used_codegen = 1;
             }
         }
 
@@ -2772,13 +2770,9 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
             zfree(to_string_struct_name);
         }
 
-        if (rw_expr && used_codegen)
+        if (rw_expr)
         {
-            (free)(rw_expr);
-        }
-        else if (rw_expr && !used_codegen)
-        {
-            (free)(rw_expr);
+            zfree(rw_expr);
         }
 
         cur = p + 1;

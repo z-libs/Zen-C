@@ -4521,7 +4521,7 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
 
         if (code_buffer)
         {
-            (free)(code_buffer);
+            zfree(code_buffer);
         }
 
         cur = p + 1;

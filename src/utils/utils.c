@@ -156,7 +156,7 @@ char *z_realpath_arena(const char *path)
     if (real)
     {
         char *res = xstrdup(real);
-        (free)(real);
+        free(real);
         return res;
     }
     return xstrdup(path);

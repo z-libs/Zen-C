@@ -137,7 +137,6 @@ void emitter_release(Emitter *e)
     }
     if (e->mode == EMITTER_BUFFER)
     {
-        (free)(e->buffer.buf);
         e->buffer.buf = NULL;
         e->buffer.len = 0;
         e->buffer.cap = 0;
