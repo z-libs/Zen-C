@@ -9,7 +9,7 @@ set ZEN_VERSION=0.1.0
 for /f "delims=" %%i in ('git describe --tags --always --dirty 2^>nul') do set ZEN_VERSION=%%i
 
 rem Compilation flags
-set CFLAGS=-Wall -Wextra -g ^
+set CFLAGS=-std=gnu11 -Wall -Wextra -Wshadow -g ^
  -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen ^
  -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics ^
  -I./std/third-party/tre/include
@@ -44,6 +44,7 @@ set SRCS=src\main.c ^
  src\codegen\codegen_decl.c ^
  src\codegen\codegen_main.c ^
  src\codegen\codegen_utils.c ^
+ src\utils\emitter.c ^
  src\utils\utils.c ^
  src\utils\colors.c ^
  src\utils\cmd.c ^
@@ -53,6 +54,7 @@ set SRCS=src\main.c ^
  src\platform\misra.c ^
  src\utils\config.c ^
  src\diagnostics\diagnostics.c ^
+ src\driver\driver.c ^
  src\lexer\token.c ^
  src\analysis\typecheck.c ^
  src\analysis\move_check.c ^
@@ -66,7 +68,7 @@ set SRCS=src\main.c ^
  src\lsp\lsp_project.c ^
  src\lsp\cJSON.c ^
  src\zen\zen_facts.c ^
- src/zen/zen_doc.c ^
+ src\zen\zen_doc.c ^
  src\repl\repl.c ^
  src\repl\repl_highlight.c ^
  src\repl\repl_readline.c ^
@@ -109,6 +111,10 @@ if not exist plugins mkdir plugins
 for %%f in (plugins\*.zc) do (
     echo Compiling native plugin %%f...
     .\zc.exe build %%f -shared -o %%~dpnf.dll
+    if errorlevel 1 (
+        echo Plugin build failed for %%f
+        exit /b 1
+    )
 )
 
 :end

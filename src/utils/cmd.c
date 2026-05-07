@@ -11,7 +11,7 @@
 void print_search_paths()
 {
     printf("Search paths:\n");
-    for (int i = 0; i < g_config.include_paths.length; i++)
+    for (size_t i = 0; i < g_config.include_paths.length; i++)
     {
         printf("  %s\n", g_config.include_paths.data[i]);
     }
@@ -232,7 +232,7 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
 
     // Input files
     arg_list_add(list, temp_source_file);
-    for (int i = 0; i < g_config.c_files.length; i++)
+    for (size_t i = 0; i < g_config.c_files.length; i++)
     {
         arg_list_add(list, g_config.c_files.data[i]);
     }
@@ -314,7 +314,7 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
     }
 
     // User-defined include paths
-    for (int i = 0; i < g_config.include_paths.length; i++)
+    for (size_t i = 0; i < g_config.include_paths.length; i++)
     {
         char abs_inc[MAX_PATH_LEN];
         z_get_absolute_path(g_config.include_paths.data[i], abs_inc, sizeof(abs_inc));

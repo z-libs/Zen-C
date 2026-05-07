@@ -206,7 +206,7 @@ char *z_resolve_path(const char *fn, const char *relative_to)
     }
 
     // 4. Include paths (-I)
-    for (int i = 0; i < g_config.include_paths.length; i++)
+    for (size_t i = 0; i < g_config.include_paths.length; i++)
     {
         snprintf(path, sizeof(path), "%s/%s", g_config.include_paths.data[i], fn);
         if (access(path, R_OK) == 0)

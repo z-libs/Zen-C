@@ -604,7 +604,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
             emit_preamble(ctx);
         }
 
-        for (int i = 0; i < g_config.cfg_defines.length; i++)
+        for (size_t i = 0; i < g_config.cfg_defines.length; i++)
         {
             EMIT(ctx, "#ifndef ZC_CFG_%s\n#define ZC_CFG_%s 1\n#endif\n",
                  g_config.cfg_defines.data[i], g_config.cfg_defines.data[i]);

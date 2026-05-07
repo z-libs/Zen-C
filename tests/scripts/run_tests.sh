@@ -79,6 +79,7 @@ for arg in "$@"; do
     if [ "$arg" = "--cpp" ]; then
         USE_CPP=1
         zc_args+=("--cpp")
+        continue
     fi
     if [ "$arg" = "--no-source" ]; then
         SHOW_SOURCE=0

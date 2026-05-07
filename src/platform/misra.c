@@ -1159,7 +1159,7 @@ void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token
         // Rule 20.9 check
         int is_defined = 0;
         // 1. Check CLI defines
-        for (int i = 0; i < g_config.cfg_defines.length; i++)
+        for (size_t i = 0; i < g_config.cfg_defines.length; i++)
         {
             if (strcmp(g_config.cfg_defines.data[i], name) == 0)
             {

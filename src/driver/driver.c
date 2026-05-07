@@ -124,7 +124,7 @@ int driver_compile(ZenCompiler *compiler)
             free(primary_real);
         }
 
-        for (int ef = 0; ef < compiler->config.extra_files.length; ef++)
+        for (size_t ef = 0; ef < compiler->config.extra_files.length; ef++)
         {
             const char *extra_path = compiler->config.extra_files.data[ef];
             char *real_path = realpath(extra_path, NULL);
@@ -327,7 +327,7 @@ int driver_compile(ZenCompiler *compiler)
     if (compiler->config.verbose)
     {
         printf(COLOR_BOLD COLOR_BLUE "     Command" COLOR_RESET);
-        for (int k = 0; k < compile_args.count; k++)
+        for (size_t k = 0; k < compile_args.count; k++)
         {
             printf(" %s", compile_args.args[k]);
         }

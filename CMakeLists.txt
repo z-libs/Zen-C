@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.10)
 project(zc C)
 include(GNUInstallDirs)
 
-# Set C standard
+# Set C standard (gnu11 for typeof, statement expressions, etc.)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
 
 # Derive ZEN_VERSION from git (similar to Makefile)
 set(ZEN_VERSION "dev")
@@ -44,12 +45,21 @@ if(WIN32)
     endif()
 else()
     if(CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
-        set(ZC_COMPILE_FLAGS -Wall -Wextra -g)
+        set(ZC_COMPILE_FLAGS -Wall -Wextra -Wshadow -g)
     elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        set(ZC_COMPILE_FLAGS -Wall -Wextra -g)
+        set(ZC_COMPILE_FLAGS -Wall -Wextra -Wshadow -g)
     elseif(CMAKE_C_COMPILER_ID STREQUAL "TinyCC")
         set(ZC_COMPILE_FLAGS -Wall -g)
     endif()
+else()
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
+        set(ZC_COMPILE_FLAGS -Wall -Wextra -Wshadow -g)
+    elseif(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        set(ZC_COMPILE_FLAGS -Wall -Wextra -Wshadow -g)
+    elseif(CMAKE_C_COMPILER_ID STREQUAL "TinyCC")
+        set(ZC_COMPILE_FLAGS -Wall -g)
+    endif()
+endif()
 endif()
 
 # --- Find Required Packages (Modern CMake Way) ---
@@ -75,6 +85,7 @@ include_directories(
 # Source files
 set(SRCS
     src/main.c
+    src/driver/driver.c
     src/diagnostics/diagnostics.c
     src/parser/parser_core.c
     src/parser/parser_decl.c
@@ -91,6 +102,7 @@ set(SRCS
     src/codegen/codegen_main.c
     src/codegen/codegen_utils.c
     src/codegen/codegen_stmt.c
+    src/utils/emitter.c
     src/utils/utils.c
     src/utils/colors.c
     src/utils/cmd.c
@@ -108,6 +120,7 @@ set(SRCS
     src/lsp/lsp_index.c
     src/lsp/lsp_semantic.c
     src/zen/zen_facts.c
+    src/zen/zen_doc.c
     src/repl/repl.c
     src/repl/repl_highlight.c
     src/repl/repl_readline.c
@@ -117,6 +130,7 @@ set(SRCS
     src/platform/os.c
     src/platform/console.c
     src/platform/dylib.c
+    src/platform/misra.c
     src/plugins/plugin_manager.c
     src/plugins/static_plugins.c
     std/third-party/tre/lib/regcomp.c
@@ -223,9 +237,24 @@ if(UNIX AND NOT WIN32)
     install(FILES man/zc.5 DESTINATION share/man/man5)
     install(FILES man/zc.7 DESTINATION share/man/man7)
 endif()
-# Test target
+# Test target (supports: cmake --build . --target test -- -DTEST_FILES="tests/std/test_hash.zc")
+set(TEST_FILES "" CACHE STRING "Space-separated list of specific test files to run")
 add_custom_target(test
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/scripts/run_tests.sh
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/scripts/run_tests.sh -- ${TEST_FILES}
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/scripts/run_codegen_tests.sh ${TEST_FILES}
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/scripts/run_example_transpile.sh ${TEST_FILES}
+    DEPENDS zc
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(test-misra
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/scripts/run_misra_tests.sh
+    DEPENDS zc
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(test-tcc
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/scripts/run_tests.sh --cc tcc
     DEPENDS zc
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )

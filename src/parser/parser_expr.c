@@ -2275,7 +2275,6 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
             }
 
             char pat_buf[MAX_ERROR_MSG_LEN] = {0};
-            Token mpeek;
             while (1)
             {
                 skip_comments(l);
@@ -2292,16 +2291,16 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     int depth = 1;
                     while (depth > 0)
                     {
-                        Token t = lexer_next(l);
-                        if (t.type == TOK_LANGLE)
+                        Token tk = lexer_next(l);
+                        if (tk.type == TOK_LANGLE)
                         {
                             depth++;
                         }
-                        else if (t.type == TOK_RANGLE)
+                        else if (tk.type == TOK_RANGLE)
                         {
                             depth--;
                         }
-                        else if (t.type == TOK_EOF)
+                        else if (tk.type == TOK_EOF)
                         {
                             break;
                         }
