@@ -1796,8 +1796,8 @@ static int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, 
                 {
                     tc->warning_count++;
                 }
-                free(t_str);
-                free(v_str);
+                zfree(t_str);
+                zfree(v_str);
             }
         }
         return 1; // All integer pairs compatible (modulo MISRA/Warning checks above)
@@ -1936,8 +1936,8 @@ static int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, 
         "Ensure the types match exactly (no implicit conversions for strict types)", NULL};
 
     tc_error_with_hints(tc, t, msg, hints);
-    free(t_str);
-    free(v_str);
+    zfree(t_str);
+    zfree(v_str);
     return 0;
 }
 
@@ -3272,12 +3272,12 @@ static void check_node(TypeChecker *tc, ASTNode *node, int depth)
                     node->call.args = idx;
 
                     check_expr_call(tc, node, depth + 1);
-                    free(mangled_idx);
-                    free(mangled_get);
+                    zfree(mangled_idx);
+                    zfree(mangled_get);
                     break;
                 }
-                free(mangled_idx);
-                free(mangled_get);
+                zfree(mangled_idx);
+                zfree(mangled_get);
             }
             if (t->kind == TYPE_ARRAY || t->kind == TYPE_POINTER || t->kind == TYPE_VECTOR)
             {
@@ -3368,11 +3368,11 @@ static void check_node(TypeChecker *tc, ASTNode *node, int depth)
                     {
                         node->type_info = sig->ret_type;
                     }
-                    free(mangled);
+                    zfree(mangled);
                 }
                 if (alloc_name)
                 {
-                    free(alloc_name);
+                    zfree(alloc_name);
                 }
             }
         }

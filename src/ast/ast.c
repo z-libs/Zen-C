@@ -39,13 +39,13 @@ int is_trait(const char *name)
     if (strncmp(base, "struct ", 7) == 0)
     {
         char *nb = xstrdup(base + 7);
-        free(base);
+        zfree(base);
         base = nb;
     }
     else if (strncmp(base, "union ", 6) == 0)
     {
         char *nb = xstrdup(base + 6);
-        free(base);
+        zfree(base);
         base = nb;
     }
 
@@ -60,12 +60,12 @@ int is_trait(const char *name)
     {
         if (0 == strcmp(r->name, base))
         {
-            free(base);
+            zfree(base);
             return 1;
         }
         r = r->next;
     }
-    free(base);
+    zfree(base);
     return 0;
 }
 
@@ -97,10 +97,10 @@ void ast_free(ASTNode *node)
     {
         if (node->comment.content)
         {
-            free(node->comment.content);
+            zfree(node->comment.content);
         }
     }
-    free(node);
+    zfree(node);
 }
 
 Type *type_new(TypeKind kind)
@@ -451,7 +451,7 @@ char *type_to_string(Type *t)
     {
         char *final = xmalloc(strlen(res) + 7);
         sprintf(final, "const %s", res);
-        free(res);
+        zfree(res);
         return final;
     }
     return res;
@@ -557,7 +557,7 @@ static char *type_to_string_impl(Type *t)
         char *inner = type_to_string(t->inner);
         char *res = xmalloc(strlen(inner) + 20);
         sprintf(res, "%sx%d", inner, t->array_size);
-        free(inner);
+        zfree(inner);
         return res;
     }
 
@@ -613,7 +613,7 @@ static char *type_to_string_impl(Type *t)
 
         char *res = xmalloc(total_len);
         strcpy(res, inner);
-        free(inner);
+        zfree(inner);
 
         char *p = res + strlen(res);
         for (int i = 0; i < dims_count; i++)
@@ -624,7 +624,7 @@ static char *type_to_string_impl(Type *t)
 
         if (dims)
         {
-            free(dims);
+            zfree(dims);
         }
         return res;
     }
@@ -644,28 +644,28 @@ static char *type_to_string_impl(Type *t)
                 {
                     char *tmp = xmalloc(strlen(res) + 3);
                     snprintf(tmp, strlen(res) + 3, "%s, ", res);
-                    free(res);
+                    zfree(res);
                     res = tmp;
                 }
                 char *arg = type_to_string(t->args[i]);
                 char *tmp = xmalloc(strlen(res) + strlen(arg) + 1);
                 sprintf(tmp, "%s%s", res, arg);
-                free(res);
+                zfree(res);
                 res = tmp;
-                free(arg);
+                zfree(arg);
             }
             if (t->is_varargs)
             {
                 char *tmp = xmalloc(strlen(res) + 6);
                 sprintf(tmp, "%s, ...", res);
-                free(res);
+                zfree(res);
                 res = tmp;
             }
             char *tmp = xmalloc(strlen(res) + strlen(ret) + 6); // ) -> Ret
             sprintf(tmp, "%s) -> %s", res, ret);
-            free(res);
+            zfree(res);
             res = tmp;
-            free(ret);
+            zfree(ret);
             return res;
         }
 
@@ -680,21 +680,21 @@ static char *type_to_string_impl(Type *t)
             {
                 char *tmp = xmalloc(strlen(res) + 3);
                 snprintf(tmp, strlen(res) + 3, "%s, ", res);
-                free(res);
+                zfree(res);
                 res = tmp;
             }
             char *arg = type_to_string(t->args[i]);
             char *tmp = xmalloc(strlen(res) + strlen(arg) + 1);
             sprintf(tmp, "%s%s", res, arg);
-            free(res);
+            zfree(res);
             res = tmp;
-            free(arg);
+            zfree(arg);
         }
         char *tmp = xmalloc(strlen(res) + strlen(ret) + 6); // ) -> Ret
         sprintf(tmp, "%s) -> %s", res, ret);
-        free(res);
+        zfree(res);
         res = tmp;
-        free(ret);
+        zfree(ret);
         return res;
     }
 
@@ -717,10 +717,10 @@ static char *type_to_string_impl(Type *t)
                 char *new_res = xmalloc(new_len);
                 sprintf(new_res, "%s__%s", res, clean_arg);
 
-                free(res);
+                zfree(res);
                 res = new_res;
-                free(arg);
-                free(clean_arg);
+                zfree(arg);
+                zfree(clean_arg);
             }
             return res;
         }
@@ -752,7 +752,7 @@ char *type_to_c_string(Type *t)
     {
         char *final = xmalloc(strlen(res) + 7);
         sprintf(final, "const %s", res);
-        free(res);
+        zfree(res);
         return final;
     }
     return res;
@@ -880,7 +880,7 @@ static char *type_to_c_string_impl(Type *t)
         char *inner = type_to_c_string(t->inner);
         char *res = xmalloc(strlen(inner) + 32);
         sprintf(res, "ZC_SIMD(%s, %d)", inner, t->array_size);
-        free(inner);
+        zfree(inner);
         return res;
     }
 
@@ -896,7 +896,7 @@ static char *type_to_c_string_impl(Type *t)
             res[prefix_len] = 0;
             strcat(res, "*");
             strcat(res, ptr_token + 2);
-            free(inner);
+            zfree(inner);
             return res;
         }
 
@@ -921,7 +921,7 @@ static char *type_to_c_string_impl(Type *t)
             char *inner_zens = type_to_string(t->inner);
             char *res = xmalloc(strlen(inner_zens) + 8);
             sprintf(res, "Slice__%s", inner_zens);
-            free(inner_zens);
+            zfree(inner_zens);
             return res;
         }
 
@@ -950,7 +950,7 @@ static char *type_to_c_string_impl(Type *t)
 
         char *res = xmalloc(total_len);
         strcpy(res, inner);
-        free(inner);
+        zfree(inner);
 
         char *p = res + strlen(res);
         for (int i = 0; i < dims_count; i++)
@@ -961,7 +961,7 @@ static char *type_to_c_string_impl(Type *t)
 
         if (dims)
         {
-            free(dims);
+            zfree(dims);
         }
         return res;
     }
@@ -979,15 +979,15 @@ static char *type_to_c_string_impl(Type *t)
                 {
                     char *tmp = xmalloc(strlen(res) + 3);
                     snprintf(tmp, strlen(res) + 3, "%s, ", res);
-                    free(res);
+                    zfree(res);
                     res = tmp;
                 }
                 char *arg = type_to_c_string(t->args[i]);
                 char *tmp = xmalloc(strlen(res) + strlen(arg) + 1);
                 sprintf(tmp, "%s%s", res, arg);
-                free(res);
+                zfree(res);
                 res = tmp;
-                free(arg);
+                zfree(arg);
             }
             if (t->is_varargs)
             {
@@ -995,27 +995,27 @@ static char *type_to_c_string_impl(Type *t)
                 {
                     char *tmp = xmalloc(strlen(res) + 6);
                     sprintf(tmp, "%s, ...", res);
-                    free(res);
+                    zfree(res);
                     res = tmp;
                 }
                 else
                 {
                     char *tmp = xmalloc(strlen(res) + 4);
                     sprintf(tmp, "%s...", res);
-                    free(res);
+                    zfree(res);
                     res = tmp;
                 }
             }
             char *tmp = xmalloc(strlen(res) + 2);
             sprintf(tmp, "%s)", res);
-            free(res);
+            zfree(res);
             res = tmp;
-            free(ret);
+            zfree(ret);
             return res;
         }
         if (t->inner)
         {
-            free(type_to_c_string(t->inner));
+            zfree(type_to_c_string(t->inner));
         }
         return xstrdup("z_closure_T");
 

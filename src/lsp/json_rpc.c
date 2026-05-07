@@ -100,14 +100,14 @@ void handle_request(const char *json_str)
         if (root && strncmp(root, "file://", 7) == 0)
         {
             char *clean = strdup(root + 7);
-            free(root);
+            zfree(root);
             root = clean;
         }
 
         lsp_project_init(root ? root : ".");
         if (root)
         {
-            free(root);
+            zfree(root);
         }
 
         const char *response =
@@ -141,7 +141,7 @@ void handle_request(const char *json_str)
         char *str = cJSON_PrintUnformatted(res_json);
         fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
         fflush(stdout);
-        free(str);
+        zfree(str);
         cJSON_Delete(res_json);
         fflush(stdout);
     }
@@ -186,7 +186,7 @@ void handle_request(const char *json_str)
         if (uri)
         {
             lsp_goto_definition(uri, line, col, id);
-            free(uri);
+            zfree(uri);
         }
     }
     else if (strcmp(method, "textDocument/hover") == 0)
@@ -197,7 +197,7 @@ void handle_request(const char *json_str)
         if (uri)
         {
             lsp_hover(uri, line, col, id);
-            free(uri);
+            zfree(uri);
         }
     }
     else if (strcmp(method, "textDocument/completion") == 0)
@@ -208,7 +208,7 @@ void handle_request(const char *json_str)
         if (uri)
         {
             lsp_completion(uri, line, col, id);
-            free(uri);
+            zfree(uri);
         }
     }
     else if (strcmp(method, "textDocument/documentSymbol") == 0)
@@ -219,7 +219,7 @@ void handle_request(const char *json_str)
         if (uri)
         {
             lsp_document_symbol(uri, id);
-            free(uri);
+            zfree(uri);
         }
     }
     else if (strcmp(method, "textDocument/references") == 0)
@@ -230,7 +230,7 @@ void handle_request(const char *json_str)
         if (uri)
         {
             lsp_references(uri, line, col, id);
-            free(uri);
+            zfree(uri);
         }
     }
     else if (strcmp(method, "textDocument/signatureHelp") == 0)
@@ -241,7 +241,7 @@ void handle_request(const char *json_str)
         if (uri)
         {
             lsp_signature_help(uri, line, col, id);
-            free(uri);
+            zfree(uri);
         }
     }
     else if (strcmp(method, "textDocument/codeAction") == 0)
@@ -285,12 +285,12 @@ void handle_request(const char *json_str)
                         // fallback empty
                         cJSON_AddItemToObject(res_json, "result", cJSON_CreateObject());
                     }
-                    free(resp);
+                    zfree(resp);
 
                     char *str = cJSON_PrintUnformatted(res_json);
                     fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
                     fflush(stdout);
-                    free(str);
+                    zfree(str);
                     cJSON_Delete(res_json);
                 }
             }
@@ -309,7 +309,7 @@ void handle_request(const char *json_str)
         if (uri && new_name)
         {
             lsp_rename(uri, line, col, new_name, id);
-            free(uri);
+            zfree(uri);
         }
     }
     else if (strcmp(method, "textDocument/formatting") == 0)
@@ -367,9 +367,9 @@ void handle_request(const char *json_str)
                         char *str = cJSON_PrintUnformatted(res_json);
                         fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
                         fflush(stdout);
-                        free(str);
+                        zfree(str);
                         cJSON_Delete(res_json);
-                        free(formatted);
+                        zfree(formatted);
                     }
                 }
             }
@@ -385,7 +385,7 @@ void handle_request(const char *json_str)
         char *str = cJSON_PrintUnformatted(res_json);
         fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
         fflush(stdout);
-        free(str);
+        zfree(str);
         cJSON_Delete(res_json);
     }
     else if (strcmp(method, "exit") == 0)

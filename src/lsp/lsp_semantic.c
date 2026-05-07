@@ -66,7 +66,7 @@ static void builder_push(TokenBuilder *b, int line, int col, int length, int typ
 static void builder_free(TokenBuilder *b)
 {
     (void)b;
-    free(b->tokens);
+    zfree(b->tokens);
 }
 
 static int compare_tokens(const void *a, const void *b)

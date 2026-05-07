@@ -212,7 +212,7 @@ void repl_load_docs(ReplState *state)
         return;
     }
     cJSON *json = cJSON_Parse(data);
-    free(data);
+    zfree(data);
     if (!json)
     {
         return;
@@ -283,7 +283,7 @@ void repl_update_symbols(ReplState *state)
 {
     for (int i = 0; i < state->symbol_count; i++)
     {
-        free(state->symbols[i]);
+        zfree(state->symbols[i]);
     }
     state->symbol_count = 0;
     static const char *STDLIB_TYPES[] = {"Vec", "String", "Map", "Set", "Slice", "Regex", NULL};
@@ -302,8 +302,8 @@ void repl_update_symbols(ReplState *state)
     size_t sz = strlen(global_code) + strlen(main_code) + 128;
     char *code = malloc(sz);
     snprintf(code, sz, "%s\nfn main() { %s }", global_code, main_code);
-    free(global_code);
-    free(main_code);
+    zfree(global_code);
+    zfree(main_code);
     ParserContext ctx = {0};
     ctx.is_repl = 1;
     ctx.skip_preamble = 1;
@@ -324,7 +324,7 @@ void repl_update_symbols(ReplState *state)
             repl_add_symbol(state, n->strct.name);
         }
     }
-    free(code);
+    zfree(code);
 }
 
 void repl_extract_c_code(const char *filename)

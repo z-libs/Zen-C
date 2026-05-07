@@ -70,7 +70,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_exter
                 zpanic_at(gt, "Generic parameter '%s' shadows an existing generic parameter", s);
             }
 
-            free(s);
+            zfree(s);
 
             if (lexer_peek(l).type == TOK_COMMA)
             {
@@ -85,7 +85,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_exter
             zpanic_at(lexer_peek(l), "Expected >");
         }
         gen_param = xstrdup(buf);
-        free(buf);
+        zfree(buf);
     }
 
     // Register generic parameters so type parsing recognizes them
@@ -99,7 +99,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_exter
             register_generic(ctx, tok);
             tok = strtok(NULL, ",");
         }
-        free(tmp);
+        zfree(tmp);
     }
 
     enter_scope(ctx);
@@ -145,7 +145,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_exter
     {
         char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name) + 3);
         sprintf(prefixed_name, "%s__%s", ctx->current_module_prefix, name);
-        free(name);
+        zfree(name);
         name = prefixed_name;
     }
 
@@ -291,7 +291,7 @@ char *patch_self_args(const char *args, const char *struct_name)
     {
         strcpy(new_args, args);
     }
-    free(safe_name);
+    zfree(safe_name);
     return new_args;
 }
 // Helper for Value-Returning Defer
@@ -779,14 +779,14 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export)
                 char *got = type_to_string(t);
                 zpanic_at(init->token, "Type validation failed. Expected '%s', but got '%s'",
                           expected, got);
-                free(expected);
-                free(got);
+                zfree(expected);
+                zfree(got);
             }
         }
 
         if (temp_literal_type)
         {
-            free(temp_literal_type); // Simple free, shallow
+            zfree(temp_literal_type); // Simple free, shallow
         }
     }
 
@@ -937,12 +937,12 @@ ASTNode *parse_def(ParserContext *ctx, Lexer *l, int is_export)
                     {
                         if (s->type_name)
                         {
-                            free(s->type_name);
+                            zfree(s->type_name);
                         }
                         s->type_name = xstrdup("int");
                         if (s->type_info)
                         {
-                            free(s->type_info);
+                            zfree(s->type_info);
                         }
                         s->type_info = type_new(TYPE_INT);
                         s->type_info->is_const = 1;

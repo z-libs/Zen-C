@@ -72,7 +72,7 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
         strncpy(content, tok.start, tok.len);
         content[tok.len] = 0;
         try_parse_macro_const(ctx, content);
-        free(content);
+        zfree(content);
     }
     else if (strncmp(p, "include", 7) == 0)
     {
@@ -146,7 +146,7 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
                     }
 
                     misra_check_preprocessor_expression_parser(ctx, tok, expr_buf);
-                    free(expr_buf);
+                    zfree(expr_buf);
                 }
             }
         }
@@ -422,7 +422,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
                                  params[i]);
                         zerror_at(name, "%s", msg);
                     }
-                    free(params[i]);
+                    zfree(params[i]);
                 }
             }
         }
@@ -482,7 +482,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
                 }
             }
 
-            free(tok_str);
+            zfree(tok_str);
 
             if (is_prim)
             {
@@ -535,7 +535,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
         }
         else
         {
-            free(n);
+            zfree(n);
         }
     }
 }
@@ -646,15 +646,15 @@ char *ast_to_string_recursive(ASTNode *node, int depth)
         char *r = ast_to_string_recursive(node->binary.right, depth + 1);
         // Add parens to be safe
         snprintf(buf, buf_size, "(%s %s %s)", l, node->binary.op ? node->binary.op : "?", r);
-        free(l);
-        free(r);
+        zfree(l);
+        zfree(r);
         break;
     }
     case NODE_EXPR_UNARY:
     {
         char *o = ast_to_string_recursive(node->unary.operand, depth + 1);
         snprintf(buf, buf_size, "(%s%s)", node->unary.op ? node->unary.op : "?", o);
-        free(o);
+        zfree(o);
         break;
     }
     case NODE_EXPR_CAST:
@@ -662,14 +662,14 @@ char *ast_to_string_recursive(ASTNode *node, int depth)
         char *e = ast_to_string_recursive(node->cast.expr, depth + 1);
         snprintf(buf, buf_size, "((%s)%s)", node->cast.target_type ? node->cast.target_type : "?",
                  e);
-        free(e);
+        zfree(e);
         break;
     }
     case NODE_EXPR_CALL:
     {
         char *callee = ast_to_string_recursive(node->call.callee, depth + 1);
         snprintf(buf, buf_size, "%s(", callee);
-        free(callee);
+        zfree(callee);
 
         ASTNode *arg = node->call.args;
         int first = 1;
@@ -687,7 +687,7 @@ char *ast_to_string_recursive(ASTNode *node, int depth)
             {
                 strcat(buf, a);
             }
-            free(a);
+            zfree(a);
             first = 0;
             arg = arg->next;
         }
@@ -726,7 +726,7 @@ char *ast_to_string_recursive(ASTNode *node, int depth)
                 {
                     strcat(buf, val);
                 }
-                free(val);
+                zfree(val);
             }
             first = 0;
             field = field->next;
@@ -741,7 +741,7 @@ char *ast_to_string_recursive(ASTNode *node, int depth)
     {
         char *t = ast_to_string_recursive(node->member.target, depth + 1);
         snprintf(buf, buf_size, "%s.%s", t, node->member.field ? node->member.field : "?");
-        free(t);
+        zfree(t);
         break;
     }
     case NODE_EXPR_INDEX:
@@ -749,8 +749,8 @@ char *ast_to_string_recursive(ASTNode *node, int depth)
         char *arr = ast_to_string_recursive(node->index.array, depth + 1);
         char *idx = ast_to_string_recursive(node->index.index, depth + 1);
         snprintf(buf, buf_size, "%s[%s]", arr, idx);
-        free(arr);
-        free(idx);
+        zfree(arr);
+        zfree(idx);
         break;
     }
     default:
@@ -828,7 +828,7 @@ void skip_comments(Lexer *l)
                 size_t old_len = strlen(g_parser_ctx->last_doc_comment);
                 char *new_c = xmalloc(old_len + tk.len + 2);
                 sprintf(new_c, "%s\n%.*s", g_parser_ctx->last_doc_comment, tk.len, tk.start);
-                free(g_parser_ctx->last_doc_comment);
+                zfree(g_parser_ctx->last_doc_comment);
                 g_parser_ctx->last_doc_comment = new_c;
             }
             else
@@ -1622,7 +1622,7 @@ EnumVariantReg *find_enum_variant(ParserContext *ctx, const char *name)
             {
                 if (ename)
                 {
-                    free(ename);
+                    zfree(ename);
                 }
                 return r;
             }
@@ -1631,7 +1631,7 @@ EnumVariantReg *find_enum_variant(ParserContext *ctx, const char *name)
     }
     if (ename)
     {
-        free(ename);
+        zfree(ename);
     }
     return NULL;
 }
@@ -1790,7 +1790,7 @@ void register_tuple(ParserContext *ctx, const char *sig)
     char struct_name[MAX_ERROR_MSG_LEN];
     char *clean_sig = sanitize_mangled_name(sig);
     snprintf(struct_name, sizeof(struct_name), "Tuple__%s", clean_sig);
-    free(clean_sig);
+    zfree(clean_sig);
 
     ASTNode *s_def = ast_create(NODE_STRUCT);
     s_def->strct.name = xstrdup(struct_name);
@@ -1833,7 +1833,7 @@ void register_tuple(ParserContext *ctx, const char *sig)
             break;
         }
     }
-    free(s_sig);
+    zfree(s_sig);
     s_def->strct.fields = head;
 
     register_struct_def(ctx, struct_name, s_def);
@@ -2246,11 +2246,11 @@ char *replace_in_string(const char *src, const char *old_w, const char *new_w)
             curr_c[c_len] = 0;
 
             char *next_src = replace_in_string(running_src, curr_p, curr_c);
-            free(running_src);
+            zfree(running_src);
             running_src = next_src;
 
-            free(curr_p);
-            free(curr_c);
+            zfree(curr_p);
+            zfree(curr_c);
 
             if (p_end)
             {
@@ -2385,7 +2385,7 @@ char *replace_mangled_part(const char *src, const char *param, const char *concr
             res_cap = res_cap * 2 + clen;
             char *new_res = xmalloc(res_cap);
             memcpy(new_res, result, current_len);
-            free(result);
+            zfree(result);
             result = new_res;
             out = result + current_len;
         }
@@ -2492,8 +2492,8 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
         char *nb = replace_type_str(base, param, concrete, old_struct, new_struct);
         char *res = xmalloc(strlen(nb) + 2);
         sprintf(res, "%s*", nb);
-        free(base);
-        free(nb);
+        zfree(base);
+        zfree(nb);
         return res;
     }
 
@@ -2508,7 +2508,7 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
         if (strstr(res, tpl_w))
         {
             char *tmp = replace_in_string(res, tpl_w, new_struct);
-            free(res);
+            zfree(res);
             res = tmp;
         }
     }
@@ -2517,7 +2517,7 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
     if (old_struct && new_struct && strstr(res, old_struct))
     {
         char *tmp = replace_in_string(res, old_struct, new_struct);
-        free(res);
+        zfree(res);
         res = tmp;
     }
 
@@ -2545,12 +2545,12 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
 
             char *clean_c = sanitize_mangled_name(c_part);
             char *tmp = replace_mangled_part(final_res, p_part, clean_c);
-            free(final_res);
+            zfree(final_res);
             final_res = tmp;
 
-            free(p_part);
-            free(c_part);
-            free(clean_c);
+            zfree(p_part);
+            zfree(c_part);
+            zfree(clean_c);
 
             if (p_end)
             {
@@ -2573,17 +2573,17 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
     else
     {
         char *t1 = replace_in_string(final_res, param, concrete);
-        free(final_res);
+        zfree(final_res);
         final_res = t1;
 
         char *clean_c = sanitize_mangled_name(concrete);
         char *tmp = replace_mangled_part(final_res, param, clean_c);
-        free(final_res);
+        zfree(final_res);
         final_res = tmp;
-        free(clean_c);
+        zfree(clean_c);
     }
 
-    free(res);
+    zfree(res);
     return final_res;
 }
 
@@ -2607,7 +2607,7 @@ Type *type_from_string_helper(const char *c)
         base[base_len] = 0;
 
         Type *inner = type_from_string_helper(base);
-        free(base);
+        zfree(base);
 
         return type_new_ptr(inner);
     }
@@ -2765,7 +2765,7 @@ Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os,
                     c_part[c_len] = 0;
 
                     Type *res = type_from_string_helper(c_part);
-                    free(c_part);
+                    zfree(c_part);
                     return res;
                 }
                 if (p_end)
@@ -2822,8 +2822,8 @@ Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os,
                 char *clean_sub = sanitize_mangled_name(sub);
                 strcat(p_suffix, "__");
                 strcat(p_suffix, clean_sub);
-                free(clean_sub);
-                free(sub);
+                zfree(clean_sub);
+                zfree(sub);
 
                 if (p_next)
                 {
@@ -2900,8 +2900,8 @@ Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os,
                     // Standardize: always use __ for mangled part
                     strcat(c_suffix, "__");
                     strcat(c_suffix, clean);
-                    free(clean);
-                    free(sub);
+                    zfree(clean);
+                    zfree(sub);
 
                     if (c_next)
                     {
@@ -3024,17 +3024,17 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
                 c_part[c_len] = 0;
 
                 char *t1 = replace_in_string(tmp_args, p_part, c_part);
-                free(tmp_args);
+                zfree(tmp_args);
                 tmp_args = t1;
 
                 char *clean_c = sanitize_mangled_name(c_part);
                 char *t2 = replace_mangled_part(tmp_args, p_part, clean_c);
-                free(tmp_args);
+                zfree(tmp_args);
                 tmp_args = t2;
 
-                free(p_part);
-                free(c_part);
-                free(clean_c);
+                zfree(p_part);
+                zfree(c_part);
+                zfree(clean_c);
 
                 if (p_end)
                 {
@@ -3057,23 +3057,23 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         else
         {
             char *t1 = replace_in_string(tmp_args, p, c);
-            free(tmp_args);
+            zfree(tmp_args);
             tmp_args = t1;
 
             if (p && c)
             {
                 char *clean_c = sanitize_mangled_name(c);
                 char *t2 = replace_mangled_part(tmp_args, p, clean_c);
-                free(tmp_args);
+                zfree(tmp_args);
                 tmp_args = t2;
-                free(clean_c);
+                zfree(clean_c);
             }
         }
 
         if (os && ns)
         {
             char *tmp2 = replace_in_string(tmp_args, os, ns);
-            free(tmp_args);
+            zfree(tmp_args);
             tmp_args = tmp2;
         }
         new_node->func.arg_count = n->func.arg_count;
@@ -3154,17 +3154,17 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
                 c_part[c_len] = 0;
 
                 char *t1 = replace_in_string(s1, p_part, c_part);
-                free(s1);
+                zfree(s1);
                 s1 = t1;
 
                 char *clean_c = sanitize_mangled_name(c_part);
                 char *t2 = replace_mangled_part(s1, p_part, clean_c);
-                free(s1);
+                zfree(s1);
                 s1 = t2;
 
-                free(p_part);
-                free(c_part);
-                free(clean_c);
+                zfree(p_part);
+                zfree(c_part);
+                zfree(clean_c);
 
                 if (p_end)
                 {
@@ -3187,23 +3187,23 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         else
         {
             char *t1 = replace_in_string(s1, p, c);
-            free(s1);
+            zfree(s1);
             s1 = t1;
 
             if (p && c)
             {
                 char *clean_c = sanitize_mangled_name(c);
                 char *t2 = replace_mangled_part(s1, p, clean_c);
-                free(s1);
+                zfree(s1);
                 s1 = t2;
-                free(clean_c);
+                zfree(clean_c);
             }
         }
 
         if (os && ns)
         {
             char *s2 = replace_in_string(s1, os, ns);
-            free(s1);
+            zfree(s1);
             s1 = s2;
         }
 
@@ -3257,17 +3257,17 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
                 c_part[c_len] = 0;
 
                 char *t1 = replace_in_string(n1, p_part, c_part);
-                free(n1);
+                zfree(n1);
                 n1 = t1;
 
                 char *clean_c = sanitize_mangled_name(c_part);
                 char *t2 = replace_mangled_part(n1, p_part, clean_c);
-                free(n1);
+                zfree(n1);
                 n1 = t2;
 
-                free(p_part);
-                free(c_part);
-                free(clean_c);
+                zfree(p_part);
+                zfree(c_part);
+                zfree(clean_c);
 
                 if (p_end)
                 {
@@ -3292,13 +3292,13 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             if (p && c)
             {
                 char *t1 = replace_in_string(n1, p, c);
-                free(n1);
+                zfree(n1);
                 n1 = t1;
 
                 char *clean_c = sanitize_mangled_name(c);
                 char *n2 = replace_mangled_part(n1, p, clean_c);
-                free(clean_c);
-                free(n1);
+                zfree(clean_c);
+                zfree(n1);
                 n1 = n2;
             }
         }
@@ -3315,7 +3315,7 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
                 char buf[MAX_ERROR_MSG_LEN];
                 snprintf(buf, sizeof(buf), "%s%s", ns, suffix);
                 char *n3 = merge_underscores(buf);
-                free(n1);
+                zfree(n1);
                 n1 = n3;
             }
         }
@@ -3363,7 +3363,7 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             new_node->type = NODE_EXPR_LITERAL;
             new_node->literal.type_kind = LITERAL_INT;
             new_node->literal.int_val = 0;
-            free(new_name);
+            zfree(new_name);
         }
         else
         {
@@ -3433,11 +3433,11 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
                     c_part[c_len] = 0;
 
                     char *t1 = replace_mangled_part(s1, p_part, c_part);
-                    free(s1);
+                    zfree(s1);
                     s1 = t1;
 
-                    free(p_part);
-                    free(c_part);
+                    zfree(p_part);
+                    zfree(c_part);
 
                     if (p_end)
                     {
@@ -3460,17 +3460,17 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
             else
             {
                 char *t1 = replace_in_string(s1, p, c);
-                free(s1);
+                zfree(s1);
                 s1 = t1;
                 char *t2 = replace_mangled_part(s1, p, c);
-                free(s1);
+                zfree(s1);
                 s1 = t2;
             }
 
             if (os && ns)
             {
                 char *s2 = replace_in_string(s1, os, ns);
-                free(s1);
+                zfree(s1);
                 s1 = s2;
                 char *colons = strstr(s1, "::");
                 if (colons)
@@ -3800,7 +3800,7 @@ char *unmangle_ptr_suffix(const char *s)
         strcpy(result, s);
     }
 
-    free(base);
+    zfree(base);
     return result;
 }
 
@@ -3865,7 +3865,7 @@ static void trigger_type_instantiation(ParserContext *ctx, Type *t)
     {
         char *inner_str = type_to_string(t->inner);
         register_slice(ctx, inner_str);
-        free(inner_str);
+        zfree(inner_str);
     }
 
     // Handle mangled types (instantiations)
@@ -3900,10 +3900,10 @@ static void trigger_type_instantiation(ParserContext *ctx, Type *t)
                 char *unmangled = unmangle_ptr_suffix(concrete_arg);
                 Token dummy_tok = {0};
                 instantiate_generic(ctx, template_name, concrete_arg, unmangled, dummy_tok);
-                free(unmangled);
+                zfree(unmangled);
             }
         }
-        free(type_copy);
+        zfree(type_copy);
     }
 
     // Recursive scan
@@ -3982,10 +3982,10 @@ static void trigger_instantiations(ParserContext *ctx, ASTNode *node)
                     char *unmangled = unmangle_ptr_suffix(concrete_arg);
                     Token dummy_tok = {0};
                     instantiate_generic(ctx, template_name, concrete_arg, unmangled, dummy_tok);
-                    free(unmangled);
+                    zfree(unmangled);
                 }
             }
-            free(type_copy);
+            zfree(type_copy);
         }
     }
     else if (node->type == NODE_EXPR_VAR)
@@ -4004,7 +4004,7 @@ static void trigger_instantiations(ParserContext *ctx, ASTNode *node)
 
                     char *unmangled = unmangle_ptr_suffix(concrete_arg);
                     instantiate_function_template(ctx, template_name, concrete_arg, unmangled);
-                    free(unmangled);
+                    zfree(unmangled);
                     break; // Found match, stop searching
                 }
                 t = t->next;
@@ -4045,10 +4045,10 @@ static void trigger_instantiations(ParserContext *ctx, ASTNode *node)
                     char *unmangled = unmangle_ptr_suffix(concrete_arg);
                     Token dummy_tok = {0};
                     instantiate_generic(ctx, template_name, concrete_arg, unmangled, dummy_tok);
-                    free(unmangled);
+                    zfree(unmangled);
                 }
             }
-            free(type_copy);
+            zfree(type_copy);
         }
     }
 
@@ -4222,7 +4222,7 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
     char buf[MAX_ERROR_MSG_LEN];
     snprintf(buf, sizeof(buf), "%s__%s", name, clean_type);
     char *mangled = merge_underscores(buf);
-    free(clean_type);
+    zfree(clean_type);
 
     if (is_still_generic)
     {
@@ -4331,7 +4331,7 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
                     {
                         char *base = xstrdup(args[0]);
                         base[alen - 3] = '\0';
-                        free(unmangled);
+                        zfree(unmangled);
                         unmangled = xmalloc(strlen(base) + 16);
                         if (is_unmangle_primitive(base))
                         {
@@ -4341,10 +4341,10 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
                         {
                             sprintf(unmangled, "struct %s*", base);
                         }
-                        free(base);
+                        zfree(base);
                     }
                     instantiate_generic(ctx, struct_base, args[0], unmangled, dummy_tok);
-                    free(unmangled);
+                    zfree(unmangled);
                 }
                 else if (arg_count > 1)
                 {
@@ -4354,13 +4354,13 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
                 // Cleanup
                 for (int i = 0; i < arg_count; i++)
                 {
-                    free(args[i]);
+                    zfree(args[i]);
                 }
-                free(args);
+                zfree(args);
             }
-            free(struct_base);
+            zfree(struct_base);
         }
-        free(param_suffix);
+        zfree(param_suffix);
     }
 
     ASTNode *new_fn = copy_ast_replacing(tpl->func_node, tpl->generic_param, subst_arg, NULL, NULL);
@@ -4369,7 +4369,7 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
         return NULL;
     }
 
-    free(new_fn->func.name);
+    zfree(new_fn->func.name);
     new_fn->func.name = xstrdup(mangled);
     new_fn->func.generic_params = NULL;
 
@@ -4390,7 +4390,7 @@ char *instantiate_function_template(ParserContext *ctx, const char *name, const 
             {
                 char *inner_str = type_to_string(at->inner);
                 register_slice(ctx, inner_str);
-                free(inner_str);
+                zfree(inner_str);
             }
         }
     }
@@ -4521,14 +4521,14 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
 
         if (code_buffer)
         {
-            free(code_buffer);
+            (free)(code_buffer);
         }
 
         cur = p + 1;
     }
 
     strcat(gen, "_b; })");
-    free(s);
+    zfree(s);
     return gen;
 }
 
@@ -4566,12 +4566,12 @@ int check_impl(ParserContext *ctx, const char *trait, const char *strct)
             {
                 if (strcmp(r->trait, trait) == 0)
                 {
-                    free(base_reg);
+                    zfree(base_reg);
                     return 1;
                 }
             }
         }
-        free(base_reg);
+        zfree(base_reg);
         r = r->next;
     }
 
@@ -4661,17 +4661,17 @@ ASTNode *copy_fields_replacing(ParserContext *ctx, ASTNode *fields, const char *
                         char *clean_concrete = sanitize_mangled_name(concrete);
                         if (strcmp(concrete_arg, clean_concrete) == 0)
                         {
-                            free(unmangled);
+                            zfree(unmangled);
                             unmangled = xstrdup(concrete);
                         }
-                        free(clean_concrete);
+                        zfree(clean_concrete);
                     }
 
                     instantiate_generic(ctx, template_name, concrete_arg, unmangled, fields->token);
-                    free(unmangled);
+                    zfree(unmangled);
                 }
             }
-            free(type_copy);
+            zfree(type_copy);
         }
     }
 
@@ -4713,13 +4713,13 @@ ASTNode *copy_fields_replacing(ParserContext *ctx, ASTNode *fields, const char *
                     char *clean_concrete = sanitize_mangled_name(concrete);
                     if (strcmp(concrete_arg, clean_concrete) == 0)
                     {
-                        free(unmangled);
+                        zfree(unmangled);
                         unmangled = xstrdup(concrete);
                     }
-                    free(clean_concrete);
+                    zfree(clean_concrete);
                 }
                 instantiate_generic(ctx, template_name, concrete_arg, unmangled, fields->token);
-                free(unmangled);
+                zfree(unmangled);
             }
         }
     }
@@ -4771,10 +4771,10 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
             new_impl = tmp;
         }
 
-        free(old_sanitized);
-        free(sanitized);
+        zfree(old_sanitized);
+        zfree(sanitized);
     }
-    free(subst_arg);
+    zfree(subst_arg);
     it->impl_node->next = backup_next; // Restore
 
     ASTNode *meth = NULL;
@@ -4815,8 +4815,8 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
             char *temp = xmalloc(strlen(mangled_struct_name) + strlen(original_method) + 3);
             sprintf(temp, "%s__%s", mangled_struct_name, original_method);
             char *new_name = merge_underscores(temp);
-            free(temp);
-            free(meth->func.name);
+            zfree(temp);
+            zfree(meth->func.name);
             meth->func.name = new_name;
         }
 
@@ -4863,7 +4863,7 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
                     {
                         char *base = xstrdup(clean_arg);
                         base[alen - 3] = '\0';
-                        free(inner_unmangled_arg);
+                        zfree(inner_unmangled_arg);
                         inner_unmangled_arg = xmalloc(strlen(base) + 16);
                         // Check if base is a primitive type
                         if (is_unmangle_primitive(base))
@@ -4874,11 +4874,11 @@ void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
                         {
                             sprintf(inner_unmangled_arg, "struct %s*", base);
                         }
-                        free(base);
+                        zfree(base);
                     }
 
                     instantiate_generic(ctx, gt->name, clean_arg, inner_unmangled_arg, meth->token);
-                    free(clean_arg);
+                    zfree(clean_arg);
                 }
                 gt = gt->next;
             }
@@ -4914,7 +4914,7 @@ static void register_enum_constructor(ParserContext *ctx, const char *m, const c
         register_func(ctx, ctx->global_scope, mangled_var, 0, NULL, NULL, ret_t, 0, 0, 0, NULL,
                       token, is_export);
     }
-    free(mangled_var);
+    zfree(mangled_var);
 }
 
 void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
@@ -4940,14 +4940,14 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
     }
     strcat(m, "__");
     strcat(m, clean_arg);
-    free(clean_arg);
+    zfree(clean_arg);
 
     Instantiation *c = ctx->instantiations;
     while (c)
     {
         if (strcmp(c->name, m) == 0)
         {
-            free(m);
+            zfree(m);
             return; // Already instantiated, DO NOTHING.
         }
         c = c->next;
@@ -5081,7 +5081,7 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg,
         }
         it = it->next;
     }
-    free(m);
+    zfree(m);
 }
 
 static void free_field_list(ASTNode *fields)
@@ -5091,13 +5091,13 @@ static void free_field_list(ASTNode *fields)
         ASTNode *next = fields->next;
         if (fields->field.name)
         {
-            free(fields->field.name);
+            zfree(fields->field.name);
         }
         if (fields->field.type)
         {
-            free(fields->field.type);
+            zfree(fields->field.type);
         }
-        free(fields);
+        zfree(fields);
         fields = next;
     }
 }
@@ -5111,7 +5111,7 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
     {
         char *clean = sanitize_mangled_name(args[i]);
         m_len += 2 + strlen(clean);
-        free(clean);
+        zfree(clean);
     }
     char *m = xmalloc(m_len + 1);
     strcpy(m, tpl);
@@ -5125,7 +5125,7 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
         char *clean = sanitize_mangled_name(args[i]);
         strcat(m, "__");
         strcat(m, clean);
-        free(clean);
+        zfree(clean);
     }
 
     // Check if already instantiated
@@ -5134,7 +5134,7 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
     {
         if (strcmp(c->name, m) == 0)
         {
-            free(m);
+            zfree(m);
             return; // Already done
         }
         c = c->next;
@@ -5294,7 +5294,7 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
             tl = nv;
             v = v->next;
         }
-        free(c_args);
+        zfree(c_args);
         i->enm.variants = h;
         ni->struct_node = i;
         register_struct_def(ctx, m, i);
@@ -5302,7 +5302,7 @@ void instantiate_generic_multi(ParserContext *ctx, const char *tpl, char **args,
         i->next = ctx->instantiated_structs;
         ctx->instantiated_structs = i;
     }
-    free(m);
+    zfree(m);
 }
 
 int is_file_imported(ParserContext *ctx, const char *p)
@@ -5414,7 +5414,7 @@ static MixinResolution resolve_mixin_method(ParserContext *ctx, const char *stru
                 char *mixin_func = merge_underscores(mixin_func_raw);
                 if (find_func(ctx, mixin_func))
                 {
-                    free(res.final_struct);
+                    zfree(res.final_struct);
                     res.final_struct = xstrdup(mixin_def->strct.used_structs[k]);
                     char cast_buf[128];
                     if (is_ptr)
@@ -5426,14 +5426,14 @@ static MixinResolution resolve_mixin_method(ParserContext *ctx, const char *stru
                         sprintf(cast_buf, "(%s*)&", res.final_struct);
                     }
                     res.final_cast = xstrdup(cast_buf);
-                    free(mixin_func);
+                    zfree(mixin_func);
                     break;
                 }
-                free(mixin_func);
+                zfree(mixin_func);
             }
         }
     }
-    free(target_func);
+    zfree(target_func);
     return res;
 }
 
@@ -5530,7 +5530,7 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
             const char *resolved_type = find_type_alias(ctx, base_t);
             if (resolved_type)
             {
-                free(base_t);
+                zfree(base_t);
                 base_t = xstrdup(resolved_type);
             }
 
@@ -5549,7 +5549,7 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                     f = f->next;
                 }
             }
-            free(base_t);
+            zfree(base_t);
 
             if (is_field)
             {
@@ -5588,7 +5588,7 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                     char *mangled_call = merge_underscores(call_buf);
 
                     dest += sprintf(dest, "%s(%s%s", mangled_call, final_cast, acc);
-                    free(final_cast);
+                    zfree(final_cast);
                 }
                 else
                 {
@@ -5599,8 +5599,8 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
 
                     dest += sprintf(dest, "%s(%s%s", mangled_call, is_ptr ? "" : "&", acc);
                 }
-                free(final_struct);
-                free(final_method);
+                zfree(final_struct);
+                zfree(final_method);
 
                 int has_args = 0;
                 while (*src && paren_depth > 0)
@@ -5653,7 +5653,7 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                     char *mangled_call = merge_underscores(call_buf);
 
                     dest += sprintf(dest, "%s(%s%s)", mangled_call, final_cast, acc);
-                    free(final_cast);
+                    zfree(final_cast);
                 }
                 else
                 {
@@ -5663,8 +5663,8 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
 
                     dest += sprintf(dest, "%s(%s%s)", mangled_call, is_ptr ? "" : "&", acc);
                 }
-                free(final_struct);
-                free(final_method);
+                zfree(final_struct);
+                zfree(final_method);
                 continue;
             }
         }
@@ -5877,7 +5877,7 @@ char *consume_and_rewrite(ParserContext *ctx, Lexer *l)
 {
     char *r = consume_until_semicolon(l);
     char *rw = rewrite_expr_methods(ctx, r);
-    free(r);
+    zfree(r);
     return rw;
 }
 
@@ -6000,7 +6000,7 @@ char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
                         add_symbol(ctx, "self", buf_type, ptr, 0);
                         types[count] = ptr;
                     }
-                    free(buf_type);
+                    zfree(buf_type);
                     if (is_const_param)
                     {
                         strcat(buf, "const void* self");

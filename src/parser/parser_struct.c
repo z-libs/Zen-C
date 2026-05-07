@@ -39,7 +39,7 @@ static void auto_import_std_mem(ParserContext *ctx)
     // Check if already imported by path
     if (is_file_imported(ctx, resolved))
     {
-        free(resolved);
+        zfree(resolved);
         return;
     }
     mark_file_imported(ctx, resolved);
@@ -48,7 +48,7 @@ static void auto_import_std_mem(ParserContext *ctx)
     char *src = load_file(resolved);
     if (!src)
     {
-        free(resolved);
+        zfree(resolved);
         return;
     }
 
@@ -63,7 +63,7 @@ static void auto_import_std_mem(ParserContext *ctx)
     parse_program_nodes(ctx, &i);
 
     g_current_filename = saved_fn;
-    free(resolved);
+    zfree(resolved);
 }
 
 static void mangle_method_name(char *out, size_t out_sz, const char *struct_name,
@@ -83,7 +83,7 @@ static void patch_and_fix_self(ParserContext *ctx, ASTNode *f, const char *full_
 {
     (void)ctx;
     char *na = patch_self_args(f->func.args, full_struct_name);
-    free(f->func.args);
+    zfree(f->func.args);
     f->func.args = na;
 }
 
@@ -193,7 +193,7 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
         {
             lexer_next(l);
             ret_type_obj = parse_type_formal(ctx, l);
-            free(ret);
+            zfree(ret);
             ret = type_to_string(ret_type_obj);
         }
 
@@ -275,7 +275,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
     // Normalize type name (e.g. int -> int32_t)
     const char *normalized = normalize_type_name(name1);
     char *final_name = xstrdup(normalized);
-    free(name1);
+    zfree(name1);
     name1 = final_name;
 
     // Check for <T> on the struct name
@@ -427,7 +427,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 {
                     char tmp[MAX_MANGLED_NAME_LEN];
                     mangle_method_name(tmp, sizeof(tmp), name2, name1, f->func.name);
-                    free(f->func.name);
+                    zfree(f->func.name);
                     f->func.name = merge_underscores(tmp);
                 }
 
@@ -475,7 +475,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     {
                         char tmp[MAX_MANGLED_NAME_LEN];
                         mangle_method_name(tmp, sizeof(tmp), name2, name1, f->func.name);
-                        free(f->func.name);
+                        zfree(f->func.name);
                         f->func.name = merge_underscores(tmp);
                     }
 
@@ -520,11 +520,11 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
 
         if (target_gen_param)
         {
-            free(full_target_name);
+            zfree(full_target_name);
         }
         else
         {
-            free(full_target_name); // It was strdup/ref. Wait, xstrdup needs free.
+            zfree(full_target_name); // It was strdup/ref. Wait, xstrdup needs free.
         }
 
         ctx->current_impl_struct = NULL; // Restore context
@@ -575,7 +575,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name1) + 3);
             snprintf(prefixed_name, strlen(ctx->current_module_prefix) + strlen(name1) + 3,
                      "%s__%s", ctx->current_module_prefix, name1);
-            free(name1);
+            zfree(name1);
             name1 = prefixed_name;
         }
 
@@ -586,7 +586,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
             const char *alias_resolved = ta->original_type;
             if (alias_resolved)
             {
-                free(name1);
+                zfree(name1);
                 name1 = xstrdup(alias_resolved);
             }
         }
@@ -628,7 +628,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     {
                         char tmp[MAX_MANGLED_NAME_LEN];
                         mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
-                        free(f->func.name);
+                        zfree(f->func.name);
                         f->func.name = merge_underscores(tmp);
                     }
 
@@ -672,7 +672,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                         {
                             char tmp[MAX_MANGLED_NAME_LEN];
                             mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
-                            free(f->func.name);
+                            zfree(f->func.name);
                             f->func.name = merge_underscores(tmp);
                         }
 
@@ -714,7 +714,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     lexer_next(l);
                 }
             }
-            free(full_struct_name);
+            zfree(full_struct_name);
             // Register Template
             ASTNode *n = ast_create(NODE_IMPL);
             n->token = t1;
@@ -756,7 +756,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     {
                         char tmp[MAX_MANGLED_NAME_LEN];
                         mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
-                        free(f->func.name);
+                        zfree(f->func.name);
                         f->func.name = merge_underscores(tmp);
                     }
 
@@ -802,7 +802,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                         {
                             char tmp[MAX_MANGLED_NAME_LEN];
                             mangle_method_name(tmp, sizeof(tmp), name1, NULL, f->func.name);
-                            free(f->func.name);
+                            zfree(f->func.name);
                             f->func.name = merge_underscores(tmp);
                         }
                         patch_and_fix_self(ctx, f, name1);
@@ -1016,7 +1016,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
                 char *mangled =
                     type_to_string(use_type); // This works if type_to_string returns mangled name
                 def = find_struct_def(ctx, mangled);
-                free(mangled);
+                zfree(mangled);
             }
 
             if (def && def->type == NODE_STRUCT)
@@ -1047,7 +1047,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
                     f = f->next;
                 }
             }
-            free(use_name);
+            zfree(use_name);
             continue;
         }
 
@@ -1105,7 +1105,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
         size_t pref_len = strlen(ctx->current_module_prefix) + strlen(name) + 3;
         char *prefixed_name = xmalloc(pref_len);
         snprintf(prefixed_name, pref_len, "%s__%s", ctx->current_module_prefix, name);
-        free(name);
+        zfree(name);
         name = prefixed_name;
     }
 
@@ -1253,7 +1253,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
                         zpanic_at(lexer_peek(l), "Type name too long for tuple generation");
                     }
                     strcpy(sig, s);
-                    free(s);
+                    zfree(s);
 
                     tuple_types = xmalloc(sizeof(Type *) * 32);
                     tuple_types[tuple_count++] = first_t;
@@ -1270,14 +1270,14 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
                             zpanic_at(lexer_peek(l), "Tuple signature too long");
                         }
                         strcat(sig, ns);
-                        free(ns);
+                        zfree(ns);
                     }
 
                     register_tuple(ctx, sig);
                     char *clean_sig = sanitize_mangled_name(sig);
                     char *tuple_name = xmalloc(strlen(clean_sig) + 8);
                     sprintf(tuple_name, "Tuple__%s", clean_sig);
-                    free(clean_sig);
+                    zfree(clean_sig);
 
                     payload = type_new(TYPE_STRUCT);
                     payload->name = tuple_name;
@@ -1307,7 +1307,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
             char *mangled_tmp = xmalloc(mangled_sz);
             snprintf(mangled_tmp, mangled_sz, "%s__%s", base_for_mangling, vname);
             char *mangled = merge_underscores(mangled_tmp);
-            free(mangled_tmp);
+            zfree(mangled_tmp);
             register_enum_variant(ctx, vname, ename, va->variant.tag_id);
 
             // Register Constructor Function Signature
@@ -1345,7 +1345,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
                 // No payload: don't register as function.
                 // Codegen handles calling the constructor via codegen_var_expr.
             }
-            free(mangled);
+            zfree(mangled);
 
             // Handle explicit assignment: Ok = 5
             if (lexer_peek(l).type == TOK_OP && *lexer_peek(l).start == '=')
@@ -1377,7 +1377,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
         size_t pref_len = strlen(ctx->current_module_prefix) + strlen(ename) + 3;
         char *prefixed_name = xmalloc(pref_len);
         snprintf(prefixed_name, pref_len, "%s__%s", ctx->current_module_prefix, ename);
-        free(ename);
+        zfree(ename);
         ename = prefixed_name;
     }
 

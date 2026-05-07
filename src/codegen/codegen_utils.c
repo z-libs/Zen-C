@@ -61,7 +61,7 @@ void emit_mangled_name(ParserContext *ctx, const char *base, const char *method)
     {
         EMIT(ctx, "%s", merged);
     }
-    free(merged);
+    zfree(merged);
 }
 
 int is_enum_type_name(ParserContext *ctx, const char *name)
@@ -356,10 +356,10 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 if (sig && sig->ret_type)
                 {
                     char *ret = type_to_c_string(sig->ret_type);
-                    free(func_name);
+                    zfree(func_name);
                     return ret;
                 }
-                free(func_name);
+                zfree(func_name);
             }
         }
 
@@ -715,7 +715,7 @@ char *extract_call_args(const char *args)
 
         p = strtok(NULL, ",");
     }
-    free(dup);
+    zfree(dup);
     return out;
 }
 
@@ -889,7 +889,7 @@ void emit_func_signature(ParserContext *ctx, ASTNode *func, const char *name_ove
         {
             EMIT(ctx, "%s %s(", ret_str, final_name);
         }
-        free(ret_str);
+        zfree(ret_str);
     }
 
     if (func->func.is_async)
@@ -935,7 +935,7 @@ void emit_func_signature(ParserContext *ctx, ASTNode *func, const char *name_ove
 
             // check if array type
             emit_c_decl(ctx, type_str, name);
-            free(type_str);
+            zfree(type_str);
         }
         if (func->func.is_varargs)
         {
@@ -951,7 +951,7 @@ void emit_func_signature(ParserContext *ctx, ASTNode *func, const char *name_ove
     if (ret_suffix)
     {
         EMIT(ctx, "%s", ret_suffix);
-        free(ret_suffix);
+        zfree(ret_suffix);
     }
 }
 
@@ -1267,7 +1267,7 @@ void handle_node_await_internal(ParserContext *ctx, ASTNode *node)
         {
             if (free_ret)
             {
-                free(ret_type);
+                zfree(ret_type);
             }
             ret_type = inf;
             free_ret = 0;
@@ -1320,6 +1320,6 @@ void handle_node_await_internal(ParserContext *ctx, ASTNode *node)
     }
     if (free_ret)
     {
-        free(ret_type);
+        zfree(ret_type);
     }
 }

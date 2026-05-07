@@ -53,7 +53,7 @@ void emitter_printf(Emitter *e, const char *fmt, ...)
         if (needed > e->buffer.cap)
         {
             e->buffer.cap = needed + (needed >> 1);
-            e->buffer.buf = realloc(e->buffer.buf, e->buffer.cap);
+            e->buffer.buf = (realloc)(e->buffer.buf, e->buffer.cap);
         }
         vsnprintf(e->buffer.buf + e->buffer.len, (size_t)(len + 1), fmt, args);
         e->buffer.len += (size_t)len;
@@ -81,7 +81,7 @@ void emitter_puts(Emitter *e, const char *s)
         if (needed > e->buffer.cap)
         {
             e->buffer.cap = needed + (needed >> 1);
-            e->buffer.buf = realloc(e->buffer.buf, e->buffer.cap);
+            e->buffer.buf = (realloc)(e->buffer.buf, e->buffer.cap);
         }
         memcpy(e->buffer.buf + e->buffer.len, s, slen);
         e->buffer.len += slen;
@@ -108,7 +108,7 @@ void emitter_write(Emitter *e, const void *ptr, size_t size)
         if (needed > e->buffer.cap)
         {
             e->buffer.cap = needed + (needed >> 1);
-            e->buffer.buf = realloc(e->buffer.buf, e->buffer.cap);
+            e->buffer.buf = (realloc)(e->buffer.buf, e->buffer.cap);
         }
         memcpy(e->buffer.buf + e->buffer.len, ptr, size);
         e->buffer.len += size;
@@ -137,7 +137,7 @@ void emitter_release(Emitter *e)
     }
     if (e->mode == EMITTER_BUFFER)
     {
-        free(e->buffer.buf);
+        (free)(e->buffer.buf);
         e->buffer.buf = NULL;
         e->buffer.len = 0;
         e->buffer.cap = 0;

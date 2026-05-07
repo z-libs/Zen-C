@@ -28,6 +28,8 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
 
+#include "../zprep.h"
+
 #ifdef __GNUC__
 #pragma GCC visibility push(default)
 #endif
@@ -170,16 +172,25 @@ static void *CJSON_CDECL internal_malloc(size_t size)
 }
 static void CJSON_CDECL internal_free(void *pointer)
 {
-    free(pointer);
+    zfree(pointer);
 }
 static void *CJSON_CDECL internal_realloc(void *pointer, size_t size)
 {
     return realloc(pointer, size);
 }
 #else
-#define internal_malloc malloc
-#define internal_free free
-#define internal_realloc realloc
+static void *CJSON_CDECL internal_malloc(size_t size)
+{
+    return xmalloc(size);
+}
+static void CJSON_CDECL internal_free(void *pointer)
+{
+    zfree(pointer);
+}
+static void *CJSON_CDECL internal_realloc(void *pointer, size_t size)
+{
+    return xrealloc(pointer, size);
+}
 #endif
 
 /* strlen of character literals resolved at compile time */

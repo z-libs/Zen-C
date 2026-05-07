@@ -71,7 +71,7 @@ static int load_config_file(const char *path)
     fclose(f);
 
     cJSON *json = cJSON_Parse(data);
-    free(data);
+    zfree(data);
 
     if (json)
     {

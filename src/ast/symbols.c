@@ -28,48 +28,48 @@ void symbol_scope_free(Scope *s)
         ZenSymbol *next = sym->next;
         if (sym->name)
         {
-            free(sym->name);
+            zfree(sym->name);
         }
         if (sym->cfg_condition)
         {
-            free(sym->cfg_condition);
+            zfree(sym->cfg_condition);
         }
 
         if (sym->kind == SYM_ALIAS)
         {
             if (sym->data.alias.original_type)
             {
-                free(sym->data.alias.original_type);
+                zfree(sym->data.alias.original_type);
             }
         }
         else if (sym->kind == SYM_CONSTANT)
         {
             if (sym->data.constant.str_val)
             {
-                free(sym->data.constant.str_val);
+                zfree(sym->data.constant.str_val);
             }
         }
         else if (sym->kind == SYM_MODULE)
         {
             if (sym->data.module.path)
             {
-                free(sym->data.module.path);
+                zfree(sym->data.module.path);
             }
             if (sym->data.module.alias_name)
             {
-                free(sym->data.module.alias_name);
+                zfree(sym->data.module.alias_name);
             }
         }
 
-        free(sym);
+        zfree(sym);
         sym = next;
     }
 
     if (s->name)
     {
-        free(s->name);
+        zfree(s->name);
     }
-    free(s);
+    zfree(s);
 }
 
 ZenSymbol *symbol_add(Scope *s, const char *name, SymbolKind kind)

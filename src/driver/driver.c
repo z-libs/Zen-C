@@ -121,7 +121,7 @@ int driver_compile(ZenCompiler *compiler)
         if (primary_real)
         {
             mark_file_imported(&ctx, primary_real);
-            free(primary_real);
+            zfree(primary_real);
         }
 
         for (size_t ef = 0; ef < compiler->config.extra_files.length; ef++)
@@ -136,7 +136,7 @@ int driver_compile(ZenCompiler *compiler)
                 zvec_push_Str(&compiler->config.c_files, xstrdup(path));
                 if (real_path)
                 {
-                    free(real_path);
+                    zfree(real_path);
                 }
                 continue;
             }
@@ -145,7 +145,7 @@ int driver_compile(ZenCompiler *compiler)
             {
                 if (real_path)
                 {
-                    free(real_path);
+                    zfree(real_path);
                 }
                 continue;
             }
@@ -159,7 +159,7 @@ int driver_compile(ZenCompiler *compiler)
                         extra_path);
                 if (real_path)
                 {
-                    free(real_path);
+                    zfree(real_path);
                 }
                 return 1;
             }
@@ -193,7 +193,7 @@ int driver_compile(ZenCompiler *compiler)
             }
             if (real_path)
             {
-                free(real_path);
+                zfree(real_path);
             }
         }
     }
@@ -263,7 +263,7 @@ int driver_compile(ZenCompiler *compiler)
     {
         char *base = z_basename(compiler->config.input_file);
         char *stripped = z_strip_ext(base);
-        free(base);
+        zfree(base);
         if (compiler->config.mode_transpile)
         {
             char *with_ext = xmalloc(strlen(stripped) + strlen(ext_p) + 1);

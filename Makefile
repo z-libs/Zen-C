@@ -35,6 +35,7 @@ else
 endif
 
 ZC_HAS_JIT ?= 1
+ZC_RUN ?= ./zc
 ifeq ($(ZC_HAS_JIT), 1)
     CFLAGS += -DZC_HAS_JIT
 endif
@@ -155,7 +156,7 @@ ape: $(ZC_COM) $(ZC_BOOT_COM)
 # Build plugins
 
 plugins/%.so: plugins/%.zc $(TARGET)
-	./zc build $< -shared -o $@
+	$(ZC_RUN) build $< -shared -o $@
 
 # Link
 $(TARGET): $(OBJS)
@@ -344,6 +345,7 @@ windows:
 
 asan: CFLAGS += -fsanitize=address,undefined -O1 -fno-omit-frame-pointer
 asan: LIBS += -fsanitize=address,undefined
+asan: ZC_RUN = ASAN_OPTIONS=detect_leaks=0 ./zc
 asan: $(TARGET) $(PLUGINS)
 
 test-asan: clean asan

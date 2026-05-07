@@ -34,8 +34,8 @@ static void emit_single_pattern_cond(ParserContext *ctx, const char *pat, int id
         {
             EMIT(ctx, "(_m_%d >= %s && _m_%d <= %s)", id, start, id, end);
         }
-        free(start);
-        free(end);
+        zfree(start);
+        zfree(end);
     }
     else if (range_excl)
     {
@@ -53,8 +53,8 @@ static void emit_single_pattern_cond(ParserContext *ctx, const char *pat, int id
         {
             EMIT(ctx, "(_m_%d >= %s && _m_%d < %s)", id, start, id, end);
         }
-        free(start);
-        free(end);
+        zfree(start);
+        zfree(end);
     }
     else if (pat[0] == '"')
     {
@@ -137,7 +137,7 @@ static void emit_pattern_condition(ParserContext *ctx, const char *pattern, int 
             part = strtok_r(NULL, "|", &saveptr);
         }
         EMIT(ctx, ")");
-        free(pattern_copy);
+        zfree(pattern_copy);
     }
     else
     {
@@ -567,7 +567,7 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, int use_result)
                     process_printf_sugar(ctx, body->token, inner, 1, "stdout", NULL, NULL, 0, 0, 0);
 
                 EMIT(ctx, "%s;", code);
-                free(code);
+                zfree(code);
             }
             else
             {
@@ -669,7 +669,7 @@ static void handle_node_impl(ParserContext *ctx, ASTNode *node)
                 size_t new_name_sz = strlen(resolved) + strlen(method_part) + 1;
                 char *new_name = xmalloc(new_name_sz);
                 snprintf(new_name, new_name_sz, "%s%s", resolved, method_part);
-                free(m->func.name);
+                zfree(m->func.name);
                 m->func.name = new_name;
             }
             m = m->next;
@@ -725,7 +725,7 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
             }
             token = strtok(NULL, ",");
         }
-        free(args_copy);
+        zfree(args_copy);
         EMIT(ctx, "};\n");
 
         EMIT(ctx, "void* _runner_%s(void* _args)\n", final_name);
@@ -837,9 +837,9 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
 
         for (int i = 0; i < arg_count; i++)
         {
-            free(arg_names[i]);
+            zfree(arg_names[i]);
         }
-        free(arg_names);
+        zfree(arg_names);
 
         if (node->cfg_condition)
         {
@@ -959,7 +959,7 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
     {
         char *safe_ret_type = type_to_c_string(node->func.ret_type_info);
         EMIT(ctx, "    %s _misra_ret = 0;\n", safe_ret_type);
-        free(safe_ret_type);
+        zfree(safe_ret_type);
     }
     char *prev_ret = ctx->cg.current_func_ret_type;
     Type *prev_ret_info = ctx->cg.current_func_ret_type_info;
@@ -1100,7 +1100,7 @@ static void handle_node_impl_trait(ParserContext *ctx, ASTNode *node)
                 size_t new_name_sz = strlen(resolved) + strlen(method_part) + 1;
                 char *new_name = xmalloc(new_name_sz);
                 snprintf(new_name, new_name_sz, "%s%s", resolved, method_part);
-                free(m->func.name);
+                zfree(m->func.name);
                 m->func.name = new_name;
             }
             m = m->next;
@@ -1300,7 +1300,7 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
                     EMIT(ctx, "(%s)(", ct);
                     codegen_expression(ctx, node->var_decl.init_expr);
                     EMIT(ctx, ")");
-                    free(ct);
+                    zfree(ct);
                 }
                 else
                 {
@@ -1339,7 +1339,7 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
 
             if (node->type_info)
             {
-                free(tname);
+                zfree(tname);
             }
         }
         else
@@ -2207,7 +2207,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     }
                     handled = 1;
                 }
-                free(tname);
+                zfree(tname);
             }
         }
 
@@ -2220,7 +2220,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                 {
                     char *tstr = type_to_c_string(ctx->cg.current_func_ret_type_info);
                     EMIT(ctx, "%s", tstr);
-                    free(tstr);
+                    zfree(tstr);
                 }
                 else if (ctx->cg.current_func_ret_type &&
                          strcmp(ctx->cg.current_func_ret_type, "void") != 0 &&
@@ -2336,7 +2336,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         }
         if (lt)
         {
-            free(lt);
+            zfree(lt);
         }
         break;
     }
@@ -2488,7 +2488,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     {
                         EMIT(ctx, "%.*s", t.len, t.start);
                     }
-                    free(name);
+                    zfree(name);
                 }
                 else
                 {

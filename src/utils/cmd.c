@@ -414,7 +414,7 @@ void cmd_add_fmt(CmdBuilder *cmd, const char *fmt, ...)
 
 void cmd_free(CmdBuilder *cmd)
 {
-    free(cmd->buf);
+    zfree(cmd->buf);
     cmd->buf = NULL;
     cmd->len = 0;
     cmd->cap = 0;
@@ -465,16 +465,16 @@ void arg_list_add_fmt(ArgList *list, const char *fmt, ...)
     va_end(args);
 
     arg_list_add(list, buf);
-    free(buf);
+    zfree(buf);
 }
 
 void arg_list_free(ArgList *list)
 {
     for (size_t i = 0; i < list->count; i++)
     {
-        free(list->args[i]);
+        zfree(list->args[i]);
     }
-    free(list->args);
+    zfree(list->args);
     list->args = NULL;
     list->count = 0;
     list->cap = 0;

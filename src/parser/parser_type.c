@@ -35,7 +35,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         TypeAlias *alias_node = find_type_alias_node(ctx, name);
         if (alias_node)
         {
-            free(name);
+            zfree(name);
             Lexer tmp;
             lexer_init(&tmp, alias_node->original_type);
 
@@ -108,7 +108,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                          resolved_suffix);
             }
 
-            free(name);
+            zfree(name);
 
             name = merged;
         }
@@ -118,7 +118,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         const ZenPrimitive *prim = find_primitive_by_name(name);
         if (prim)
         {
-            free(name);
+            zfree(name);
             Type *t_prim = type_new(prim->kind);
             RECURSION_EXIT(ctx);
             return t_prim;
@@ -147,31 +147,31 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                     {
                         if (width == 8)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_I8);
                         }
                         if (width == 16)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_I16);
                         }
                         if (width == 32)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_I32);
                         }
                         if (width == 64)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_I64);
                         }
                         if (width == 128)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_I128);
                         }
@@ -180,31 +180,31 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                     {
                         if (width == 8)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_U8);
                         }
                         if (width == 16)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_U16);
                         }
                         if (width == 32)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_U32);
                         }
                         if (width == 64)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_U64);
                         }
                         if (width == 128)
                         {
-                            free(name);
+                            zfree(name);
                             RECURSION_EXIT(ctx);
                             return type_new(TYPE_U128);
                         }
@@ -212,7 +212,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
 
                     Type *inner_t = type_new(name[0] == 'u' ? TYPE_UBITINT : TYPE_BITINT);
                     inner_t->array_size = width;
-                    free(name);
+                    zfree(name);
                     RECURSION_EXIT(ctx);
                     return inner_t;
                 }
@@ -238,7 +238,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                 // This is a selectively imported symbol
                 // Resolve to the actual struct name which was prefixed during module
                 // parsing
-                free(name);
+                zfree(name);
                 name = xmalloc(strlen(si->source_module) + strlen(si->symbol) + 3);
                 snprintf(name, strlen(si->source_module) + strlen(si->symbol) + 3, "%s__%s",
                          si->source_module, si->symbol);
@@ -255,7 +255,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name) + 3);
             snprintf(prefixed_name, strlen(ctx->current_module_prefix) + strlen(name) + 3, "%s__%s",
                      ctx->current_module_prefix, name);
-            free(name);
+            zfree(name);
             name = prefixed_name;
         }
 
@@ -292,7 +292,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                     char *arg_str = type_to_string(arg);
                     args = realloc(args, sizeof(char *) * (arg_count + 1));
                     args[arg_count++] = xstrdup(arg_str);
-                    free(arg_str);
+                    zfree(arg_str);
                 }
 
                 // Consume >
@@ -334,7 +334,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                 {
                     char *clean = sanitize_mangled_name(args[i]);
                     mangled_len += 2 + strlen(clean);
-                    free(clean);
+                    zfree(clean);
                 }
                 char *mangled = xmalloc(mangled_len);
                 strcpy(mangled, name);
@@ -343,12 +343,12 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                     char *clean = sanitize_mangled_name(args[i]);
                     strcat(mangled, "__");
                     strcat(mangled, clean);
-                    free(clean);
-                    free(args[i]);
+                    zfree(clean);
+                    zfree(args[i]);
                 }
-                free(args);
+                zfree(args);
 
-                free(ty->name);
+                zfree(ty->name);
                 ty->name = mangled;
             }
             else
@@ -378,19 +378,19 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                 {
                     instantiate_generic(ctx, name, first_arg_str, unmangled_arg, t);
                 }
-                free(unmangled_arg);
+                zfree(unmangled_arg);
 
                 char *clean_arg = sanitize_mangled_name(first_arg_str);
                 size_t mangled_sz = strlen(name) + strlen(clean_arg) + 3;
                 char *mangled = xmalloc(mangled_sz);
                 snprintf(mangled, mangled_sz, "%s__%s", name, clean_arg);
-                free(clean_arg);
+                zfree(clean_arg);
 
-                free(ty->name);
+                zfree(ty->name);
                 ty->name = mangled;
             }
 
-            free(first_arg_str);
+            zfree(first_arg_str);
             ty->kind = TYPE_STRUCT;
             ty->args = NULL;
             ty->arg_count = 0;
@@ -462,7 +462,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             Type *sub = parse_type_formal(ctx, l);
             char *s = type_to_string(sub);
             strcat(sig, s);
-            free(s);
+            zfree(s);
 
             if (lexer_peek(l).type == TOK_COMMA)
             {
@@ -484,7 +484,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         char *clean_sig = sanitize_mangled_name(sig);
         char *tuple_name = xmalloc(strlen(clean_sig) + 8);
         snprintf(tuple_name, strlen(clean_sig) + 8, "Tuple__%s", clean_sig);
-        free(clean_sig);
+        zfree(clean_sig);
 
         Type *ty = type_new(TYPE_STRUCT);
         ty->name = tuple_name;
@@ -672,7 +672,7 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
 
             char *inner_str = type_to_string(t);
             register_slice(ctx, inner_str);
-            free(inner_str);
+            zfree(inner_str);
 
             dims[dims_count++] = 0;
             continue;
@@ -716,7 +716,7 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
 
     if (dims)
     {
-        free(dims);
+        zfree(dims);
     }
 
     if (is_restrict)
@@ -847,7 +847,7 @@ char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st)
             snprintf(o, o_sz, "(Slice__int){.data=(int[]){%s}, .len=%d, .cap=%d}", c, n, n);
         }
     }
-    free(c);
+    zfree(c);
     return o;
 }
 char *parse_tuple_literal(ParserContext *ctx, Lexer *l, const char *tn)
@@ -912,7 +912,7 @@ char *parse_tuple_literal(ParserContext *ctx, Lexer *l, const char *tn)
     size_t o_sz = strlen(c) + strlen(tn) + 128;
     char *o = xmalloc(o_sz);
     snprintf(o, o_sz, "(%s){%s}", tn, c);
-    free(c);
+    zfree(c);
     return o;
 }
 ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
@@ -928,7 +928,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
     char fn[MAX_PATH_LEN];
     strncpy(fn, content, MAX_PATH_LEN - 1);
     fn[MAX_PATH_LEN - 1] = 0;
-    free(content);
+    zfree(content);
 
     // Check for optional "as Type"
     Type *target_type = NULL;
@@ -1025,7 +1025,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
                     snprintf(o, oc, "(%s){.data=(%s[]){", slice_name, inner_ts);
                 }
             }
-            free(inner_ts);
+            zfree(inner_ts);
         }
         else
         {
@@ -1038,7 +1038,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
                 snprintf(o, oc, "(%s){", ts);
             }
         }
-        free(ts);
+        zfree(ts);
     }
 
     size_t cur_len = strlen(o);
@@ -1079,7 +1079,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
         {
             char *actual_ts = type_to_string(target_type);
             int is_slice = (actual_ts && strncmp(actual_ts, "Slice__", 7) == 0);
-            free(actual_ts);
+            zfree(actual_ts);
 
             if (is_slice)
             {
@@ -1097,7 +1097,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
                         snprintf(p, oc - cur_len, "}; (%s){.data=__tmp, .len=%ld, .cap=%ld}; })",
                                  ts, (long)len, (long)len);
                     }
-                    free(ts);
+                    zfree(ts);
                 }
                 else
                 {
@@ -1118,7 +1118,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
                 {
                     char *inner_ts = type_to_string(target_type->inner);
                     snprintf(p, oc - cur_len, "}; (%s*)__tmp; })", inner_ts);
-                    free(inner_ts);
+                    zfree(inner_ts);
                 }
                 else
                 {
@@ -1128,7 +1128,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
         }
     }
 
-    free(b);
+    zfree(b);
 
     ASTNode *n = ast_create(NODE_RAW_STMT);
     n->token = t;

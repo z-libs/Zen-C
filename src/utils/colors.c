@@ -1,5 +1,6 @@
 #define ZEN_DISABLE_COLORS_WRAPPER
 #include "colors.h"
+#include "../zprep.h"
 #include <stdlib.h>
 #include <string.h>
 #include "platform/arch.h"
@@ -80,7 +81,7 @@ int zvfprintf(FILE *stream, const char *format, va_list args)
 
     if (work_buf != stack_buf)
     {
-        free(work_buf);
+        zfree(work_buf);
     }
 
     return ret >= 0 ? stripped_len : -1;

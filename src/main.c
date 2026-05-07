@@ -83,7 +83,7 @@ int main(int argc, char **argv)
             if (access(check_path, F_OK) == 0)
             {
                 // Found it!
-                free(g_config.root_path);
+                zfree(g_config.root_path);
                 g_config.root_path = xstrdup(current_root);
                 break;
             }
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     {
         if (g_config.root_path)
         {
-            free(g_config.root_path);
+            zfree(g_config.root_path);
         }
         g_config.root_path = xstrdup(env_root);
     }
@@ -529,7 +529,7 @@ int main(int argc, char **argv)
     {
         g_config.input_dir = xstrdup(".");
     }
-    free(input_file_copy);
+    zfree(input_file_copy);
 
     g_current_filename = g_config.input_file;
 

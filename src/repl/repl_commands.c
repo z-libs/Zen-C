@@ -27,19 +27,19 @@ static int cmd_plot(ReplState *state, const char *args)
     snprintf(full_code, code_size, "use std.io;\n%s\nfn main() { %s \n %s }", global_code,
              main_code, plot_logic);
 
-    free(global_code);
-    free(main_code);
-    free(plot_logic);
+    zfree(global_code);
+    zfree(main_code);
+    zfree(plot_logic);
 
     /* Execution */
     char *c_code = repl_transpile(full_code);
     if (c_code)
     {
         repl_jit_execute(c_code);
-        free(c_code);
+        zfree(c_code);
     }
 
-    free(full_code);
+    zfree(full_code);
     return REPL_HANDLED;
 }
 
@@ -62,7 +62,7 @@ static int cmd_reset(ReplState *state, const char *args)
     (void)args;
     for (int i = 0; i < state->history_len; i++)
     {
-        free(state->history[i]);
+        zfree(state->history[i]);
     }
     state->history_len = 0;
     printf("History cleared.\n");
@@ -90,7 +90,7 @@ static int cmd_undo(ReplState *state, const char *args)
     if (state->history_len > 0)
     {
         state->history_len = state->history_len - 1;
-        free(state->history[state->history_len]);
+        zfree(state->history[state->history_len]);
         printf("Removed last entry.\n");
     }
     else
@@ -105,7 +105,7 @@ static int cmd_delete(ReplState *state, const char *args)
     int idx = atoi(args) - 1;
     if (idx >= 0 && idx < state->history_len)
     {
-        free(state->history[idx]);
+        zfree(state->history[idx]);
         for (int i = idx; i < state->history_len - 1; i++)
         {
             state->history[i] = state->history[i + 1];
@@ -236,7 +236,7 @@ static int cmd_show(ReplState *state, const char *args)
     {
         printf("  (not found)\n");
     }
-    free(show_code);
+    zfree(show_code);
     return REPL_HANDLED;
 }
 
@@ -301,7 +301,7 @@ static int cmd_edit(ReplState *state, const char *args)
                         }
                         else
                         {
-                            free(buffer);
+                            zfree(buffer);
                         }
                     }
                     fclose(fr);
@@ -366,7 +366,7 @@ static int cmd_edit(ReplState *state, const char *args)
                     }
                     else
                     {
-                        free(buffer);
+                        zfree(buffer);
                     }
                 }
                 fclose(fr);
@@ -424,7 +424,7 @@ static int cmd_unwatch(ReplState *state, const char *args)
     int idx = atoi(args) - 1;
     if (idx >= 0 && idx < state->watches_len)
     {
-        free(state->watches[idx]);
+        zfree(state->watches[idx]);
         for (int i = idx; i < state->watches_len - 1; i++)
         {
             state->watches[i] = state->watches[i + 1];
@@ -452,8 +452,8 @@ static int cmd_save(ReplState *state, const char *args)
         fprintf(f, "%s\n", global_code);
         fprintf(f, "\nfn main() {\n%s\n}\n", main_code);
 
-        free(global_code);
-        free(main_code);
+        zfree(global_code);
+        zfree(main_code);
         fclose(f);
         printf("Session saved to %s\n", filename);
     }
@@ -507,8 +507,8 @@ static int cmd_run(ReplState *state, const char *args)
     char *code = malloc(code_size);
 
     snprintf(code, code_size, "%s\nfn main() { %s }", global_code, main_code);
-    free(global_code);
-    free(main_code);
+    zfree(global_code);
+    zfree(main_code);
 
     char tmp_path[MAX_PATH_SIZE];
     snprintf(tmp_path, sizeof(tmp_path), "%s/zprep_repl_run_%d.zc", z_get_temp_dir(), rand());
@@ -525,7 +525,7 @@ static int cmd_run(ReplState *state, const char *args)
 #endif
         system(cmdbuf);
     }
-    free(code);
+    zfree(code);
     return REPL_HANDLED;
 }
 
@@ -544,8 +544,8 @@ static int cmd_vars_funcs_structs(ReplState *state, const char *args)
     size_t code_size = strlen(global_code) + strlen(main_code) + 128;
     char *code = malloc(code_size);
     snprintf(code, code_size, "%s\nfn main() { %s }", global_code, main_code);
-    free(global_code);
-    free(main_code);
+    zfree(global_code);
+    zfree(main_code);
 
     ParserContext ctx = {0};
     ctx.is_repl = 1;
@@ -587,8 +587,8 @@ static int cmd_vars_funcs_structs(ReplState *state, const char *args)
                  "%s\nfn main() { _z_suppress_stdout(); %s _z_restore_stdout(); "
                  "printf(\"Variables:\\n\"); ",
                  probe_global_code, probe_main_code);
-        free(probe_global_code);
-        free(probe_main_code);
+        zfree(probe_global_code);
+        zfree(probe_main_code);
 
         int found_vars = 0;
         if (main_func && main_func->func.body && main_func->func.body->type == NODE_BLOCK)
@@ -708,7 +708,7 @@ static int cmd_vars_funcs_structs(ReplState *state, const char *args)
             system(cmdbuf);
             remove(tmp_path);
         }
-        free(probe_code);
+        zfree(probe_code);
     }
     else if (want_funcs)
     {
@@ -745,7 +745,7 @@ static int cmd_vars_funcs_structs(ReplState *state, const char *args)
         }
     }
 
-    free(code);
+    zfree(code);
     return REPL_HANDLED;
 }
 
@@ -762,8 +762,8 @@ static int cmd_type(ReplState *state, const char *args)
 
     snprintf(probe_code, probe_size, "%s\nfn main() { _z_suppress_stdout(); %s", global_code,
              main_code);
-    free(global_code);
-    free(main_code);
+    zfree(global_code);
+    zfree(main_code);
 
     strcat(probe_code, " raw { typedef struct { int _u; } __REVEAL_TYPE__; } ");
     strcat(probe_code, " let _z_type_probe: __REVEAL_TYPE__; _z_type_probe = (");
@@ -849,7 +849,7 @@ static int cmd_type(ReplState *state, const char *args)
             }
         }
     }
-    free(probe_code);
+    zfree(probe_code);
     return REPL_HANDLED;
 }
 
@@ -873,8 +873,8 @@ static int cmd_time(ReplState *state, const char *args)
              "%s\ninclude \"time.h\"\nfn main() { _z_suppress_stdout();\n%s "
              "_z_restore_stdout();\n",
              global_code, main_code);
-    free(global_code);
-    free(main_code);
+    zfree(global_code);
+    zfree(main_code);
 
     strcat(code, "raw { clock_t _start = clock(); }\n");
     strcat(code, "for _i in 0..1000 { ");
@@ -901,7 +901,7 @@ static int cmd_time(ReplState *state, const char *args)
 #endif
         system(cmdbuf);
     }
-    free(code);
+    zfree(code);
     return REPL_HANDLED;
 }
 
@@ -955,7 +955,7 @@ static int cmd_c(ReplState *state, const char *args)
                 cmd_brace_depth--;
             }
         }
-        free(more);
+        zfree(more);
     }
 
     char *global_code = NULL;
@@ -966,9 +966,9 @@ static int cmd_c(ReplState *state, const char *args)
     char *code = malloc(code_size);
 
     snprintf(code, code_size, "%s\nfn main() { %s %s }", global_code, main_code, expr_buf);
-    free(global_code);
-    free(main_code);
-    free(expr_buf);
+    zfree(global_code);
+    zfree(main_code);
+    zfree(expr_buf);
 
     char tmp_path[MAX_PATH_SIZE];
     snprintf(tmp_path, sizeof(tmp_path), "%s/zprep_repl_c_%d.zc", z_get_temp_dir(), rand());
@@ -993,7 +993,7 @@ static int cmd_c(ReplState *state, const char *args)
 
         remove(tmp_path);
     }
-    free(code);
+    zfree(code);
     return REPL_HANDLED;
 }
 

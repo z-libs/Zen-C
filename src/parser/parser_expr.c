@@ -233,7 +233,7 @@ ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
 
     if (!is_trait(clean_trait))
     {
-        free(clean_trait);
+        zfree(clean_trait);
         return source_expr;
     }
 
@@ -278,7 +278,7 @@ ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
             trait_type->name = xstrdup(clean_trait);
             wrapper->type_info = trait_type;
 
-            free(clean_trait);
+            zfree(clean_trait);
             // If target_trait had a *, we might need to wrap in &addr?
             if (strchr(target_trait, '*'))
             {
@@ -314,7 +314,7 @@ ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
         }
     }
 
-    free(clean_trait);
+    zfree(clean_trait);
     return source_expr;
 }
 
@@ -1162,14 +1162,14 @@ void analyze_lambda_captures(ParserContext *ctx, ASTNode *lambda)
     {
         for (int i = 0; i < num_local_decls; i++)
         {
-            free(local_decls[i]);
+            zfree(local_decls[i]);
         }
-        free(local_decls);
+        zfree(local_decls);
     }
     for (int i = 0; i < num_refs; i++)
     {
-        free(all_refs[i]);
-        free(all_refs);
+        zfree(all_refs[i]);
+        zfree(all_refs);
     }
 }
 
@@ -1658,7 +1658,7 @@ static ASTNode *parse_int_literal(Token t)
     }
 
     node->literal.int_val = val;
-    free(s);
+    zfree(s);
     return node;
 }
 
@@ -1699,7 +1699,7 @@ static ASTNode *parse_float_literal(Token t)
         }
     }
 
-    free(s);
+    zfree(s);
     return node;
 }
 
@@ -1760,7 +1760,7 @@ static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
             }
         }
 
-        free(content);
+        zfree(content);
         return node;
     }
 
@@ -1818,7 +1818,7 @@ static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
     node->literal.type_kind = LITERAL_STRING;
 
     node->literal.string_val = escape_c_string(content);
-    free(content);
+    zfree(content);
 
     node->type_info = type_new(TYPE_STRING);
     return node;
@@ -1837,7 +1837,7 @@ static ASTNode *parse_fstring_literal(ParserContext *ctx, Token t)
     node->type_info = type_new(TYPE_STRING);
     node->resolved_type = xstrdup("string");
 
-    free(content);
+    zfree(content);
     return node;
 }
 
@@ -2316,7 +2316,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     Token pt = lexer_next(l);
                     char *s = token_strdup(pt);
                     strncat(pat_buf, s, sizeof(pat_buf) - strlen(pat_buf) - 1);
-                    free(s);
+                    zfree(s);
                 }
                 else
                 {
@@ -2367,7 +2367,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                             char *s = token_strdup(val);
                             if (strcmp(s, "true") == 0 || strcmp(s, "false") == 0)
                             {
-                                free(s);
+                                zfree(s);
                                 bindings[binding_count] = NULL;
                             }
                             else
@@ -2505,7 +2505,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
             node = parse_macro_call(ctx, l, ident);
             if (node)
             {
-                free(ident);
+                zfree(ident);
                 return node;
             }
         }
@@ -2635,7 +2635,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                         tmp = merge_underscores(tmp_raw);
                     }
 
-                    free(acc);
+                    zfree(acc);
                     acc = tmp;
                 }
                 else
@@ -2648,7 +2648,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                             char *tmp = xmalloc(suffix.len + 1);
                             strncpy(tmp, suffix.start, suffix.len);
                             tmp[suffix.len] = 0;
-                            free(acc);
+                            zfree(acc);
                             acc = tmp;
 
                             register_extern_symbol(ctx, acc);
@@ -2661,7 +2661,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
 
                             if (is_extern_symbol(ctx, sbuf))
                             {
-                                free(acc);
+                                zfree(acc);
                                 acc = xstrdup(sbuf);
                             }
                             else
@@ -2670,7 +2670,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                                 sprintf(tmp2_raw, "%s__%.*s", mod->base_name, (int)suffix.len,
                                         suffix.start);
                                 char *tmp2 = merge_underscores(tmp2_raw);
-                                free(acc);
+                                zfree(acc);
                                 acc = tmp2;
                             }
                         }
@@ -2691,7 +2691,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                                     const char *aliased = find_type_alias(ctx, acc);
                                     if (aliased)
                                     {
-                                        free(acc);
+                                        zfree(acc);
                                         acc = xstrdup(aliased);
                                         def = find_struct_def(ctx, acc);
                                     }
@@ -2728,7 +2728,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                                 snprintf(v_mangled_raw, sizeof(v_mangled_raw), "%s__%s", acc,
                                          method_name);
                                 char *v_mangled = merge_underscores(v_mangled_raw);
-                                free(acc);
+                                zfree(acc);
                                 acc = v_mangled;
                                 strcpy(tmp, acc);
                             }
@@ -2741,7 +2741,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
 
                                 if (find_func(ctx, direct))
                                 {
-                                    free(acc);
+                                    zfree(acc);
                                     acc = direct;
                                     strcpy(tmp, acc);
                                 }
@@ -2771,7 +2771,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
 
                                             if (find_func(ctx, t_m))
                                             {
-                                                free(acc);
+                                                zfree(acc);
                                                 acc = xstrdup(t_m);
                                                 strcpy(tmp, acc);
                                                 found_trait = 1;
@@ -2782,13 +2782,13 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                                     }
                                     if (!found_trait)
                                     {
-                                        free(acc);
+                                        zfree(acc);
                                         acc = direct;
                                         strcpy(tmp, acc);
                                     }
                                     else
                                     {
-                                        free(direct);
+                                        zfree(direct);
                                     }
                                 }
                             }
@@ -2900,13 +2900,13 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                                 snprintf(combined_raw, sizeof(combined_raw), "%s__%.*s", acc,
                                          (int)suffix.len, suffix.start);
                                 char *combined = merge_underscores(combined_raw);
-                                free(acc);
+                                zfree(acc);
                                 acc = combined;
                                 strcpy(tmp, acc);
                             }
                         }
-                        free(method_name);
-                        free(acc);
+                        zfree(method_name);
+                        zfree(acc);
                         acc = tmp;
                     }
                 }
@@ -2985,7 +2985,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                         {
                             char *clean = sanitize_mangled_name(concrete_types[i]);
                             mangled_len += 2 + strlen(clean);
-                            free(clean);
+                            zfree(clean);
                         }
                         char *mangled = xmalloc(mangled_len);
                         strcpy(mangled, acc);
@@ -2994,7 +2994,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                             char *clean = sanitize_mangled_name(concrete_types[i]);
                             strcat(mangled, "__");
                             strcat(mangled, clean);
-                            free(clean);
+                            zfree(clean);
                         }
 
                         int is_generic_dep = 0;
@@ -3015,7 +3015,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                                 instantiate_generic(ctx, acc, concrete_types[0], unmangled_types[0],
                                                     t);
                             }
-                            free(acc);
+                            zfree(acc);
                             acc = mangled;
                         }
                         else
@@ -3025,7 +3025,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                             {
                                 instantiate_generic_multi(ctx, acc, concrete_types, arg_count, t);
                             }
-                            free(acc);
+                            zfree(acc);
                             acc = mangled;
                         }
                     }
@@ -3051,7 +3051,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                             instantiate_function_template(ctx, acc, full_concrete, full_unmangled);
                         if (m)
                         {
-                            free(acc);
+                            zfree(acc);
                             acc = m;
                         }
                         else
@@ -3063,11 +3063,11 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     // Cleanup
                     for (int i = 0; i < arg_count; ++i)
                     {
-                        free(concrete_types[i]);
-                        free(unmangled_types[i]);
+                        zfree(concrete_types[i]);
+                        zfree(unmangled_types[i]);
                     }
-                    free(concrete_types);
-                    free(unmangled_types);
+                    zfree(concrete_types);
+                    zfree(unmangled_types);
 
                     changed = 1;
                 }
@@ -3456,12 +3456,12 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                         char mangled_raw[MAX_MANGLED_NAME_LEN];
                         snprintf(mangled_raw, sizeof(mangled_raw), "%s__%s", gtpl->name, clean);
                         char *mangled = merge_underscores(mangled_raw);
-                        free(clean);
+                        zfree(clean);
 
                         node->struct_init.struct_name = mangled;
                         struct_name = mangled;
 
-                        free(inferred);
+                        zfree(inferred);
                     }
                 }
 
@@ -3535,9 +3535,9 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     tail = addr;
                 }
                 node->call.args = head;
-                free(fmt);
+                zfree(fmt);
             }
-            free(acc);
+            zfree(acc);
         }
         else if (sig && lexer_peek(l).type == TOK_LPAREN)
         {
@@ -3703,7 +3703,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                         snprintf(buf, 511, "Async<%s>", inner);
                         node->resolved_type = xstrdup(buf);
                         async_type->name = xstrdup(buf); // HACK: Persist generic info in name
-                        free(inner);
+                        zfree(inner);
                     }
                     else
                     {
@@ -3821,7 +3821,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     if (mangled)
                     {
                         // Rewrite the callee to point to the instantiated function
-                        free(callee->var_ref.name);
+                        zfree(callee->var_ref.name);
                         callee->var_ref.name = mangled;
 
                         // Update type info from the newly registered FuncSig
@@ -3848,7 +3848,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     {
                         node->resolved_type = xstrdup("unknown");
                     }
-                    free(inferred_type);
+                    zfree(inferred_type);
                 }
                 else
                 {
@@ -4008,17 +4008,17 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
             *l = actual_parse;
 
             ASTNode *node_multi = parse_arrow_lambda_multi(ctx, l, params, param_types, nparams, 0);
-            free(param_types);
+            zfree(param_types);
             return node_multi;
         }
         else
         {
             for (int i = 0; i < nparams; i++)
             {
-                free(params[i]);
+                zfree(params[i]);
             }
-            free(params);
-            free(param_types);
+            zfree(params);
+            zfree(param_types);
         }
 
         int saved = l->pos;
@@ -4083,7 +4083,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
 
                     if (is_trait(cast_type))
                     {
-                        free(cast_type);
+                        zfree(cast_type);
                         return transform_to_trait_object(ctx, type_to_string(cast_type_obj),
                                                          target);
                     }
@@ -4231,7 +4231,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
 
                             ASTNode *node_multi = parse_arrow_lambda_multi(
                                 ctx, l, params, param_types, nparams, default_capture_mode);
-                            free(param_types);
+                            zfree(param_types);
                             return node_multi;
                         }
                     }
@@ -4441,7 +4441,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                     node = call;
                     overloaded_get = 1;
                 }
-                free(mangled);
+                zfree(mangled);
             }
 
             if (!overloaded_get)
@@ -4547,7 +4547,7 @@ Type *get_field_type(ParserContext *ctx, Type *struct_type, const char *field_na
     {
         if (alloc_name)
         {
-            free(alloc_name);
+            zfree(alloc_name);
         }
         return NULL;
     }
@@ -4559,7 +4559,7 @@ Type *get_field_type(ParserContext *ctx, Type *struct_type, const char *field_na
         {
             if (alloc_name)
             {
-                free(alloc_name);
+                zfree(alloc_name);
             }
             return f->type_info;
         }
@@ -4567,7 +4567,7 @@ Type *get_field_type(ParserContext *ctx, Type *struct_type, const char *field_na
     }
     if (alloc_name)
     {
-        free(alloc_name);
+        zfree(alloc_name);
     }
     return NULL;
 }
@@ -4724,7 +4724,7 @@ char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out
             char *mangled = merge_underscores(mangled_raw);
             struct_name = mangled;
             *allocated_out = mangled;
-            free(clean);
+            zfree(clean);
             *is_ptr_out = 0;
         }
         else if (strchr(alias_target, '*'))
@@ -4738,7 +4738,7 @@ char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out
             }
             struct_name = xstrdup(tmp);
             *allocated_out = struct_name;
-            free(tmp);
+            zfree(tmp);
         }
         else
         {
@@ -4746,7 +4746,7 @@ char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out
             *allocated_out = struct_name;
             *is_ptr_out = 0;
         }
-        free(tpl);
+        zfree(tpl);
     }
     else
     {
@@ -4786,9 +4786,9 @@ char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out
                             if (clean)
                             {
                                 len += strlen(clean) + 2; // +2 for '__'
-                                free(clean);
+                                zfree(clean);
                             }
-                            free(s);
+                            zfree(s);
                         }
                     }
                 }
@@ -4810,9 +4810,9 @@ char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out
                             {
                                 strcat(mangled, "__");
                                 strcat(mangled, clean);
-                                free(clean);
+                                zfree(clean);
                             }
-                            free(arg_str);
+                            zfree(arg_str);
                         }
                     }
                 }
@@ -4841,9 +4841,9 @@ char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out
                     char *mangled = merge_underscores(mangled_raw);
                     struct_name = mangled;
                     *allocated_out = mangled;
-                    free(clean);
+                    zfree(clean);
                 }
-                free(tpl);
+                zfree(tpl);
             }
             else
             {
@@ -4891,7 +4891,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
             // Reuse printf sugar to generate the prompt print
             char *print_code =
                 process_printf_sugar(ctx, t_str, inner, 1, "stdout", NULL, NULL, 0, is_raw, 0);
-            free(inner);
+            zfree(inner);
 
             // Checks for (args...) suffix for SCAN mode
             if (lexer_peek(l).type == TOK_LPAREN)
@@ -4985,7 +4985,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 char *s1_code = xmalloc(strlen(print_code) + 2);
                 sprintf(s1_code, "%s;", print_code);
                 s1->raw_stmt.content = s1_code;
-                free(print_code);
+                zfree(print_code);
 
                 ASTNode *call = ast_create(NODE_EXPR_CALL);
                 call->token = t;
@@ -5026,13 +5026,13 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
 
                 char *final_code = xmalloc(strlen(print_code) + 64);
                 sprintf(final_code, "%s readln(); })", print_code);
-                free(print_code);
+                zfree(print_code);
 
                 ASTNode *n = ast_create(NODE_RAW_STMT);
                 n->token = next;
                 char *stmt_code = xmalloc(strlen(final_code) + 2);
                 sprintf(stmt_code, "%s;", final_code);
-                free(final_code);
+                zfree(final_code);
                 n->raw_stmt.content = stmt_code;
                 return n;
             }
@@ -5157,13 +5157,13 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
 
             char *code = process_printf_sugar(ctx, t_str, inner, newline, "stderr", NULL, NULL, 1,
                                               is_raw, 0);
-            free(inner);
+            zfree(inner);
 
             ASTNode *n = ast_create(NODE_RAW_STMT);
             n->token = t_str;
             char *stmt_code = xmalloc(strlen(code) + 2);
             sprintf(stmt_code, "%s;", code);
-            free(code);
+            zfree(code);
             n->raw_stmt.content = stmt_code;
             return n;
         }
@@ -5401,14 +5401,14 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
 
                     if (allocated_name)
                     {
-                        free(allocated_name);
+                        zfree(allocated_name);
                     }
                     // Skip standard unary node creation
                     goto after_unary;
                 }
                 if (allocated_name)
                 {
-                    free(allocated_name);
+                    zfree(allocated_name);
                 }
             }
         }
@@ -5616,7 +5616,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 }
                 if (alloc_name)
                 {
-                    free(alloc_name);
+                    zfree(alloc_name);
                 }
             }
 
@@ -5677,7 +5677,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 }
                 if (alloc_name)
                 {
-                    free(alloc_name);
+                    zfree(alloc_name);
                 }
             }
 
@@ -5831,11 +5831,11 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                                     if (find_func(ctx, trait_mangled))
                                     {
                                         sig = find_func(ctx, trait_mangled);
-                                        free(mangled);
+                                        zfree(mangled);
                                         mangled = trait_mangled;
                                         break;
                                     }
-                                    free(trait_mangled);
+                                    zfree(trait_mangled);
                                 }
                             }
                             ref = ref->next;
@@ -5947,7 +5947,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 }
                 if (alloc_name)
                 {
-                    free(alloc_name);
+                    zfree(alloc_name);
                 }
             }
 
@@ -6060,7 +6060,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                     {
                         new_names[i + 1] = arg_names[i];
                     }
-                    free(arg_names);
+                    zfree(arg_names);
                     arg_names = new_names;
                 }
             }
@@ -6345,7 +6345,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                             }
                             it = it->next;
                         }
-                        free(base);
+                        zfree(base);
                     }
 
                     if (sig)
@@ -6431,12 +6431,12 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                         }
 
                         lhs = call;
-                        free(mangled_index);
-                        free(mangled_get);
+                        zfree(mangled_index);
+                        zfree(mangled_get);
                         continue;
                     }
-                    free(mangled_index);
-                    free(mangled_get);
+                    zfree(mangled_index);
+                    zfree(mangled_get);
                 }
 
                 // Static Array Bounds Check
@@ -6504,7 +6504,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 }
                 if (alloc_name)
                 {
-                    free(alloc_name);
+                    zfree(alloc_name);
                 }
             }
 
@@ -6611,12 +6611,12 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
 
                                     if (find_func(ctx, trait_mangled))
                                     {
-                                        free(mangled);
+                                        zfree(mangled);
                                         mangled = trait_mangled;
                                         sig = find_func(ctx, mangled);
                                         break;
                                     }
-                                    free(trait_mangled);
+                                    zfree(trait_mangled);
                                 }
                             }
                             ref = ref->next;
@@ -6760,11 +6760,11 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                             }
                             strcat(all_concrete, concrete[i]);
                             strcat(all_unmangled, unmangled[i]);
-                            free(concrete[i]);
-                            free(unmangled[i]);
+                            zfree(concrete[i]);
+                            zfree(unmangled[i]);
                         }
-                        free(concrete);
-                        free(unmangled);
+                        zfree(concrete);
+                        zfree(unmangled);
 
                         mn = instantiate_function_template(ctx, full_name, all_concrete,
                                                            all_unmangled);
@@ -6773,7 +6773,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                             char *p = strstr(mn, "__");
                             if (p)
                             {
-                                free(node->member.field);
+                                zfree(node->member.field);
                                 node->member.field = xstrdup(p + 2);
                             }
 
@@ -6788,15 +6788,15 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                         }
                         if (full_name)
                         {
-                            free(full_name);
+                            zfree(full_name);
                         }
                         if (all_concrete)
                         {
-                            free(all_concrete);
+                            zfree(all_concrete);
                         }
                         if (all_unmangled)
                         {
-                            free(all_unmangled);
+                            zfree(all_unmangled);
                         }
                     }
                 }
@@ -6901,7 +6901,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 }
                 if (allocated_lhs)
                 {
-                    free(raw_lhs_type);
+                    zfree(raw_lhs_type);
                 }
             }
         }
@@ -7121,11 +7121,11 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 }
                 if (allocated_name)
                 {
-                    free(allocated_name);
+                    zfree(allocated_name);
                 }
             }
 
-            free(bin->binary.op);
+            zfree(bin->binary.op);
             bin->binary.op = xstrdup("=");
             bin->binary.right = op_node;
         }
@@ -7198,7 +7198,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                     }
                     else
                     {
-                        free(set_name);
+                        zfree(set_name);
                     }
                 }
             }
@@ -7229,7 +7229,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 (void)r_name;
                 if (r_alloc)
                 {
-                    free(r_alloc);
+                    zfree(r_alloc);
                 }
 
                 if (is_rhs_ptr)
@@ -7237,7 +7237,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                     // Both are pointers: Skip rewrite to allow pointer comparison
                     if (allocated_name)
                     {
-                        free(allocated_name);
+                        zfree(allocated_name);
                     }
                     struct_name = NULL;
                 }
@@ -7269,12 +7269,12 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
 
                                 if (find_func(ctx, trait_mangled))
                                 {
-                                    free(mangled);
+                                    zfree(mangled);
                                     mangled = trait_mangled;
                                     sig = find_func(ctx, mangled);
                                     break;
                                 }
-                                free(trait_mangled);
+                                zfree(trait_mangled);
                             }
                         }
                         ref = ref->next;
@@ -7378,13 +7378,13 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                     lhs = call;
                     if (allocated_name)
                     {
-                        free(allocated_name);
+                        zfree(allocated_name);
                     }
                     continue; // Loop again with result as new lhs
                 }
                 if (allocated_name)
                 {
-                    free(allocated_name);
+                    zfree(allocated_name);
                 }
             }
         }
@@ -7535,11 +7535,11 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                     }
                     if (al)
                     {
-                        free(al);
+                        zfree(al);
                     }
                     if (ar)
                     {
-                        free(ar);
+                        zfree(ar);
                     }
 
                     char *t1 = type_to_string(lhs->type_info);
@@ -7799,7 +7799,7 @@ ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_nam
             // Update return type
             if (t->inner)
             {
-                free(t->inner);
+                zfree(t->inner);
             }
             t->inner = ret_val->type_info;
         }
@@ -7809,7 +7809,7 @@ ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_nam
     ZenSymbol *sym = find_symbol_entry(ctx, param_name);
     if (sym && sym->type_info && sym->type_info->kind != TYPE_UNKNOWN)
     {
-        free(lambda->lambda.param_types[0]);
+        zfree(lambda->lambda.param_types[0]);
         lambda->lambda.param_types[0] = type_to_string(sym->type_info);
         t->args[0] = sym->type_info;
     }
@@ -7817,7 +7817,7 @@ ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_nam
     {
         if (lambda->lambda.param_types[0])
         {
-            free(lambda->lambda.param_types[0]);
+            zfree(lambda->lambda.param_types[0]);
         }
         lambda->lambda.param_types[0] = xstrdup("unknown");
         t->args[0] = type_new(TYPE_UNKNOWN);
@@ -8010,7 +8010,7 @@ ASTNode *parse_tuple_expression(ParserContext *ctx, Lexer *l, const char *type_n
         char tuple_name[1024 + 16];
         char *clean_sig = sanitize_mangled_name(sig);
         snprintf(tuple_name, sizeof(tuple_name), "Tuple__%s", clean_sig);
-        free(clean_sig);
+        zfree(clean_sig);
         n->resolved_type = xstrdup(tuple_name);
     }
     return n;

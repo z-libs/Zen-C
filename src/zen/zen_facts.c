@@ -128,7 +128,7 @@ static void load_facts(void)
     }
 
     cJSON *json = cJSON_Parse(data);
-    free(data);
+    zfree(data);
 
     if (!json)
     {

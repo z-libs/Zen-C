@@ -117,7 +117,7 @@ static void scan_file(const char *path)
 
     fprintf(stderr, "zls: Indexing %s\n", path);
     lsp_project_update_file(uri, src);
-    free(src);
+    zfree(src);
 }
 
 static void scan_dir(const char *dir_path)
@@ -228,7 +228,7 @@ void lsp_project_update_file(const char *uri, const char *src)
 
     if (pf->source)
     {
-        free(pf->source);
+        zfree(pf->source);
     }
     pf->source = xstrdup(src);
 

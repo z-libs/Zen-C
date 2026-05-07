@@ -22,12 +22,12 @@ void lsp_index_free(LSPIndex *idx)
         LSPRange *n = c->next;
         if (c->hover_text)
         {
-            free(c->hover_text);
+            zfree(c->hover_text);
         }
-        free(c);
+        zfree(c);
         c = n;
     }
-    free(idx);
+    zfree(idx);
 }
 
 void lsp_index_add(LSPIndex *idx, LSPRange *r)

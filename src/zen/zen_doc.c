@@ -112,7 +112,7 @@ static void print_markdown_doc(const char *comment)
     {
         printf("\n%s\n\n", cleaned);
     }
-    free(cleaned);
+    zfree(cleaned);
 }
 
 static const char *unmangle_name(const char *name)
@@ -168,7 +168,7 @@ static void generate_docs_internal(struct ParserContext *ctx, ASTNode *node, int
                 {
                     char *tstr = type_to_string(node->func.arg_types[i]);
                     printf("%s", tstr);
-                    free(tstr);
+                    zfree(tstr);
                 }
                 else
                 {
@@ -184,7 +184,7 @@ static void generate_docs_internal(struct ParserContext *ctx, ASTNode *node, int
             {
                 char *rstr = type_to_string(node->func.ret_type_info);
                 printf(" -> %s", rstr);
-                free(rstr);
+                zfree(rstr);
             }
             else if (node->func.ret_type)
             {

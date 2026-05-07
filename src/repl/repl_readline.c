@@ -211,14 +211,14 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
                         {
                             if (saved_current_line)
                             {
-                                free(saved_current_line);
+                                zfree(saved_current_line);
                             }
                             saved_current_line = strdup(buf);
                         }
                         history_idx--;
                         if (history_idx >= 0 && history_idx < state->history_len)
                         {
-                            free(buf);
+                            zfree(buf);
                             buf = strdup(state->history[history_idx]);
                             buf_size = strlen(buf) + 1;
                             len = strlen(buf);
@@ -231,7 +231,7 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
                     if (history_idx < state->history_len)
                     {
                         history_idx++;
-                        free(buf);
+                        zfree(buf);
                         if (history_idx == state->history_len)
                         {
                             if (saved_current_line)
@@ -308,10 +308,10 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
             {
                 state->aborted = 1;
             }
-            free(buf);
+            zfree(buf);
             if (saved_current_line)
             {
-                free(saved_current_line);
+                zfree(saved_current_line);
             }
             repl_disable_raw_mode();
             return strdup("");
@@ -320,10 +320,10 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
         {
             if (len == 0)
             {
-                free(buf);
+                zfree(buf);
                 if (saved_current_line)
                 {
-                    free(saved_current_line);
+                    zfree(saved_current_line);
                 }
                 repl_disable_raw_mode();
                 return NULL;
@@ -343,7 +343,7 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
                     len += clen;
                     pos += clen;
                 }
-                free(completion);
+                zfree(completion);
             }
         }
         else if (c == 18)
@@ -374,7 +374,7 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
             if (found != -1)
             {
                 search_match_idx = found;
-                free(buf);
+                zfree(buf);
                 buf = strdup(state->history[found]);
                 buf_size = strlen(buf) + 1;
                 len = strlen(buf);
@@ -403,7 +403,7 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
                     if (found != -1)
                     {
                         search_match_idx = found;
-                        free(buf);
+                        zfree(buf);
                         buf = strdup(state->history[found]);
                         buf_size = strlen(buf) + 1;
                         len = strlen(buf);
@@ -419,7 +419,7 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
                 if (c == 3)
                 {
                     // Abort
-                    free(buf);
+                    zfree(buf);
                     buf = strdup("");
                     len = 0;
                     pos = 0;
@@ -456,7 +456,7 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
                     if (found != -1)
                     {
                         search_match_idx = found;
-                        free(buf);
+                        zfree(buf);
                         buf = strdup(state->history[found]);
                         buf_size = strlen(buf) + 1;
                         len = strlen(buf);
@@ -495,10 +495,10 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
         else if (c == 14)
         {
             printf("^N\r\n");
-            free(buf);
+            zfree(buf);
             if (saved_current_line)
             {
-                free(saved_current_line);
+                zfree(saved_current_line);
             }
             repl_disable_raw_mode();
             return strdup(":reset");
@@ -540,7 +540,7 @@ char *repl_readline(ReplState *state, const char *prompt, int indent_level)
 
     if (saved_current_line)
     {
-        free(saved_current_line);
+        zfree(saved_current_line);
     }
     repl_disable_raw_mode();
 

@@ -28,7 +28,7 @@ static void emit_json(const char *level, Token t, const char *msg, const char *s
     {
         fprintf(stderr, "%s\n", json);
     }
-    free(json);
+    zfree(json);
     cJSON_Delete(root);
 
     // Call LSP diagnostics hook

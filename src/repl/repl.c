@@ -45,20 +45,20 @@ void repl_state_free(ReplState *state)
 {
     for (int i = 0; i < state->history_len; i++)
     {
-        free(state->history[i]);
+        zfree(state->history[i]);
     }
-    free(state->history);
+    zfree(state->history);
 
     for (int i = 0; i < state->watches_len; i++)
     {
-        free(state->watches[i]);
+        zfree(state->watches[i]);
     }
 
     for (int i = 0; i < state->symbol_count; i++)
     {
-        free(state->symbols[i]);
+        zfree(state->symbols[i]);
     }
-    free(state->symbols);
+    zfree(state->symbols);
 }
 
 void repl_history_add(ReplState *state, const char *line)
@@ -197,7 +197,7 @@ void run_repl(const char *self_path, int argc, char **argv)
 
         int res = repl_process_line(&state, line, &brace_depth, &paren_depth, &in_quote, &escaped,
                                     &input_buffer, &input_len);
-        free(line);
+        zfree(line);
         if (res == REPL_QUIT)
         {
             break;
@@ -298,7 +298,7 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
     }
     if (*input_len == 0)
     {
-        free(*input_buffer);
+        zfree(*input_buffer);
         *input_buffer = NULL;
         *input_len = 0;
         return REPL_HANDLED;
@@ -306,7 +306,7 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
 
     repl_history_add(state, *input_buffer);
     char *raw_input = strdup(*input_buffer);
-    free(*input_buffer);
+    zfree(*input_buffer);
     *input_buffer = NULL;
     *input_len = 0;
 
@@ -319,8 +319,8 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
     char *full_code = malloc(total_size);
     snprintf(full_code, total_size, "%s\nfn main() { _z_suppress_stdout(); %s", global_code,
              main_code);
-    free(global_code);
-    free(main_code);
+    zfree(global_code);
+    zfree(main_code);
     strcat(full_code, "_z_restore_stdout(); ");
 
     /* Auto-print detection */
@@ -337,7 +337,7 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
         Lexer l;
         lexer_init(&l, check_buf);
         ASTNode *node = parse_statement(&pctx, &l);
-        free(check_buf);
+        zfree(check_buf);
 
         if (node && (node->type >= NODE_EXPR_BINARY && node->type <= NODE_MATCH))
         {
@@ -362,20 +362,20 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
     {
         if (repl_jit_execute(c_code) != 0)
         {
-            free(state->history[--state->history_len]);
+            zfree(state->history[--state->history_len]);
         }
         else
         {
             repl_update_symbols(state);
         }
-        free(c_code);
+        zfree(c_code);
     }
     else
     {
-        free(state->history[--state->history_len]);
+        zfree(state->history[--state->history_len]);
     }
     printf("\n");
-    free(full_code);
-    free(raw_input);
+    zfree(full_code);
+    zfree(raw_input);
     return REPL_HANDLED;
 }

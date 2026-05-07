@@ -200,8 +200,8 @@ void emit_preamble(ParserContext *ctx)
                  "static string _z_readln_raw() { size_t cap = 64; size_t len = 0; char *line = "
                  "static_cast<char*>(malloc(cap)); if(!line) return NULL; int c; while((c = "
                  "fgetc(stdin)) != EOF) { if(c == '\\n') break; if(len + 1 >= cap) { cap *= 2; "
-                 "char *n = static_cast<char*>(realloc(line, cap)); if(!n) { free(line); return "
-                 "NULL; } line = n; } line[len++] = c; } if(len == 0 && c == EOF) { free(line); "
+                 "char *n = static_cast<char*>(realloc(line, cap)); if(!n) { z_free(line); return "
+                 "NULL; } line = n; } line[len++] = c; } if(len == 0 && c == EOF) { z_free(line); "
                  "return NULL; } line[len] = 0; return line; }\n");
         }
         else
@@ -270,7 +270,7 @@ static void mark_module_visited(VisitedModules **visited, const char *path)
 static void free_visited_modules(VisitedModules *visited)
 {
     // NO-OP: We use arena allocation (xmalloc) for VisitedModules.
-    // Arena is reset globally, single nodes must not be free()d.
+    // Arena is reset globally, single nodes must not be zfree()d.
     (void)visited;
 }
 
@@ -368,7 +368,7 @@ static void emit_type_aliases_internal(ParserContext *ctx, ASTNode *node, Visite
                 {
                     EMIT(ctx, "typedef %s %s;\n", c_type_str, node->type_alias.alias);
                 }
-                free(c_type_str);
+                zfree(c_type_str);
             }
             else
             {
@@ -418,7 +418,7 @@ void emit_global_aliases(ParserContext *ctx)
                 {
                     EMIT(ctx, "typedef %s %s;\n", c_type_str, ta->alias);
                 }
-                free(c_type_str);
+                zfree(c_type_str);
             }
             else
             {
@@ -491,7 +491,7 @@ void emit_enum_protos(ParserContext *ctx, ASTNode *node)
                             char *tstr = type_to_c_string(v->variant.payload);
                             EMIT(ctx, "%s %s__%s(%s v);\n", final_name, final_name, v->variant.name,
                                  tstr);
-                            free(tstr);
+                            zfree(tstr);
                         }
                     }
                     else
@@ -537,7 +537,7 @@ void emit_lambda_defs(ParserContext *ctx)
                         tstr = xstrdup(node->lambda.captured_types[i]);
                     }
                     EMIT(ctx, "    %s* %s;\n", tstr, node->lambda.captured_vars[i]);
-                    free(tstr);
+                    zfree(tstr);
                 }
                 else
                 {
@@ -551,7 +551,7 @@ void emit_lambda_defs(ParserContext *ctx)
                         tstr = xstrdup(node->lambda.captured_types[i]);
                     }
                     EMIT(ctx, "    %s %s;\n", tstr, node->lambda.captured_vars[i]);
-                    free(tstr);
+                    zfree(tstr);
 
                     char *tname = node->lambda.captured_types[i];
                     const char *clean = tname;
@@ -622,7 +622,7 @@ void emit_lambda_defs(ParserContext *ctx)
         if (node->type_info && node->type_info->inner &&
             node->type_info->inner->kind != TYPE_UNKNOWN)
         {
-            free(ret_type_str);
+            zfree(ret_type_str);
         }
 
         for (int i = 0; i < node->lambda.num_params; i++)
@@ -650,7 +650,7 @@ void emit_lambda_defs(ParserContext *ctx)
             if (node->type_info && node->type_info->args && node->type_info->args[i] &&
                 node->type_info->args[i]->kind != TYPE_UNKNOWN)
             {
-                free(param_type_str);
+                zfree(param_type_str);
             }
         }
         EMIT(ctx, ") {\n");
@@ -775,7 +775,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
                 char *inner_c = type_to_c_string(node->type_info->inner);
                 EMIT(ctx, "typedef ZC_SIMD(%s, %d) %s;\n", inner_c, node->type_info->array_size,
                      node->strct.name);
-                free(inner_c);
+                zfree(inner_c);
                 if (node->cfg_condition)
                 {
                     EMIT(ctx, "#endif\n");
@@ -935,7 +935,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
                     {
                         char *tstr = type_to_c_string(v->variant.payload);
                         EMIT(ctx, "%s %s; ", tstr, v->variant.name);
-                        free(tstr);
+                        zfree(tstr);
                     }
                     v = v->next;
                 }
@@ -1007,7 +1007,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
                                      final_name, v->variant.name, v->variant.name);
                             }
                         }
-                        free(tstr);
+                        zfree(tstr);
                     }
                     else
                     {
@@ -1112,7 +1112,7 @@ static void emit_trait_defs_internal(ParserContext *ctx, ASTNode *node, VisitedM
                 char *ret_safe = substitute_proto_self(m->func.ret_type, "void*");
                 const char *orig = parse_original_method_name(m->func.name);
                 EMIT(ctx, "    %s (*%s)(", ret_safe, orig);
-                free(ret_safe);
+                zfree(ret_safe);
 
                 int has_self = (m->func.args && strstr(m->func.args, "self"));
                 if (!has_self)
@@ -1138,7 +1138,7 @@ static void emit_trait_defs_internal(ParserContext *ctx, ASTNode *node, VisitedM
                         }
                         EMIT(ctx, "%s", args_safe);
                     }
-                    free(args_safe);
+                    zfree(args_safe);
                 }
                 EMIT(ctx, ");\n");
                 m = m->next;
@@ -1227,7 +1227,7 @@ static void emit_trait_wrappers_internal(ParserContext *ctx, ASTNode *node,
                     {
                         EMIT(ctx, ", %s", sa);
                     }
-                    free(sa);
+                    zfree(sa);
                 }
                 EMIT(ctx, ") {\n");
 
@@ -1262,7 +1262,7 @@ static void emit_trait_wrappers_internal(ParserContext *ctx, ASTNode *node,
                             }
                         }
                     }
-                    free(call_args);
+                    zfree(call_args);
                 }
                 EMIT(ctx, ");\n");
 
@@ -1272,7 +1272,7 @@ static void emit_trait_wrappers_internal(ParserContext *ctx, ASTNode *node,
                          node->trait.name);
                 }
                 EMIT(ctx, "}\n\n");
-                free(ret_sub);
+                zfree(ret_sub);
                 m = m->next;
             }
             if (node->cfg_condition)
@@ -1352,7 +1352,7 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, VisitedModu
                 }
                 if (inferred)
                 {
-                    free(inferred);
+                    zfree(inferred);
                 }
             }
             if (node->var_decl.init_expr)
@@ -1376,7 +1376,7 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, VisitedModu
                 }
                 if (tname)
                 {
-                    free(tname);
+                    zfree(tname);
                 }
             }
             EMIT(ctx, ";\n");
@@ -1400,7 +1400,7 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, VisitedModu
                         EMIT(ctx, "int __z_drop_flag_%s = %d;\n", node->var_decl.name,
                              node->var_decl.init_expr ? 1 : 0);
                     }
-                    free(tname);
+                    zfree(tname);
                 }
             }
             if (node->cfg_condition)
@@ -1528,7 +1528,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModul
             ASTNode *def = find_struct_def(g_parser_ctx, mangled);
             if (!def && resolved)
             {
-                free(mangled);
+                zfree(mangled);
                 mangled = replace_string_type(resolved);
                 def = find_struct_def(g_parser_ctx, mangled);
             }
@@ -1554,12 +1554,12 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModul
                     {
                         skip = 1;
                     }
-                    free(buf);
+                    zfree(buf);
                 }
             }
             if (mangled)
             {
-                free(mangled);
+                zfree(mangled);
             }
 
             if (skip)
@@ -1610,7 +1610,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModul
                     EMIT(ctx, "#endif\n");
                 }
 
-                free(proto);
+                zfree(proto);
                 m = m->next;
             }
             if (f->cfg_condition)
@@ -1647,12 +1647,12 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModul
                     {
                         skip = 1;
                     }
-                    free(buf);
+                    zfree(buf);
                 }
             }
             if (mangled)
             {
-                free(mangled);
+                zfree(mangled);
             }
 
             if (skip)
@@ -1778,12 +1778,12 @@ void emit_impl_vtables(ParserContext *ctx)
                     {
                         skip = 1;
                     }
-                    free(buf);
+                    zfree(buf);
                 }
             }
             if (mangled)
             {
-                free(mangled);
+                zfree(mangled);
             }
             if (skip)
             {
@@ -1842,7 +1842,7 @@ void emit_impl_vtables(ParserContext *ctx)
 
                 EMIT(ctx, ".%s = (__typeof__(((%s_VTable*)0)->%s))%s", orig_name, trait, orig_name,
                      m->func.name);
-                free(prefix);
+                zfree(prefix);
                 if (m->next)
                 {
                     EMIT(ctx, ", ");
@@ -2084,7 +2084,7 @@ void print_type_defs(ParserContext *ctx, ASTNode *nodes)
         char *clean_sig = sanitize_mangled_name(t->sig);
         EMIT(ctx, "typedef struct Tuple__%s Tuple__%s;\nstruct Tuple__%s { ", clean_sig, clean_sig,
              clean_sig);
-        free(clean_sig);
+        zfree(clean_sig);
         char *s = xstrdup(t->sig);
         char *current = s;
         char *next_sep = strstr(current, "__");
@@ -2104,7 +2104,7 @@ void print_type_defs(ParserContext *ctx, ASTNode *nodes)
                 break;
             }
         }
-        free(s);
+        zfree(s);
         EMIT(ctx, "};\n");
         t = t->next;
     }

@@ -220,8 +220,8 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node)
             if (alias)
             {
                 emit_mangled_name(ctx, alias, method_name);
-                free(type_name);
-                free(mangled_type);
+                zfree(type_name);
+                zfree(mangled_type);
                 return;
             }
         }
@@ -253,8 +253,8 @@ static void codegen_var_expr(ParserContext *ctx, ASTNode *node)
             }
         }
 
-        free(type_name);
-        free(mangled_type);
+        zfree(type_name);
+        zfree(mangled_type);
         return;
     }
 
@@ -374,7 +374,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node)
                 }
 
                 EMIT(ctx, "*(%s*)(&_z_ctx_%d->%s) = ", tstr, lid, node->lambda.captured_vars[i]);
-                free(tstr);
+                zfree(tstr);
 
                 ASTNode *var_node = ast_create(NODE_EXPR_VAR);
                 var_node->var_ref.name = xstrdup(node->lambda.captured_vars[i]);
@@ -517,7 +517,7 @@ static void handle_va_arg(ParserContext *ctx, ASTNode *node)
     EMIT(ctx, "va_arg(");
     codegen_expression(ctx, node->va_arg.ap);
     EMIT(ctx, ", %s)", type_str);
-    free(type_str);
+    zfree(type_str);
 }
 
 static void handle_expr_sizeof(ParserContext *ctx, ASTNode *node)
@@ -526,7 +526,7 @@ static void handle_expr_sizeof(ParserContext *ctx, ASTNode *node)
     {
         char *mapped = type_to_c_string(node->size_of.target_type_info);
         EMIT(ctx, "sizeof(%s)", mapped);
-        free(mapped);
+        zfree(mapped);
     }
     else if (node->size_of.target_type)
     {
@@ -548,7 +548,7 @@ static void handle_typeof(ParserContext *ctx, ASTNode *node)
     {
         char *mapped = type_to_c_string(node->size_of.target_type_info);
         EMIT(ctx, "typeof(%s)", mapped);
-        free(mapped);
+        zfree(mapped);
     }
     else if (node->size_of.target_type)
     {
@@ -676,10 +676,10 @@ static void handle_expr_member(ParserContext *ctx, ASTNode *node)
             if (is_simple_enum(ctx, tname))
             {
                 codegen_expression(ctx, node->member.target);
-                free(tname);
+                zfree(tname);
                 return;
             }
-            free(tname);
+            zfree(tname);
         }
     }
 
@@ -720,7 +720,7 @@ static void handle_expr_member(ParserContext *ctx, ASTNode *node)
         }
         if (lt)
         {
-            free(lt);
+            zfree(lt);
         }
 
         char *field = node->member.field;
@@ -764,7 +764,7 @@ static void handle_expr_index(ParserContext *ctx, ASTNode *node)
         }
         if (inferred)
         {
-            free(inferred);
+            zfree(inferred);
         }
     }
 
@@ -840,7 +840,7 @@ static void handle_expr_index(ParserContext *ctx, ASTNode *node)
                 extra = extra->next;
             }
             EMIT(ctx, ")");
-            free(struct_name);
+            zfree(struct_name);
         }
         else
         {
@@ -935,7 +935,7 @@ static void handle_expr_slice(ParserContext *ctx, ASTNode *node)
     }
     if (tname && strcmp(tname, "unknown") != 0)
     {
-        free(tname);
+        zfree(tname);
     }
 }
 
@@ -1164,7 +1164,7 @@ static void handle_reflection(ParserContext *ctx, ASTNode *node)
     {
         char *s = type_to_c_string(t);
         EMIT(ctx, "\"%s\"", s);
-        free(s);
+        zfree(s);
     }
     else
     {
@@ -1656,7 +1656,7 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
         }
         if (t1)
         {
-            free(t1);
+            zfree(t1);
         }
     }
     else if (strcmp(node->binary.op, "**") == 0)
@@ -1709,7 +1709,7 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
                         memmove(clean_type, base, strlen(base) + 1);
                     }
                 }
-                free(type_name);
+                zfree(type_name);
             }
         }
 
@@ -1784,13 +1784,13 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
                         EMIT(ctx, "(%s)(", c_type);
                         codegen_expression_with_move(ctx, node->binary.right);
                         EMIT(ctx, ")");
-                        free(c_type);
+                        zfree(c_type);
                     }
                     else
                     {
                         if (c_type)
                         {
-                            free(c_type);
+                            zfree(c_type);
                         }
                         codegen_expression_with_move(ctx, node->binary.right);
                     }
@@ -1809,7 +1809,7 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
 
         if (clean_type)
         {
-            free(clean_type);
+            zfree(clean_type);
         }
     }
     if (g_config.misra_mode)
@@ -1973,8 +1973,8 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
                     snprintf(base_buf, sizeof(base_buf), "%s__%s", prefix, clean_arg);
                     mangled_base = base_buf;
 
-                    free(args_ptr);
-                    free(clean_arg);
+                    zfree(args_ptr);
+                    zfree(clean_arg);
                 }
             }
 
@@ -2023,8 +2023,8 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
                         snprintf(type_buf, sizeof(type_buf), "%s__%s", prefix, clean_arg);
                         type_mangled = type_buf;
 
-                        free(args_ptr);
-                        free(clean_arg);
+                        zfree(args_ptr);
+                        zfree(clean_arg);
                     }
                 }
 
@@ -2064,7 +2064,7 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
                 char mixin_func_name[MAX_MANGLED_NAME_LEN * 2];
                 strncpy(mixin_func_name, mixin_func_name_ptr, sizeof(mixin_func_name) - 1);
                 mixin_func_name[sizeof(mixin_func_name) - 1] = 0;
-                free(mixin_func_name_ptr);
+                zfree(mixin_func_name_ptr);
 
                 char *resolved_method_suffix = NULL;
 
@@ -2081,10 +2081,10 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
                             char *alias_func_name = merge_underscores(alias_func_base);
                             if (find_func(ctx, alias_func_name))
                             {
-                                free(alias_func_name);
+                                zfree(alias_func_name);
                                 break;
                             }
-                            free(alias_func_name);
+                            zfree(alias_func_name);
                         }
                         ta = ta->next;
                     }
@@ -2104,10 +2104,10 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
                                 snprintf(suffix_base, sizeof(suffix_base), "%s__%s",
                                          ref->node->impl_trait.trait_name, method);
                                 resolved_method_suffix = merge_underscores(suffix_base);
-                                free(trait_mangled);
+                                zfree(trait_mangled);
                                 break;
                             }
-                            free(trait_mangled);
+                            zfree(trait_mangled);
                         }
                         ref = ref->next;
                     }
@@ -2131,10 +2131,10 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
                                     snprintf(suffix_base, sizeof(suffix_base), "%s__%s", tname,
                                              method);
                                     resolved_method_suffix = merge_underscores(suffix_base);
-                                    free(trait_mangled);
+                                    zfree(trait_mangled);
                                     break;
                                 }
-                                free(trait_mangled);
+                                zfree(trait_mangled);
                             }
                             it = it->next;
                         }
@@ -2159,10 +2159,10 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
                                 {
                                     call_base = def->strct.used_structs[k];
                                     need_cast = 1;
-                                    free(mixin_check);
+                                    zfree(mixin_check);
                                     break;
                                 }
-                                free(mixin_check);
+                                zfree(mixin_check);
                             }
                         }
                     }
@@ -2190,16 +2190,16 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
 
                 if (resolved_method_suffix)
                 {
-                    free(resolved_method_suffix);
+                    zfree(resolved_method_suffix);
                 }
             }
-            free(clean);
-            free(type);
+            zfree(clean);
+            zfree(type);
             return;
         }
         if (type)
         {
-            free(type);
+            zfree(type);
         }
     }
 
@@ -2226,12 +2226,12 @@ skip_method_mangling:
         char *ret = type_to_c_string(ft->inner);
         if (strcmp(ret, "string") == 0)
         {
-            free(ret);
+            zfree(ret);
             ret = xstrdup("char*");
         }
         if (strcmp(ret, "unknown") == 0)
         {
-            free(ret);
+            zfree(ret);
             ret = xstrdup("void*");
         }
 
@@ -2241,11 +2241,11 @@ skip_method_mangling:
             char *as = type_to_c_string(ft->args[i]);
             if (strcmp(as, "unknown") == 0)
             {
-                free(as);
+                zfree(as);
                 as = xstrdup("void*");
             }
             EMIT(ctx, ", %s", as);
-            free(as);
+            zfree(as);
         }
         if (ft->is_varargs)
         {
@@ -2261,7 +2261,7 @@ skip_method_mangling:
             arg = arg->next;
         }
         EMIT(ctx, "); })");
-        free(ret);
+        zfree(ret);
         return;
     }
 
@@ -2397,7 +2397,7 @@ skip_callee_gen:
                     EMIT(ctx, "(Slice__%s){.data = ", inner);
                     codegen_expression(ctx, arg);
                     EMIT(ctx, ", .len = %d, .cap = %d}", arg_t->array_size, arg_t->array_size);
-                    free(inner);
+                    zfree(inner);
                     handled = 1;
                 }
                 else if (param_t && param_t->kind == TYPE_STRUCT &&
@@ -2441,7 +2441,7 @@ skip_callee_gen:
                         EMIT(ctx, "(%s)(", c_type);
                         codegen_expression_with_move(ctx, arg);
                         EMIT(ctx, ")");
-                        free(c_type);
+                        zfree(c_type);
                     }
                     else
                     {

@@ -34,7 +34,7 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                 {
                     char *tmp = token_strdup(num);
                     res.vector_size = atoi(tmp);
-                    free(tmp);
+                    zfree(tmp);
                 }
                 if (lexer_next(l).type != TOK_RPAREN)
                 {
@@ -185,9 +185,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                         char *old = res.cfg_condition;
                         res.cfg_condition = xmalloc(strlen(old) + strlen(cfg_name) + 32);
                         sprintf(res.cfg_condition, "%s && !defined(ZC_CFG_%s)", old, cfg_name);
-                        free(old);
+                        zfree(old);
                     }
-                    free(cfg_name);
+                    zfree(cfg_name);
                     if (lexer_next(l).type != TOK_RPAREN)
                     {
                         zpanic_at(lexer_peek(l), "Expected ) after name in @cfg(not(NAME))");
@@ -229,9 +229,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                                 char *old = any_cond;
                                 any_cond = xmalloc(strlen(old) + strlen(cfg_name) + 32);
                                 sprintf(any_cond, "%s || !defined(ZC_CFG_%s)", old, cfg_name);
-                                free(old);
+                                zfree(old);
                             }
-                            free(cfg_name);
+                            zfree(cfg_name);
                             if (lexer_next(l).type != TOK_RPAREN)
                             {
                                 zpanic_at(lexer_peek(l), "Expected )");
@@ -250,9 +250,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                                 char *old = any_cond;
                                 any_cond = xmalloc(strlen(old) + strlen(cfg_name) + 32);
                                 sprintf(any_cond, "%s || defined(ZC_CFG_%s)", old, cfg_name);
-                                free(old);
+                                zfree(old);
                             }
-                            free(cfg_name);
+                            zfree(cfg_name);
                         }
                         else
                         {
@@ -283,9 +283,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                             char *old = res.cfg_condition;
                             res.cfg_condition = xmalloc(strlen(old) + strlen(any_cond) + 32);
                             sprintf(res.cfg_condition, "%s && (%s)", old, any_cond);
-                            free(old);
+                            zfree(old);
                         }
-                        free(any_cond);
+                        zfree(any_cond);
                     }
                 }
                 else if (cfg_tok.type == TOK_IDENT && cfg_tok.len == 3 &&
@@ -324,9 +324,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                                 char *old = all_cond;
                                 all_cond = xmalloc(strlen(old) + strlen(cfg_name) + 32);
                                 sprintf(all_cond, "%s && !defined(ZC_CFG_%s)", old, cfg_name);
-                                free(old);
+                                zfree(old);
                             }
-                            free(cfg_name);
+                            zfree(cfg_name);
                             if (lexer_next(l).type != TOK_RPAREN)
                             {
                                 zpanic_at(lexer_peek(l), "Expected )");
@@ -345,9 +345,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                                 char *old = all_cond;
                                 all_cond = xmalloc(strlen(old) + strlen(cfg_name) + 32);
                                 sprintf(all_cond, "%s && defined(ZC_CFG_%s)", old, cfg_name);
-                                free(old);
+                                zfree(old);
                             }
-                            free(cfg_name);
+                            zfree(cfg_name);
                         }
                         else
                         {
@@ -378,9 +378,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                             char *old = res.cfg_condition;
                             res.cfg_condition = xmalloc(strlen(old) + strlen(all_cond) + 32);
                             sprintf(res.cfg_condition, "%s && (%s)", old, all_cond);
-                            free(old);
+                            zfree(old);
                         }
-                        free(all_cond);
+                        zfree(all_cond);
                     }
                 }
                 else if (cfg_tok.type == TOK_IDENT)
@@ -396,9 +396,9 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
                         char *old = res.cfg_condition;
                         res.cfg_condition = xmalloc(strlen(old) + strlen(cfg_name) + 32);
                         sprintf(res.cfg_condition, "%s && defined(ZC_CFG_%s)", old, cfg_name);
-                        free(old);
+                        zfree(old);
                     }
-                    free(cfg_name);
+                    zfree(cfg_name);
                 }
                 else
                 {
@@ -842,7 +842,7 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 s = ast_create(NODE_RAW_STMT);
                 s->token = t;
                 s->raw_stmt.content = normalize_raw_content(content);
-                free(content);
+                zfree(content);
             }
             else
             {
@@ -1006,19 +1006,19 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             // Cleanup attributes if no node was created to receive them
             if (attrs.cfg_condition)
             {
-                free(attrs.cfg_condition);
+                zfree(attrs.cfg_condition);
             }
             if (attrs.link_name)
             {
-                free(attrs.link_name);
+                zfree(attrs.link_name);
             }
             if (attrs.deprecated_msg)
             {
-                free(attrs.deprecated_msg);
+                zfree(attrs.deprecated_msg);
             }
             if (attrs.section)
             {
-                free(attrs.section);
+                zfree(attrs.section);
             }
             // ... potentially more cleanup needed for derived_traits and custom_attributes
         }

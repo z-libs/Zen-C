@@ -216,7 +216,7 @@ void zptr_plugin_mgr_cleanup(void)
         {
             z_dlclose(curr->handle);
         }
-        free(curr);
+        zfree(curr);
         curr = next;
     }
     head = NULL;
@@ -244,7 +244,7 @@ int zptr_unload_plugin(const char *name)
             {
                 z_dlclose(curr->handle);
             }
-            free(curr);
+            zfree(curr);
             return 1;
         }
         prev = curr;

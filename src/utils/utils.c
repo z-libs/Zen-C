@@ -192,11 +192,11 @@ char *z_resolve_path(const char *fn, const char *relative_to)
             snprintf(path, sizeof(path), "%s/%s", dir, fn);
             if (access(path, R_OK) == 0)
             {
-                free(dir);
+                zfree(dir);
                 return z_realpath_arena(path);
             }
         }
-        free(dir);
+        zfree(dir);
     }
 
     // 3. Current directory
@@ -796,7 +796,7 @@ int levenshtein(const char *s1, const char *s2)
     }
 
     int result = MATRIX(len1, len2);
-    free(matrix);
+    zfree(matrix);
     return result;
 }
 

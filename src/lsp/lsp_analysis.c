@@ -43,7 +43,7 @@ static void send_json_response(cJSON *root)
         fprintf(stderr, "zls: Sent: %s\n", str);
         fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
         fflush(stdout);
-        free(str);
+        zfree(str);
     }
     cJSON_Delete(root);
 }
@@ -178,8 +178,8 @@ void lsp_check_file(const char *uri, const char *json_src, int id)
     while (cur)
     {
         Diagnostic *next = cur->next;
-        free(cur->message);
-        free(cur);
+        zfree(cur->message);
+        zfree(cur);
         cur = next;
     }
 }
@@ -518,7 +518,7 @@ void lsp_hover(const char *uri, int line, int col, int id)
                 text = (char *)doc;
                 is_primitive = 1;
             }
-            free(word);
+            zfree(word);
         }
     }
 
@@ -543,7 +543,7 @@ void lsp_hover(const char *uri, int line, int col, int id)
             char *code_block = malloc(block_size);
             snprintf(code_block, block_size, "```zc\n%s\n```", text);
             cJSON_AddStringToObject(contents, "value", code_block);
-            free(code_block);
+            zfree(code_block);
         }
 
         cJSON_AddItemToObject(result, "contents", contents);
@@ -985,7 +985,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
                                 {
                                     if (strcmp(field->field.name, parts[p]) == 0)
                                     {
-                                        free(type_name);
+                                        zfree(type_name);
                                         type_name =
                                             field->field.type ? strdup(field->field.type) : NULL;
                                         found_field = 1;
@@ -996,7 +996,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
                             }
                             if (!found_field)
                             {
-                                free(type_name);
+                                zfree(type_name);
                                 type_name = NULL;
                             }
                         }
@@ -1083,10 +1083,10 @@ void lsp_completion(const char *uri, int line, int col, int id)
                                 }
                                 fn_sig = fn_sig->next;
                             }
-                            free(type_name);
+                            zfree(type_name);
                         }
                     }
-                    free(copy);
+                    zfree(copy);
                 }
             }
         }
@@ -1240,7 +1240,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
                 char *tstr = type_to_string(f->arg_types[i]);
                 offset += snprintf(detail + offset, sizeof(detail) - offset, "%s%s", tstr,
                                    (i < f->total_args - 1) ? ", " : "");
-                free(tstr);
+                zfree(tstr);
                 if (offset >= (int)sizeof(detail))
                 {
                     break;
@@ -1251,7 +1251,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
             {
                 snprintf(detail + offset, sizeof(detail) - offset, ") -> %s", ret_str);
             }
-            free(ret_str);
+            zfree(ret_str);
             cJSON_AddStringToObject(item, "detail", detail);
 
             // Snippet to jump inside parens
@@ -1547,7 +1547,7 @@ void lsp_references(const char *uri, int line, int col, int id)
                     cJSON_AddItemToArray(items, item);
 
                     ReferenceResult *next = curr->next;
-                    free(curr);
+                    zfree(curr);
                     curr = next;
                 }
             }
@@ -1652,7 +1652,7 @@ void lsp_signature_help(const char *uri, int line, int col, int id)
                             if (tstr)
                             {
                                 strncat(params, tstr, sizeof(params) - strlen(params) - 1);
-                                free(tstr);
+                                zfree(tstr);
                             }
                             else
                             {
@@ -1665,7 +1665,7 @@ void lsp_signature_help(const char *uri, int line, int col, int id)
                                  ret_str ? ret_str : "void");
                         if (ret_str)
                         {
-                            free(ret_str);
+                            zfree(ret_str);
                         }
 
                         cJSON_AddStringToObject(sig, "label", label);
@@ -1845,7 +1845,7 @@ void lsp_rename(const char *uri, int line, int col, const char *new_name, int id
         cJSON_AddItemToArray(edits, edit);
 
         ReferenceResult *next = cur->next;
-        free(cur);
+        zfree(cur);
         cur = next;
     }
 
@@ -1933,6 +1933,6 @@ void lsp_code_action(const char *uri, cJSON *diagnostics, int id)
     char *str = cJSON_PrintUnformatted(res_json);
     fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
     fflush(stdout);
-    free(str);
+    zfree(str);
     cJSON_Delete(res_json);
 }

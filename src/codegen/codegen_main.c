@@ -61,7 +61,7 @@ static int struct_depends_on(ParserContext *ctx, ASTNode *s1, const char *target
                 // Check for match
                 size_t len = strlen(target_name);
                 int is_match = (strncmp(mangled_clean, target_name, len) == 0);
-                free(mangled_clean);
+                zfree(mangled_clean);
 
                 if (is_match)
                 {
@@ -84,7 +84,7 @@ static int struct_depends_on(ParserContext *ctx, ASTNode *s1, const char *target
                 {
                     if (strchr(type_str, '*'))
                     {
-                        free(type_str);
+                        zfree(type_str);
                         variant = variant->next;
                         continue;
                     }
@@ -116,18 +116,18 @@ static int struct_depends_on(ParserContext *ctx, ASTNode *s1, const char *target
                     // Check for match
                     size_t len = strlen(target_name);
                     int is_match = (strncmp(mangled_clean, target_name, len) == 0);
-                    free(mangled_clean);
+                    zfree(mangled_clean);
 
                     if (is_match)
                     {
                         char next = clean[len];
                         if (next == 0 || next == '[' || isspace(next))
                         {
-                            free(type_str);
+                            zfree(type_str);
                             return 1;
                         }
                     }
-                    free(type_str);
+                    zfree(type_str);
                 }
             }
             variant = variant->next;
@@ -167,7 +167,7 @@ static void mark_module_visited(VisitedModules **visited, const char *path)
 static void free_visited_modules(VisitedModules *visited)
 {
     // NO-OP: We use arena allocation (xmalloc) for VisitedModules.
-    // Arena is reset globally, single nodes must not be free()d.
+    // Arena is reset globally, single nodes must not be zfree()d.
     (void)visited;
 }
 
@@ -375,9 +375,9 @@ static ASTNode *topo_sort_structs(ParserContext *ctx, ASTNode *head)
         result_tail->next = NULL;
     }
 
-    free(nodes);
-    free(emitted);
-    free(order);
+    zfree(nodes);
+    zfree(emitted);
+    zfree(order);
     return result;
 }
 
@@ -417,8 +417,8 @@ static void free_emitted_list(EmittedContent *list)
     while (list)
     {
         EmittedContent *next = list->next;
-        free(list->content);
-        free(list);
+        zfree(list->content);
+        zfree(list);
         list = next;
     }
 }
@@ -915,7 +915,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
                 ASTNode *def = find_struct_def(ctx, mangled);
                 if (!def && resolved)
                 {
-                    free(mangled);
+                    zfree(mangled);
                     mangled = replace_string_type(resolved);
                     def = find_struct_def(ctx, mangled);
                 }
@@ -941,12 +941,12 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
                         {
                             skip = 1;
                         }
-                        free(buf);
+                        zfree(buf);
                     }
                 }
                 if (mangled)
                 {
-                    free(mangled);
+                    zfree(mangled);
                 }
                 if (skip)
                 {
@@ -983,12 +983,12 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
                         {
                             skip = 1;
                         }
-                        free(buf);
+                        zfree(buf);
                     }
                 }
                 if (mangled)
                 {
-                    free(mangled);
+                    zfree(mangled);
                 }
                 if (skip)
                 {

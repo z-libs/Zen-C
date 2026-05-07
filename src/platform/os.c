@@ -1,5 +1,6 @@
 
 #include "os.h"
+#include "../zprep.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -216,7 +217,7 @@ void z_get_absolute_path(const char *path, char *buffer, size_t size)
                         {
                             strncpy(buffer, physical, size - 1);
                             buffer[size - 1] = '\0';
-                            free(real);
+                            zfree(real);
                             return;
                         }
                     }
@@ -226,7 +227,7 @@ void z_get_absolute_path(const char *path, char *buffer, size_t size)
                     {
                         strncpy(buffer, exe_dir, size - 1);
                         buffer[size - 1] = '\0';
-                        free(real);
+                        zfree(real);
                         return;
                     }
                 }
@@ -235,7 +236,7 @@ void z_get_absolute_path(const char *path, char *buffer, size_t size)
 #endif
         strncpy(buffer, real, size - 1);
         buffer[size - 1] = '\0';
-        free(real);
+        zfree(real);
     }
     else
     {
@@ -469,7 +470,7 @@ int z_run_command(char *const argv[])
     {
         char *q = quote_arg(argv[i]);
         cmd_len += strlen(q) + 1;
-        free(q);
+        zfree(q);
     }
 
     char *cmd_line = malloc(cmd_len + 1);
@@ -482,7 +483,7 @@ int z_run_command(char *const argv[])
         {
             strcat(cmd_line, " ");
         }
-        free(q);
+        zfree(q);
     }
 
     STARTUPINFOA si;
@@ -493,7 +494,7 @@ int z_run_command(char *const argv[])
 
     if (!CreateProcessA(NULL, cmd_line, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
     {
-        free(cmd_line);
+        zfree(cmd_line);
         return -1;
     }
 
@@ -503,7 +504,7 @@ int z_run_command(char *const argv[])
 
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    free(cmd_line);
+    zfree(cmd_line);
     return (int)exit_code;
 #else
     pid_t pid = fork();
@@ -553,7 +554,7 @@ int z_run_command_capture(char *const argv[], char *buffer, size_t size)
     {
         char *q = quote_arg(argv[i]);
         cmd_len += strlen(q) + 1;
-        free(q);
+        zfree(q);
     }
 
     char *cmd_line = malloc(cmd_len + 1);
@@ -566,7 +567,7 @@ int z_run_command_capture(char *const argv[], char *buffer, size_t size)
         {
             strcat(cmd_line, " ");
         }
-        free(q);
+        zfree(q);
     }
 
     STARTUPINFOA si;
@@ -582,7 +583,7 @@ int z_run_command_capture(char *const argv[], char *buffer, size_t size)
     {
         CloseHandle(hReadPipe);
         CloseHandle(hWritePipe);
-        free(cmd_line);
+        zfree(cmd_line);
         return -1;
     }
 
@@ -604,7 +605,7 @@ int z_run_command_capture(char *const argv[], char *buffer, size_t size)
     GetExitCodeProcess(pi.hProcess, &exit_code);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    free(cmd_line);
+    zfree(cmd_line);
     return (int)exit_code;
 #else
     int pipefd[2];

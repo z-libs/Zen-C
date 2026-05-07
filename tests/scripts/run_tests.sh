@@ -75,6 +75,7 @@ for arg in "$@"; do
     fi
     if [ "$arg" = "--check" ]; then
         USE_TYPECHECK=1
+        continue
     fi
     if [ "$arg" = "--cpp" ]; then
         USE_CPP=1
@@ -117,9 +118,9 @@ if [ ! -f "$ZC" ]; then
 fi
 
 if [ ${#TEST_FILES[@]} -gt 0 ]; then
-    TEST_LIST=$(printf "%s\n" "${TEST_FILES[@]}" | grep "$TEST_DIR"/)
+    mapfile -t TEST_LIST < <(printf "%s\n" "${TEST_FILES[@]}" | grep "$TEST_DIR"/)
 else
-    TEST_LIST=$(find "$TEST_DIR" -name "*.zc" -not -name "_*.zc" | sort)
+    mapfile -t TEST_LIST < <(find "$TEST_DIR" -name "*.zc" -not -name "_*.zc" | sort)
 fi
 
 if [ ${#TEST_LIST[@]} -eq 0 ]; then
@@ -178,11 +179,22 @@ run_test() {
     fi
 
     local tmp_out="test_out_parallel_${job_id}.out"
-    local cmd_str="$ZC run \"$test_file\" -o \"$tmp_out\" -w --emit-c \"${zc_args[@]}\""
+    local cmd_str="$ZC run \"$test_file\" -o \"$tmp_out\" -w --emit-c ${zc_args[*]}"
+
+    run_single() {
+        $ZC run "$test_file" -o "$tmp_out" -w --emit-c "${zc_args[@]}" 2>&1 | tr -d '\0'
+    }
+
     local output
-    output=$(set -o pipefail; $ZC run "$test_file" -o "$tmp_out" -w --emit-c "${zc_args[@]}" 2>&1 | tr -d '\0')
-    local exit_code=$?
-    
+    local exit_code
+    output=$(set -o pipefail; run_single); exit_code=$?
+
+    # Retry flaky failures (e.g., execvp race in parallel mode)
+    if [ $exit_code -eq 127 ] && [ "$JOBS" -gt 1 ]; then
+        sleep 0.2
+        output=$(set -o pipefail; run_single); exit_code=$?
+    fi
+
     if grep -q "// EXPECT: FAIL" "$test_file"; then
         if [ $exit_code -ne 0 ]; then
             echo "PASS_EXPECTED_FAIL" > "$result_file.status"
@@ -241,7 +253,7 @@ run_test() {
 }
 
 job_count=0
-while read -r test_file; do
+for test_file in "${TEST_LIST[@]}"; do
     [ -e "$test_file" ] || continue
     
     echo "$test_file" > "$RESULTS_DIR/$job_count.name"
@@ -255,9 +267,7 @@ while read -r test_file; do
         fi
     fi
     ((job_count++))
-done <<< "$TEST_LIST"
-
-wait
+done
 
 # Wait for any remaining background jobs
 wait

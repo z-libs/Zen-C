@@ -62,7 +62,7 @@ int lsp_main(int argc, char **argv)
         if (fread(body, 1, content_len, stdin) != (size_t)content_len)
         {
             fprintf(stderr, "zls: Error reading body\n");
-            free(body);
+            zfree(body);
             break;
         }
         body[content_len] = 0;
@@ -71,7 +71,7 @@ int lsp_main(int argc, char **argv)
         fprintf(stderr, "zls: Received: %s\n", body);
         handle_request(body);
 
-        free(body);
+        zfree(body);
     }
 
     return 0;

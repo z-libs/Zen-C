@@ -51,11 +51,11 @@ void move_state_free(MoveState *state)
     while (e)
     {
         MoveEntry *next = e->next;
-        free(e->symbol_name);
-        free(e);
+        zfree(e->symbol_name);
+        zfree(e);
         e = next;
     }
-    free(state);
+    zfree(state);
 }
 
 char *get_node_path(ASTNode *node, int depth)
@@ -79,7 +79,7 @@ char *get_node_path(ASTNode *node, int depth)
         {
             char buffer[MAX_ERROR_MSG_LEN];
             snprintf(buffer, sizeof(buffer), "%s.%s", target_path, node->member.field);
-            free(target_path);
+            zfree(target_path);
             path = xstrdup(buffer);
         }
     }
@@ -345,7 +345,7 @@ void check_use_validity(TypeChecker *tc, ASTNode *use_node)
     }
 
     check_path_validity(tc, path, use_node->token);
-    free(path);
+    zfree(path);
 }
 
 void mark_symbol_moved(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node)
@@ -376,7 +376,7 @@ void mark_symbol_moved(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node
             if (path)
             {
                 mark_moved_in_state(ctx->move_state, path, context_node->token);
-                free(path);
+                zfree(path);
             }
         }
     }
@@ -429,7 +429,7 @@ void mark_symbol_valid(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node
             mark_valid_in_state(ctx->move_state, path,
                                 context_node ? context_node->token
                                              : (sym ? sym->decl_token : (Token){0}));
-            free(path);
+            zfree(path);
         }
     }
 }

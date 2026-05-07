@@ -47,7 +47,7 @@ static void auto_import_std_slice(ParserContext *ctx)
     // Check if already imported by path
     if (is_file_imported(ctx, resolved))
     {
-        free(resolved);
+        zfree(resolved);
         return;
     }
     mark_file_imported(ctx, resolved);
@@ -56,7 +56,7 @@ static void auto_import_std_slice(ParserContext *ctx)
     char *src = load_file(resolved);
     if (!src)
     {
-        free(resolved);
+        zfree(resolved);
         return;
     }
 
@@ -71,7 +71,7 @@ static void auto_import_std_slice(ParserContext *ctx)
     parse_program_nodes(ctx, &i);
 
     g_current_filename = saved_fn;
-    free(resolved);
+    zfree(resolved);
 }
 
 static void check_assignment_condition(ASTNode *cond)
@@ -190,7 +190,7 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                     char *tmp = xmalloc(strlen(p_str) + suffix.len + 3);
                     // Join with underscore: Result::Ok -> Result__Ok
                     sprintf(tmp, "%s__%.*s", p_str, suffix.len, suffix.start);
-                    free(p_str);
+                    zfree(p_str);
                     p_str = tmp;
                 }
                 else if (pk.type == TOK_LANGLE)
@@ -233,8 +233,8 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                 // Build range pattern: "start..end" or "start..=end"
                 char *range_str = xmalloc(strlen(p_str) + strlen(end_str) + 5);
                 sprintf(range_str, "%s%s%s", p_str, is_inclusive ? "..=" : "..", end_str);
-                free(p_str);
-                free(end_str);
+                zfree(p_str);
+                zfree(end_str);
                 p_str = range_str;
             }
 
@@ -250,7 +250,7 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                 strcat(patterns_buf, "|");
             }
             strcat(patterns_buf, p_str);
-            free(p_str);
+            zfree(p_str);
             pattern_count++;
 
             // Check for OR continuation: ||, 'or', or comma (legacy)
@@ -425,7 +425,7 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                                     payload_node_field = tuple_def->strct.fields;
                                 }
                             }
-                            free(v_full);
+                            zfree(v_full);
                             break;
                         }
                         v = v->next;
@@ -1543,7 +1543,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                     slice_ref->resolved_type = xstrdup(slice_type);
                     obj_expr = slice_ref;
 
-                    free(elem_type_str);
+                    zfree(elem_type_str);
                 }
 
                 ASTNode *it_decl = ast_create(NODE_VAR_DECL);
@@ -1650,7 +1650,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                             sprintf(u_type, "MapEntry<%s>", inner);
                             if (old_u)
                             {
-                                free(old_u);
+                                zfree(old_u);
                             }
 
                             option_type_ptr = xmalloc(strlen(inner) + 128);
@@ -1675,7 +1675,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                             sprintf(option_type_ptr, "Option<%s>", u_type);
                         }
 
-                        free(inner);
+                        zfree(inner);
                     }
                 }
 
@@ -1702,7 +1702,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                             option_type_ptr = xmalloc(256);
                             snprintf(option_type_ptr, 256, "Option<%s>", elem);
 
-                            free(elem);
+                            zfree(elem);
                         }
                     }
                 }
@@ -2008,7 +2008,7 @@ void append_to_gen_fmt(char **gen, size_t *cap, const char *fmt, ...)
     va_end(args);
 
     append_to_gen(gen, cap, buf);
-    free(buf);
+    zfree(buf);
 }
 
 char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *content, int newline,
@@ -2098,8 +2098,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
             append_to_gen(&gen, &gen_cap, escaped);
             append_to_gen(&gen, &gen_cap, "\"); ");
 
-            free(escaped);
-            free(txt);
+            zfree(escaped);
+            zfree(txt);
         }
 
         if (*brace == 0)
@@ -2215,7 +2215,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                     }
                     else
                     {
-                        free(name);
+                        zfree(name);
                     }
                 }
                 prev = t;
@@ -2302,7 +2302,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                         to_string_is_ptr = is_ptr;
                         to_string_struct_name = xstrdup(struct_name);
                     }
-                    free(mangled);
+                    zfree(mangled);
                 }
             }
         }
@@ -2414,7 +2414,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                     char *inner_name = type_to_string(base->inner);
                     char slice_name[MAX_TYPE_NAME_LEN];
                     snprintf(slice_name, sizeof(slice_name), "Slice__%s", inner_name);
-                    free(inner_name);
+                    zfree(inner_name);
 
                     ASTNode *def = find_struct_def(ctx, slice_name);
                     if (def && def->type == NODE_STRUCT)
@@ -2587,7 +2587,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
                 if (t)
                 {
-                    free(inferred_type);
+                    zfree(inferred_type);
                 }
             }
 
@@ -2765,20 +2765,20 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
     next_segment:
         if (mangled_to_string)
         {
-            free(mangled_to_string);
+            zfree(mangled_to_string);
         }
         if (to_string_struct_name)
         {
-            free(to_string_struct_name);
+            zfree(to_string_struct_name);
         }
 
         if (rw_expr && used_codegen)
         {
-            free(rw_expr);
+            (free)(rw_expr);
         }
         else if (rw_expr && !used_codegen)
         {
-            free(rw_expr);
+            (free)(rw_expr);
         }
 
         cur = p + 1;
@@ -2809,7 +2809,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         append_to_gen(&gen, &gen_cap, "0; })");
     }
 
-    free(s);
+    zfree(s);
     ctx->silent_warnings = saved_silent;
     return gen;
 }
@@ -2873,7 +2873,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
         // Fallback for ZLS: Return a dummy plugin node to stay alive
         if (g_config.mode_lsp)
         {
-            free(body);
+            zfree(body);
             ASTNode *n = ast_create(NODE_PLUGIN);
             n->plugin_stmt.plugin_name = xstrdup(macro_name);
             n->plugin_stmt.body = xstrdup("");
@@ -2898,7 +2898,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
         // Fallback for ZLS: Return a dummy plugin node to stay alive
         if (g_config.mode_lsp)
         {
-            free(body);
+            zfree(body);
             ASTNode *n = ast_create(NODE_PLUGIN);
             n->plugin_stmt.plugin_name = xstrdup(plugin_name);
             n->plugin_stmt.body = xstrdup("");
@@ -2947,7 +2947,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
         return n;
     }
 
-    free(body);
+    zfree(body);
 
     // Create Raw Statement/Expression Node
     ASTNode *n = ast_create(NODE_RAW_STMT);
@@ -3041,11 +3041,11 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             // Append semicolon to Statement Expression to make it a valid statement
             char *stmt_code = xmalloc(strlen(code) + 2);
             sprintf(stmt_code, "%s;", code);
-            free(code);
+            zfree(code);
             n->raw_stmt.content = stmt_code;
             n->raw_stmt.used_symbols = used_syms;
             n->raw_stmt.used_symbol_count = used_count;
-            free(inner);
+            zfree(inner);
             return n;
         }
     }
@@ -3185,7 +3185,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             lexer_next(l); // consume identifier
 
             ASTNode *n = parse_macro_call(ctx, l, macro_name);
-            free(macro_name);
+            zfree(macro_name);
             return n;
         }
 
@@ -3227,7 +3227,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             ASTNode *raw_s = ast_create(NODE_RAW_STMT);
             raw_s->token = tk;
             raw_s->raw_stmt.content = normalize_raw_content(content);
-            free(content);
+            zfree(content);
             return raw_s;
         }
 
@@ -3637,7 +3637,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             int used_count = 0;
             char *code = process_printf_sugar(ctx, t, inner, is_ln, target, &used_syms, &used_count,
                                               1, (t.type == TOK_RAW_STRING), 0);
-            free(inner);
+            zfree(inner);
 
             if (lexer_peek(l).type == TOK_SEMICOLON)
             {
@@ -3649,7 +3649,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             // Append semicolon to Statement Expression to make it a valid statement
             char *stmt_code = xmalloc(strlen(code) + 2);
             sprintf(stmt_code, "%s;", code);
-            free(code);
+            zfree(code);
             n->raw_stmt.content = stmt_code;
             n->raw_stmt.used_symbols = used_syms;
             n->raw_stmt.used_symbol_count = used_count;
@@ -3977,7 +3977,7 @@ void try_parse_c_function_decl(ParserContext *ctx, const char *line)
     name[name_len] = '\0';
 
     register_extern_symbol(ctx, name);
-    free(name);
+    zfree(name);
 }
 
 /**
@@ -4061,7 +4061,7 @@ void try_parse_c_struct_decl(ParserContext *ctx, const char *line)
                 name[name_len] = '\0';
                 register_type_alias(ctx, name, name, NULL, 1, NULL, (Token){0}, 0);
                 register_extern_symbol(ctx, name);
-                free(name);
+                zfree(name);
             }
         }
         return;
@@ -4105,13 +4105,13 @@ void try_parse_c_struct_decl(ParserContext *ctx, const char *line)
         sprintf(c_type, "%s %s", c_keyword, tag_name);
         register_type_alias(ctx, tag_name, c_type, NULL, 1, NULL, (Token){0}, 0);
         register_extern_symbol(ctx, tag_name);
-        free(c_type);
+        zfree(c_type);
     }
 
     // If typedef: also check for alias after '}'
     // (handled by the '}' branch on subsequent lines)
 
-    free(tag_name);
+    zfree(tag_name);
 }
 
 /**
@@ -4252,7 +4252,7 @@ void scan_c_header_contents(ParserContext *ctx, const char *path, int depth)
                 try_parse_c_function_decl(ctx, line_buf);
                 try_parse_c_struct_decl(ctx, line_buf);
             }
-            free(line_buf);
+            zfree(line_buf);
         }
 
         ptr = line_end;
@@ -4261,7 +4261,7 @@ void scan_c_header_contents(ParserContext *ctx, const char *path, int depth)
             ptr++;
         }
     }
-    free(src);
+    zfree(src);
 }
 
 ASTNode *parse_include(ParserContext *ctx, Lexer *l)
@@ -4339,10 +4339,10 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
                 *last_slash = 0;
                 char resolved_path[MAX_PATH_LEN];
                 snprintf(resolved_path, sizeof(resolved_path), "%s/%s", current_dir, plugin_name);
-                free(plugin_name);
+                zfree(plugin_name);
                 plugin_name = xstrdup(resolved_path);
             }
-            free(current_dir);
+            zfree(current_dir);
         }
 
         // Check for optional "as alias"
@@ -4460,11 +4460,11 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         else
         {
             zpanic_at(t, "Could not find module: %s", fn);
-            free(fn);
+            zfree(fn);
             return NULL; // In fault-tolerant mode (LSP), zpanic_at returns.
         }
     }
-    free(fn);
+    zfree(fn);
     fn = resolved;
 
     // In fault-tolerant LSP mode zpanic_at reports the diagnostic and returns.
@@ -4478,7 +4478,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
 
     if (is_file_imported(ctx, fn))
     {
-        free(fn);
+        zfree(fn);
         return NULL;
     }
     mark_file_imported(ctx, fn);
@@ -4596,7 +4596,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     // Restore previous module context
     if (temp_module_prefix)
     {
-        free(temp_module_prefix);
+        zfree(temp_module_prefix);
         ctx->current_module_prefix = prev_module_prefix;
     }
 
@@ -4605,26 +4605,26 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     {
         for (int k = 0; k < symbol_count; k++)
         {
-            free(symbols[k]);
+            zfree(symbols[k]);
             if (aliases[k])
             {
-                free(aliases[k]);
+                zfree(aliases[k]);
             }
         }
     }
 
     if (alias)
     {
-        free(alias);
+        zfree(alias);
     }
 
     if (module_base_name)
     { // This was only used for selective import
       // registration, not for ctx->current_module_prefix
-        free(module_base_name);
+        zfree(module_base_name);
     }
 
-    // Do not free(fn) here, because the Lexer tokens generated during
+    // Do not zfree(fn) here, because the Lexer tokens generated during
     // parse_program_nodes hold a direct pointer (t.file) to this string!
 
     import_node->token = t;
@@ -4685,7 +4685,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     ASTNode *block = parse_block(&cctx, &cl);
     ASTNode *nodes = block ? block->block.statements : NULL;
 
-    free(wrapped_code);
+    zfree(wrapped_code);
 
     char filename[64];
     sprintf(filename, "_tmp_comptime_%d.c", rand());
@@ -4856,7 +4856,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     remove(filename);
     remove(bin);
     remove(out_file);
-    free(code);
+    zfree(code);
 
     return output_src;
 }
