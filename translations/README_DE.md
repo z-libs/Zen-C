@@ -120,6 +120,17 @@ cd zenc
 make clean # Entferne alte Build-Dateien
 make
 sudo make install
+
+#### Development Targets
+
+```bash
+make format       # Auto-format all source files with clang-format
+make format-check # Verify formatting without changing files
+make lint         # Run format-check + shellcheck on test scripts
+make bench        # Run performance benchmarks
+make WERROR=1     # Build with -Werror (warnings as errors)
+```
+
 ```
 
 ### Windows
@@ -234,31 +245,46 @@ Zen C enthält eine Standardbibliothek (`std`), die grundlegende Funktionalität
 
 ### 18. Unit-Testing-Framework
 
-Zen C bietet ein eingebautes Test-Framework, um Unit-Tests direkt in den Quellcode-Dateien zu schreiben, mittels des `test`-Schlüsselworts.
+Zen C bietet ein eingebautes Test-Framework mit **Test-Isolation**, **benannter Ausgabe** und **nicht-fatalen Assertions**.
 
 #### Syntax
 Ein `test`-Block enthält einen beschreibenden Namen und einen Codeblock, der ausgeführt wird. Es wird keine `main`-Funktion benötigt.
 
 ```zc
-test "unittest1" {
-    "Dies ist ein Unit-Test";
-
+test "beschreibender Name" {
     let a = 3;
-    assert(a > 0, "a sollte eine positive Zahl sein");
-
-    "unittest1 erfolgreich.";
+    assert(a > 0, "a sollte positiv sein");
 }
 ```
 
 #### Tests ausführen
-Um alle Tests einer Datei auszuführen, nutze den `run`-Befehl. Der Compiler erkennt automatisch alle top-level `test`-Blöcke.
-
 ```bash
 zc run my_file.zc
 ```
 
+Die Ausgabe zeigt jeden Test mit Namen:
+```
+  TEST: beschreibender Name ... OK
+  TEST: weiterer Test ... FEHLGESCHLAGEN
+
+1 test(s) failed
+```
+
 #### Assertions
-Verwende die eingebaute Funktion `assert(condition, message)` zur Überprüfung von Erwartungen. Wenn die Bedingung falsch ist, schlägt der Test fehl und die Nachricht wird ausgegeben.
+| Funktion | Verhalten |
+|:---|:---|
+| `assert(cond, msg)` | Zeichnet Fehler auf, fährt mit nächstem Test fort |
+| `expect(cond, msg)` | Nicht-fatal — zeichnet Fehler auf, fährt im selben Test fort |
+
+```zc
+test "beispiel" {
+    expect(ergebnis != null, "ergebnis sollte nicht null sein");
+    expect(ergebnis.code == 200, "status sollte 200 sein");
+}
+```
+
+#### Exit-Code
+Das Binärprogramm beendet sich mit der Anzahl fehlgeschlagener Tests (0 = alle bestanden).
 
 ---
 

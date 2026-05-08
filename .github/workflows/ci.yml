@@ -141,6 +141,10 @@ jobs:
       with:
         version: master
 
+    - name: Install ccache
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install -y ccache
+
     - name: Install LibTCC (Linux)
       if: runner.os == 'Linux' && !matrix.install_tcc
       run: sudo apt-get update && sudo apt-get install -y libtcc-dev
@@ -168,12 +172,17 @@ jobs:
       shell: bash
       run: |
         export ZC_HAS_JIT=${{ matrix.zc_has_jit }}
+        export PATH="/usr/lib/ccache:$PATH"
+        WERROR_FLAG=""
+        if [ "${{ matrix.cc }}" = "gcc" ] && [ "${{ matrix.name }}" = "Linux GCC" ]; then
+          WERROR_FLAG="WERROR=1"
+        fi
         if [ "${{ matrix.cc }}" = "zig cc" ]; then
-           make ZC_HAS_JIT=$ZC_HAS_JIT
+           make $WERROR_FLAG ZC_HAS_JIT=$ZC_HAS_JIT
         elif [ "${{ runner.os }}" = "Windows" ]; then
            ./build.bat
         else
-           make CC="${{ matrix.cc }}" ZC_HAS_JIT=$ZC_HAS_JIT
+           make CC="${{ matrix.cc }}" $WERROR_FLAG ZC_HAS_JIT=$ZC_HAS_JIT
         fi
 
     - name: Run Tests
@@ -266,11 +275,19 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y zip wget
 
+    - name: Cache cosmocc
+      uses: actions/cache@v4
+      with:
+        path: $HOME/cosmocc
+        key: cosmocc-${{ hashFiles('**/ci.yml') }}
+
     - name: Setup cosmocc
       run: |
-        wget https://cosmo.zip/pub/cosmocc/cosmocc.zip
-        mkdir -p $HOME/cosmocc
-        unzip cosmocc.zip -d $HOME/cosmocc
+        if [ ! -d "$HOME/cosmocc/bin" ]; then
+          wget https://cosmo.zip/pub/cosmocc/cosmocc.zip
+          mkdir -p $HOME/cosmocc
+          unzip cosmocc.zip -d $HOME/cosmocc
+        fi
         echo "$HOME/cosmocc/bin" >> $GITHUB_PATH
 
     - name: Build APE

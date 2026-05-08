@@ -120,7 +120,25 @@ cd zenc
 make clean # 移除舊的構建文件
 make
 sudo make install
+
+#### Development Targets
+
+```bash
+make format       # Auto-format all source files with clang-format
+make format-check # Verify formatting without changing files
+make lint         # Run format-check + shellcheck on test scripts
+make bench        # Run performance benchmarks
+make WERROR=1     # Build with -Werror (warnings as errors)
 ```
+
+```
+
+### Unit Testing Framework
+
+Zen C features a built-in testing framework with **per-test isolation**, **named output**, and **non-fatal assertions**.
+
+For full details, see the [English README](../README.md#unit-testing-framework).
+
 
 ### Windows
 

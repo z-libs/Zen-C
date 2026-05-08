@@ -32,7 +32,10 @@ We use GitHub Issues and Pull Requests to track bugs and features. To help us ma
 
 ### Code Style
 - Follow the existing C style found in the codebase. Consistency is key.
-- You can use the provided `.clang-format` file to format your code.
+- Use `make format` to auto-format all source files with the provided `.clang-format`.
+- Use `make lint` to verify formatting and check shell scripts.
+- An `.editorconfig` file is provided for consistent editor settings (4-space indent, UTF-8, LF endings).
+- **Pre-commit hooks**: Install with `pip install pre-commit && pre-commit install` to automatically check formatting, trailing whitespace, and shell scripts before each commit.
 - Keep code clean and readable.
 
 ### Project Structure
@@ -46,38 +49,39 @@ If you are looking to extend the compiler, here is a quick map of the codebase:
 The test suite is your best friend when developing. Please ensure all tests pass before submitting a PR.
 
 ### Run All Tests
-To run the full test suite using the default compiler (usually GCC):
 ```bash
 make test
 ```
 
 ### Run Specific Test
-To run a single test file to save time during development, you can either run it directly:
 ```bash
 ./zc run tests/language/control_flow/test_match.zc
 ```
 
-Or you can run the test suite selectively:
+Or via the test runner:
 ```bash
 make test only="tests/language/control_flow/test_match.zc"
 ```
 
 ### Test with Different Backends
-Zen C supports multiple C compilers as backends. You can run tests against them specifically:
-
-**Clang**:
 ```bash
-./tests/run_tests.sh --cc clang
+./tests/scripts/run_tests.sh --cc clang    # Clang
+./tests/scripts/run_tests.sh --cc zig      # Zig cc
+./tests/scripts/run_tests.sh --cc tcc      # Tiny C Compiler
 ```
 
-**Zig (cc)**:
+### Specialized Test Suites
 ```bash
-./tests/run_tests.sh --cc zig
+make test-lsp      # LSP integration tests
+make test-tcc      # Full suite with TCC backend
+make test-misra    # MISRA C compliance checks
+make test-asan     # AddressSanitizer / UBSan tests
 ```
 
-**TCC (Tiny C Compiler)**:
+### Warnings as Errors
+To build with `-Werror` (recommended before submitting a PR):
 ```bash
-./tests/run_tests.sh --cc tcc
+make clean && make WERROR=1 -j$(nproc)
 ```
 
 ## Pull Request Process

@@ -123,6 +123,16 @@ make
 sudo make install
 ```
 
+#### Development Targets
+
+```bash
+make format       # Auto-format all source files with clang-format
+make format-check # Verify formatting without changing files
+make lint         # Run format-check + shellcheck on test scripts
+make bench        # Run performance benchmarks
+make WERROR=1     # Build with -Werror (warnings as errors)
+```
+
 ### Windows
 
 Zen C has full native support for Windows (x86_64). You can build using the provided batch script with GCC (MinGW):
@@ -235,31 +245,49 @@ Zen C includes a standard library (`std`) covering essential functionality.
 
 ### 18. Unit Testing Framework
 
-Zen C features a built-in testing framework that allows you to write unit tests directly in your source files using the `test` keyword.
+Zen C features a built-in testing framework with **per-test isolation**, **named output**, and **non-fatal assertions**.
 
 #### Syntax
 A `test` block contains a descriptive name and a body of code to execute. Tests do not require a `main` function to run.
 
 ```zc
-test "unittest1" {
-    "This is an unittest";
-
+test "descriptive name" {
     let a = 3;
-    assert(a > 0, "a should be a positive integer");
-
-    "unittest1 passed.";
+    assert(a > 0, "a should be positive");
 }
 ```
 
 #### Running Tests
-To run all tests in a file, use the `run` command. The compiler will automatically detect and execute all top-level `test` blocks.
-
 ```bash
 zc run my_file.zc
 ```
 
+Output shows each test by name:
+```
+  TEST: descriptive name ... OK
+  TEST: another test ... FAIL
+
+1 test(s) failed
+```
+
 #### Assertions
-Use the built-in `assert(condition, message)` function to verify expectations. If the condition is false, the test will fail and print the provided message.
+| Function | Behavior |
+|:---|:---|
+| `assert(cond, msg)` | Records failure, continues to next test (no longer aborts) |
+| `expect(cond, msg)` | Non-fatal — records failure but continues within the same test |
+
+Use `assert` for critical checks that should stop the current test, and `expect` when you want to verify multiple conditions without short-circuiting:
+
+```zc
+test "example" {
+    expect(result != null, "result should not be null");
+    expect(result.code == 200, "status should be 200");
+    // both run even if the first fails
+}
+```
+
+#### Exit Code
+The binary exits with the number of failed tests (0 = all passed).
 
 ---
 
