@@ -1,5 +1,23 @@
 # Zen C TODO
 
+## Recently Completed
+
+### Test Framework Modernization
+- [x] Per-test failure isolation: `__zenc_assert` no longer calls `exit(1)` — uses counter instead
+- [x] Named per-test output: each test prints name + OK/FAIL to stderr
+- [x] `_z_run_tests()` returns failure count; `main()` uses it as exit code
+- [x] Added `expect` keyword — non-fatal assertion, continues after failure
+- [x] Multiple assertions in one test are all reported (not just the first)
+
+### Emitter Refactoring
+- [x] Fix `realloc` NULL-return bug, `emitter_vprintf`, `emitter_putc`, auto-indent, push/pop API
+- [x] Migrate ~84 hardcoded `"    "` in codegen to auto-indent
+- [x] Comptime temp file collision fix (`rand()` → `getpid()` + counter)
+
+### Type Checker Tests
+- [x] 13 new test files (from 47 lines to 450+ lines): type compat, operators, calls,
+      returns, move, struct init, vardecl, traits, lifetime, match, cast, const-fold, misc
+
 ## Codegen
 - [ ] Migrate remaining control instructions in codegen_stmt.c to jump tables (break, continue, return, asm, loops).
 - [ ] Split codegen_stmt.c (2,548 lines) and codegen_decl.c (1,900+ lines) further by concern.
@@ -26,6 +44,9 @@
       function calls, returns, move semantics, struct init, variable decl, traits, lifetime,
       match, cast, const-folding, lambdas, loops). Raised from 47 lines to 450+ lines.
 - [ ] Add dedicated move checker tests (currently zero dedicated tests).
+- [ ] Allow `expect` in comptime blocks for compile-time test assertions.
+- [ ] Add test filtering via `ZC_TEST_FILTER` environment variable.
+- [ ] Add `expect_eq`/`expect_ne`/`expect_approx_eq` helpers to standard library.
 
 ## Memory
 - [ ] Fix LSP buffer leak: lsp_main.c arena-allocates JSON body then calls `zfree` (no-op on arena).

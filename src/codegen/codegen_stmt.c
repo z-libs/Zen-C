@@ -626,6 +626,21 @@ static void handle_node_assert(ParserContext *ctx, ASTNode *node)
     EMIT(ctx, ");\n");
 }
 
+static void handle_node_expect(ParserContext *ctx, ASTNode *node)
+{
+    EMIT(ctx, "__zenc_expect(");
+    codegen_expression(ctx, node->assert_stmt.condition);
+    if (node->assert_stmt.message)
+    {
+        EMIT(ctx, ", %s", node->assert_stmt.message);
+    }
+    else
+    {
+        EMIT(ctx, ", \"Expectation failed\"");
+    }
+    EMIT(ctx, ");\n");
+}
+
 static void handle_node_defer(ParserContext *ctx, ASTNode *node)
 {
     (void)ctx;
@@ -1607,6 +1622,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         [NODE_AST_COMMENT] = handle_node_ast_comment,
         [NODE_MATCH] = handle_node_match,
         [NODE_ASSERT] = handle_node_assert,
+        [NODE_EXPECT] = handle_node_expect,
         [NODE_DEFER] = handle_node_defer,
         [NODE_BLOCK] = handle_node_block,
         [NODE_IMPL] = handle_node_impl,

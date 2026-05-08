@@ -161,6 +161,7 @@ typedef enum
     NODE_RAW_STMT,           ///< Raw statement (transpiler bypass).
     NODE_TEST,               ///< Test block.
     NODE_ASSERT,             ///< Assert statement.
+    NODE_EXPECT,             ///< Expect statement (non-fatal assert).
     NODE_DEFER,              ///< Defer statement.
     NODE_DESTRUCT_VAR,       ///< Destructuring declaration.
     NODE_TERNARY,            ///< Ternary expression (?:).

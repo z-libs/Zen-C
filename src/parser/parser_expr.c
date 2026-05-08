@@ -928,6 +928,7 @@ static void find_var_refs(ASTNode *node, char ***refs, int *ref_count)
         find_var_refs(node->ternary.true_expr, refs, ref_count);
         find_var_refs(node->ternary.false_expr, refs, ref_count);
         break;
+    case NODE_EXPECT:
     case NODE_ASSERT:
         find_var_refs(node->assert_stmt.condition, refs, ref_count);
         break;

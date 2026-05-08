@@ -1022,7 +1022,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
 
         if (!has_user_main && test_count > 0)
         {
-            EMIT(ctx, "\nint main() { _z_run_tests(); return 0; }\n");
+            EMIT(ctx, "\nint main() { return _z_run_tests(); }\n");
         }
 
         if (g_config.use_cpp)

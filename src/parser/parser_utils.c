@@ -3650,6 +3650,7 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         new_node->slice.start = copy_ast_replacing(n->slice.start, p, c, os, ns);
         new_node->slice.end = copy_ast_replacing(n->slice.end, p, c, os, ns);
         break;
+    case NODE_EXPECT:
     case NODE_ASSERT:
         new_node->assert_stmt.condition =
             copy_ast_replacing(n->assert_stmt.condition, p, c, os, ns);
@@ -4118,6 +4119,7 @@ static void trigger_instantiations(ParserContext *ctx, ASTNode *node)
         trigger_instantiations(ctx, node->match_case.guard);
         trigger_instantiations(ctx, node->match_case.body);
         break;
+    case NODE_EXPECT:
     case NODE_ASSERT:
         trigger_instantiations(ctx, node->assert_stmt.condition);
         break;

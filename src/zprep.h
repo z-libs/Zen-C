@@ -144,6 +144,7 @@ typedef enum
     TOK_PIPE,       ///< |> (pipe operator).
     TOK_TEST,       ///< 'test' keyword.
     TOK_ASSERT,     ///< 'assert' keyword.
+    TOK_EXPECT,     ///< 'expect' keyword.
     TOK_SIZEOF,     ///< 'sizeof' keyword.
     TOK_DEF,        ///< 'def' keyword.
     TOK_DEFER,      ///< 'defer' keyword.

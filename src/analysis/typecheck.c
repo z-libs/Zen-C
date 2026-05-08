@@ -3445,8 +3445,9 @@ static void check_node(TypeChecker *tc, ASTNode *node, int depth)
         }
         check_node(tc, node->unless_stmt.body, depth + 1);
         break;
+    case NODE_EXPECT:
     case NODE_ASSERT:
-        // Check assert condition
+        // Check assert/expect condition
         {
             int old_stmt_ctx = tc->is_stmt_context;
             tc->is_stmt_context = 0;
@@ -3464,10 +3465,10 @@ static void check_node(TypeChecker *tc, ASTNode *node, int depth)
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
                      cond_type->kind != TYPE_POINTER && cond_type->kind != TYPE_STRING)
             {
-                const char *hints[] = {"Assert conditions must be boolean, integer, or pointer",
-                                       NULL};
+                const char *hints[] = {
+                    "Assert/expect conditions must be boolean, integer, or pointer", NULL};
                 tc_error_with_hints(tc, node->assert_stmt.condition->token,
-                                    "Assert condition must be a truthy type", hints);
+                                    "Assert/expect condition must be a truthy type", hints);
             }
         }
         break;

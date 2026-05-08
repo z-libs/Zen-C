@@ -237,6 +237,10 @@ Token lexer_next(Lexer *l)
         {
             return (Token){TOK_ASSERT, s, 6, start_line, start_col, g_current_filename};
         }
+        if (len == 6 && strncmp(s, "expect", 6) == 0)
+        {
+            return (Token){TOK_EXPECT, s, 6, start_line, start_col, g_current_filename};
+        }
         if (len == 6 && strncmp(s, "sizeof", 6) == 0)
         {
             return (Token){TOK_SIZEOF, s, 6, start_line, start_col, g_current_filename};

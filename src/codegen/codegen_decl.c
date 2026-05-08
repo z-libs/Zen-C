@@ -190,8 +190,12 @@ void emit_preamble(ParserContext *ctx)
              "static void _z_autofree_impl(void *p) { void **pp = (void**)p; if(*pp) { "
              "z_free(*pp); *pp = NULL; } }\n");
         EMIT(ctx, "%s",
-             "#define __zenc_assert(cond, ...) if (!(cond)) { fprintf(stderr, \"\\\"Assertion "
-             "failed: \\\" \" __VA_ARGS__); exit(1); }\n");
+             "#define __zenc_assert(cond, ...) if (!(cond)) { fprintf(stderr, \"  Assertion "
+             "failed: \" __VA_ARGS__); fprintf(stderr, \"\\n\"); _zc_test_failures++; }\n");
+        EMIT(ctx, "%s",
+             "#define __zenc_expect(cond, ...) if (!(cond)) { fprintf(stderr, \"  Expectation "
+             "failed: \" __VA_ARGS__); fprintf(stderr, \"\\n\"); _zc_test_failures++; }\n");
+        EMIT(ctx, "int _zc_test_failures = 0;\n");
 
         // C++ compatible readln helper
         if (g_config.use_cpp)
@@ -1889,7 +1893,9 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
             {
                 EMIT(ctx, "#if %s\n", cur->cfg_condition);
             }
-            EMIT(ctx, "static void _z_test_%d() {\n", test_count);
+            EMIT(ctx, "static int _z_test_%d() {\n", test_count);
+            EMIT(ctx, "fprintf(stderr, \"  TEST: %s ... \");\n", cur->test_stmt.name);
+            EMIT(ctx, "int _zc_before = _zc_test_failures;\n");
             int saved = ctx->cg.defer_count;
             char *saved_ret = ctx->cg.current_func_ret_type;
             ctx->cg.current_func_ret_type = "void";
@@ -1902,6 +1908,9 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
                 codegen_node_single(ctx, ctx->cg.defer_stack[i]);
             }
             ctx->cg.defer_count = saved;
+            EMIT(ctx, "if (_zc_before == _zc_test_failures) { fprintf(stderr, \"OK\\n\"); } "
+                      "else { fprintf(stderr, \"FAIL\\n\"); }\n");
+            EMIT(ctx, "return _zc_test_failures - _zc_before;\n");
             EMIT(ctx, "}\n");
             if (cur->cfg_condition)
             {
@@ -1913,8 +1922,9 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
     }
     if (test_count > 0)
     {
-        EMIT(ctx, "\nvoid _z_run_tests() {\n");
+        EMIT(ctx, "\nint _z_run_tests() {\n");
         emitter_indent(&ctx->emitter);
+        EMIT(ctx, "int _zc_total = 0;\n");
         cur = node;
         int i = 0;
         while (cur)
@@ -1925,7 +1935,7 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
                 {
                     EMIT(ctx, "#if %s\n", cur->cfg_condition);
                 }
-                EMIT(ctx, "_z_test_%d();\n", i);
+                EMIT(ctx, "_zc_total += _z_test_%d();\n", i);
                 if (cur->cfg_condition)
                 {
                     EMIT(ctx, "#endif\n");
@@ -1934,6 +1944,8 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
             }
             cur = cur->next;
         }
+        EMIT(ctx, "fprintf(stderr, \"\\n%%d test(s) failed\\n\", _zc_total);\n");
+        EMIT(ctx, "return _zc_total;\n");
         emitter_dedent(&ctx->emitter);
         EMIT(ctx, "}\n\n");
     }

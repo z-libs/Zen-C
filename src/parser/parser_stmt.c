@@ -16,6 +16,7 @@
 
 char *curr_func_ret = NULL;
 char *run_comptime_block(ParserContext *ctx, Lexer *l);
+ASTNode *parse_expect(ParserContext *ctx, Lexer *l);
 extern char *g_current_filename;
 
 /**
@@ -526,6 +527,11 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
         if (pk.type == TOK_LBRACE)
         {
             body = parse_block(ctx, l);
+        }
+        else if (pk.type == TOK_EXPECT ||
+                 (pk.type == TOK_IDENT && strncmp(pk.start, "expect", 6) == 0))
+        {
+            body = parse_expect(ctx, l);
         }
         else if (pk.type == TOK_ASSERT ||
                  (pk.type == TOK_IDENT && strncmp(pk.start, "assert", 6) == 0))
@@ -1110,6 +1116,46 @@ ASTNode *parse_assert(ParserContext *ctx, Lexer *l)
     }
 
     ASTNode *n = ast_create(NODE_ASSERT);
+    n->token = tk;
+    n->assert_stmt.condition = cond;
+    n->assert_stmt.message = msg;
+    return n;
+}
+
+ASTNode *parse_expect(ParserContext *ctx, Lexer *l)
+{
+    Token tk = lexer_next(l); // expect
+    if (lexer_peek(l).type == TOK_LPAREN)
+    {
+        lexer_next(l); // optional paren
+    }
+
+    ASTNode *cond = parse_expression(ctx, l);
+
+    char *msg = NULL;
+    if (lexer_peek(l).type == TOK_COMMA)
+    {
+        lexer_next(l);
+        Token st = lexer_next(l);
+        if (st.type != TOK_STRING)
+        {
+            zpanic_at(st, "Expected message string");
+        }
+        msg = xmalloc(st.len + 1);
+        strncpy(msg, st.start, st.len);
+        msg[st.len] = 0;
+    }
+
+    if (lexer_peek(l).type == TOK_RPAREN)
+    {
+        lexer_next(l);
+    }
+    if (lexer_peek(l).type == TOK_SEMICOLON)
+    {
+        lexer_next(l);
+    }
+
+    ASTNode *n = ast_create(NODE_EXPECT);
     n->token = tk;
     n->assert_stmt.condition = cond;
     n->assert_stmt.message = msg;
@@ -3144,6 +3190,10 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
         ASTNode *b = ast_create(NODE_BLOCK);
         b->block.statements = head;
         return b;
+    }
+    if (tk.type == TOK_EXPECT)
+    {
+        return parse_expect(ctx, l);
     }
     if (tk.type == TOK_ASSERT)
     {
