@@ -7984,12 +7984,19 @@ ASTNode *parse_tuple_expression(ParserContext *ctx, Lexer *l, const char *type_n
     {
         char sig[MAX_ERROR_MSG_LEN];
         sig[0] = 0;
+        const char *type_names[256];
+        int type_count = 0;
         ASTNode *curr = head;
         int i = 0;
         while (curr)
         {
             char *it = infer_type(ctx, curr);
             const char *type_name_to_append = it ? it : "int";
+
+            if (type_count < 256)
+            {
+                type_names[type_count++] = type_name_to_append;
+            }
 
             if (i > 0)
             {
@@ -8007,7 +8014,7 @@ ASTNode *parse_tuple_expression(ParserContext *ctx, Lexer *l, const char *type_n
             curr = curr->next;
             i++;
         }
-        register_tuple(ctx, sig);
+        register_tuple_with_types(ctx, sig, type_names, type_count);
         char tuple_name[1024 + 16];
         char *clean_sig = sanitize_mangled_name(sig);
         snprintf(tuple_name, sizeof(tuple_name), "Tuple__%s", clean_sig);

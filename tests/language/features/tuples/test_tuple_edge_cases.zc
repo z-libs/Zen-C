@@ -1,0 +1,38 @@
+
+// Tuple edge cases: large arity, nested destructuring, etc.
+
+fn large_tuple() -> (int, int, int, int, int, int, int, int) {
+    return (1, 2, 3, 4, 5, 6, 7, 8);
+}
+
+test "8-tuple" {
+    let t = large_tuple();
+    assert(t.0 == 1 && t.7 == 8, "8-tuple first/last");
+}
+
+fn ten_tuple() -> (int, int, int, int, int, int, int, int, int, int) {
+    return (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+}
+
+test "10-tuple" {
+    let t = ten_tuple();
+    assert(t.0 == 1 && t.9 == 10, "10-tuple first/last");
+}
+
+test "nested destructure" {
+    let t = ((1, 2), (3, 4));
+    let (a, b) = t;
+    assert(a.0 == 1 && a.1 == 2, "nested destructure a");
+    assert(b.0 == 3 && b.1 == 4, "nested destructure b");
+}
+
+test "tuple in boolean context" {
+    let t = (1, 2, 3);
+    assert(t.0 < t.1 && t.1 < t.2, "tuple element comparison");
+}
+
+test "tuple with string indexing" {
+    let t = ("first", "second", "third");
+    assert(t.0 == "first", "string tuple 0");
+    assert(t.2 == "third", "string tuple 2");
+}

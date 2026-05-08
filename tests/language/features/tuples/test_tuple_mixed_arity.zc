@@ -1,0 +1,29 @@
+
+// Mixed arity: return + destructuring with 3-tuples
+
+fn stats(data: int, data2: int, data3: int) -> (int, int, int) {
+    let sum = data + data2 + data3;
+    let avg = sum / 3;
+    let mx = data;
+    if data2 > mx { mx = data2; }
+    if data3 > mx { mx = data3; }
+    return (sum, avg, mx);
+}
+
+test "3-tuple destructuring" {
+    let (s, a, m) = stats(10, 20, 30);
+    assert(s == 60, "sum");
+    assert(a == 20, "avg");
+}
+
+test "3-tuple destructuring typed" {
+    let (s: int, a: int, m: int) = stats(5, 10, 15);
+    assert(s == 30, "typed sum");
+    assert(a == 10, "typed avg");
+}
+
+test "3-tuple partial access" {
+    let t = stats(1, 2, 3);
+    assert(t.0 == 6, "partial sum");
+    assert(t.2 == 3, "partial max");
+}

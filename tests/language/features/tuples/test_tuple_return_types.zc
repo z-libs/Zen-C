@@ -1,0 +1,38 @@
+
+// Tuple return types for various arities
+
+fn pair() -> (int, int) {
+    return (1, 2);
+}
+
+fn triple() -> (int, int, int) {
+    return (1, 2, 3);
+}
+
+fn quad() -> (int, int, int, int) {
+    return (1, 2, 3, 4);
+}
+
+fn quint() -> (int, int, int, int, int) {
+    return (1, 2, 3, 4, 5);
+}
+
+test "pair return" {
+    let t = pair();
+    assert(t.0 == 1 && t.1 == 2, "pair");
+}
+
+test "triple return" {
+    let t = triple();
+    assert(t.0 == 1 && t.1 == 2 && t.2 == 3, "triple");
+}
+
+test "quad return" {
+    let t = quad();
+    assert(t.0 == 1 && t.1 == 2 && t.2 == 3 && t.3 == 4, "quad");
+}
+
+test "quint return" {
+    let t = quint();
+    assert(t.0 == 1 && t.4 == 5, "quint first/last");
+}

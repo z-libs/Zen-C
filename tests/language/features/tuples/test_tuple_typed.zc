@@ -1,0 +1,24 @@
+
+// Explicit type annotations for tuples
+
+test "typed 3-tuple" {
+    let t: (int, string, f64) = (1, "two", 3.0);
+    assert(t.0 == 1, "typed 0");
+    assert(t.1 == "two", "typed 1");
+}
+
+test "typed 4-tuple" {
+    let t: (int, int, string, bool) = (10, 20, "hello", true);
+    assert(t.0 == 10, "typed 4 0");
+    assert(t.2 == "hello", "typed 4 2");
+    assert(t.3 == true, "typed 4 3");
+}
+
+fn typed_return() -> (int, int, int) {
+    return (5, 10, 15);
+}
+
+test "typed fn return" {
+    let t: (int, int, int) = typed_return();
+    assert(t.0 == 5 && t.1 == 10 && t.2 == 15, "typed fn return");
+}

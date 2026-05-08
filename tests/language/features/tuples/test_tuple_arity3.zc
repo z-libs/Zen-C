@@ -1,0 +1,25 @@
+
+// 3-tuple tests: literal, field access, return from fn
+
+test "3-tuple literal" {
+    let t = (1, "hello", 3.14);
+    assert(t.0 == 1, "first element");
+    assert(t.1 == "hello", "second element");
+}
+
+fn three_tuple() -> (int, string, int) {
+    return (10, "twenty", 30);
+}
+
+test "3-tuple return" {
+    let t = three_tuple();
+    assert(t.0 == 10, "first");
+    assert(t.1 == "twenty", "second");
+    assert(t.2 == 30, "third");
+}
+
+test "3-tuple mixed types" {
+    let t = (42, true, 2.71);
+    assert(t.0 == 42, "int");
+    assert(t.1 == true, "bool");
+}

@@ -1771,7 +1771,7 @@ void register_slice(ParserContext *ctx, const char *type)
     }
 }
 
-void register_tuple(ParserContext *ctx, const char *sig)
+void register_tuple_with_types(ParserContext *ctx, const char *sig, const char **types, int count)
 {
     TupleType *c = ctx->used_tuples;
     while (c)
@@ -1784,6 +1784,12 @@ void register_tuple(ParserContext *ctx, const char *sig)
     }
     TupleType *n = xmalloc(sizeof(TupleType));
     n->sig = xstrdup(sig);
+    n->types = xmalloc(sizeof(char *) * (size_t)count);
+    for (int i = 0; i < count; i++)
+    {
+        n->types[i] = xstrdup(types[i]);
+    }
+    n->count = count;
     n->next = ctx->used_tuples;
     ctx->used_tuples = n;
 
@@ -1792,27 +1798,17 @@ void register_tuple(ParserContext *ctx, const char *sig)
     snprintf(struct_name, sizeof(struct_name), "Tuple__%s", clean_sig);
     zfree(clean_sig);
 
+    // Create AST struct definition for the tuple
     ASTNode *s_def = ast_create(NODE_STRUCT);
     s_def->strct.name = xstrdup(struct_name);
-
-    char *s_sig = xstrdup(sig);
-    char *current = s_sig;
-    char *next_sep = strstr(current, "__");
     ASTNode *head = NULL, *tail = NULL;
-    int i = 0;
-    while (current)
+    for (int fi = 0; fi < count; fi++)
     {
-        if (next_sep)
-        {
-            *next_sep = 0;
-        }
-
         ASTNode *f = ast_create(NODE_FIELD);
         char fname[32];
-        snprintf(fname, sizeof(fname), "v%d", i++);
+        snprintf(fname, sizeof(fname), "v%d", fi);
         f->field.name = xstrdup(fname);
-        f->field.type = xstrdup(current);
-
+        f->field.type = xstrdup(types[fi]);
         if (!head)
         {
             head = f;
@@ -1822,21 +1818,27 @@ void register_tuple(ParserContext *ctx, const char *sig)
             tail->next = f;
         }
         tail = f;
-
-        if (next_sep)
-        {
-            current = next_sep + 2;
-            next_sep = strstr(current, "__");
-        }
-        else
-        {
-            break;
-        }
     }
-    zfree(s_sig);
     s_def->strct.fields = head;
-
     register_struct_def(ctx, struct_name, s_def);
+}
+
+void register_tuple(ParserContext *ctx, const char *sig)
+{
+    // Legacy wrapper: intended only for non-nested tuples.
+    // Nested tuples must use register_tuple_with_types() directly.
+    char *s = xstrdup(sig);
+    char *parts[256];
+    int count = 0;
+    char *save = NULL;
+    char *tok = strtok_r(s, "__", &save);
+    while (tok && count < 256)
+    {
+        parts[count++] = tok;
+        tok = strtok_r(NULL, "__", &save);
+    }
+    register_tuple_with_types(ctx, sig, (const char **)parts, count);
+    zfree(s);
 }
 
 void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node)

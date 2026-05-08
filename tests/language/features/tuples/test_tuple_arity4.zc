@@ -1,0 +1,19 @@
+
+// 4-tuple tests
+
+test "4-tuple literal" {
+    let t = (1, 2, 3, 4);
+    assert(t.0 == 1, "first");
+    assert(t.1 == 2, "second");
+    assert(t.2 == 3, "third");
+    assert(t.3 == 4, "fourth");
+}
+
+fn four_tuple() -> (int, int, int, int) {
+    return (10, 20, 30, 40);
+}
+
+test "4-tuple return" {
+    let t = four_tuple();
+    assert(t.0 == 10 && t.1 == 20 && t.2 == 30 && t.3 == 40, "four tuple return");
+}

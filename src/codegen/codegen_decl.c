@@ -733,7 +733,7 @@ void emit_lambda_defs(ParserContext *ctx)
 
 // Emit struct and enum definitions.
 static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
-                                      int depth)
+                                      int depth, int filter_type)
 {
     if (depth > 1024)
     {
@@ -746,7 +746,8 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
             if (!is_module_visited(*visited, node->import_stmt.path))
             {
                 mark_module_visited(visited, node->import_stmt.path);
-                emit_struct_defs_internal(ctx, node->import_stmt.module_root, visited, depth + 1);
+                emit_struct_defs_internal(ctx, node->import_stmt.module_root, visited, depth + 1,
+                                          filter_type);
             }
             node = node->next;
             continue;
@@ -756,7 +757,8 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
         {
             if (node->root.children != node)
             { // Basic cycle check
-                emit_struct_defs_internal(ctx, node->root.children, visited, depth + 1);
+                emit_struct_defs_internal(ctx, node->root.children, visited, depth + 1,
+                                          filter_type);
             }
             node = node->next;
             continue;
@@ -768,6 +770,16 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
             continue;
         }
         if (node->type == NODE_ENUM && node->enm.is_template)
+        {
+            node = node->next;
+            continue;
+        }
+        if (filter_type == NODE_ENUM && node->type != NODE_ENUM)
+        {
+            node = node->next;
+            continue;
+        }
+        if (filter_type == NODE_STRUCT && node->type != NODE_STRUCT)
         {
             node = node->next;
             continue;
@@ -1064,12 +1076,26 @@ void emit_struct_defs(ParserContext *ctx, ASTNode *node, VisitedModules **visite
 {
     if (visited)
     {
-        emit_struct_defs_internal(ctx, node, visited, 0);
+        emit_struct_defs_internal(ctx, node, visited, 0, 0);
     }
     else
     {
         VisitedModules *local_visited = NULL;
-        emit_struct_defs_internal(ctx, node, &local_visited, 0);
+        emit_struct_defs_internal(ctx, node, &local_visited, 0, 0);
+    }
+}
+
+void emit_struct_defs_filtered(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
+                               int filter_type)
+{
+    if (visited)
+    {
+        emit_struct_defs_internal(ctx, node, visited, 0, filter_type);
+    }
+    else
+    {
+        VisitedModules *local_visited = NULL;
+        emit_struct_defs_internal(ctx, node, &local_visited, 0, filter_type);
     }
 }
 
@@ -2113,37 +2139,40 @@ void print_type_defs(ParserContext *ctx, ASTNode *nodes)
         c = c->next;
     }
 
-    TupleType *t = ctx->used_tuples;
-    while (t)
+    // Emit full tuple struct definitions (typedef + body).
+    // Must come before enum protos and user struct/enum bodies,
+    // which may reference tuple types by value.
+    // used_tuples is LIFO; reverse so inner (declared first) tuples come first.
+    int tup_count = 0;
+    TupleType *tup = ctx->used_tuples;
+    while (tup)
     {
-        char *clean_sig = sanitize_mangled_name(t->sig);
-        EMIT(ctx, "typedef struct Tuple__%s Tuple__%s;\nstruct Tuple__%s { ", clean_sig, clean_sig,
-             clean_sig);
-        zfree(clean_sig);
-        char *s = xstrdup(t->sig);
-        char *current = s;
-        char *next_sep = strstr(current, "__");
-        int i = 0;
-        while (1)
-        {
-            if (next_sep)
-            {
-                *next_sep = 0;
-                EMIT(ctx, "%s v%d; ", current, i++);
-                current = next_sep + 2;
-                next_sep = strstr(current, "__");
-            }
-            else
-            {
-                EMIT(ctx, "%s v%d; ", current, i++);
-                break;
-            }
-        }
-        zfree(s);
-        EMIT(ctx, "};\n");
-        t = t->next;
+        tup_count++;
+        tup = tup->next;
     }
-    EMIT(ctx, "\n");
+    if (tup_count > 0)
+    {
+        TupleType **tup_arr = xmalloc(sizeof(TupleType *) * (size_t)tup_count);
+        tup = ctx->used_tuples;
+        for (int ti = tup_count - 1; ti >= 0; ti--)
+        {
+            tup_arr[ti] = tup;
+            tup = tup->next;
+        }
+        for (int ti = 0; ti < tup_count; ti++)
+        {
+            char *clean_sig = sanitize_mangled_name(tup_arr[ti]->sig);
+            EMIT(ctx, "typedef struct Tuple__%s Tuple__%s;\nstruct Tuple__%s { ", clean_sig,
+                 clean_sig, clean_sig);
+            zfree(clean_sig);
+            for (int i = 0; i < tup_arr[ti]->count; i++)
+            {
+                EMIT(ctx, "%s v%d; ", tup_arr[ti]->types[i], i);
+            }
+            EMIT(ctx, "};\n");
+        }
+        zfree(tup_arr);
+    }
 
     // End of type definitions
 }

@@ -1,0 +1,30 @@
+
+// Complex expressions in tuple literals
+
+fn add_one(x: int) -> int {
+    return x + 1;
+}
+
+test "tuple with arithmetic" {
+    let t = (1 + 2, 10 * 5, 100 - 1);
+    assert(t.0 == 3, "add");
+    assert(t.1 == 50, "multiply");
+    assert(t.2 == 99, "subtract");
+}
+
+test "tuple with function calls" {
+    let t = (add_one(5), add_one(10), add_one(100));
+    assert(t.0 == 6, "fn call 0");
+    assert(t.1 == 11, "fn call 1");
+    assert(t.2 == 101, "fn call 2");
+}
+
+test "tuple with variables" {
+    let x = 10;
+    let y = 20;
+    let z = 30;
+    let t = (x + y, y * z, z - x);
+    assert(t.0 == 30, "var add");
+    assert(t.1 == 600, "var mul");
+    assert(t.2 == 20, "var sub");
+}

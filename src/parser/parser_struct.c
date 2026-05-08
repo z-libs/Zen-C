@@ -1273,7 +1273,16 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
                         zfree(ns);
                     }
 
-                    register_tuple(ctx, sig);
+                    const char *type_strs[32];
+                    for (int ti = 0; ti < tuple_count && ti < 32; ti++)
+                    {
+                        type_strs[ti] = type_to_string(tuple_types[ti]);
+                    }
+                    register_tuple_with_types(ctx, sig, type_strs, tuple_count);
+                    for (int ti = 0; ti < tuple_count && ti < 32; ti++)
+                    {
+                        zfree((void *)type_strs[ti]);
+                    }
                     char *clean_sig = sanitize_mangled_name(sig);
                     char *tuple_name = xmalloc(strlen(clean_sig) + 8);
                     sprintf(tuple_name, "Tuple__%s", clean_sig);

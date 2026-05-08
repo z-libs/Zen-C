@@ -456,13 +456,22 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         lexer_next(l); // eat (
         char sig[MAX_SHORT_MSG_LEN];
         sig[0] = 0;
+        const char *type_names[256];
+        int type_count = 0;
 
         while (1)
         {
             Type *sub = parse_type_formal(ctx, l);
             char *s = type_to_string(sub);
             strcat(sig, s);
-            zfree(s);
+            if (type_count < 256)
+            {
+                type_names[type_count++] = s;
+            }
+            else
+            {
+                zfree(s);
+            }
 
             if (lexer_peek(l).type == TOK_COMMA)
             {
@@ -479,7 +488,11 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             zpanic_at(lexer_peek(l), "Expected ) in tuple");
         }
 
-        register_tuple(ctx, sig);
+        register_tuple_with_types(ctx, sig, type_names, type_count);
+        for (int i = 0; i < type_count; i++)
+        {
+            zfree((void *)type_names[i]);
+        }
 
         char *clean_sig = sanitize_mangled_name(sig);
         char *tuple_name = xmalloc(strlen(clean_sig) + 8);

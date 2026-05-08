@@ -1,0 +1,18 @@
+
+// Tuple mangling with complex type names (pointers, nested types)
+
+struct Custom { val: int; }
+
+fn ptr_tuple() -> (int*, string*) {
+    let x = 42;
+    let y = "hello";
+    return (&x, &y);
+}
+
+test "pointer tuple" {
+    let t = ptr_tuple();
+    assert(*t.0 == 42, "ptr tuple 0");
+    assert(*t.1 == "hello", "ptr tuple 1");
+}
+
+

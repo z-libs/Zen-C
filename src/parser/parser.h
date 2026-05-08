@@ -200,7 +200,9 @@ typedef struct SliceType
  */
 typedef struct TupleType
 {
-    char *sig;
+    char *sig;    ///< Signature string for dedup (e.g. "int__string").
+    char **types; ///< Individual field type names for codegen.
+    int count;    ///< Number of fields.
     struct TupleType *next;
 } TupleType;
 
@@ -845,6 +847,7 @@ void register_slice(ParserContext *ctx, const char *type);
  * @brief Registers a tuple type.
  */
 void register_tuple(ParserContext *ctx, const char *sig);
+void register_tuple_with_types(ParserContext *ctx, const char *sig, const char **types, int count);
 
 // Struct lookup
 /**

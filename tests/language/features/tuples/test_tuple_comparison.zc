@@ -1,0 +1,26 @@
+
+// Tuple comparison via manual field access
+
+fn eq_pair(a: (int, int), b: (int, int)) -> bool {
+    return a.0 == b.0 && a.1 == b.1;
+}
+
+test "tuple comparison" {
+    let a = (1, 2);
+    let b = (1, 2);
+    let c = (3, 4);
+    assert(eq_pair(a, b) == true, "equal pairs");
+    assert(eq_pair(a, c) == false, "unequal pairs");
+}
+
+fn eq_triple(a: (int, int, int), b: (int, int, int)) -> bool {
+    return a.0 == b.0 && a.1 == b.1 && a.2 == b.2;
+}
+
+test "triple comparison" {
+    let a = (1, 2, 3);
+    let b = (1, 2, 3);
+    let c = (1, 2, 99);
+    assert(eq_triple(a, b) == true, "equal triples");
+    assert(eq_triple(a, c) == false, "unequal triples");
+}

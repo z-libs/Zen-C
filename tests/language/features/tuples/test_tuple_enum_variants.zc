@@ -1,0 +1,41 @@
+
+// Enum variants with tuple payloads of various arities
+
+enum Shape {
+    Point,
+    Line(int, int),
+    Triple(int, int, int),
+    Labeled(int, string, f64),
+}
+
+test "enum with 3-tuple payload" {
+    let t = Shape.Triple(1, 2, 3);
+    match t {
+        Shape::Triple(a, b, c) => {
+            assert(a == 1 && b == 2 && c == 3, "triple payload");
+        }
+        _ => { assert(false, "wrong variant"); }
+    }
+}
+
+test "enum with mixed tuple payload" {
+    let l = Shape.Labeled(42, "answer", 3.14);
+    match l {
+        Shape::Labeled(id, name, val) => {
+            assert(id == 42, "labeled id");
+            assert(name == "answer", "labeled name");
+        }
+        _ => { assert(false, "wrong variant"); }
+    }
+}
+
+test "enum with 2-tuple payload" {
+    let l = Shape.Line(10, 20);
+    match l {
+        Shape::Line(x, y) => {
+            assert(x == 10 && y == 20, "line payload");
+        }
+        _ => { assert(false, "wrong variant"); }
+    }
+}
+

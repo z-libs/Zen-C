@@ -2,6 +2,20 @@
 
 ## Recently Completed
 
+### Tuple Infrastructure Fix + 13 New Tests
+- [x] Fixed nested tuple struct emission: field types now use `types[i]` array instead
+      of naively splitting the mangled signature by `__` (which broke for nested tuples
+      like `((int, int), (int, int))` — the inner `Tuple__int__int` contains `__`)
+- [x] Added `TupleType.types[]` + `TupleType.count` fields to store individual
+      field type names for correct codegen
+- [x] Updated `register_tuple_with_types()` API and all callers (parser_type.c,
+      parser_expr.c, parser_struct.c) to pass field type names individually
+- [x] Fixed reverse-LIFO emission order so nested tuples are defined before parents
+- [x] Two-pass model: forward declarations + struct bodies before enums
+- [x] 13 new test files covering: 3/4/5/8/10-tuples, nested tuples, field mutation,
+      comparison, enum variants, complex expressions, typed annotations, return types,
+      edge cases, pointer type mangling, mixed arity destructuring
+
 ### Test Framework Modernization
 - [x] Per-test failure isolation: `__zenc_assert` no longer calls `exit(1)` — uses counter instead
 - [x] Named per-test output: each test prints name + OK/FAIL to stderr

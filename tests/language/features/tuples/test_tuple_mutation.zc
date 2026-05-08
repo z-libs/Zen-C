@@ -1,0 +1,38 @@
+
+// Tuple field mutation: t.0 = new_value
+
+test "mutate 2-tuple" {
+    let t = (1, 2);
+    t.0 = 10;
+    assert(t.0 == 10, "mutate 0");
+    assert(t.1 == 2, "unchanged 1");
+}
+
+test "mutate 3-tuple" {
+    let t = (1, 2, 3);
+    t.1 = 20;
+    t.2 = 30;
+    assert(t.0 == 1, "unchanged 0");
+    assert(t.1 == 20, "mutated 1");
+    assert(t.2 == 30, "mutated 2");
+}
+
+// Note: t.v0.v0 access is used instead of t.0.0 because the
+// lexer reads 0.0 as a float literal, not as two separate tokens.
+
+test "mutate nested" {
+    let t = ((1, 2), (3, 4));
+    t.v0.v1 = 99;
+    assert(t.v0.v0 == 1, "nested unchanged");
+    assert(t.v0.v1 == 99, "nested mutated");
+}
+
+fn make_pair() -> (int, int) {
+    return (0, 0);
+}
+
+test "mutate returned tuple" {
+    let t = make_pair();
+    t.0 = 42;
+    assert(t.0 == 42, "mutated returned");
+}

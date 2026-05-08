@@ -1,0 +1,37 @@
+
+// Nested tuple tests: ((a, b), (c, d))
+
+// Note: nested access t.0.0 doesn't work because the lexer reads 0.0 as a float.
+// Use intermediate variables or raw field names (v0, v1) instead.
+
+test "nested 2x2 tuple" {
+    let t = ((1, 2), (3, 4));
+    let inner0 = t.v0;
+    let inner1 = t.v1;
+    assert(inner0.v0 == 1, "nested 0.0");
+    assert(inner0.v1 == 2, "nested 0.1");
+    assert(inner1.v0 == 3, "nested 1.0");
+    assert(inner1.v1 == 4, "nested 1.1");
+}
+
+test "nested mixed types" {
+    let t = ((1, "inner"), (3.14, true));
+    let inner0 = t.v0;
+    let inner1 = t.v1;
+    assert(inner0.v0 == 1, "inner int");
+    assert(inner0.v1 == "inner", "inner string");
+    assert(inner1.v0 > 3.13 && inner1.v0 < 3.15, "inner float");
+}
+
+fn nested_return() -> ((int, string), (int, int)) {
+    return ((42, "answer"), (1, 2));
+}
+
+test "nested return" {
+    let t = nested_return();
+    let inner0 = t.v0;
+    let inner1 = t.v1;
+    assert(inner0.v0 == 42, "nested return 0.0");
+    assert(inner0.v1 == "answer", "nested return 0.1");
+    assert(inner1.v0 == 1 && inner1.v1 == 2, "nested return 1");
+}
