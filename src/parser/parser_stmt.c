@@ -4681,8 +4681,10 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
 
     zfree(wrapped_code);
 
+    static int comptime_temp_counter = 0;
     char filename[64];
-    sprintf(filename, "_tmp_comptime_%d.c", rand());
+    snprintf(filename, sizeof(filename), "_tmp_comptime_%d_%d.c", (int)getpid(),
+             comptime_temp_counter++);
     FILE *f = fopen(filename, "w");
     if (!f)
     {
