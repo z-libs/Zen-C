@@ -195,7 +195,7 @@ void emit_preamble(ParserContext *ctx)
         EMIT(ctx, "%s",
              "#define __zenc_expect(cond, ...) if (!(cond)) { fprintf(stderr, \"  Expectation "
              "failed: \" __VA_ARGS__); fprintf(stderr, \"\\n\"); _zc_test_failures++; }\n");
-        EMIT(ctx, "int _zc_test_failures = 0;\n");
+        EMIT(ctx, "static int _zc_test_failures = 0;\n");
 
         // C++ compatible readln helper
         if (g_config.use_cpp)
@@ -1082,20 +1082,6 @@ void emit_struct_defs(ParserContext *ctx, ASTNode *node, VisitedModules **visite
     {
         VisitedModules *local_visited = NULL;
         emit_struct_defs_internal(ctx, node, &local_visited, 0, 0);
-    }
-}
-
-void emit_struct_defs_filtered(ParserContext *ctx, ASTNode *node, VisitedModules **visited,
-                               int filter_type)
-{
-    if (visited)
-    {
-        emit_struct_defs_internal(ctx, node, visited, 0, filter_type);
-    }
-    else
-    {
-        VisitedModules *local_visited = NULL;
-        emit_struct_defs_internal(ctx, node, &local_visited, 0, filter_type);
     }
 }
 

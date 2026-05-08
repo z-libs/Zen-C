@@ -26,6 +26,12 @@ void lsp_project_init(const char *root_path)
 
     fprintf(stderr, "zls: Initializing project at %s\n", root_path);
 
+    // Close any previous hoist_out before creating a new project context
+    if (g_project && g_project->ctx && g_project->ctx->hoist_out)
+    {
+        fclose(g_project->ctx->hoist_out);
+    }
+
     g_project = xcalloc(1, sizeof(LSPProject));
     g_project->root_path = xstrdup(root_path);
 
@@ -277,6 +283,7 @@ void lsp_project_update_file(const char *uri, const char *src)
     else
     {
         fprintf(stderr, "zls: Parse failed for %s (returned NULL)\n", pf->path);
+        pf->ast = NULL;
     }
     fprintf(stderr, "zls: Finished handling %s\n", pf->path);
 

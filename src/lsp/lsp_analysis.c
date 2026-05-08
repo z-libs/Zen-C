@@ -237,7 +237,8 @@ void lsp_goto_definition(const char *uri, int line, int col, int id)
         {
             name = r->node->var_ref.name;
         }
-        else if (r->node->type == NODE_EXPR_CALL && r->node->call.callee->type == NODE_EXPR_VAR)
+        else if (r->node->type == NODE_EXPR_CALL && r->node->call.callee &&
+                 r->node->call.callee->type == NODE_EXPR_VAR)
         {
             name = r->node->call.callee->var_ref.name;
         }
@@ -908,7 +909,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
                         t = strtok(NULL, ".");
                     }
 
-                    if (is_scoped && part_count == 1)
+                    if (is_scoped && part_count == 1 && g_project->ctx)
                     {
                         EnumVariantReg *ev = g_project->ctx->enum_variants;
                         while (ev)
@@ -1519,7 +1520,8 @@ void lsp_references(const char *uri, int line, int col, int id)
             {
                 name = r->node->var_ref.name;
             }
-            else if (r->node->type == NODE_EXPR_CALL && r->node->call.callee->type == NODE_EXPR_VAR)
+            else if (r->node->type == NODE_EXPR_CALL && r->node->call.callee &&
+                     r->node->call.callee->type == NODE_EXPR_VAR)
             {
                 name = r->node->call.callee->var_ref.name;
             }

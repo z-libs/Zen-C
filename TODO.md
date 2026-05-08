@@ -2,6 +2,14 @@
 
 ## Recently Completed
 
+### LSP Crash Fixes & Memory Leaks
+- [x] Fixed 3 NULL-pointer crashes: `callee` unchecked in goto-def (lsp_analysis.c:240),
+      find-references (lsp_analysis.c:1522), and missing `ctx` check in completion (lsp_analysis.c:913)
+- [x] Fixed real heap leaks: replaced `strdup()` with `xstrdup()` in json_rpc.c
+      (system malloc vs arena mismatch — `zfree` is a no-op)
+- [x] Fixed `tmpfile()` file descriptor leak on project reinit (lsp_project.c)
+- [x] Clear stale AST on parse failure instead of retaining outdated index (lsp_project.c:280)
+
 ### Tuple Infrastructure Fix + 13 New Tests
 - [x] Fixed nested tuple struct emission: field types now use `types[i]` array instead
       of naively splitting the mangled signature by `__` (which broke for nested tuples
