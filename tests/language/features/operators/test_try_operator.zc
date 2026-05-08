@@ -1,0 +1,35 @@
+
+// Try operator ? tests using the standard Result type
+
+import "std/result.zc"
+
+fn try_ok() -> Result<int> {
+    return Result<int>::Ok(42);
+}
+
+fn try_err_str() -> Result<int> {
+    return Result<int>::Err("fail");
+}
+
+fn chain_ok() -> Result<int> {
+    let inner = try_ok();
+    let val = inner?;
+    return Result<int>::Ok(val * 2);
+}
+
+fn chain_err() -> Result<int> {
+    let inner = try_err_str();
+    let val = inner?;
+    return Result<int>::Ok(val);
+}
+
+test "try chain ok" {
+    let r = chain_ok();
+    assert(r.is_ok(), "chain ok is ok");
+    assert(r.val == 84, "chain ok doubled");
+}
+
+test "try chain err" {
+    let r = chain_err();
+    assert(r.is_err(), "chain err propagates");
+}

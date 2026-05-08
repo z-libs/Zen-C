@@ -1,0 +1,26 @@
+
+// Null coalescing ?? and null assignment ??= tests
+
+test "null coalescing with non-null" {
+    let x: int = 42;
+    let px = &x;
+    let default_val: int = 0;
+    let pd = &default_val;
+    let val = px ?? pd;
+    assert(*val == 42, "non-null coalesce");
+}
+
+test "null coalescing with null" {
+    let p: int* = NULL;
+    let default_val: int = 99;
+    let pd = &default_val;
+    let val = p ?? pd;
+    assert(*val == 99, "null coalesce default");
+}
+
+test "null assignment" {
+    let default_val: int = 42;
+    let p: int* = NULL;
+    p ??= &default_val;
+    assert(*p == 42, "null assign sets value");
+}

@@ -23,7 +23,15 @@ GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo 
 SHAREDIR ?= /usr/local/share/zenc
 DEFINES = -DZEN_VERSION=\"$(GIT_VERSION)\" -DZEN_SHARE_DIR=\"$(SHAREDIR)\"
 WERROR ?= 0
-CFLAGS = -std=gnu11 -Wall -Wextra -Wshadow -g -MMD -MP $(if $(filter 1,$(WERROR)),-Werror,) -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics -I./std/third-party/tre/include $(DEFINES)
+# TCC does not support -MMD -MP and may not search /usr/local/include
+ifeq ($(findstring tcc,$(CC)),tcc)
+    DEPFLAGS =
+    TCC_EXTRA = -I/usr/local/include
+else
+    DEPFLAGS = -MMD -MP
+    TCC_EXTRA =
+endif
+CFLAGS = -std=gnu11 -Wall -Wextra -Wshadow -g $(DEPFLAGS) $(TCC_EXTRA) $(if $(filter 1,$(WERROR)),-Werror,) -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics -I./std/third-party/tre/include $(DEFINES)
 
 # Toggle plugins
 ifeq ($(NO_PLUGINS), 1)

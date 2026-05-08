@@ -1,0 +1,17 @@
+
+// Safe navigation ?. operator tests
+
+struct Point { x: int; y: int; }
+
+test "safe navigation non-null" {
+    let p = Point { x: 10, y: 20 };
+    let ptr = &p;
+    let x = ptr?.x;
+    assert(x == 10, "safe nav field");
+}
+
+test "safe navigation null" {
+    let ptr: Point* = NULL;
+    let x = ptr?.x;
+    assert(x == 0, "safe nav null returns default");
+}

@@ -1,0 +1,34 @@
+
+// Pipeline |> operator tests
+
+fn dbl(x: int) -> int {
+    return x * 2;
+}
+
+fn add(a: int, b: int) -> int {
+    return a + b;
+}
+
+fn tri(x: int) -> int {
+    return x * 3;
+}
+
+test "pipeline basic" {
+    let res = 5 |> dbl;
+    assert(res == 10, "basic pipe");
+}
+
+test "pipeline with args" {
+    let res = 10 |> add(20);
+    assert(res == 30, "pipe with args");
+}
+
+test "pipeline chained" {
+    let res = 5 |> dbl |> tri;
+    assert(res == 30, "chained pipe");
+}
+
+test "pipeline mixed" {
+    let res = 2 |> dbl |> add(10) |> tri;
+    assert(res == 42, "mixed pipe chain");
+}
