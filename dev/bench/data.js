@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778261022847,
+  "lastUpdate": 1778262094479,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -974,6 +974,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Runtime (sha256)",
             "value": 56,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sort_large)",
+            "value": 65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "10cf66d160668a61a3e7b91d60fead91b18735c6",
+          "message": "zenc: new tests and Makefile patch for TCC.",
+          "timestamp": "2026-05-08T18:40:36+01:00",
+          "tree_id": "8441f7d657de1f4ba02018b9f6f02fd229de9c45",
+          "url": "https://github.com/zenc-lang/zenc/commit/10cf66d160668a61a3e7b91d60fead91b18735c6"
+        },
+        "date": 1778262093857,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 14206,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 36,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sha256)",
+            "value": 52,
             "unit": "ms"
           },
           {
