@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778243751808,
+  "lastUpdate": 1778244465544,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -616,6 +616,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Compiler (Full Suite Transpilation)",
             "value": 13641,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 38,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sha256)",
+            "value": 53,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sort_large)",
+            "value": 65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "471dbb638dacdd8d3006a4dcf874eb7e62670b34",
+          "message": "zenc: update TODO and little patch.",
+          "timestamp": "2026-05-08T13:46:46+01:00",
+          "tree_id": "346e2ef9ac23fddaabd760eeaad46ab5ce1839ed",
+          "url": "https://github.com/zenc-lang/zenc/commit/471dbb638dacdd8d3006a4dcf874eb7e62670b34"
+        },
+        "date": 1778244464900,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 13590,
             "unit": "ms"
           },
           {
