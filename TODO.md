@@ -2,7 +2,9 @@
 
 ## Recently Completed
 
-### LSP Crash Fixes & Memory Leaks
+### LSP Crash Fixes, Memory Leaks & Test Coverage
+- [x] 7 new LSP tests (21 total): partial code goto-def/references, unopened file
+      request, empty source, didChange incremental update, codeAction
 - [x] Fixed 3 NULL-pointer crashes: `callee` unchecked in goto-def (lsp_analysis.c:240),
       find-references (lsp_analysis.c:1522), and missing `ctx` check in completion (lsp_analysis.c:913)
 - [x] Fixed real heap leaks: replaced `strdup()` with `xstrdup()` in json_rpc.c

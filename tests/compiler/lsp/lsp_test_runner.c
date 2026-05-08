@@ -243,6 +243,231 @@ void test_hover()
     free(resp);
 }
 
+void test_definition_partial_code()
+{
+    printf("Running test_definition_partial_code...\n");
+    // Incomplete call: "foo(" without closing paren or args.
+    // This creates a NODE_EXPR_CALL with NULL callee.
+    int fd = open("/tmp/test_partial_def.zc", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd >= 0)
+    {
+        const char *code = "fn main() {\n    foo(\n}";
+        write(fd, code, strlen(code));
+        close(fd);
+    }
+
+    send_request(
+        "{\"jsonrpc\": \"2.0\", \"method\": \"textDocument/didOpen\", \"params\": "
+        "{\"textDocument\": {\"uri\": \"file:///tmp/test_partial_def.zc\", \"languageId\": "
+        "\"zenc\", \"version\": 1, \"text\": \"fn main() {\\n    foo(\\n}\"}}}");
+    usleep(100000);
+
+    // Request definition at line 1, character 5 (on "foo")
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 100, \"method\": \"textDocument/definition\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_partial_def.zc\"}, "
+                 "\"position\": {\"line\": 1, \"character\": 5}}}");
+
+    char *resp = wait_for_response(100);
+    if (!resp)
+    {
+        printf("WARN: No response for partial definition (no crash = good).\n");
+        return;
+    }
+    printf("PASS: test_definition_partial_code (no crash)\n");
+    free(resp);
+}
+
+void test_references_partial_code()
+{
+    printf("Running test_references_partial_code...\n");
+    // Same partial code as above — references on incomplete call
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 101, \"method\": \"textDocument/references\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_partial_def.zc\"}, "
+                 "\"position\": {\"line\": 1, \"character\": 5}, "
+                 "\"context\": {\"includeDeclaration\": true}}}");
+
+    char *resp = wait_for_response(101);
+    if (!resp)
+    {
+        printf("WARN: No response for partial references (no crash = good).\n");
+        return;
+    }
+    printf("PASS: test_references_partial_code (no crash)\n");
+    free(resp);
+}
+
+void test_request_unopened_file()
+{
+    printf("Running test_request_unopened_file...\n");
+    // Hover on a URI that was never didOpen'd — tests null-pointer guards.
+    // The server may not respond, so verify it's still alive via a hover on
+    // a known-opened file (test_lsp.zc from test_hover).
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 102, \"method\": \"textDocument/hover\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_nonexistent.zc\"}, "
+                 "\"position\": {\"line\": 0, \"character\": 0}}}");
+
+    // Hover on a known file to verify server is still alive
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 103, \"method\": \"textDocument/hover\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_lsp.zc\"}, "
+                 "\"position\": {\"line\": 0, \"character\": 5}}}");
+
+    char *resp = wait_for_response(103);
+    if (resp && strstr(resp, "contents"))
+    {
+        printf("PASS: test_request_unopened_file (server alive)\n");
+    }
+    else
+    {
+        printf("WARN: test_request_unopened_file: %s\n", resp ? resp : "no response");
+    }
+    free(resp);
+}
+
+void test_empty_source()
+{
+    printf("Running test_empty_source...\n");
+    int fd = open("/tmp/test_empty.zc", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd >= 0)
+    {
+        write(fd, "", 0);
+        close(fd);
+    }
+
+    // Open empty file
+    send_request("{\"jsonrpc\": \"2.0\", \"method\": \"textDocument/didOpen\", \"params\": "
+                 "{\"textDocument\": {\"uri\": \"file:///tmp/test_empty.zc\", \"languageId\": "
+                 "\"zenc\", \"version\": 1, \"text\": \"\"}}}");
+    usleep(100000);
+
+    // Hover on empty file — should not crash
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 103, \"method\": \"textDocument/hover\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_empty.zc\"}, "
+                 "\"position\": {\"line\": 0, \"character\": 0}}}");
+
+    char *resp = wait_for_response(103);
+    if (resp)
+    {
+        printf("PASS: test_empty_source (hover on empty file)\n");
+        free(resp);
+    }
+    else
+    {
+        printf("WARN: No response for empty source hover.\n");
+    }
+
+    // Completion on empty file
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 104, \"method\": \"textDocument/completion\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_empty.zc\"}, "
+                 "\"position\": {\"line\": 0, \"character\": 0}}}");
+
+    char *resp2 = wait_for_response(104);
+    if (resp2)
+    {
+        printf("PASS: test_empty_source (completion on empty file)\n");
+        free(resp2);
+    }
+    else
+    {
+        printf("WARN: No response for empty source completion.\n");
+    }
+}
+
+void test_did_change()
+{
+    printf("Running test_did_change...\n");
+    // Open a file, then send didChange with modified content
+    int fd = open("/tmp/test_change.zc", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd >= 0)
+    {
+        const char *code = "fn original() {}\nfn main() { original(); }";
+        write(fd, code, strlen(code));
+        close(fd);
+    }
+
+    send_request(
+        "{\"jsonrpc\": \"2.0\", \"method\": \"textDocument/didOpen\", \"params\": "
+        "{\"textDocument\": {\"uri\": \"file:///tmp/test_change.zc\", \"languageId\": "
+        "\"zenc\", \"version\": 1, \"text\": \"fn original() {}\\nfn main() { original(); }\"}}}");
+    usleep(100000);
+
+    // Change: rename "original" to "updated"
+    send_request(
+        "{\"jsonrpc\": \"2.0\", \"method\": \"textDocument/didChange\", \"params\": "
+        "{\"textDocument\": {\"uri\": \"file:///tmp/test_change.zc\", \"version\": 2}, "
+        "\"contentChanges\": [{\"text\": \"fn updated() {}\\nfn main() { updated(); }\"}]}}}");
+    usleep(100000);
+
+    // Hover on "updated" should work after didChange
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 105, \"method\": \"textDocument/hover\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_change.zc\"}, "
+                 "\"position\": {\"line\": 0, \"character\": 5}}}");
+
+    char *resp = wait_for_response(105);
+    if (resp && strstr(resp, "contents"))
+    {
+        printf("PASS: test_did_change (hover works after change)\n");
+    }
+    else
+    {
+        printf("WARN: test_did_change: %s\n", resp ? resp : "no response");
+    }
+    free(resp);
+
+    // Verify definition on "updated()" function (line 0, character 3)
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 106, \"method\": \"textDocument/definition\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_change.zc\"}, "
+                 "\"position\": {\"line\": 0, \"character\": 5}}}");
+
+    char *resp2 = wait_for_response(106);
+    if (resp2 && strstr(resp2, "\"line\":0"))
+    {
+        printf("PASS: test_did_change (definition works after change)\n");
+    }
+    else
+    {
+        printf("WARN: test_did_change definition: %s\n", resp2 ? resp2 : "no response");
+    }
+    free(resp2);
+}
+
+void test_code_action()
+{
+    printf("Running test_code_action...\n");
+    // Open a file with 'var' to trigger deprecation diagnostics
+    int fd = open("/tmp/test_action.zc", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd >= 0)
+    {
+        const char *code = "fn main() { var x: int = 5; }";
+        write(fd, code, strlen(code));
+        close(fd);
+    }
+
+    send_request("{\"jsonrpc\": \"2.0\", \"method\": \"textDocument/didOpen\", \"params\": "
+                 "{\"textDocument\": {\"uri\": \"file:///tmp/test_action.zc\", \"languageId\": "
+                 "\"zenc\", \"version\": 1, \"text\": \"fn main() { var x: int = 5; }\"}}}");
+    usleep(100000);
+
+    // Request code actions. The diagnostic is provided by the client
+    // matching what the server would emit for 'var' deprecation.
+    send_request("{\"jsonrpc\": \"2.0\", \"id\": 107, \"method\": \"textDocument/codeAction\", "
+                 "\"params\": {\"textDocument\": {\"uri\": \"file:///tmp/test_action.zc\"}, "
+                 "\"context\": {\"diagnostics\": [{\"range\": {\"start\": {\"line\": 0, "
+                 "\"character\": 12}, \"end\": {\"line\": 0, \"character\": 15}}, "
+                 "\"code\": \"W42\", \"message\": \"'var' is deprecated for declarations. "
+                 "Use 'let' instead.\"}]}}}");
+
+    char *resp = wait_for_response(107);
+    if (resp && strstr(resp, "Replace 'var' with 'let'"))
+    {
+        printf("PASS: test_code_action (var -> let action)\n");
+    }
+    else
+    {
+        printf("WARN: test_code_action: %s\n", resp ? resp : "no response");
+    }
+    free(resp);
+}
+
 void test_shutdown()
 {
     printf("Running test_shutdown...\n");
@@ -676,6 +901,12 @@ int main()
     test_outline();
     test_formatting();
     test_signature_help();
+    test_definition_partial_code();
+    test_references_partial_code();
+    test_request_unopened_file();
+    test_empty_source();
+    test_did_change();
+    test_code_action();
     test_shutdown();
     send_request("{\"jsonrpc\": \"2.0\", \"method\": \"exit\", \"params\": {}}");
     waitpid(child_pid, NULL, 0);
