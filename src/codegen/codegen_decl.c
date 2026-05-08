@@ -222,19 +222,25 @@ void emit_preamble(ParserContext *ctx)
         // REPL helpers: suppress/restore stdout.
         EMIT(ctx, "%s", "static int _z_orig_stdout = -1;\n");
         EMIT(ctx, "%s", "static void _z_suppress_stdout() {\n");
-        EMIT(ctx, "%s", "    fflush(stdout);\n");
-        EMIT(ctx, "%s", "    if (_z_orig_stdout == -1) _z_orig_stdout = dup(STDOUT_FILENO);\n");
-        EMIT(ctx, "%s", "    int nullfd = open(\"/dev/null\", O_WRONLY);\n");
-        EMIT(ctx, "%s", "    dup2(nullfd, STDOUT_FILENO);\n");
-        EMIT(ctx, "%s", "    close(nullfd);\n");
+        emitter_indent(&ctx->emitter);
+        EMIT(ctx, "%s", "fflush(stdout);\n");
+        EMIT(ctx, "%s", "if (_z_orig_stdout == -1) _z_orig_stdout = dup(STDOUT_FILENO);\n");
+        EMIT(ctx, "%s", "int nullfd = open(\"/dev/null\", O_WRONLY);\n");
+        EMIT(ctx, "%s", "dup2(nullfd, STDOUT_FILENO);\n");
+        EMIT(ctx, "%s", "close(nullfd);\n");
+        emitter_dedent(&ctx->emitter);
         EMIT(ctx, "%s", "}\n");
         EMIT(ctx, "%s", "static void _z_restore_stdout() {\n");
-        EMIT(ctx, "%s", "    fflush(stdout);\n");
-        EMIT(ctx, "%s", "    if (_z_orig_stdout != -1) {\n");
-        EMIT(ctx, "%s", "        dup2(_z_orig_stdout, STDOUT_FILENO);\n");
-        EMIT(ctx, "%s", "        close(_z_orig_stdout);\n");
-        EMIT(ctx, "%s", "        _z_orig_stdout = -1;\n");
-        EMIT(ctx, "%s", "    }\n");
+        emitter_indent(&ctx->emitter);
+        EMIT(ctx, "%s", "fflush(stdout);\n");
+        EMIT(ctx, "%s", "if (_z_orig_stdout != -1) {\n");
+        emitter_indent(&ctx->emitter);
+        EMIT(ctx, "%s", "dup2(_z_orig_stdout, STDOUT_FILENO);\n");
+        EMIT(ctx, "%s", "close(_z_orig_stdout);\n");
+        EMIT(ctx, "%s", "_z_orig_stdout = -1;\n");
+        emitter_dedent(&ctx->emitter);
+        EMIT(ctx, "%s", "}\n");
+        emitter_dedent(&ctx->emitter);
         EMIT(ctx, "%s", "}\n");
     }
 }
@@ -523,6 +529,7 @@ void emit_lambda_defs(ParserContext *ctx)
         if (node->lambda.num_captures > 0)
         {
             EMIT(ctx, "struct Lambda_%d_Ctx {\n", node->lambda.lambda_id);
+            emitter_indent(&ctx->emitter);
             for (int i = 0; i < node->lambda.num_captures; i++)
             {
                 if (node->lambda.capture_modes && node->lambda.capture_modes[i] == 1)
@@ -536,7 +543,7 @@ void emit_lambda_defs(ParserContext *ctx)
                     {
                         tstr = xstrdup(node->lambda.captured_types[i]);
                     }
-                    EMIT(ctx, "    %s* %s;\n", tstr, node->lambda.captured_vars[i]);
+                    EMIT(ctx, "%s* %s;\n", tstr, node->lambda.captured_vars[i]);
                     zfree(tstr);
                 }
                 else
@@ -550,7 +557,7 @@ void emit_lambda_defs(ParserContext *ctx)
                     {
                         tstr = xstrdup(node->lambda.captured_types[i]);
                     }
-                    EMIT(ctx, "    %s %s;\n", tstr, node->lambda.captured_vars[i]);
+                    EMIT(ctx, "%s %s;\n", tstr, node->lambda.captured_vars[i]);
                     zfree(tstr);
 
                     char *tname = node->lambda.captured_types[i];
@@ -563,15 +570,17 @@ void emit_lambda_defs(ParserContext *ctx)
                     ASTNode *fdef = find_struct_def(ctx, clean);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
-                        EMIT(ctx, "    int __z_drop_flag_%s;\n", node->lambda.captured_vars[i]);
+                        EMIT(ctx, "int __z_drop_flag_%s;\n", node->lambda.captured_vars[i]);
                     }
                 }
             }
+            emitter_dedent(&ctx->emitter);
             EMIT(ctx, "};\n\n");
 
             // Generate Drop function for the closure context
             EMIT(ctx, "static void _lambda_%d_drop(void* _ctx) {\n", node->lambda.lambda_id);
-            EMIT(ctx, "    struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
+            emitter_indent(&ctx->emitter);
+            EMIT(ctx, "struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
                  node->lambda.lambda_id, node->lambda.lambda_id);
 
             for (int i = 0; i < node->lambda.num_captures; i++)
@@ -588,13 +597,14 @@ void emit_lambda_defs(ParserContext *ctx)
                     ASTNode *fdef = find_struct_def(ctx, clean);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
-                        EMIT(ctx, "    if (ctx->__z_drop_flag_%s) %s__Drop__glue(&ctx->%s);\n",
+                        EMIT(ctx, "if (ctx->__z_drop_flag_%s) %s__Drop__glue(&ctx->%s);\n",
                              node->lambda.captured_vars[i], clean, node->lambda.captured_vars[i]);
                     }
                 }
             }
 
-            EMIT(ctx, "    free(_ctx);\n");
+            EMIT(ctx, "free(_ctx);\n");
+            emitter_dedent(&ctx->emitter);
             EMIT(ctx, "}\n\n");
         }
 
@@ -654,10 +664,11 @@ void emit_lambda_defs(ParserContext *ctx)
             }
         }
         EMIT(ctx, ") {\n");
+        emitter_indent(&ctx->emitter);
 
         if (node->lambda.num_captures > 0)
         {
-            EMIT(ctx, "    struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
+            EMIT(ctx, "struct Lambda_%d_Ctx* ctx = (struct Lambda_%d_Ctx*)_ctx;\n",
                  node->lambda.lambda_id, node->lambda.lambda_id);
         }
 
@@ -674,7 +685,7 @@ void emit_lambda_defs(ParserContext *ctx)
                     {
                         if (stmt->type != NODE_RETURN)
                         {
-                            EMIT(ctx, "    return ");
+                            EMIT(ctx, "return ");
                         }
                         codegen_node_single(ctx, stmt);
                     }
@@ -695,7 +706,7 @@ void emit_lambda_defs(ParserContext *ctx)
             if (node->type_info && node->type_info->inner &&
                 node->type_info->inner->kind != TYPE_VOID && node->lambda.body->type != NODE_RETURN)
             {
-                EMIT(ctx, "    return ");
+                EMIT(ctx, "return ");
             }
             codegen_node_single(ctx, node->lambda.body);
             EMIT(ctx, ";\n");
@@ -708,6 +719,7 @@ void emit_lambda_defs(ParserContext *ctx)
             codegen_node_single(ctx, ctx->cg.defer_stack[i]);
         }
 
+        emitter_dedent(&ctx->emitter);
         EMIT(ctx, "}\n\n");
 
         ctx->cg.defer_count = saved_defer;
@@ -859,6 +871,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
 
             EMIT(ctx, " {");
             EMIT(ctx, "\n");
+            emitter_indent(&ctx->emitter);
             if (node->strct.fields)
             {
                 codegen_walker(ctx, node->strct.fields);
@@ -866,8 +879,9 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
             else
             {
                 // C requires at least one member in a struct.
-                EMIT(ctx, "    char _placeholder;\n");
+                EMIT(ctx, "char _placeholder;\n");
             }
+            emitter_dedent(&ctx->emitter);
             EMIT(ctx, "}");
 
             EMIT(ctx, ";\n\n");
@@ -967,24 +981,27 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
                                 i++;
                             }
                             EMIT(ctx, ") {\n");
+                            emitter_indent(&ctx->emitter);
                             if (g_config.use_cpp)
                             {
-                                EMIT(ctx, "    %s _res = {}; _res.tag = %s__%s_Tag; ", final_name,
+                                EMIT(ctx, "%s _res = {}; _res.tag = %s__%s_Tag; ", final_name,
                                      final_name, v->variant.name);
                                 for (int j = 0; j < i; j++)
                                 {
                                     EMIT(ctx, "_res.data.%s.v%d = _%d; ", v->variant.name, j, j);
                                 }
+                                emitter_dedent(&ctx->emitter);
                                 EMIT(ctx, "return _res; }\n");
                             }
                             else
                             {
-                                EMIT(ctx, "    return (%s){.tag=%s__%s_Tag, .data.%s={", final_name,
+                                EMIT(ctx, "return (%s){.tag=%s__%s_Tag, .data.%s={", final_name,
                                      final_name, v->variant.name, v->variant.name);
                                 for (int j = 0; j < i; j++)
                                 {
                                     EMIT(ctx, ".v%d=_%d%s", j, j, (j == i - 1) ? "" : ", ");
                                 }
+                                emitter_dedent(&ctx->emitter);
                                 EMIT(ctx, "}}; }\n");
                             }
                         }
@@ -1106,12 +1123,13 @@ static void emit_trait_defs_internal(ParserContext *ctx, ASTNode *node, VisitedM
                 EMIT(ctx, "#if %s\n", node->cfg_condition);
             }
             EMIT(ctx, "typedef struct %s_VTable {\n", node->trait.name);
+            emitter_indent(&ctx->emitter);
             ASTNode *m = node->trait.methods;
             while (m)
             {
                 char *ret_safe = substitute_proto_self(m->func.ret_type, "void*");
                 const char *orig = parse_original_method_name(m->func.name);
-                EMIT(ctx, "    %s (*%s)(", ret_safe, orig);
+                EMIT(ctx, "%s (*%s)(", ret_safe, orig);
                 zfree(ret_safe);
 
                 int has_self = (m->func.args && strstr(m->func.args, "self"));
@@ -1143,6 +1161,7 @@ static void emit_trait_defs_internal(ParserContext *ctx, ASTNode *node, VisitedM
                 EMIT(ctx, ");\n");
                 m = m->next;
             }
+            emitter_dedent(&ctx->emitter);
             EMIT(ctx, "} %s_VTable;\n", node->trait.name);
             EMIT(ctx, "typedef struct %s { void *self; %s_VTable *vtable; } %s;\n",
                  node->trait.name, node->trait.name, node->trait.name);
@@ -1230,15 +1249,16 @@ static void emit_trait_wrappers_internal(ParserContext *ctx, ASTNode *node,
                     zfree(sa);
                 }
                 EMIT(ctx, ") {\n");
+                emitter_indent(&ctx->emitter);
 
                 int ret_is_self = (m->func.ret_type && strcasecmp(m->func.ret_type, "Self") == 0);
                 if (ret_is_self)
                 {
-                    EMIT(ctx, "    void* res = self->vtable->%s(self->self", orig);
+                    EMIT(ctx, "void* res = self->vtable->%s(self->self", orig);
                 }
                 else
                 {
-                    EMIT(ctx, "    return self->vtable->%s(self->self", orig);
+                    EMIT(ctx, "return self->vtable->%s(self->self", orig);
                 }
 
                 if (m->func.args && strlen(m->func.args) > 0)
@@ -1268,9 +1288,10 @@ static void emit_trait_wrappers_internal(ParserContext *ctx, ASTNode *node,
 
                 if (ret_is_self)
                 {
-                    EMIT(ctx, "    return (%s){.self = res, .vtable = self->vtable};\n",
+                    EMIT(ctx, "return (%s){.self = res, .vtable = self->vtable};\n",
                          node->trait.name);
                 }
+                emitter_dedent(&ctx->emitter);
                 EMIT(ctx, "}\n\n");
                 zfree(ret_sub);
                 m = m->next;
@@ -1893,6 +1914,7 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
     if (test_count > 0)
     {
         EMIT(ctx, "\nvoid _z_run_tests() {\n");
+        emitter_indent(&ctx->emitter);
         cur = node;
         int i = 0;
         while (cur)
@@ -1903,7 +1925,7 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
                 {
                     EMIT(ctx, "#if %s\n", cur->cfg_condition);
                 }
-                EMIT(ctx, "    _z_test_%d();\n", i);
+                EMIT(ctx, "_z_test_%d();\n", i);
                 if (cur->cfg_condition)
                 {
                     EMIT(ctx, "#endif\n");
@@ -1912,6 +1934,7 @@ int emit_tests_and_runner(ParserContext *ctx, ASTNode *node)
             }
             cur = cur->next;
         }
+        emitter_dedent(&ctx->emitter);
         EMIT(ctx, "}\n\n");
     }
     return test_count;

@@ -2309,11 +2309,11 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         // Always codegen the base expression first
         if (expr_node)
         {
-            Emitter saved = ctx->emitter;
+            emitter_push(&ctx->emitter);
             emitter_init_buffer(&ctx->emitter);
             codegen_expression(ctx, expr_node);
             char *expr_buf = emitter_take_string(&ctx->emitter);
-            ctx->emitter = saved;
+            emitter_pop(&ctx->emitter);
             if (expr_buf)
             {
                 rw_expr = expr_buf;
@@ -4690,7 +4690,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
         return NULL; // Prevent crash in LSP mode
     }
 
-    FILE *saved_emitter_out = ctx->emitter.file;
+    emitter_push(&ctx->emitter);
     emitter_init_file(&ctx->emitter, f);
     emitter_init_file(&cctx.emitter, f);
     emit_preamble(ctx);
@@ -4795,7 +4795,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     }
     EMIT(ctx, "return 0;\n}\n");
     fclose(f);
-    emitter_init_file(&ctx->emitter, saved_emitter_out);
+    emitter_pop(&ctx->emitter);
 
     char cmdbuf[MAX_PATH_LEN * 3];
     char bin[MAX_PATH_LEN];

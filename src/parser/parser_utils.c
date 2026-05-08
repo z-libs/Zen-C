@@ -4474,11 +4474,11 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
         // Codegen expression to temporary buffer
         char *code_buffer = NULL;
         {
-            Emitter saved = ctx->emitter;
+            emitter_push(&ctx->emitter);
             emitter_init_buffer(&ctx->emitter);
             codegen_expression(ctx, expr_node);
             code_buffer = emitter_take_string(&ctx->emitter);
-            ctx->emitter = saved;
+            emitter_pop(&ctx->emitter);
         }
 
         if (fmt)

@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "../utils/emitter.h"
 
-#define EMIT(ctx, fmt, ...) emitter_printf(&(ctx)->emitter, fmt, ##__VA_ARGS__)
+#define EMIT(ctx, ...) emitter_printf(&(ctx)->emitter, ##__VA_ARGS__)
 
 // Main codegen entry points.
 
