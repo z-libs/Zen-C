@@ -1144,6 +1144,8 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
             misra_check_binary_op_essential_types(tc, node->binary.left, node->binary.right,
                                                   node->token);
 
+            misra_check_string_compare(tc, left_type, right_type, node->token);
+
             if (!type_eq(left_type, right_type))
             {
                 // Allow comparison between numeric types
@@ -2168,6 +2170,7 @@ static void check_function(TypeChecker *tc, ASTNode *node, int depth)
             Type *param_type =
                 (node->func.arg_types && node->func.arg_types[i]) ? node->func.arg_types[i] : NULL;
 
+            misra_check_tuple_size(tc, param_type, node->token);
             misra_check_pointer_nesting(tc, param_type, node->token);
             misra_check_reserved_identifier(tc, node->func.param_names[i], node->token);
             tc_add_symbol(tc, node->func.param_names[i], param_type, node->token,
@@ -2177,6 +2180,7 @@ static void check_function(TypeChecker *tc, ASTNode *node, int depth)
 
     if (node->func.ret_type_info)
     {
+        misra_check_tuple_size(tc, node->func.ret_type_info, node->token);
         misra_check_pointer_nesting(tc, node->func.ret_type_info, node->token);
 
         // Lifetime Elision result was already computed in pre-pass for named functions.

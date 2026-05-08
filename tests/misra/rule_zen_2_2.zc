@@ -1,0 +1,7 @@
+// EXPECT: Rule Zen 2.2
+
+// Test: tuple with 3+ fields as function return type is forbidden in MISRA mode
+
+fn three_tuple() -> (int, int, int) {  // Zen 2.2 violation
+    return (1, 2, 3);
+}

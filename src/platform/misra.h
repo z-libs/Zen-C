@@ -101,6 +101,9 @@ void misra_check_plugin_block(struct TypeChecker *tc, Token token);
 void misra_check_reserved_identifier(struct TypeChecker *tc, const char *name, Token token);
 void misra_check_banned_function(struct TypeChecker *tc, const char *name, Token tok);
 void misra_check_file_dereference(struct TypeChecker *tc, struct Type *type, Token tok);
+void misra_check_tuple_size(struct TypeChecker *tc, struct Type *ret_type, Token token);
+void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struct Type *right,
+                                Token token);
 
 // Phase 3 MISRA
 void misra_check_evaluation_order(struct TypeChecker *tc, struct ASTNode *expr);

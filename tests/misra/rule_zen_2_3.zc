@@ -1,0 +1,11 @@
+// EXPECT: Rule Zen 2.3
+
+// Test: string == string comparison is forbidden in MISRA mode
+
+fn main() {
+    let a: string = "hello";
+    let b: string = "world";
+    if a == b {  // Zen 2.3 violation
+        println "equal";
+    }
+}

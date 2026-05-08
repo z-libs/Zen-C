@@ -1518,3 +1518,61 @@ void misra_check_typographic_ambiguity(struct TypeChecker *tc, const char *new_n
         s = s->parent;
     }
 }
+
+void misra_check_tuple_size(struct TypeChecker *tc, struct Type *t, Token token)
+{
+    if (!g_config.misra_mode || !t || t->kind != TYPE_STRUCT || !t->name)
+    {
+        return;
+    }
+    // Tuple types have names like "Tuple__int__string"
+    if (strncmp(t->name, "Tuple__", 7) != 0)
+    {
+        return;
+    }
+    // Look up the tuple in the registry to get field count
+    TupleType *tup = tc->pctx->used_tuples;
+    while (tup)
+    {
+        char *clean_sig = sanitize_mangled_name(tup->sig);
+        char expected[1024];
+        snprintf(expected, sizeof(expected), "Tuple__%s", clean_sig);
+        zfree(clean_sig);
+        if (strcmp(t->name, expected) == 0)
+        {
+            if (tup->count >= 3)
+            {
+                tc_error(tc, token,
+                         "MISRA Rule Zen 2.2: tuple with 3 or more fields shall be "
+                         "replaced with a named struct (use 'struct' instead of "
+                         "positional tuple)");
+            }
+            break;
+        }
+        tup = tup->next;
+    }
+}
+
+void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struct Type *right,
+                                Token token)
+{
+    if (!g_config.misra_mode)
+    {
+        return;
+    }
+    if (!left || !right)
+    {
+        return;
+    }
+    // Check if both sides are string types
+    int left_is_str =
+        (left->kind == TYPE_STRING || (left->name && strcmp(left->name, "string") == 0));
+    int right_is_str =
+        (right->kind == TYPE_STRING || (right->name && strcmp(right->name, "string") == 0));
+    if (left_is_str && right_is_str)
+    {
+        tc_error(tc, token,
+                 "MISRA Rule Zen 2.3: 'string == string' shall not be used; "
+                 "use strcmp() instead for string comparison");
+    }
+}
