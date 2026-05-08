@@ -23,7 +23,7 @@ test "enum with mixed tuple payload" {
     match l {
         Shape::Labeled(id, name, val) => {
             assert(id == 42, "labeled id");
-            assert(name == "answer", "labeled name");
+            assert(strcmp(name, "answer") == 0, "labeled name");
         }
         _ => { assert(false, "wrong variant"); }
     }

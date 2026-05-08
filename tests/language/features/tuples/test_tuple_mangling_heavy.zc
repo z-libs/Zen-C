@@ -12,7 +12,7 @@ fn ptr_tuple() -> (int*, string*) {
 test "pointer tuple" {
     let t = ptr_tuple();
     assert(*t.0 == 42, "ptr tuple 0");
-    assert(*t.1 == "hello", "ptr tuple 1");
+    assert(strcmp(*t.1, "hello") == 0, "ptr tuple 1");
 }
 
 

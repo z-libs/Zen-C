@@ -2007,20 +2007,24 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                         if (node->asm_stmt.register_size <= 32)
                         {
                             int _n = snprintf(dst, rem, "%%w%d", idx);
-                            dst += (_n > 0 && (size_t)_n < rem) ? _n : rem > 1 ? rem - 1 : 0;
+                            dst += (_n > 0 && (size_t)_n < rem) ? (size_t)_n
+                                   : rem > 1                    ? rem - 1
+                                                                : 0;
                         }
                         else
 #endif
                         {
                             int _n = snprintf(dst, rem, "%%%d", idx);
-                            dst += (_n > 0 && (size_t)_n < rem) ? _n : rem > 1 ? rem - 1 : 0;
+                            dst += (_n > 0 && (size_t)_n < rem) ? (size_t)_n
+                                   : rem > 1                    ? rem - 1
+                                                                : 0;
                         }
                     }
                     else
                     {
                         // Variable not found - error or keep as-is?
                         int _n = snprintf(dst, rem, "{%s}", var_name);
-                        dst += (_n > 0 && (size_t)_n < rem) ? _n : rem > 1 ? rem - 1 : 0;
+                        dst += (_n > 0 && (size_t)_n < rem) ? (size_t)_n : rem > 1 ? rem - 1 : 0;
                     }
 
                     p = end; // Skip past }

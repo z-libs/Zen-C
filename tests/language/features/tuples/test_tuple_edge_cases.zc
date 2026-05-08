@@ -33,6 +33,6 @@ test "tuple in boolean context" {
 
 test "tuple with string indexing" {
     let t = ("first", "second", "third");
-    assert(t.0 == "first", "string tuple 0");
-    assert(t.2 == "third", "string tuple 2");
+    assert(strcmp(t.0, "first") == 0, "string tuple 0");
+    assert(strcmp(t.2, "third") == 0, "string tuple 2");
 }

@@ -4,7 +4,7 @@
 test "3-tuple literal" {
     let t = (1, "hello", 3.14);
     assert(t.0 == 1, "first element");
-    assert(t.1 == "hello", "second element");
+    assert(strcmp(t.1, "hello") == 0, "second element");
 }
 
 fn three_tuple() -> (int, string, int) {
@@ -14,7 +14,7 @@ fn three_tuple() -> (int, string, int) {
 test "3-tuple return" {
     let t = three_tuple();
     assert(t.0 == 10, "first");
-    assert(t.1 == "twenty", "second");
+    assert(strcmp(t.1, "twenty") == 0, "second");
     assert(t.2 == 30, "third");
 }
 

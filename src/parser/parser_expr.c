@@ -1,6 +1,23 @@
 #include "parser.h"
 #include "../codegen/codegen.h"
 
+// Returns 1 if the token can serve as a field/method name in member access.
+// Accepts TOK_IDENT (normal names), TOK_INT (tuple access like .0),
+// and any keyword that starts with an identifier character (like .expect).
+static int token_is_field_name(Token t)
+{
+    if (t.type == TOK_IDENT || t.type == TOK_INT)
+    {
+        return 1;
+    }
+    if (!t.start || t.len <= 0)
+    {
+        return 0;
+    }
+    char c = t.start[0];
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
 int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 {
     if (!a || !b)
@@ -5586,7 +5603,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         {
             lexer_next(l);
             Token field = lexer_next(l);
-            if (field.type != TOK_IDENT && field.type != TOK_INT)
+            if (!token_is_field_name(field))
             {
                 zpanic_at(field, "Expected field name after ->");
                 break;
@@ -5647,7 +5664,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         {
             lexer_next(l);
             Token field = lexer_next(l);
-            if (field.type != TOK_IDENT && field.type != TOK_INT)
+            if (!token_is_field_name(field))
             {
                 zpanic_at(field, "Expected field name after ?.");
                 break;
@@ -6474,7 +6491,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         if (op.type == TOK_OP && is_token(op, "."))
         {
             Token field = lexer_next(l);
-            if (field.type != TOK_IDENT && field.type != TOK_INT)
+            if (!token_is_field_name(field))
             {
                 zpanic_at(field, "Expected field name after .");
                 break;

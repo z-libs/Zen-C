@@ -16,5 +16,5 @@ test "5-tuple return" {
 
 test "5-tuple literal" {
     let t = ("a", "b", "c", "d", "e");
-    assert(t.0 == "a" && t.4 == "e", "5-tuple strings");
+    assert(strcmp(t.0, "a") == 0 && strcmp(t.4, "e") == 0, "5-tuple strings");
 }
