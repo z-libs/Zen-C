@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778246584201,
+  "lastUpdate": 1778256745366,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -768,6 +768,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Compiler (Avg per file)",
             "value": 37,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sha256)",
+            "value": 52,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sort_large)",
+            "value": 64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "4ad94209113ffa9d566b13bca15fbb4187747c2b",
+          "message": "zenc: more LSP tests.",
+          "timestamp": "2026-05-08T17:11:26+01:00",
+          "tree_id": "108f5886f0edb9808f58121fc2090aefe4bba086",
+          "url": "https://github.com/zenc-lang/zenc/commit/4ad94209113ffa9d566b13bca15fbb4187747c2b"
+        },
+        "date": 1778256745125,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 13413,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 35,
             "unit": "ms"
           },
           {
