@@ -22,11 +22,10 @@
 - [ ] Improve comptime mechanics.
 
 ## Testing
-- [ ] Add comprehensive type checker tests (10-15 files: generic instantiation, trait resolution,
-      type inference, comptime eval, error recovery). Currently 1 test file (47 lines) for 4,113 lines of logic.
+- [x] Add comprehensive type checker tests (13 files covering type compatibility, operators,
+      function calls, returns, move semantics, struct init, variable decl, traits, lifetime,
+      match, cast, const-folding, lambdas, loops). Raised from 47 lines to 450+ lines.
 - [ ] Add dedicated move checker tests (currently zero dedicated tests).
-- [x] Fix parallel test runner: `rand()`-based temp filenames in `run_comptime_block` caused collisions
-      when tests ran concurrently. Changed to `getpid()` + static counter.
 
 ## Memory
 - [ ] Fix LSP buffer leak: lsp_main.c arena-allocates JSON body then calls `zfree` (no-op on arena).

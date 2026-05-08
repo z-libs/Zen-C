@@ -1,0 +1,44 @@
+
+// Variable declaration and type inference tests
+
+// --- Explicit type annotation ---
+test "explicit type" {
+    let x: i32 = 42;
+    let y: f64 = 3.14;
+    let name: string = "hello";
+    assert(x == 42, "explicit type ok");
+}
+
+// --- Type inference from literal ---
+test "type inference" {
+    let x = 42;
+    let y = 3.14;
+    let z = "hello";
+    // just verify they compiled
+    assert(x == 42, "type inference ok");
+}
+
+// --- Type inference from expression ---
+fn get_val() -> i32 {
+    return 99;
+}
+
+test "infer from call" {
+    let v = get_val();
+    assert(v == 99, "infer from call ok");
+}
+
+// --- Multiple declarations ---
+test "multiple decls" {
+    let a = 1;
+    let b = 2;
+    let c = a + b;
+    assert(c == 3, "multiple decls ok");
+}
+
+// --- Variable reassignment ---
+test "reassign" {
+    let x = 10;
+    x = x + 5;
+    assert(x == 15, "reassign ok");
+}

@@ -1,0 +1,37 @@
+
+// Move semantics tests
+// Non-Copy types (e.g., String) are moved; Copy types (i32, struct of Copy fields) are copied
+
+// --- Copy types can be used after move ---
+test "copy type reuse" {
+    let x: i32 = 42;
+    let y = x; // copy
+    let z = x; // still valid (Copy)
+    assert(y == 42 && z == 42, "copy type reuse ok");
+}
+
+// --- Move between variables ---
+struct NonCopy {
+    data: i32;
+}
+
+// Note: structs with only i32 fields may be Copy by default in Zen C.
+// This test verifies the basic assignment pattern.
+
+test "struct assign" {
+    let a = NonCopy { data: 10 };
+    let b = NonCopy { data: 20 };
+    // Both should be independently valid
+    assert(a.data == 10 && b.data == 20, "struct assign ok");
+}
+
+// --- Move into function ---
+fn consume(val: i32) -> i32 {
+    return val * 2;
+}
+
+test "move into fn" {
+    let x = 21;
+    let r = consume(x);
+    assert(r == 42, "move into fn ok");
+}

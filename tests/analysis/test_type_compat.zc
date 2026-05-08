@@ -1,0 +1,59 @@
+
+// Type compatibility tests: int, float, string, void*, struct, trait
+
+struct Point { x: i32; y: i32; }
+
+trait Printable {
+    fn print(self);
+}
+
+impl Printable for Point {
+    fn print(self) {
+        println "({self.x}, {self.y})";
+    }
+}
+
+// --- Int-to-wider-int compatibility ---
+test "int widening" {
+    let a: i32 = 10;
+    let _b: i64 = a;   // i32 -> i64
+    let _c: i64 = 42;  // literal -> i64
+    assert(true, "int widening ok");
+}
+
+// --- Float compatibility ---
+test "float compat" {
+    let a: f32 = 3.14;
+    let _b: f64 = a;   // f32 -> f64
+    assert(true, "float compat ok");
+}
+
+// --- void* generic pointer ---
+test "void pointer" {
+    let x: i32 = 42;
+    let p: i32* = &x;
+    let _vp: void* = p;
+    assert(true, "void pointer ok");
+}
+
+// --- String assignment ---
+test "string types" {
+    let s = "hello";
+    let t: string = s;
+    assert(t == "hello", "string types ok");
+}
+
+// --- Struct to trait via reference ---
+test "trait object" {
+    let p = Point { x: 1, y: 2 };
+    let t: Printable = &p;
+    t.print();
+    assert(true, "trait object ok");
+}
+
+// --- Struct assignment ---
+test "struct copy" {
+    let a = Point { x: 1, y: 2 };
+    let b = a;
+    assert(b.x == 1 && b.y == 2, "struct copy ok");
+}
