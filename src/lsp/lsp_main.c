@@ -57,12 +57,12 @@ int lsp_main(int argc, char **argv)
             break;
         }
 
-        // Read body.
-        char *body = malloc(content_len + 1);
-        if (fread(body, 1, content_len, stdin) != (size_t)content_len)
+        // Read body (use libc malloc/free to avoid arena leak for long-running LSP).
+        char *body = (char *)libc_malloc((size_t)content_len + 1);
+        if (!body || fread(body, 1, (size_t)content_len, stdin) != (size_t)content_len)
         {
             fprintf(stderr, "zls: Error reading body\n");
-            zfree(body);
+            libc_free(body);
             break;
         }
         body[content_len] = 0;
@@ -71,7 +71,7 @@ int lsp_main(int argc, char **argv)
         fprintf(stderr, "zls: Received: %s\n", body);
         handle_request(body);
 
-        zfree(body);
+        libc_free(body);
     }
 
     return 0;
