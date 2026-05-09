@@ -380,6 +380,7 @@ struct ParserContext
         ASTNode *global_user_structs; ///< List of user defined structs.
         char *current_impl_type;      ///< Type currently being implemented (in impl block).
         int tmp_counter;              ///< Counter for temporary variables.
+        int in_async_body;            ///< 1 if currently generating async poll body.
         ASTNode *defer_stack[1024];   ///< Stack of deferred nodes (max 1024).
         int defer_count;              ///< Counter for defer statements in current scope.
         ASTNode *current_lambda;      ///< Current lambda being generated.

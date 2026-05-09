@@ -285,15 +285,9 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 {
                     if (sig->ret_type)
                     {
-                        char *inner = type_to_c_string(sig->ret_type);
-                        if (inner)
-                        {
-                            char *buf = xmalloc(strlen(inner) + 10);
-                            sprintf(buf, "Async<%s>", inner);
-                            return buf;
-                        }
+                        return type_to_c_string(sig->ret_type);
                     }
-                    return "Async";
+                    return "void";
                 }
                 if (sig->ret_type)
                 {
@@ -859,7 +853,16 @@ void emit_func_signature(ParserContext *ctx, ASTNode *func, const char *name_ove
     // Return type
     if (func->func.is_async)
     {
-        EMIT(ctx, "Async ");
+        // Async functions use _impl_ for the actual implementation;
+        // this signature is for prototype declarations.
+        if (func->func.ret_type)
+        {
+            EMIT(ctx, "%s ", func->func.ret_type);
+        }
+        else
+        {
+            EMIT(ctx, "void ");
+        }
     }
     else
     {
@@ -1244,15 +1247,36 @@ const char *map_to_c_type(const char *t)
 
 void handle_node_await_internal(ParserContext *ctx, ASTNode *node)
 {
-    char *ret_type = "void*";
-    int free_ret = 0;
+    // Determine the function name from the awaited expression
+    ASTNode *operand = node->unary.operand;
+    const char *fname = NULL;
+    if (operand && operand->type == NODE_EXPR_CALL && operand->call.callee)
+    {
+        if (operand->call.callee->type == NODE_EXPR_VAR)
+        {
+            fname = operand->call.callee->var_ref.name;
+        }
+    }
+
+    if (!fname)
+    {
+        // Fallback: use infer_type result as the return type
+        char *inf = infer_type(ctx, node);
+        EMIT(ctx, "({ %s _r = ", inf ? inf : "void");
+        codegen_expression(ctx, operand);
+        EMIT(ctx, "; _r; })");
+        zfree(inf);
+        return;
+    }
+
+    // Get the return type for the get function
+    char *ret_type = "void";
     if (node->type_info)
     {
         char *t = type_to_c_string(node->type_info);
-        if (t)
+        if (t && strcmp(t, "void") != 0)
         {
             ret_type = t;
-            free_ret = 1;
         }
     }
     else if (node->resolved_type)
@@ -1260,66 +1284,30 @@ void handle_node_await_internal(ParserContext *ctx, ASTNode *node)
         ret_type = node->resolved_type;
     }
 
-    if (strcmp(ret_type, "Async") == 0 || strcmp(ret_type, "void*") == 0)
+    // Generate: ({ struct fname_Future _f; fname_init(&_f, args...);
+    //             while (!fname_poll(&_f)); fname_get(&_f); })
+    EMIT(ctx, "({ struct %s_Future _f; ", fname);
+    EMIT(ctx, "%s_init(&_f", fname);
+
+    // Extract arguments from the call expression
+    if (operand->type == NODE_EXPR_CALL)
     {
-        char *inf = infer_type(ctx, node);
-        if (inf && strcmp(inf, "Async") != 0 && strcmp(inf, "void*") != 0)
+        ASTNode *arg = operand->call.args;
+        while (arg)
         {
-            if (free_ret)
-            {
-                zfree(ret_type);
-            }
-            ret_type = inf;
-            free_ret = 0;
+            EMIT(ctx, ", ");
+            codegen_expression(ctx, arg);
+            arg = arg->next;
         }
     }
 
-    int needs_long_cast = 0;
-    int returns_struct = 0;
-    if (strstr(ret_type, "*") == NULL && strcmp(ret_type, "string") != 0 &&
-        strcmp(ret_type, "void") != 0 && strcmp(ret_type, "Async") != 0)
+    EMIT(ctx, "); while (!%s_poll(&_f)); ", fname);
+    if (strcmp(ret_type, "void") != 0 && strcmp(ret_type, "void*") != 0)
     {
-        if (is_struct_return_type(ret_type))
-        {
-            returns_struct = 1;
-        }
-        else
-        {
-            needs_long_cast = 1;
-        }
-        if (strncmp(ret_type, "struct", 6) == 0)
-        {
-            returns_struct = 1;
-        }
-    }
-
-    EMIT(ctx, "({ Async _a = ");
-    codegen_expression(ctx, node->unary.operand);
-    EMIT(ctx, "; void* _r; pthread_join(_a.thread, &_r); ");
-    if (strcmp(ret_type, "void") == 0)
-    {
-        EMIT(ctx, "})");
+        EMIT(ctx, "%s_get(&_f); })", fname);
     }
     else
     {
-        if (returns_struct)
-        {
-            EMIT(ctx, "%s _val = *(%s*)_r; free(_r); _val; })", ret_type, ret_type);
-        }
-        else
-        {
-            if (needs_long_cast)
-            {
-                EMIT(ctx, "(%s)(uintptr_t)_r; })", ret_type);
-            }
-            else
-            {
-                EMIT(ctx, "(%s)_r; })", ret_type);
-            }
-        }
-    }
-    if (free_ret)
-    {
-        zfree(ret_type);
+        EMIT(ctx, " })");
     }
 }

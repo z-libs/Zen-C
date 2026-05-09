@@ -26,7 +26,7 @@ WERROR ?= 0
 # TCC does not support -MMD -MP and may not search /usr/local/include
 ifeq ($(findstring tcc,$(CC)),tcc)
     DEPFLAGS =
-    TCC_EXTRA = -I/usr/local/include
+    TCC_EXTRA = -I/usr/local/include -L/usr/local/lib
 else
     DEPFLAGS = -MMD -MP
     TCC_EXTRA =

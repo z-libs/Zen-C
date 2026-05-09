@@ -1,8 +1,6 @@
-//> link: -lpthread
 import "std/thread.zc"
 
 async fn double_slowly(x: int) -> int {
-    usleep(1000); 
     return x * 2;
 }
 
@@ -29,27 +27,20 @@ struct Counter {
 }
 
 test "test_async_basics" {
-    let future1 = double_slowly(21);
-    let future2 = add_async(10, 20);
-    
-    let result1 = await future1;
-    let result2 = await future2;
-    
+    let result1 = await double_slowly(21);
+    let result2 = await add_async(10, 20);
     assert(result1 == 42, "Async double failed");
     assert(result2 == 30, "Async add failed");
 }
 
 test "test_async_struct_return" {
-    let f = make_point(5, 7);
-    let p = await f;
-    
+    let p = await make_point(5, 7);
     assert(p.x == 5, "Async struct x failed");
     assert(p.y == 7, "Async struct y failed");
 }
 
 test "test_async_void" {
-    let f = say_hello();
-    await f;
+    await say_hello();
 }
 
 test "test_thread" {

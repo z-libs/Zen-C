@@ -3708,31 +3708,16 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
             }
             if (sig->is_async)
             {
-                Type *async_type = type_new(TYPE_STRUCT);
-                async_type->name = xstrdup("Async");
-                node->type_info = async_type;
-
+                // Async functions return their inner type directly (no Async<T> wrapper)
                 if (sig->ret_type)
                 {
-                    char *inner = type_to_string(sig->ret_type);
-                    if (inner)
-                    {
-                        char buf[MAX_MANGLED_NAME_LEN];
-                        snprintf(buf, 511, "Async<%s>", inner);
-                        node->resolved_type = xstrdup(buf);
-                        async_type->name = xstrdup(buf); // HACK: Persist generic info in name
-                        zfree(inner);
-                    }
-                    else
-                    {
-                        node->resolved_type = xstrdup("Async");
-                    }
+                    node->type_info = sig->ret_type;
+                    node->resolved_type = type_to_string(sig->ret_type);
                 }
                 else
                 {
-                    node->resolved_type = xstrdup("Async");
+                    node->resolved_type = xstrdup("void");
                 }
-                node->type_info = async_type;
             }
             else if (sig->ret_type)
             {

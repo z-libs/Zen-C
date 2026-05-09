@@ -718,100 +718,55 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
     if (node->func.is_async)
     {
         const char *final_name = (node->link_name) ? node->link_name : node->func.name;
-        EMIT(ctx, "struct %s_Args {\n", final_name);
+        int has_ret = node->func.ret_type && strcmp(node->func.ret_type, "void") != 0;
+
+        // Parse args
         char *args_copy = xstrdup(node->func.args);
         char *token = strtok(args_copy, ",");
         int arg_count = 0;
         char **arg_names = xmalloc(32 * sizeof(char *));
-
+        char **arg_types = xmalloc(32 * sizeof(char *));
         while (token)
         {
             while (*token == ' ')
             {
-                token++; // trim leading
+                token++;
             }
             char *last_space = strrchr(token, ' ');
             if (last_space)
             {
                 *last_space = 0;
-                char *type = token;
-                char *name = last_space + 1;
-                EMIT(ctx, "%s %s;\n", type, name);
-
-                arg_names[arg_count++] = xstrdup(name);
+                arg_types[arg_count] = xstrdup(token);
+                arg_names[arg_count] = xstrdup(last_space + 1);
+                arg_count++;
             }
             token = strtok(NULL, ",");
         }
         zfree(args_copy);
-        EMIT(ctx, "};\n");
 
-        EMIT(ctx, "void* _runner_%s(void* _args)\n", final_name);
-        EMIT(ctx, "{\n");
-        emitter_indent(&ctx->emitter);
-        EMIT(ctx, "struct %s_Args* args = (struct %s_Args*)_args;\n", final_name, final_name);
-
-        // Determine mechanism: struct/large-type? -> malloc; primitive -> cast
-        int returns_struct = 0;
-        char *rt = node->func.ret_type;
-        if (node->func.ret_type_info)
-        {
-            returns_struct = z_is_struct_type(node->func.ret_type_info);
-        }
-        else
-        {
-            if (rt && strstr(rt, "*") == NULL && strcmp(rt, "string") != 0 &&
-                strcmp(rt, "void") != 0 && strcmp(rt, "Async") != 0)
-            {
-                returns_struct = is_struct_return_type(rt);
-            }
-        }
-
-        // Call Impl
-        if (returns_struct)
-        {
-            if (g_config.use_cpp)
-            {
-                EMIT(ctx, "%s *res_ptr = (%s*)malloc(sizeof(%s));\n", rt, rt, rt);
-            }
-            else
-            {
-                EMIT(ctx, "%s *res_ptr = malloc(sizeof(%s));\n", rt, rt);
-            }
-            EMIT(ctx, "*res_ptr = ");
-        }
-        else if (rt && strcmp(rt, "void") != 0 && strcmp(rt, "Async") != 0)
-        {
-            EMIT(ctx, "%s res = ", rt);
-        }
-        else
-        {
-        }
-
-        EMIT(ctx, "_impl_%s(", final_name);
+        // 1. Init function (struct definition emitted in protos)
+        EMIT(ctx, "void %s_init(struct %s_Future *f", final_name, final_name);
         for (int i = 0; i < arg_count; i++)
         {
-            EMIT(ctx, "%sargs->%s", i > 0 ? ", " : "", arg_names[i]);
+            EMIT(ctx, ", %s %s", arg_types[i], arg_names[i]);
         }
-        EMIT(ctx, ");\n");
-        EMIT(ctx, "free(args);\n");
-
-        if (returns_struct)
+        EMIT(ctx, ")\n{\n");
+        emitter_indent(&ctx->emitter);
+        EMIT(ctx, "f->_state = 0;\n");
+        for (int i = 0; i < arg_count; i++)
         {
-            EMIT(ctx, "return (void*)res_ptr;\n");
-        }
-        else if (strcmp(rt, "void") != 0)
-        {
-            EMIT(ctx, "return (void*)(uintptr_t)res;\n");
-        }
-        else
-        {
-            EMIT(ctx, "return NULL;\n");
+            EMIT(ctx, "f->%s = %s;\n", arg_names[i], arg_names[i]);
         }
         emitter_dedent(&ctx->emitter);
         EMIT(ctx, "}\n");
 
-        EMIT(ctx, "%s _impl_%s(%s)\n", node->func.ret_type, final_name, node->func.args);
-        EMIT(ctx, "{\n");
+        // 3. Emit the actual function body as _impl_%s (regular C function with normal returns)
+        EMIT(ctx, "%s _impl_%s(", has_ret ? node->func.ret_type : "void", final_name);
+        for (int i = 0; i < arg_count; i++)
+        {
+            EMIT(ctx, "%s%s %s", i > 0 ? ", " : "", arg_types[i], arg_names[i]);
+        }
+        EMIT(ctx, ")\n{\n");
         emitter_indent(&ctx->emitter);
         ctx->cg.defer_count = 0;
         char *prev_ret = ctx->cg.current_func_ret_type;
@@ -831,36 +786,49 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
         emitter_dedent(&ctx->emitter);
         EMIT(ctx, "}\n");
 
-        // 4. Define Public Wrapper (Spawns Thread)
-        EMIT(ctx, "Async %s(%s)\n", final_name, node->func.args);
+        // 4. Poll function — calls _impl_, stores result
+        EMIT(ctx, "int %s_poll(void *ctx)\n", final_name);
         EMIT(ctx, "{\n");
         emitter_indent(&ctx->emitter);
-        if (g_config.use_cpp)
+        EMIT(ctx, "struct %s_Future *f = ctx;\n", final_name);
+        EMIT(ctx, "if (f->_state > 0) return 1;\n");
+        EMIT(ctx, "f->_state = 1;\n");
+        if (has_ret)
         {
-            EMIT(ctx, "struct %s_Args* args = (struct %s_Args*)malloc(sizeof(struct %s_Args));\n",
-                 final_name, final_name, final_name);
+            EMIT(ctx, "f->_result = _impl_%s(", final_name);
+            for (int i = 0; i < arg_count; i++)
+            {
+                EMIT(ctx, "%sf->%s", i > 0 ? ", " : "", arg_names[i]);
+            }
+            EMIT(ctx, ");\n");
         }
         else
         {
-            EMIT(ctx, "struct %s_Args* args = malloc(sizeof(struct %s_Args));\n", final_name,
-                 final_name);
+            EMIT(ctx, "_impl_%s(", final_name);
+            for (int i = 0; i < arg_count; i++)
+            {
+                EMIT(ctx, "%sf->%s", i > 0 ? ", " : "", arg_names[i]);
+            }
+            EMIT(ctx, ");\n");
         }
-        for (int i = 0; i < arg_count; i++)
-        {
-            EMIT(ctx, "args->%s = %s;\n", arg_names[i], arg_names[i]);
-        }
-
-        EMIT(ctx, "pthread_t th;\n");
-        EMIT(ctx, "pthread_create(&th, NULL, _runner_%s, args);\n", final_name);
-        EMIT(ctx, "return (Async){.thread=th, .result=NULL};\n");
+        EMIT(ctx, "return 1;\n");
         emitter_dedent(&ctx->emitter);
         EMIT(ctx, "}\n");
+
+        // 5. Get function
+        if (has_ret)
+        {
+            EMIT(ctx, "%s %s_get(struct %s_Future *f) { return f->_result; }\n",
+                 node->func.ret_type, final_name, final_name);
+        }
 
         for (int i = 0; i < arg_count; i++)
         {
             zfree(arg_names[i]);
+            zfree(arg_types[i]);
         }
         zfree(arg_names);
+        zfree(arg_types);
 
         if (node->cfg_condition)
         {
@@ -1275,6 +1243,15 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
             (!node->var_decl.init_expr || node->var_decl.init_expr->type != NODE_AWAIT))
         {
             tname = type_to_c_string(node->type_info);
+            // Async functions now return Async*; correct the type name
+            // so the emitted C uses "Async*" instead of "Async" or "Async<...>".
+            if (tname && strncmp(tname, "Async", 5) == 0 && node->var_decl.init_expr &&
+                node->var_decl.init_expr->resolved_type &&
+                strncmp(node->var_decl.init_expr->resolved_type, "Async", 5) == 0)
+            {
+                zfree(tname);
+                tname = xstrdup("Async*");
+            }
         }
         else if (node->var_decl.type_str && strcmp(node->var_decl.type_str, "__auto_type") != 0)
         {

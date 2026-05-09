@@ -144,8 +144,7 @@ void emit_preamble(ParserContext *ctx)
         EMIT(ctx, "%s", "typedef size_t usize;\ntypedef char* string;\ntypedef intptr_t any;\n");
         if (ctx->has_async)
         {
-            EMIT(ctx, "%s", "#include <pthread.h>\n");
-            EMIT(ctx, "%s", "typedef struct { pthread_t thread; void *result; } Async;\n");
+            EMIT(ctx, "%s", "typedef int (*PollFn)(void*);\n");
         }
         EMIT(ctx, "%s",
              "#ifdef ZC_STATIC_PLUGIN\n#define ZC_FUNC static\n#define ZC_GLOBAL "
@@ -1526,8 +1525,38 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModul
             if (f->func.is_async)
             {
                 const char *final_name = (f->link_name) ? f->link_name : f->func.name;
-                EMIT(ctx, "Async %s(%s);\n", final_name, f->func.args);
-                // Also emit _impl_ prototype
+                int has_ret = f->func.ret_type && strcmp(f->func.ret_type, "void") != 0;
+
+                // Emit future struct definition so await expressions can use it
+                EMIT(ctx, "struct %s_Future {\n", final_name);
+                EMIT(ctx, "    int _state;\n");
+                if (has_ret)
+                {
+                    EMIT(ctx, "    %s _result;\n", f->func.ret_type);
+                }
+                // Parse args to get field types and names
+                char *args_copy = xstrdup(f->func.args);
+                char *tok = strtok(args_copy, ",");
+                int fi = 0;
+                while (tok)
+                {
+                    while (*tok == ' ')
+                    {
+                        tok++;
+                    }
+                    char *last_space = strrchr(tok, ' ');
+                    if (last_space)
+                    {
+                        *last_space = 0;
+                        EMIT(ctx, "    %s %s;\n", tok, last_space + 1);
+                    }
+                    tok = strtok(NULL, ",");
+                    fi++;
+                }
+                zfree(args_copy);
+                EMIT(ctx, "};\n");
+
+                // Emit _impl_ prototype
                 if (f->func.ret_type)
                 {
                     EMIT(ctx, "%s _impl_%s(%s);\n", f->func.ret_type, final_name, f->func.args);
@@ -1535,6 +1564,24 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModul
                 else
                 {
                     EMIT(ctx, "void _impl_%s(%s);\n", final_name, f->func.args);
+                }
+                // Emit init prototype
+                if (f->func.args && strcmp(f->func.args, "void") != 0 && f->func.args[0] != 0)
+                {
+                    EMIT(ctx, "void %s_init(struct %s_Future *f, %s);\n", final_name, final_name,
+                         f->func.args);
+                }
+                else
+                {
+                    EMIT(ctx, "void %s_init(struct %s_Future *f);\n", final_name, final_name);
+                }
+                // Emit poll prototype
+                EMIT(ctx, "int %s_poll(void *ctx);\n", final_name);
+                // Emit get prototype
+                if (has_ret)
+                {
+                    EMIT(ctx, "%s %s_get(struct %s_Future *f);\n", f->func.ret_type, final_name,
+                         final_name);
                 }
             }
             else

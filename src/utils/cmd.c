@@ -245,10 +245,6 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
     if (!z_is_windows() && !g_config.is_freestanding)
     {
         arg_list_add(list, "-lm");
-        if (g_parser_ctx && g_parser_ctx->has_async)
-        {
-            arg_list_add(list, "-lpthread");
-        }
     }
 
     // Linker flags
