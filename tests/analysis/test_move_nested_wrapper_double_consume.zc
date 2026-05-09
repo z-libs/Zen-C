@@ -1,0 +1,20 @@
+// EXPECT: FAIL
+import "std/string.zc"
+
+struct Inner {
+    data: String;
+}
+
+struct Outer {
+    inner: Inner;
+}
+
+fn consume(o: Outer) {}
+
+fn main() {
+    let s = String::new("hello");
+    let inner = Inner { data: s };
+    let outer = Outer { inner: inner };
+    consume(outer);
+    consume(outer);
+}

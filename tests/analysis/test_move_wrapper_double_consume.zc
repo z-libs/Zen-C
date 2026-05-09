@@ -1,0 +1,15 @@
+// EXPECT: FAIL
+import "std/string.zc"
+
+struct WrapString {
+    inner: String;
+}
+
+fn consume(w: WrapString) {}
+
+fn main() {
+    let s = String::new("hello");
+    let w = WrapString { inner: s };
+    consume(w);
+    consume(w);
+}
