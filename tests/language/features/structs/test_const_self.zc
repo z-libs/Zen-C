@@ -1,3 +1,4 @@
+// structs: test_const_self
 struct Point {
     x: i32;
     y: i32;

@@ -1,0 +1,27 @@
+// language/control-flow: control-flow: test_labeled_break
+test "test_labeled_break" {
+    // Test basic goto-based loop exit
+    let result = 0;
+    
+    for i in 0..10 {
+        for j in 0..10 {
+            if i == 3 {
+                goto done_search;
+            }
+        }
+        result++;
+    }
+done_search:
+    
+    assert result == 3;
+    
+    // Test do-while
+    let x = 0;
+    do {
+        x++;
+    } while x < 3;
+    
+    assert x == 3;
+    
+    
+}

@@ -1,0 +1,48 @@
+// test_string_utf8
+import "std/string.zc"
+import "std/utf8.zc"
+
+test "string utf8 and rune operations" {
+    let s = String::from("Héllö 🚀");
+    defer { s.free(); }
+    
+    // Test utf8_len
+    assert(s.utf8_len() == 7, "utf8_len failed");
+    
+    // Test utf8_get
+    assert((u32)s.utf8_get(1) == 233, "utf8_get(1) failed (é)");
+    assert((u32)s.utf8_get(6) == 0x1F680, "utf8_get(6) failed (🚀)");
+    
+    // Test runes()
+    let runes = s.runes();
+    assert(runes.len == 7, "String::runes length failed");
+    assert((u32)runes.get(6) == 0x1F680, "String::runes content failed");
+    runes.free();
+    
+    // Test chars iterator
+    let it = s.chars();
+    let count = 0;
+    while (true) {
+        let opt = it.next();
+        if (opt.is_none()) break;
+        count = count + 1;
+    }
+    assert(count == 7, "StringCharsIter count failed");
+    
+    // Test insert/remove
+    // Original: "Héllö 🚀"
+    s.insert_rune(1, 'ñ'); // "Hñéllö 🚀"
+    assert(s.utf8_len() == 8, "After insert_rune len failed");
+    let r_at_1 = s.utf8_get(1);
+    let expected_n: rune = 'ñ';
+    assert((u32)r_at_1 == (u32)expected_n, "After insert_rune content failed");
+    
+    let removed = s.remove_rune_at(2); // removes 'é' -> "Hñllö 🚀"
+    assert((u32)removed == 233, "remove_rune_at returned wrong char");
+    assert(s.utf8_len() == 7, "After remove_rune_at len failed");
+    
+    // Test Utf8 tools
+    assert(Utf8::rune_len('🚀') == 4, "Utf8::rune_len failed");
+    assert(Utf8::is_alpha('ñ'), "Utf8::is_alpha(ñ) failed");
+    assert(Utf8::is_upper('É'), "Utf8::is_upper(É) failed");
+}

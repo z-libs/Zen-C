@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_generics_struct
 struct Wrapper<T> {
     item: T;
     id: int;

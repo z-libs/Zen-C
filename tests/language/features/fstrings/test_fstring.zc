@@ -1,3 +1,4 @@
+// fstrings: test_fstring
 import "tests/language/features/fstrings/_fstring_mod.zc" as Mod;
 
 test "alias namespace fstring" {

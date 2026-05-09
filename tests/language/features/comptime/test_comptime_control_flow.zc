@@ -1,3 +1,4 @@
+// comptime: test_comptime_control_flow
 comptime {
     let sum = 0;
     for i in 0..5 {

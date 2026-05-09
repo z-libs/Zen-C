@@ -1,0 +1,109 @@
+// arrays/slices: test_arrays_slices_suite
+fn test_slice_return_fn() {
+    let s = [1.0, 2.0, 3.0]
+    assert(s[0] == 1.0, "slice[0] != 1.0");
+    assert(s[1] == 2.0, "slice[1] != 2.0");
+    assert(s[2] == 3.0, "slice[2] != 3.0");
+}
+
+fn test_float_slice_return_fn() -> [float] {
+    // implicit cast from double to float
+    return [1.0, 2.0, 3.0]
+}
+
+fn test_double_slice_return_fn() -> [double] {
+    return [4.0, 5.0, 6.0]
+}
+
+test "slice_literal_return_heap_allocation" {
+    test_slice_return_fn();
+}
+
+test "slice_literal_return_mixed_types" {
+    let f = test_float_slice_return_fn();
+    assert(f[0] >= 0.9 && f[0] <= 1.1, "float slice[0] wrong");
+    assert(f[1] >= 1.9 && f[1] <= 2.1, "float slice[1] wrong");
+    assert(f[2] >= 2.9 && f[2] <= 3.1, "float slice[2] wrong");
+}
+
+test "slice_literal_return_double" {
+    let d = test_double_slice_return_fn();
+    assert(d[0] == 4.0, "double slice[0] wrong");
+    assert(d[1] == 5.0, "double slice[1] wrong");
+    assert(d[2] == 6.0, "double slice[2] wrong");
+}
+
+test "empty_slice_return" {
+    let empty: [int] = [];
+    assert(empty.len == 0, "empty slice len != 0");
+}
+
+def ROWS = 3;
+def COLS = 3;
+
+struct Matrix {
+    data: int[9];  // ROWS * COLS
+}
+
+impl Matrix {
+    fn get(self, row: int, col: int) -> int {
+        return self.data[row * COLS + col];
+    }
+
+    fn set(self, row: int, col: int, val: int) {
+        self.data[row * COLS + col] = val;
+    }
+
+    static fn identity() -> Matrix {
+        let m = Matrix{data: [1,0,0, 0,1,0, 0,0,1]};
+        return m;
+    }
+}
+
+struct Vec3 {
+    data: int[3];
+}
+
+impl Vec3 {
+    fn get(self, i: int) -> int {
+        return self.data[i];
+    }
+}
+
+test "single index via get" {
+    let v = Vec3{data: [10, 20, 30]};
+    assert(v[0] == 10, "Single index [0] failed");
+    assert(v[1] == 20, "Single index [1] failed");
+    assert(v[2] == 30, "Single index [2] failed");
+}
+
+test "multi index via get" {
+    let m = Matrix::identity();
+
+    // Diagonal should be 1
+    assert(m[0, 0] == 1, "Matrix [0,0] failed");
+    assert(m[1, 1] == 1, "Matrix [1,1] failed");
+    assert(m[2, 2] == 1, "Matrix [2,2] failed");
+
+    // Off-diagonal should be 0
+    assert(m[0, 1] == 0, "Matrix [0,1] failed");
+    assert(m[1, 0] == 0, "Matrix [1,0] failed");
+    assert(m[0, 2] == 0, "Matrix [0,2] failed");
+}
+
+test "multi index expressions" {
+    let m = Matrix{data: [1,2,3, 4,5,6, 7,8,9]};
+
+    // Test with computed indices
+    let row = 1;
+    let col = 2;
+    assert(m[row, col] == 6, "Matrix [1,2] failed");
+    assert(m[0, col] == 3, "Matrix [0,2] failed");
+    assert(m[row, 0] == 4, "Matrix [1,0] failed");
+}
+
+test "multi index with set" {
+    let m = Matrix{data: [0,0,0, 0,0,0, 0,0,0]};
+    m.set(1, 2, 42);
+    assert(m[1, 2] == 42, "Matrix set then get failed");
+}

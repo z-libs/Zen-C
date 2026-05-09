@@ -389,7 +389,7 @@ test-asan: clean asan
 	ASAN_OPTIONS=detect_leaks=0 ./tests/scripts/run_example_transpile.sh
 
 test-plugins: $(TARGET) $(PLUGINS)
-	./zc run tests/plugins_suite.zc
+	./zc run tests/language/features/test_plugins_suite.zc
 
 # Fuzzing
 FUZZ_TARGET = zc-fuzz

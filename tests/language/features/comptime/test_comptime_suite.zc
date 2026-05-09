@@ -1,3 +1,4 @@
+// comptime: test_comptime_suite
 comptime {
     yield("def GENERATED_VAL = 42;");
 }

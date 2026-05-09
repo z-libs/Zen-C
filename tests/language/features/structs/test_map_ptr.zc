@@ -1,3 +1,4 @@
+// structs: test_map_ptr
 import "std/map.zc"
 struct RImage {}
 struct ResourceManager {

@@ -1,3 +1,4 @@
+// closures: test_explicit_captures
 fn main() {
     let x = 10;
     let y = 20;

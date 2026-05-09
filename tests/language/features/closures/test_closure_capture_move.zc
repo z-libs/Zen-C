@@ -1,4 +1,5 @@
 // EXPECT: FAIL
+// language/features/closures: test_closure_capture_move  --  should fail compilation
 struct Mover {
   val: int
 }

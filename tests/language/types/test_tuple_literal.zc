@@ -1,3 +1,4 @@
+// types: test_tuple_literal
 fn get_five() -> int {
     return 5;
 }

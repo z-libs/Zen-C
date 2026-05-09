@@ -1,0 +1,41 @@
+// compiler/analysis: type analysis: test_type_match
+// Match statement validation tests
+
+// --- Simple match with default ---
+fn classify(x: i32) -> string {
+    match x {
+        1 => { return "one"; }
+        2 => { return "two"; }
+        _ => { return "many"; }
+    }
+}
+
+test "match basic" {
+    let r = classify(3);
+    assert(r == "many", "match basic ok");
+}
+
+// --- Match with multiple values ---
+fn label(x: i32) -> string {
+    match x {
+        0 => { return "zero"; }
+        1 => { return "one"; }
+        2 => { return "two"; }
+        _ => { return "other"; }
+    }
+}
+
+test "match values" {
+    assert(label(2) == "two", "match values ok");
+}
+
+// --- Match with side effects ---
+test "match side effects" {
+    let x = 0;
+    let found = false;
+    match x {
+        0 => { found = true; }
+        _ => { }
+    }
+    assert(found, "match side effects ok");
+}

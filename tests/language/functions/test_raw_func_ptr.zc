@@ -1,4 +1,4 @@
-
+// language/functions: functions: test_raw_func_ptr
 fn print_msg(msg: char*) {
     puts(msg);
 }

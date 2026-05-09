@@ -1,3 +1,4 @@
+// tuples: test_tuples
 fn get_pair() -> (int, int) {
     return (10, 20);
 }

@@ -1,3 +1,4 @@
+// string: test_interpolation_release
 import "std/string.zc"
 
 fn getter(c: int*) -> String {

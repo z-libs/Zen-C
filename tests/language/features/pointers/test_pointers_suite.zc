@@ -1,3 +1,4 @@
+// pointers: test_pointers_suite
 struct Point {
     x: int;
     y: int;

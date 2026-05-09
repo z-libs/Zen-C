@@ -1,3 +1,4 @@
+// functions: test_implicit_return
 test "test_implicit_return" {
     // Adds newline
     "Hello Implicit"; 

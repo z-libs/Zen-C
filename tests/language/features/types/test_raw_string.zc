@@ -1,0 +1,6 @@
+// Raw string literals: r"..." preserves backslashes
+
+test "raw_string_basic" {
+    let s: string = r"hello world";
+    expect_eq(1, 1, "raw string compiles");
+}

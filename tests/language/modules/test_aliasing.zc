@@ -1,4 +1,4 @@
-
+// language/modules: modules: test_aliasing
 import { Vector as MathVec } from "./test_modules/_math.zc";
 import { Vector as PhysicsVec } from "./test_modules/_physics.zc";
 

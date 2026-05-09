@@ -1,0 +1,3 @@
+// EXPECT: FAIL
+// language/features/keyword-ident: test_trait  --  should fail compilation
+trait trait {}

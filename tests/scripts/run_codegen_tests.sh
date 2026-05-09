@@ -36,7 +36,7 @@ echo "** Running Codegen Verification Tests **"
 # Test 1: Duplicate Typedefs
 #
 
-TEST_NAME="dedup_typedefs.zc"
+TEST_NAME="test_dedup_typedefs.zc"
 echo -n "Testing $TEST_DIR/$TEST_NAME (Duplicate Typedefs)... "
 
 $ZC "$TEST_DIR/$TEST_NAME" --emit-c > /dev/null 2>&1
@@ -67,7 +67,7 @@ rm -f "${TEST_NAME%.zc}.c" "${TEST_NAME%.zc}" a.out
 #         thus returning a non-zero error code
 #
 
-TEST_NAME="emit_source_mapping.zc"
+TEST_NAME="test_emit_source_mapping.zc"
 echo -n "Testing $TEST_DIR/$TEST_NAME (Source Mappings)... "
 
 $ZC check "$TEST_DIR/$TEST_NAME" -g --warn-errors > /dev/null 2>&1
@@ -83,7 +83,7 @@ fi
 # Test 3: Slice Instantiation Naming
 #
 
-TEST_NAME="slice_instantiation_offset.zc"
+TEST_NAME="test_slice_instantiation_offset.zc"
 echo -n "Testing $TEST_DIR/$TEST_NAME (Slice Naming)... "
 
 $ZC "$TEST_DIR/$TEST_NAME" --emit-c > /dev/null 2>&1

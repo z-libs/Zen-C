@@ -1,3 +1,4 @@
+// comptime: test_comptime_vars
 comptime {
     let x = 10;
     let y = 20;

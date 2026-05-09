@@ -1,4 +1,4 @@
-
+// language/features/compiler: compiler features: test_build_directives
 //> shell: echo "Env Worked" > ${PWD}/build_dir_env.txt
 //> linux: shell: echo "Linux Worked" > ${PWD}/build_dir_linux.txt
 //> windows: shell: echo "Windows Worked" > ${PWD}/build_dir_windows.txt

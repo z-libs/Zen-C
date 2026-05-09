@@ -1,4 +1,4 @@
-
+// language/features/tuples: tuples: test_enum_tuples
 enum Shape {
     Circle(float),
     Rect(float, float)

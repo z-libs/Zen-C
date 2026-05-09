@@ -1,4 +1,4 @@
-
+// language/basic: basic: test_basics
 test "test_hello" {
     println "It works!"; 
 }

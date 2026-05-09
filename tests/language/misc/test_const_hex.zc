@@ -1,4 +1,4 @@
-
+// language/misc: misc: test_const_hex
 def CONST_HEX = 0x10;
 def CONST_OCT = 0o10;
 

@@ -1,3 +1,4 @@
+// generics: test_generic_loop_instantiation
 import "std/mem.zc"
 
 struct List<G> {

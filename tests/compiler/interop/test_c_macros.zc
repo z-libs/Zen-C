@@ -1,4 +1,4 @@
-
+// compiler/interop: interop: test_c_macros
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define DEBUG_MODE 1
 

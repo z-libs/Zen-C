@@ -1,0 +1,58 @@
+// stdlib: test_vec_operators
+import "std/vec.zc"
+
+test "vec_neq_operator" {
+    let v1 = Vec<int>::new();
+    v1.push(1); v1.push(2);
+    
+    let v2 = Vec<int>::new();
+    v2.push(1); v2.push(3);
+    
+    assert(v1 != v2);
+    v2.set(1, 2);
+    assert(v1 == v2);
+    println "neq passed";
+}
+
+test "vec_shl_shr_operators" {
+    let v = Vec<int>::new();
+    v << 10;
+    v << 20;
+    v << 30; // Push
+    
+    assert(v.length() == 3);
+    assert(v[0] == 10);
+    assert(v[2] == 30);
+    
+    let out = 0;
+    v >> &out; // Pop 30
+    assert(out == 30);
+    assert(v.length() == 2);
+    
+    v >> &out;
+    v >> (int*)0; // Pop 20, then pop 10 into nowhere
+    assert(out == 20);
+    assert(v.length() == 0);
+    println "shl passed";
+}
+
+test "vec_mul_operators" {
+    let v = Vec<int>::new();
+    v << 1;
+    v << 2;
+    
+    let v2 = v * 3;
+    assert(v2.length() == 6);
+    assert(v2[0] == 1); assert(v2[1] == 2);
+    assert(v2[2] == 1); assert(v2[3] == 2);
+    assert(v2[4] == 1); assert(v2[5] == 2);
+    println "mul passed";
+    
+    let v3 = Vec<int>::new();
+    v3 << 5;
+    v3 *= 4;
+    assert(v3.length() == 4);
+    assert(v3[0] == 5);
+    assert(v3[3] == 5);
+    println "mul_assign passed";
+}

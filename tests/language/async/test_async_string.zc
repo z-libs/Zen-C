@@ -1,3 +1,4 @@
+// async: test_async_string
 async fn fetch_string() -> string {
     return "Hello, world!";
 }

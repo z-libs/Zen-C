@@ -1,0 +1,12 @@
+// EXPECT: FAIL
+// compiler/analysis: test_move_vec_string_double_consume  --  should fail compilation
+import "std/string.zc"
+
+fn consume(v: Vec<String>) {}
+
+fn main() {
+    let v = Vec<String>::new();
+    v.push(String::new("hello"));
+    consume(v);
+    consume(v);
+}

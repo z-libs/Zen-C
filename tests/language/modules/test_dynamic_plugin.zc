@@ -1,4 +1,4 @@
-
+// language/modules: modules: test_dynamic_plugin
 import plugin "plugins/brainfuck" as bf
 import "std/io.zc"
 

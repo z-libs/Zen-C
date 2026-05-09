@@ -1,4 +1,4 @@
-
+// language/features/control_flow_ext: test_defer_control_flow
 test "defer_runs_on_break" {
     let result = 0;
     

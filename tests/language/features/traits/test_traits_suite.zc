@@ -1,4 +1,4 @@
-
+// language/features/traits: traits: test_traits_suite
 trait Greeter {
     fn greet(self, msg: string);
     fn shout(self);

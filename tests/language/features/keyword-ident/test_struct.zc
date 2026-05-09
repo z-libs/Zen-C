@@ -1,0 +1,3 @@
+// EXPECT: FAIL
+// language/features/keyword-ident: test_struct  --  should fail compilation
+struct struct {}

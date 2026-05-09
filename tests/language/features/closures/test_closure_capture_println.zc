@@ -1,3 +1,4 @@
+// closures: test_closure_capture_println
 fn execute(f: fn()) {
     f();
 }

@@ -1,4 +1,4 @@
-
+// language/features/tuples: tuples: test_tuple_comparison
 // Tuple comparison via manual field access
 
 fn eq_pair(a: (int, int), b: (int, int)) -> bool {

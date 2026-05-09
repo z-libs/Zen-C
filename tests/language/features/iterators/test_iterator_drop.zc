@@ -1,3 +1,4 @@
+// iterators: test_iterator_drop
 import "std/iter.zc"
 import "std/mem.zc"
 

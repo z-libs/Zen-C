@@ -1,4 +1,4 @@
-
+// language/modules/test_modules: _math  --  helper module
 struct Vector {
     x: int;
     y: int;

@@ -1,3 +1,4 @@
+// generics: test_complex_slice
 struct Inner {
     val: i32;
 }

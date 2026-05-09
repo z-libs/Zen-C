@@ -1,3 +1,4 @@
+// functions: test_required
 include <stdio.h>
 
 @required

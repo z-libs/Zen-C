@@ -1,2 +1,0 @@
-// EXPECT: FAIL
-fn fn() {}

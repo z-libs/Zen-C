@@ -1,0 +1,11 @@
+// EXPECT: FAIL
+// compiler/analysis: test_move_string_use_after_move  --  should fail compilation
+import "std/string.zc"
+
+fn consume(s: String) {}
+
+fn main() {
+    let s = String::new("hello");
+    consume(s);
+    consume(s);
+}

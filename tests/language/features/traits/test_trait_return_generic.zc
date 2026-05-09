@@ -1,3 +1,4 @@
+// traits: test_trait_return_generic
 import "std/vec.zc"
 
 trait GenericReturn {

@@ -1,3 +1,4 @@
+// comptime: test_comptime_helpers
 comptime {
     compile_warn("This is a compile-time warning test");
     yield("def TEST_YIELD_VAL = 42;");

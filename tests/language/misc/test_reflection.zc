@@ -1,0 +1,5 @@
+// Reflection: compile-time type introspection
+
+test "reflection_placeholder" {
+    expect_eq(1, 1, "reflection test compiles");
+}

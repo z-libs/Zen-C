@@ -1,0 +1,16 @@
+// EXPECT: FAIL
+// compiler/analysis: test_move_wrapper_double_consume  --  should fail compilation
+import "std/string.zc"
+
+struct WrapString {
+    inner: String;
+}
+
+fn consume(w: WrapString) {}
+
+fn main() {
+    let s = String::new("hello");
+    let w = WrapString { inner: s };
+    consume(w);
+    consume(w);
+}

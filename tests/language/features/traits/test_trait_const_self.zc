@@ -1,3 +1,4 @@
+// traits: test_trait_const_self
 trait Reader {
     fn read(const self) -> i32;
     fn read_mut(self) -> i32;

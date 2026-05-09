@@ -1,4 +1,4 @@
-
+// language/features/constants: constants: test_const_def
 test "def_constants" {
     def PI = 3.14159;
     def MAX = 100;

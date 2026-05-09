@@ -1,3 +1,4 @@
+// types: test_unicode_escapes
 test "unicode escape sequences" {
     // 32-bit rune literal
     let r1: rune = '\u{1F680}'; // Rocket

@@ -1,4 +1,0 @@
-// EXPECT: FAIL
-fn main() {
-    let let = 10;
-}

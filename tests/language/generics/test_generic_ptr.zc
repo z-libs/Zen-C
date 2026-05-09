@@ -1,3 +1,4 @@
+// generics: test_generic_ptr
 import "std/vec.zc"
 import "std/result.zc"
 

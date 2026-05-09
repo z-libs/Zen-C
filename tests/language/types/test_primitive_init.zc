@@ -1,3 +1,4 @@
+// types: test_primitive_init
 test "primitive_struct_init" {
     let a = int{};
     let b = int{5};

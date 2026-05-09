@@ -1,3 +1,4 @@
+// generics: test_sizeof_template
 struct Struct<T> {
     val: T;
 }

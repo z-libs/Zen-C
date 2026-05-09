@@ -1,4 +1,4 @@
-
+// language/features/aliases: test_alias
 struct Point {
     x: int;
     y: int;

@@ -1,0 +1,20 @@
+// @cold and @hot attributes: branch prediction hints
+
+import "std/core.zc"
+
+@cold
+fn error_handler(msg: string) {
+    // Cold: rarely executed path
+}
+
+@hot
+fn fast_path(x: int) -> int {
+    return x * 2;
+}
+
+test "cold_hot_attributes" {
+    expect_eq(fast_path(21), 42, "hot function works");
+    // cold function compiles and runs
+    error_handler("test");
+    expect_eq(1, 1, "cold function compiles");
+}

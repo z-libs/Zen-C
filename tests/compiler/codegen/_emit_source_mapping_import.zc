@@ -1,3 +1,4 @@
+// compiler/codegen: _emit_source_mapping_import  --  helper module
 struct Imported {
     // Empty.
 }

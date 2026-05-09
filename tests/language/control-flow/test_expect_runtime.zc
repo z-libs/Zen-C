@@ -1,0 +1,16 @@
+// expect: non-fatal assertion at runtime
+
+test "expect_pass" {
+    expect(1 + 1 == 2, "basic math");
+}
+
+test "expect_with_message_var" {
+    let msg = "dynamic message";
+    expect(42 == 42, msg);
+}
+
+test "expect_in_loop" {
+    for i in 0..3 {
+        expect(i >= 0, "loop index non-negative");
+    }
+}

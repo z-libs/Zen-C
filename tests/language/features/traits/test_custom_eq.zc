@@ -1,3 +1,4 @@
+// traits: test_custom_eq
 import "std.zc";
 
 struct MyStruct{

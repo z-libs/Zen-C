@@ -1,0 +1,26 @@
+// stdlib/networking: test_http
+import "std/net/http.zc"
+import "std/thread.zc"
+
+
+
+fn handler(_req: Request*, res: Response*) {
+    res.set_body(String::new("Hello World"));
+}
+
+test "HTTP Server and Client" {
+    let server = Server::new(8081, handler);
+    
+    // Spawn server thread
+    Thread::spawn(fn() {
+        server.start();
+    });
+    
+    sleep_ms(100); // Wait for server to start
+    
+    let response = fetch(String::new("http://127.0.0.1:8081/hello"));
+    
+    assert(response.status == 200, "Status 200");
+    assert(!response.body.is_empty(), "Body not empty");
+    assert(response.body.eq_str("Hello World"), "Body content match");
+}

@@ -1,3 +1,4 @@
+// comptime: test_comptime_strings
 comptime {
     let a = 100;
     let b = 200;

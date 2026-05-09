@@ -1,0 +1,30 @@
+// stdlib: test_tre_regex
+import "std/regex.zc"
+
+test "test_tre_regex" {
+    let re = Regex::compile("a+b");
+    
+    if (!re.is_valid()) panic("Failed to compile regex");
+
+    if (!re.match("aaab")) panic("Match 1: FAILED");
+    if (re.match("acb")) panic("Match 2: FAILED");
+    
+    re.destroy();
+
+    // Test find
+    let re2 = Regex::compile("([0-9]+)");
+    let found = re2.find("Year: 2023");
+    if (!found.is_some()) panic("Find: FAILED (Not found)");
+    let m = found.unwrap();
+    // Comparing strings in C requires strcmp usually, but Zen C might overload == for String?
+    // Match::as_string returns char*.
+    // "2023" is char*.
+    // char* == char* checks pointer equality.
+    // We need strcmp.
+    // std/string.zc imports string.h so strcmp is available.
+    // But let's check if there is a helper.
+    let s = m.as_string();
+    if (strcmp(s, "2023") != 0) panic("Find: FAILED (Wrong content)");
+    free(s);
+    re2.destroy();
+}

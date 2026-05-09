@@ -1,0 +1,14 @@
+// Escape analysis: smoke test  --  struct field escape checking (future enforcement)
+struct PtrBox {
+    ptr: int*
+}
+
+fn test_struct_escape() -> int* {
+    let x = 10;
+    let b = PtrBox { ptr: &x }; // SAFE: b and x have same lifetime
+    return b.ptr; // ERROR: x (via b.ptr) escapes the function!
+}
+
+fn main() {
+    let _ = test_struct_escape();
+}

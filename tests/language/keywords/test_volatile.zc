@@ -1,0 +1,14 @@
+// volatile keyword: used in asm volatile blocks
+
+fn read_cycle_count() -> int {
+    let result: int;
+    asm volatile {
+        "nop"
+    }
+    return 0;
+}
+
+test "volatile_asm" {
+    let x = read_cycle_count();
+    expect_eq(x, 0, "asm volatile compiles");
+}

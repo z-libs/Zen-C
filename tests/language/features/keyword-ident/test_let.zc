@@ -1,0 +1,5 @@
+// EXPECT: FAIL
+// language/features/keyword-ident: test_let  --  should fail compilation
+fn main() {
+    let let = 10;
+}

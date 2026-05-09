@@ -1,3 +1,4 @@
+// codegen: test_dangle_warn
 import "std/option.zc"
 
 fn get_optional_int() -> Option<int> {

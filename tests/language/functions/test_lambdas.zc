@@ -1,4 +1,4 @@
-
+// language/functions: functions: test_lambdas
 fn apply_twice(f: fn(I32) -> I32, x: I32) -> I32 {
     return f(f(x));
 }

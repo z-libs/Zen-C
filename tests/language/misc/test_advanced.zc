@@ -1,3 +1,4 @@
+// misc: test_advanced
 import "std.zc"
 
 fn fibonacci(n: int) -> int {

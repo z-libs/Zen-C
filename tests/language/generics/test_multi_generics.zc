@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_multi_generics
 struct Pair<A, B> {
     first: A;
     second: B;

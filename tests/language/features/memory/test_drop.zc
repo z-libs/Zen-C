@@ -1,0 +1,24 @@
+// memory: test_drop
+import "std/mem.zc"
+
+let DROP_CALLED = 0;
+
+struct MyResource {
+    id: int;
+}
+
+impl Drop for MyResource {
+    fn drop(self) {
+        println "Dropping MyResource {self.id}";
+        DROP_CALLED = 1;
+    }
+}
+
+test "drop_trait" {
+    {
+        let res = MyResource { id: 1 };
+        // Scope ends here, drop should be called
+    }
+    
+    assert(DROP_CALLED == 1, "Drop was not called!");
+}

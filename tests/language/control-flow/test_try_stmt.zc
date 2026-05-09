@@ -1,0 +1,32 @@
+// try operator (?): propagates errors from Result types
+
+import "std/result.zc"
+
+fn try_ok() -> Result<int> {
+    return Result<int>::Ok(42);
+}
+
+fn try_err() -> Result<int> {
+    return Result<int>::Err("fail");
+}
+
+fn chain_ok() -> Result<int> {
+    let val = try_ok()?;
+    return Result<int>::Ok(val * 2);
+}
+
+fn chain_err() -> Result<int> {
+    let val = try_err()?;
+    return Result<int>::Ok(val);
+}
+
+test "try_chain_ok" {
+    let r = chain_ok();
+    expect(r.is_ok(), "chain ok");
+    expect_eq(r.val, 84, "chain ok doubled");
+}
+
+test "try_chain_err" {
+    let r = chain_err();
+    expect(r.is_err(), "chain err propagates");
+}

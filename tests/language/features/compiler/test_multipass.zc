@@ -1,4 +1,4 @@
-
+// language/features/compiler: compiler features: test_multipass
 struct MultiPass {
     val: int;
 }

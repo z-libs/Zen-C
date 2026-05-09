@@ -1,4 +1,4 @@
-
+// language/functions: functions: test_attributes
 @required
 fn compute() -> int {
     return 42;

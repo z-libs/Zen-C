@@ -1,3 +1,4 @@
+// functions: test_closure_generic
 import "std/vec.zc"
 
 alias clos = fn(int) -> int;

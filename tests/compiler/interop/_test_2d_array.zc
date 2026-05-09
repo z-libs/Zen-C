@@ -1,3 +1,4 @@
+// compiler/interop: _test_2d_array  --  helper module
 fn twod(a: f64[2][2]) {
     println "{a[0][0]} {a[0][1]}";
     println "{a[1][0]} {a[1][1]}";

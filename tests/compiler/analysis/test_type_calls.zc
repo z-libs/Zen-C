@@ -1,0 +1,59 @@
+// compiler/analysis: type analysis: test_type_calls
+// Function call validation: arg count, types, @pure, default args
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+fn greet(name: string) {
+    println "Hello, {name}!";
+}
+
+@pure
+fn pure_add(a: i32, b: i32) -> i32 {
+    return a + b;
+}
+
+@pure
+fn pure_identity(a: i32) -> i32 {
+    return pure_add(a, 0);
+}
+
+// --- Correct call ---
+test "basic call" {
+    let r = add(3, 4);
+    assert(r == 7, "basic call ok");
+}
+
+// --- Void call ---
+test "void call" {
+    greet("world");
+    assert(true, "void call ok");
+}
+
+// --- @pure calling @pure ---
+test "pure chain" {
+    let r = pure_identity(42);
+    assert(r == 42, "pure chain ok");
+}
+
+// --- Nested calls ---
+test "nested calls" {
+    let r = add(add(1, 2), add(3, 4));
+    assert(r == 10, "nested calls ok");
+}
+
+// --- Method call ---
+struct Vec2 { x: i32; y: i32; }
+
+impl Vec2 {
+    fn len_sq(self) -> i32 {
+        return self.x * self.x + self.y * self.y;
+    }
+}
+
+test "method call" {
+    let v = Vec2 { x: 3, y: 4 };
+    let l = v.len_sq();
+    assert(l == 25, "method call ok");
+}

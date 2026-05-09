@@ -1,4 +1,4 @@
-
+// language/modules: modules: test_namespaced
 import "./test_modules/_math.zc" as math;
 import "./test_modules/_physics.zc" as physics;
 

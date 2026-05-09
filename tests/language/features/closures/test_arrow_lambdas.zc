@@ -1,3 +1,4 @@
+// closures: test_arrow_lambdas
 fn test_no_args() {
     let f1 = () -> 42;
     assert(f1() == 42);

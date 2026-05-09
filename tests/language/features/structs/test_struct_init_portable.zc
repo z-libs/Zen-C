@@ -1,3 +1,4 @@
+// structs: test_struct_init_portable
 struct Empty {
     x: int;
 }

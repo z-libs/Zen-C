@@ -1,0 +1,15 @@
+// memory: test_auto_drop
+import "std/vec.zc"
+
+struct Container {
+    items: Vec<int>,
+}
+
+pub fn main() {
+    let c = Container {
+        items: Vec<int>::new(),
+    };
+    c.items.push(1);
+    c.items.push(2);
+    c.items.push(3);
+}

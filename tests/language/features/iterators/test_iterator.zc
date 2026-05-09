@@ -1,3 +1,4 @@
+// iterators: test_iterator
 import "std/iter.zc"
 import "std/option.zc"
 

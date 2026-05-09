@@ -1,0 +1,56 @@
+// language/features/memory: memory: test_resources
+// Copy Trait
+@derive(Copy)
+struct Point { x: int; y: int; }
+
+// Clone Pattern
+trait Clone {
+    fn clone(self) -> Self;
+}
+
+struct LocalBox { val: int; }
+
+impl Clone for LocalBox {
+    fn clone(self) -> LocalBox {
+        return LocalBox{val: self.val};
+    }
+}
+
+// Re-initialization
+struct Resource { ptr: void*; }
+
+// Function Param Helper
+fn take_point(p: Point) {
+    if p.x != 10 {
+        // Error
+    }
+}
+
+test "Resource Semantics" {
+    "Testing Resource Semantics...";
+
+    let p1 = Point{x: 10, y: 20};
+    let _p2 = p1; // Copied
+    
+    let b1 = LocalBox{val: 99};
+    let b2 = b1.clone(); 
+    // let b3 = b1; // This would move if uncommented.
+    
+    assert(b2.val == 99, "Clone failed");
+    
+    // Re-initialization
+    // struct Resource (Global)
+    
+    let r1 = Resource{ptr: NULL};
+    let _r2 = r1; // Moved
+    
+    r1 = Resource{ptr: NULL}; // Re-init
+    let _r3 = r1; // Valid again
+    
+    // Function Param Move (Simulated)
+    take_point(p1);
+    take_point(p1); // Still valid because Copy
+    
+    "Resource Semantics Passed.";
+}
+

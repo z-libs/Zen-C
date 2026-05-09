@@ -1,4 +1,4 @@
-
+// language/functions: functions: test_lambda_arrow
 fn compute(op: fn(I32, I32) -> I32, a: I32, b: I32) -> I32 {
     return op(a, b);
 }

@@ -1,0 +1,52 @@
+// compiler/analysis: type analysis: test_type_misc
+// Miscellaneous type checker features
+
+// --- Lambda (arrow syntax) ---
+fn apply(f: fn(I32) -> I32, val: I32) -> I32 {
+    return f(val);
+}
+
+test "lambda basic" {
+    let dbl = x -> x * 2;
+    let r = dbl(21);
+    assert(r == 42, "lambda basic ok");
+}
+
+// --- Lambda as argument ---
+test "lambda arg" {
+    let r = apply(x -> x + 1, 41);
+    assert(r == 42, "lambda arg ok");
+}
+
+// --- Boolean in conditions ---
+test "bool conditions" {
+    let x = 10;
+    let y = 20;
+    if x < y {
+        assert(true, "bool condition ok");
+    } else {
+        assert(false, "should not reach");
+    }
+}
+
+// --- While loop ---
+test "while loop" {
+    let i = 0;
+    let sum = 0;
+    while i < 5 {
+        sum = sum + i;
+        i = i + 1;
+    }
+    assert(sum == 10, "while loop ok");
+}
+
+// --- For loop ---
+test "for loop" {
+    let sum = 0;
+    for i in 0..5 {
+        sum = sum + i;
+    }
+    assert(sum == 10, "for loop ok");
+}
+
+

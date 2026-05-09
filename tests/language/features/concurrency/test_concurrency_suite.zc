@@ -1,3 +1,4 @@
+// concurrency: test_concurrency_suite
 import "std/thread.zc"
 
 async fn double_slowly(x: int) -> int {

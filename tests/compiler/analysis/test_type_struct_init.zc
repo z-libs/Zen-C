@@ -1,0 +1,42 @@
+// compiler/analysis: type analysis: test_type_struct_init
+// Struct initialization validation
+
+struct Point {
+    x: i32;
+    y: i32;
+}
+
+struct Rect {
+    min: Point;
+    max: Point;
+}
+
+// --- Full struct init ---
+test "struct init" {
+    let p = Point { x: 1, y: 2 };
+    assert(p.x == 1 && p.y == 2, "struct init ok");
+}
+
+// --- Nested struct init ---
+test "nested struct init" {
+    let r = Rect {
+        min: Point { x: 0, y: 0 },
+        max: Point { x: 10, y: 10 },
+    };
+    assert(r.min.x == 0 && r.max.x == 10, "nested struct init ok");
+}
+
+// --- Struct field access ---
+test "field access" {
+    let p = Point { x: 3, y: 4 };
+    let x = p.x;
+    let y = p.y;
+    assert(x == 3 && y == 4, "field access ok");
+}
+
+// --- Field update ---
+test "field update" {
+    let p = Point { x: 1, y: 2 };
+    p.x = 10;
+    assert(p.x == 10 && p.y == 2, "field update ok");
+}

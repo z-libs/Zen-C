@@ -1,4 +1,4 @@
-
+// language/features/tuples: tuples: test_tuple_typed
 // Explicit type annotations for tuples
 
 test "typed 3-tuple" {

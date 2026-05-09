@@ -1,3 +1,4 @@
+// destructuring: test_destructuring
 struct Point {
     x: int;
     y: int;

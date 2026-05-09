@@ -1,0 +1,17 @@
+// language/control-flow: control-flow: test_if_expr
+test "if_as_expression" {
+    // If-expression with blocks
+    let x = if (1) { 10 } else { 20 };
+    assert(x == 10, "if true branch should return 10");
+
+    // False condition
+    let y = if (0) { 100 } else { 200 };
+    assert(y == 200, "if false branch should return 200");
+
+    // If-expression with comparison
+    let val = 5;
+    let z = if (val > 3) { 1 } else { 0 };
+    assert(z == 1, "if-expression with comparison should work");
+
+    println "  If-expression tests: Success";
+}

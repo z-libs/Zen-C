@@ -1,9 +1,0 @@
-fn test_array_escape() -> int* {
-    let x = 10;
-    let a: [int*; 1] = [&x]; // SAFE
-    return a[0]; // ERROR: x escapes via array!
-}
-
-fn main() {
-    let _ = test_array_escape();
-}

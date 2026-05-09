@@ -1,4 +1,4 @@
-
+// language/features/operators: operators: test_safe_nav
 // Safe navigation ?. operator tests
 
 struct Point { x: int; y: int; }

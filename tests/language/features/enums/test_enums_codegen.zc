@@ -1,0 +1,53 @@
+// language/features/enums: enums: test_enums_codegen
+enum Status {
+    Idle,
+    Running,
+    Finished,
+    Error(int)
+}
+
+test "enum_codegen_auto_call" {
+    // Test: Enum::Variant used as a value without ()
+    // This should correctly emit Status__Idle() in C.
+    let s = Status::Idle;
+    
+    match s {
+        Status::Idle => assert(true, "Should be Idle"),
+        _ => assert(false, "Failed to match Idle")
+    }
+}
+
+test "enum_codegen_explicit_call" {
+    // Test: Enum::Variant used with explicit ()
+    // This should correctly emit Status__Running() and NOT double-call Status__Running()().
+    let s = Status::Running();
+    
+    match s {
+        Status::Running => assert(true, "Should be Running"),
+        _ => assert(false, "Failed to match Running")
+    }
+}
+
+test "enum_codegen_payload" {
+    // Test: Enum variant with payload
+    // Ensures no regression for normal variant calls.
+    let s = Status::Error(404);
+    
+    match s {
+        Status::Error(code) => assert(code == 404, "Code mismatch"),
+        _ => assert(false, "Failed to match Error")
+    }
+}
+
+test "enum_codegen_qualified_match" {
+    // Test: Qualified matches and nested logic
+    let s = Status::Finished;
+    
+    // Explicitly check tags via match
+    match s {
+        Status::Idle => assert(false, "Should not be Idle"),
+        Status::Running => assert(false, "Should not be Running"),
+        Status::Finished => assert(true, "Should be Finished"),
+        Status::Error(_) => assert(false, "Should not be Error")
+    }
+}

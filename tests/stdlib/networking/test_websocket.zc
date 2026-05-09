@@ -1,0 +1,79 @@
+// stdlib/networking: test_websocket
+import "std/net/websocket.zc"
+import "std/thread.zc"
+
+
+
+test "WebSocket Handshake and Frame" {
+    // Server Thread
+    Thread::spawn(fn() {
+        let l_res = TcpListener::bind("127.0.0.1", 9002);
+        if (l_res.is_err()) return;
+        
+        let l = l_res.unwrap();
+        let stream_res = l.accept();
+        if (stream_res.is_err()) return;
+        
+        let stream = stream_res.unwrap();
+        
+        // Read handshake (dummy)
+        let buf: char[1024];
+        stream.read(&buf[0], 1024);
+        
+        let key = "dGhlIHNhbXBsZSBub25jZQ==";
+        let ws_res = WebSocket::handshake(stream, String::new(key));
+        if (ws_res.is_err()) return;
+        
+        let ws = ws_res.unwrap();
+        
+        // Echo loop
+        let msg_res = ws.recv();
+        if (msg_res.is_ok()) {
+            let msg = msg_res.unwrap();
+            ws.send(msg); // Echo back
+        }
+    });
+    
+    sleep_ms(100);
+    
+    // Client (Manual)
+    let client = TcpStream::connect("127.0.0.1", 9002).unwrap();
+    
+    // Send Handshake
+    let req = "GET /chat HTTP/1.1\r\nHost: server.example.com\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nOrigin: http://example.com\r\n\r\n";
+    client.write((u8*)req, strlen(req));
+    
+    // Read Response
+    let buf: char[1024];
+    let n = client.read(&buf[0], 1024).unwrap();
+    buf[n] = 0;
+    
+    // Verify Accept Header
+    assert(strstr(&buf[0], "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=") != NULL, "Handshake verification");
+    
+    // Send Frame (Masked "Hello")
+    let frame: u8[11];
+    frame[0] = 0x81;
+    frame[1] = 0x85; // Masked, len 5
+    frame[2] = 0x37; frame[3] = 0xfa; frame[4] = 0x21; frame[5] = 0x3d; // Mask
+    frame[6] = 0x7f; frame[7] = 0x9f; frame[8] = 0x4d; frame[9] = 0x51; frame[10] = 0x58; // Hello masked using XOR
+    
+    client.write(&frame[0], 11);
+    
+    // Read Echo (Unmasked from server "Hello")
+    let echo_buf: char[100];
+    let total_read = 0;
+    while (total_read < 7) {
+        let n = client.read(&echo_buf[total_read], 100 - total_read).unwrap();
+        assert(n != 0, "Connection closed early");
+        total_read = total_read + n;
+    }
+    echo_buf[total_read] = 0;
+    
+    let b1 = (u8)echo_buf[0];
+    let b2 = (u8)echo_buf[1];
+    
+    assert(b1 == 0x81, "Opcode Text");
+    assert(b2 == 0x05, "Len 5");
+    assert(strncmp(&echo_buf[2], "Hello", 5) == 0, "Payload match");
+}

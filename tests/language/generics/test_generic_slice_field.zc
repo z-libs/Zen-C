@@ -1,3 +1,4 @@
+// generics: test_generic_slice_field
 struct Inner {
     val: i32;
 }

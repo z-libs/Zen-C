@@ -1,0 +1,13 @@
+// @link_name attribute: override the generated C identifier
+
+import "std/core.zc"
+
+@link_name("my_custom_name")
+fn original_name() -> int {
+    return 99;
+}
+
+test "link_name_works" {
+    let x = original_name();
+    expect_eq(x, 99, "link_name function works");
+}

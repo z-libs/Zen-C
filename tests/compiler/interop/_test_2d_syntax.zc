@@ -1,3 +1,4 @@
+// compiler/interop: _test_2d_syntax  --  helper module
 fn twod_known(a: f64[2][2]) {
     println "known";
 }

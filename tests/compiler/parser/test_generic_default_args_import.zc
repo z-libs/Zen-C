@@ -1,0 +1,44 @@
+// parser: test_generic_default_args_import
+import "std.zc"
+
+struct Handle<T>{
+    data:T*;
+}
+impl Handle<T>{
+    fn new(value:T=T{})->Handle{
+        let b=Handle{};
+        b.data=malloc(sizeof(T));
+        *b.data=value;
+
+        return b;
+    }
+    fn get(self)->T{
+        return *self.data;
+    }
+    fn free(self){
+        free(self.data);
+    }
+}
+test "generic default arguments (int)"{
+    let h=Handle<int>::new();
+    "h.get()={h.get()}";
+    h.free();
+}
+test "generic default arguments (pointer)"{
+    let h=Handle<int*>::new();
+    "h.get()={h.get()}";
+    h.free();
+}
+struct Point{
+    x:int;
+    y:int 
+}
+test "generic default arguments (struct)"{
+    let h=Handle<Point>::new();
+    let p=h.get();
+
+    "p.x={p.x}";
+    "p.y={p.y}";
+
+    h.free();
+}

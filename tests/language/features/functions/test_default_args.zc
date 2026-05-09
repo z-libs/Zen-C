@@ -1,4 +1,4 @@
-
+// language/features/functions: functions: test_default_args
 struct Point {
     x: int;
     y: int;

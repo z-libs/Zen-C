@@ -1,0 +1,5 @@
+// EXPECT: FAIL
+// language/features/keyword-ident: test_self_invalid  --  should fail compilation
+fn main() {
+    let self = 10;
+}

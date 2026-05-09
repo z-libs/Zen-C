@@ -1,4 +1,4 @@
-
+// language/features/functions: functions: test_varargs
 test "Variadic Sum" {
     // We can't define full variadic functions inside tests easily due to closure wrapping in some contexts?
     // Actually, global functions are better. But tests usually run in main.

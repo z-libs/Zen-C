@@ -1,0 +1,77 @@
+// test_bits
+import "std/bits.zc"
+import "std/core.zc"
+
+@cfg(not(__TINYC__))
+test "bits_u128" {
+    println "Testing u128 rots...";
+    let a128: u128 = (((u128)0x8000000000000000) << 64) | 0x1;
+    let b128: u128 = 0x3;
+    let c128: u128 = (((u128)0xC000000000000000) << 64);
+    assert(Bits::rotl128(a128, 1) == b128, "u128 rotl failed");
+    assert(Bits::rotr128(a128, 1) == c128, "u128 rotr failed");
+
+    assert(Bits::popcount128((((u128)0xFFFFFFFFFFFFFFFF) << 64) | 0xFFFFFFFFFFFFFFFF) == 128, "u128 popcount failed");
+}
+
+@cfg(__TINYC__)
+test "bits_u128_skip" {
+    println "Skipping u128 tests (not supported by TCC)";
+}
+
+test "bits_rotations" {
+    println "Testing rots...";
+    // --- Rotations ---
+    let a8: u8 = 0b10000001;
+    assert(Bits::rotl8(a8, 1) == 0b00000011, "u8 rotl failed");
+    assert(Bits::rotr8(a8, 1) == 0b11000000, "u8 rotr failed");
+
+    let a16: u16 = 0x8001;
+    assert(Bits::rotl16(a16, 1) == 0x0003, "u16 rotl failed");
+    assert(Bits::rotr16(a16, 1) == 0xC000, "u16 rotr failed");
+    
+    let a32: u32 = 0x80000001;
+    assert(Bits::rotl32(a32, 1) == 0x00000003, "u32 rotl failed");
+    assert(Bits::rotr32(a32, 1) == 0xC0000000, "u32 rotr failed");
+    
+    let a64: u64 = 0x8000000000000001;
+    assert(Bits::rotl64(a64, 1) == 0x0000000000000003, "u64 rotl failed");
+    assert(Bits::rotr64(a64, 1) == 0xC000000000000000, "u64 rotr failed");
+}
+
+test "bits_popcount" {
+    assert(Bits::popcount8((u8)0b10101010) == 4, "u8 popcount failed");
+    assert(Bits::popcount16((u16)0xFFFF) == 16, "u16 popcount failed");
+    assert(Bits::popcount32(0x12345678) == 13, "u32 popcount failed");
+    assert(Bits::popcount64(0xF0F0F0F0F0F0F0F0) == 32, "u64 popcount failed");
+}
+
+test "bits_count_zeros" {
+    // --- CLZ (Count Leading Zeros) ---
+    assert(Bits::clz8((u8)0b00101010) == 2, "u8 clz failed");
+    assert(Bits::clz16((u16)0x00FF) == 8, "u16 clz failed");
+    assert(Bits::clz32(0x00001234) == 19, "u32 clz failed");
+    assert(Bits::clz64(0x00000000FFFFFFFF) == 32, "u64 clz failed");
+    
+    // --- CTZ (Count Trailing Zeros) ---
+    assert(Bits::ctz8((u8)0b10101000) == 3, "u8 ctz failed");
+    assert(Bits::ctz16((u16)0xFF00) == 8, "u16 ctz failed");
+    assert(Bits::ctz32(0xFFFF0000) == 16, "u32 ctz failed");
+}
+
+test "bits_bswap" {
+    assert(Bits::bswap16((u16)0x1234) == 0x3412, "u16 bswap failed");
+    assert(Bits::bswap32(0x12345678) == 0x78563412, "u32 bswap failed");
+    assert(Bits::bswap64(0x1122334455667788) == 0x8877665544332211, "u64 bswap failed");
+}
+
+test "bits_reverse" {
+    assert(Bits::reverse_bits8((u8)0b10100011) == 0b11000101, "u8 reverse failed");
+    assert(Bits::reverse_bits16((u16)0x0F00) == 0x00F0, "u16 reverse failed");
+    assert(Bits::reverse_bits32(0x0F0F0F0F) == 0xF0F0F0F0, "u32 reverse failed");
+}
+
+test "z_final" {
+    println "Bits tests passed successfully!";
+}
+

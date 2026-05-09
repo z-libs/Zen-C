@@ -1,4 +1,4 @@
-
+// language/misc: misc: test_chained
 import "std/string.zc"
 
 test "test_chained" {

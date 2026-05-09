@@ -1,4 +1,4 @@
-
+// language/features/traits: traits: test_mixin_methods
 struct Foo {
     i: i32;
 }

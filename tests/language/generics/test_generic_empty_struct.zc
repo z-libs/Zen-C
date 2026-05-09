@@ -1,3 +1,4 @@
+// generics: test_generic_empty_struct
 struct Optional<T> {
   value: T;
   valid: bool;

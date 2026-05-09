@@ -1,0 +1,20 @@
+// control-flow: test_match_return
+fn get_number(code: int) -> int {
+    match code {
+        0 => { return 10; }
+        1 => { return 20; }
+        _ => { return -1; }
+    }
+}
+
+fn main() {
+    let a = get_number(0);
+    let b = get_number(1);
+    let c = get_number(99);
+
+    if (a != 10) { return 1; }
+    if (b != 20) { return 1; }
+    if (c != -1) { return 1; }
+
+    return 0;
+}

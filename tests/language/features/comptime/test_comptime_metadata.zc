@@ -1,3 +1,4 @@
+// comptime: test_comptime_metadata
 comptime {
     let target = __COMPTIME_TARGET__;
     let path = __COMPTIME_FILE__;

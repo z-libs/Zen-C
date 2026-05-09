@@ -1,4 +1,4 @@
-
+// language/features/fstrings: _fstring_mod  --  helper module
 fn get_val() -> int {
     return 42;
 }

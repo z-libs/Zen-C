@@ -1,0 +1,79 @@
+// language/features/opaque-types: test_opaque_alias_methods
+import "std/core.zc"
+import "std/slice.zc"
+import "std/option.zc"
+
+opaque alias StringView = Slice<char>;
+
+impl StringView {
+    fn from(s: char*) -> StringView {
+        let sv = StringView{data: s, len: strlen(s)};
+        return sv;
+    }
+
+    fn from_parts(s: char*, len: usize) -> StringView {
+        let sv = StringView{data: s, len: len};
+        return sv;
+    }
+
+    fn eq(self, other: StringView) -> bool {
+        if(self.len != other.len) return false;
+        return memcmp(self.data, other.data, self.len) == 0;
+    }
+
+    fn chop_by_delim(self, delim: char) -> StringView {
+        let i: usize = 0;
+        for(; i < self.len && self.data[i] != delim;) i++;
+
+        let result = StringView{data: self.data, len: i};
+
+        if(i < self.len) {
+            self.len -= i + 1;
+            self.data += i + 1;
+        } else {
+            self.len -= i;
+            self.data += i;
+        }
+
+        return result;
+    }
+}
+
+test "opaque alias static constructor" {
+    let sv = StringView::from("hello");
+    assert(sv.len == 5, "StringView::from length failed");
+    assert(sv.data[0] == 'h', "StringView::from data failed");
+}
+
+test "opaque alias from_parts" {
+    let sv = StringView::from_parts("hello world", 5);
+    assert(sv.len == 5, "StringView::from_parts length failed");
+    assert(sv.data[0] == 'h', "StringView::from_parts data failed");
+}
+
+test "opaque alias instance method" {
+    let sv1 = StringView::from("hello");
+    let sv2 = StringView::from("hello");
+    let sv3 = StringView::from("world");
+
+    assert(sv1.eq(sv2), "StringView eq same failed");
+    assert(!sv1.eq(sv3), "StringView eq diff failed");
+
+    assert(sv1 == sv2, "StringView == operator same failed");
+    assert(sv1 != sv3, "StringView != operator diff failed");
+}
+
+test "opaque alias chop_by_delim" {
+    let sv = StringView::from("hello world");
+    let left: Slice<char> = sv.chop_by_delim(' ');
+
+    assert(left.len == 5, "chop_by_delim left length failed");
+    assert(sv.len == 5, "chop_by_delim remainder length failed");
+}
+
+test "opaque alias underlying type fields" {
+    let sv = StringView::from("test");
+    // Access fields from the underlying Slice<char> type
+    assert(sv.data != 0, "StringView data field access failed");
+    assert(sv.len == 4, "StringView len field access failed");
+}

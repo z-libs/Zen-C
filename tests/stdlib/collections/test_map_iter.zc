@@ -1,0 +1,27 @@
+// stdlib: test_map_iter
+import "std/map.zc"
+import "std/string.zc"
+
+test "map_iterator" {
+    let m = Map<int>::new();
+    
+    m.put("one", 1);
+    m.put("two", 2);
+    m.put("three", 3);
+    
+    let count = 0;
+    let sum = 0;
+    
+    for entry in m {
+        count = count + 1;
+        sum = sum + entry.val;
+        
+        println "Key: {entry.key}, Val: {entry.val}";
+    }
+    
+    assert(count == 3, "Map iterator count failed");
+    
+    assert(sum == 6, "Map iterator sum failed");
+    
+    m.free();
+}

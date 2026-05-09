@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_default_args
 struct Handle<T> {
     data: T*;
 }

@@ -1,3 +1,4 @@
+// async: test_async_struct_ptr
 struct String {
     data: char*;
 }

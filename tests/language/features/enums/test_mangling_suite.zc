@@ -1,0 +1,49 @@
+// enums: test_mangling_suite
+import "_sockaddr_mod.zc" as net;
+
+raw {
+    struct sockaddr { char data[16]; };
+    typedef struct sockaddr sockaddr;
+    int af_inet = 2;
+    void ws2__WSAStringToAddressA(void* str, int af, void* p, void* sa, void* sz) {}
+}
+
+// Case 1: Local struct mangling
+struct Local {
+    val: int;
+}
+impl Local {
+    fn new(v: int) -> Local { return Local{val: v}; }
+    fn get(self) -> int { return self.val; }
+}
+
+test "local_struct_mangling" {
+    let l = Local::new(42);
+    assert(l.get() == 42);
+}
+
+// Case 2: Trait mangling
+trait Newable {
+    fn create() -> self;
+}
+impl Newable for Local {
+    fn create() -> Local { return Local{val: 100}; }
+}
+
+test "trait_method_mangling" {
+    let l = Local::create();
+    assert(l.val == 100);
+}
+
+// Case 3: Extern struct mangling bypass
+test "extern_struct_mangling_bypass" {
+    let s = net::sockaddr::new();
+    // Verification is primarily by checking it compiles (unmangled C name sockaddr)
+    // In our mock, new() returns NULL
+    assert(s == NULL);
+}
+
+// Case 4: Namespaced extern symbol access
+test "namespaced_extern_access" {
+    assert(net::af_inet == 2);
+}

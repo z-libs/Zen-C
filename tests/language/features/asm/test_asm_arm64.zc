@@ -1,3 +1,4 @@
+// asm: test_asm_arm64
 fn test_nop() {
     asm { nop }
 }

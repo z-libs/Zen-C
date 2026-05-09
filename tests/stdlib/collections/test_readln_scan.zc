@@ -1,0 +1,21 @@
+// stdlib/collections: test_readln_scan
+test "test_readln_scan" {
+    "Testing readln compilation...";
+    
+    let x: int = 0;
+    let f: float = 0.0;
+    
+    if (1 == 0) {
+        let s = readln();
+        
+        let count = readln(x);  
+        readln(f);
+        
+        readln(x, f);
+        
+        let count2 = ?"Age? "(x);
+        ?"Coords? "(x, f);
+    }
+    
+    "Smart readln compiled successfully";
+}

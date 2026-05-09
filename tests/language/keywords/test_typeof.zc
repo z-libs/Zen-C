@@ -1,0 +1,7 @@
+// typeof operator: returns the C type of an expression
+// typeof is parsed as an expression but currently has minimal codegen support
+
+fn main() {
+    let a = 42;
+    typeof(a);  // Should at least parse without error
+}

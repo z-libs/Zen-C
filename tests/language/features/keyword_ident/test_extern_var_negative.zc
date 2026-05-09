@@ -1,3 +1,0 @@
-// EXPECT: FAIL
-extern var x: int;
-fn main() {}

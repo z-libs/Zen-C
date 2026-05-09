@@ -1,3 +1,4 @@
+// traits: test_trait_cast_fix
 trait Greeter {
     fn greet(self);
 }

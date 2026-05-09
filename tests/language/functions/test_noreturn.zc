@@ -1,0 +1,14 @@
+// @noreturn attribute: function does not return (calls exit/abort)
+
+import "std/core.zc"
+
+@noreturn
+fn exit_program() {
+    // In a real scenario this would call C's exit()
+    // Here we just test that the attribute compiles
+}
+
+test "noreturn_compiles" {
+    // The @noreturn attribute should not prevent compilation
+    expect_eq(1, 1, "noreturn compiles");
+}

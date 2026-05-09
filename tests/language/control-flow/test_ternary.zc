@@ -1,0 +1,30 @@
+// language/control-flow: control-flow: test_ternary
+enum Result {
+    Ok(int),
+    Err(int)
+}
+
+fn test_unwrap() -> Result {
+    let res = Result.Ok(42);
+    let val = res?; 
+    if (val == 42) println "  Unwrap: Success";
+    else println "  Unwrap: Failed";
+    return res;
+}
+
+test "test_ternary" {
+    println "Testing Ternary...";
+    
+    // Simple Ternary
+    let x = 1 ? 10 : 20;
+    if (x == 10) println "  Simple Ternary: Success";
+    else println "  Simple Ternary: Failed";
+    
+    // Simple Unwrap
+    test_unwrap();
+
+    // Ambiguity / Precredence
+    // 1 ? 2 : 3
+    let y = 0 ? 100 : 200;
+    if (y == 200) println "  False Branch: Success";
+}

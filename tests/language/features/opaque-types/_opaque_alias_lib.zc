@@ -1,0 +1,14 @@
+// language/features/opaque-types: _opaque_alias_lib  --  helper module
+opaque alias Handle = int;
+
+fn new_handle(v: int) -> Handle {
+    return v; // Implicit cast int -> Handle (OK in module)
+}
+
+fn get_val(h: Handle) -> int {
+    return h; // Implicit cast Handle -> int (OK in module)
+}
+
+fn compare_handles(a: Handle, b: Handle) -> bool {
+    return a == b; // Strict equality (OK)
+}

@@ -1,0 +1,39 @@
+// EXPECT: FAIL
+// language/features/move: test_move_loop  --  should fail compilation
+struct Mover {
+    val: int
+}
+
+impl Drop for Mover {
+    fn drop(self) {
+        println "dropping mover";
+    }
+}
+
+fn consume(m: Mover) {
+    println "from consume: m.val = {m.val}";
+}
+
+fn main() {
+    let m1 = Mover { val: 1 };
+
+    for _ in 0..=1 {
+        m1.val++;
+        println "from loop: m1.val = {m1.val}";
+
+        // This should be a compiler error since the above access of `m1` counts
+        // as "after" the move since the loop continues from this point.
+        consume(m1);
+    }
+
+    let m2 = Mover { val: 1 };
+
+    for _ in 0..=1 {
+        m2.val++;
+        println "from loop: m2.val = {m2.val}";
+
+        // This is a valid move since the loop can't continue after the move.
+        consume(m2);
+        break;
+    }
+}

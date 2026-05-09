@@ -1,0 +1,20 @@
+// opaque-types: test_opaque
+import "_opaque_lib.zc";
+
+fn main() {
+    let b = new_box(42);
+    
+    // Stack allocation should work (size known)
+    let b2: SecretBox;
+    b2 = b;
+
+    // Public methods should work
+    let v = get_value(&b2);
+    assert(v == 42, "Value should be 42");
+
+    set_value(&b2, 100);
+    assert(get_value(&b2) == 100, "Value should be 100");
+
+    println "Opaque struct test passed";
+    return 0;
+}

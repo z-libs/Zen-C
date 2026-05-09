@@ -1,4 +1,4 @@
-
+// language/features/tuples: tuples: test_tuple_arity5
 // 5-tuple tests
 
 fn five_tuple() -> (int, int, int, int, int) {

@@ -1,0 +1,38 @@
+// stdlib/networking: test_net_udp
+import "std/net/udp.zc"
+import "std/io.zc"
+
+
+
+test "UDP Bind, Send, Recv" {
+    // Server Socket
+    let res_a = UdpSocket::bind("127.0.0.1", 9000);
+    assert(!res_a.is_err(), "Bind Server");
+    let server = res_a.unwrap();
+    defer server.close();
+
+    // Client Socket
+    let res_b = UdpSocket::bind("127.0.0.1", 9001);
+    assert(!res_b.is_err(), "Bind Client");
+    let client = res_b.unwrap();
+    defer client.close();
+
+    // Send
+    let msg = "Hello UDP";
+    let len = strlen(msg);
+    let send_res = client.send_to(msg, len, "127.0.0.1", 9000);
+    assert(!send_res.is_err(), "SendTo");
+
+    // Recv
+    let buf: char[128];
+    let recv_res = server.recv_from(&buf[0], 128);
+    assert(!recv_res.is_err(), "RecvFrom");
+    
+    let res = recv_res.unwrap();
+    let n = res.n;
+    
+    buf[n] = 0;
+    res.host.free();
+
+    assert(strcmp(&buf[0], msg) == 0, "Message content match");
+}

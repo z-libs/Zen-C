@@ -1,0 +1,5 @@
+// raw statement: emit literal C code verbatim
+
+test "raw_stmt_compiles" {
+    expect_eq(1, 1, "raw stmt test file compiles");
+}

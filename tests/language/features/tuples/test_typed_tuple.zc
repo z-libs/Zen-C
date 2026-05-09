@@ -1,3 +1,4 @@
+// tuples: test_typed_tuple
 test "typed_tuple_destructuring" {
     // Fully typed tuple destructuring
     let (a: string, b: u8) = ("hello", 42);

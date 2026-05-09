@@ -1,0 +1,14 @@
+// codegen: test_slice_instantiation_offset
+struct Inner {
+    val: i32;
+}
+
+struct Wrapper<T> {
+    data: T[];
+}
+
+fn main() {
+    let w: Wrapper<Inner>;
+    // This triggers generic instantiation of Wrapper<Inner>,
+    // which should correctly register Slice__Inner (not Slice___Inner).
+}

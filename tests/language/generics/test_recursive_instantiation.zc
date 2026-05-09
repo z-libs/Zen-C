@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_recursive_instantiation
 
 fn alloc<T>() -> T* {
     return (T*)malloc(sizeof(T));

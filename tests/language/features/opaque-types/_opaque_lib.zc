@@ -1,0 +1,16 @@
+// language/features/opaque-types: _opaque_lib  --  helper module
+opaque struct SecretBox {
+    value: int;
+}
+
+fn new_box(v: int) -> SecretBox {
+    return SecretBox { value: v };
+}
+
+fn get_value(b: SecretBox*) -> int {
+    return b.value;
+}
+
+fn set_value(b: SecretBox*, v: int) {
+    b.value = v;
+}

@@ -1,3 +1,4 @@
+// types: test_simd_native
 import "std/simd.zc";
 
 fn main() {

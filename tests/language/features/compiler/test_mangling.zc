@@ -1,3 +1,4 @@
+// compiler features: test_mangling
 import "std.zc";
 
 struct MyGeneric<T> {

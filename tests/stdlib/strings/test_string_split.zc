@@ -1,0 +1,41 @@
+// stdlib: test_string_split
+import "std/string.zc";
+
+test "string_split_basic" {
+    let s = String::from("a,b,c");
+    let parts = s.split(',');
+    
+    assert(parts.length() == 3, "Split length fail");
+    
+    let p0 = parts.get(0);
+    let t0 = String::from("a");
+    assert(p0.eq(&t0), "string_split_basic: p0 mismatch");
+    
+    let p1 = parts.get(1);
+    let t1 = String::from("b");
+    assert(p1.eq(&t1), "string_split_basic: p1 mismatch");
+    
+    let p2 = parts.get(2);
+    let t2 = String::from("c");
+    assert(p2.eq(&t2), "string_split_basic: p2 mismatch");
+    
+}
+
+test "string_split_edge" {
+    let s = String::from("hello");
+    let parts = s.split(' '); // Not found
+    
+    assert(parts.length() == 1, "Split edge 1 failed");
+    
+    let p0 = parts.get(0);
+    assert(p0.eq(&s), "string_split_edge: p0 equals s");
+    
+
+    
+    let s2 = String::from("a,,b");
+    let parts2 = s2.split(',');
+    assert(parts2.length() == 3, "Split edge 2 failed");
+    
+    let empty = parts2.get(1);
+    assert(empty.is_empty(), "string_split_edge: empty part is empty");
+}

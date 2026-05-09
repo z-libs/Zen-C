@@ -1,4 +1,4 @@
-
+// language/features/traits: traits: test_smart_derive
 @derive(Eq)
 struct Container {
     val: int;

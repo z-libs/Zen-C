@@ -1,4 +1,4 @@
-
+// language/features/functions: functions: test_purity
 fn impure_func() {
     println "I am impure";
 }

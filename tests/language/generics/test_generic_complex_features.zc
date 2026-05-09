@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_generic_complex_features
 struct Option<T> {
     has_value: bool;
     val: T;

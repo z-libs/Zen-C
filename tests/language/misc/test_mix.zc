@@ -1,4 +1,4 @@
-
+// language/misc: misc: test_mix
 enum Result {
     Ok(int),
     Err(int)

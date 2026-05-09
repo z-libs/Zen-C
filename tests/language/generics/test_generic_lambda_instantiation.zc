@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_generic_lambda_instantiation
 struct Box<T> {
     val: T;
 }

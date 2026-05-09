@@ -1,4 +1,4 @@
-
+// language/functions: functions: test_fn_ptr_bare_lambda
 trait Greeting {
     fn greet(self);
 }

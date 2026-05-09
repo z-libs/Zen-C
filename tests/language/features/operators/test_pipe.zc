@@ -1,4 +1,4 @@
-
+// language/features/operators: operators: test_pipe
 // Pipeline |> operator tests
 
 fn dbl(x: int) -> int {

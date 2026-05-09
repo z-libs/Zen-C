@@ -1,0 +1,21 @@
+// codegen: test_dedup_typedefs
+struct Vec2f {
+    x: f32;
+    y: f32;
+}
+
+struct Node {
+    val: int;
+    next: Node*;
+}
+
+fn main() {
+    let v: Vec2f;
+    v.x = 1.0;
+    v.y = 2.0;
+
+    let n: Node;
+    n.val = 1;
+
+    return 0;
+}

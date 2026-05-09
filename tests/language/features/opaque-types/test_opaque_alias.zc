@@ -1,0 +1,15 @@
+// opaque-types: test_opaque_alias
+import "_opaque_alias_lib.zc";
+
+fn main() {
+    let h = new_handle(42);
+    let v = get_val(h);
+    
+    assert(v == 42, "Opaque Alias FAIL");
+
+    let h2 = new_handle(42);
+    assert(compare_handles(h, h2), "Equality FAIL");
+
+    println "Opaque Alias OK";
+    return 0;
+}

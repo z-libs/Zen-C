@@ -1,4 +1,4 @@
-
+// language/features/operators: operators: test_operators_suite
 struct Flags {
     bits: int;
 }

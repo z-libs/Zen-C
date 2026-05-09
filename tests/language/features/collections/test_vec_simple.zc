@@ -1,3 +1,4 @@
+// collections: test_vec_simple
 import "std/vec.zc"
 
 test "vec_simple" {

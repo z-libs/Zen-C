@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_generic_operators
 struct Foo<T> {
   value: T;
 }

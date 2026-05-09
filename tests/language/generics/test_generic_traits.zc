@@ -1,4 +1,4 @@
-
+// language/generics: generics: test_generic_traits
 trait MyClone {
     fn my_clone(self) -> int;
 }

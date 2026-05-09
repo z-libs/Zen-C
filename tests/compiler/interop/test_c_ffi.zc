@@ -1,4 +1,4 @@
-
+// compiler/interop: interop: test_c_ffi
 include "tests/compiler/interop/test_ffi_helper.h"
 
 test "test_ffi_function_scanning" {

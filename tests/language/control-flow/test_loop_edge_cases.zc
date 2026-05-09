@@ -1,0 +1,64 @@
+// language/control-flow: control-flow: test_loop_edge_cases
+test "test_loop_edge_cases" {
+    println "Testing loop edge cases...";
+    
+    // Empty range (0..0 should not iterate)
+    let count1 = 0;
+    for i in 0..0 {
+        count1++;
+    }
+    assert(count1 == 0, "empty range (0..0) should not iterate");
+    
+    // Single iteration range (0..1)
+    let count2 = 0;
+    for i in 0..1 {
+        count2++;
+    }
+    assert(count2 == 1, "single iteration (0..1) should iterate once");
+    
+    // Repeat 0 times (should not execute)
+    let count3 = 0;
+    for _ in 0..0 {
+        count3++;
+    }
+    assert(count3 == 0, "repeat 0 times should not execute");
+    
+    // Repeat 1 time
+    let count4 = 0;
+    for _ in 0..1 {
+        count4++;
+    }
+    assert(count4 == 1, "repeat 1 time should execute once");
+    
+    // Nested loops
+    let total = 0;
+    for i in 0..3 {
+        for j in 0..2 {
+            total = total + 1;
+        }
+    }
+    assert(total == 6, "nested for-in loops (3x2) should total 6");
+    
+    // Break in nested loop  
+    let outer_count = 0;
+    for i in 0..3 {
+        outer_count = outer_count + 1;
+        let inner_done = 0;
+        loop {
+            inner_done = inner_done + 1;
+            if (inner_done >= 2) {
+                break;
+            }
+        }
+    }
+    assert(outer_count == 3, "nested loop with break should iterate outer 3 times");
+    
+    // Large step value
+    let count7 = 0;
+    for i in 0..100 step 25 {
+        count7++;
+    }
+    assert(count7 == 4, "large step value (step 25) should iterate 4 times");
+    
+    println "All loop edge cases passed!";
+}

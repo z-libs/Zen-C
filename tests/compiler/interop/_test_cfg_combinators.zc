@@ -1,7 +1,7 @@
 // Test @cfg() combinators: any(), all(), not()
 // Run with: ./zc run tests/compiler/interop/test_cfg_combinators.zc -DFEATURE_A -DFEATURE_C
 
-// any() — include if ANY match
+// any()  --  include if ANY match
 @cfg(any(FEATURE_A, FEATURE_B))
 fn has_feature() -> bool { return true; }
 
@@ -9,7 +9,7 @@ fn has_feature() -> bool { return true; }
 @cfg(not(FEATURE_B))
 fn has_feature() -> bool { return false; }
 
-// all() — include if ALL match
+// all()  --  include if ALL match
 @cfg(all(FEATURE_A, FEATURE_C))
 fn has_both_ac() -> bool { return true; }
 

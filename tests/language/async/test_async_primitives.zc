@@ -1,4 +1,4 @@
-
+// language/async: async: test_async_primitives
 async fn fetchi8() -> i8 {
     return 16;
 }

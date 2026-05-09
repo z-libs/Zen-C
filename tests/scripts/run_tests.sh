@@ -147,7 +147,7 @@ run_test() {
             return
         fi
     fi
-    if [[ "$CC_NAME" == *"zig"* ]] && [[ "$test_file" == *"plugins_suite.zc"* ]]; then
+    if [[ "$CC_NAME" == *"zig"* ]] && [[ "$test_file" == *"test_plugins_suite.zc"* ]]; then
         echo "SKIP" > "$result_file.status"
         return
     fi

@@ -1,4 +1,4 @@
-
+// language/features/embedding: embedding: test_embed
 test "test_embed" {
     "=> Static File Analyzer";
     

@@ -1,0 +1,31 @@
+// compiler/analysis: type analysis: test_type_cast
+// Cast expression validation tests
+
+// --- Int to wider int via assignment ---
+test "int widening" {
+    let x: i32 = 42;
+    let _y: i64 = x;
+    assert(true, "int widening ok");
+}
+
+// --- Int to float ---
+test "int to float" {
+    let x: i32 = 10;
+    let _y: f64 = x;
+    assert(true, "int to float ok");
+}
+
+// --- Float to int ---
+test "float to int" {
+    let x: f64 = 3.14;
+    let _y: i32 = x;
+    assert(true, "float to int ok");
+}
+
+// --- Pointer to void* ---
+test "ptr to void" {
+    let x: i32 = 42;
+    let p = &x;
+    let _vp: void* = p;
+    assert(true, "ptr to void ok");
+}

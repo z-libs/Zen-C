@@ -1,0 +1,36 @@
+// test_process_pal
+import "std.zc"
+import "std/process.zc"
+import "std/env.zc"
+
+fn check(cond: bool, msg: char*) {
+    if (!cond) {
+        panic(msg);
+    }
+}
+
+test "pal_env_vars" {
+    let key = "ZEN_PAL_TEST_KEY";
+    let val = "some_value_123";
+    
+    // Clean start
+    Env::unset(key);
+    check(Env::get(key).is_none(), "Env var should be unset initially");
+    
+    // Set
+    Env::set(key, val);
+    let got = Env::get(key);
+    check(got.is_some(), "Env var should be found");
+    
+    // Unset
+    Env::unset(key);
+    check(Env::get(key).is_none(), "Env var should be unset after unset");
+}
+
+test "pal_process_popen" {
+    // Basic command execution check
+    // "echo" is widely available
+    let output = Command::new("echo").arg("hello").output();
+    check(output.exit_code == 0, "Command should succeed");
+    check(output.std_out.length() > 0, "Command output should not be empty");
+}

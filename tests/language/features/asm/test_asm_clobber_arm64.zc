@@ -1,3 +1,4 @@
+// asm: test_asm_clobber_arm64
 fn add(a: int, b: int) -> int {
     let result: int;
     asm {
