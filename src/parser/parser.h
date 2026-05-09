@@ -456,6 +456,7 @@ int validate_types(ParserContext *ctx);
  * structs.
  */
 void propagate_drop_traits(ParserContext *ctx);
+void fix_type_refs_has_drop(ParserContext *ctx);
 
 /**
  * @brief Propagates inner types for vector types (SIMD).

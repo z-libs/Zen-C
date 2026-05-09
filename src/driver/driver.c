@@ -204,6 +204,7 @@ int driver_compile(ZenCompiler *compiler)
     {
         propagate_vector_inner_types(&ctx);
         propagate_drop_traits(&ctx);
+        fix_type_refs_has_drop(&ctx);
 
         if (!validate_types(&ctx))
         {

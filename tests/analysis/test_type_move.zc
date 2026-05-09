@@ -1,4 +1,6 @@
 
+import "std/string.zc"
+
 // Move semantics tests
 // Non-Copy types (e.g., String) are moved; Copy types (i32, struct of Copy fields) are copied
 
@@ -34,4 +36,25 @@ test "move into fn" {
     let x = 21;
     let r = consume(x);
     assert(r == 42, "move into fn ok");
+}
+
+// --- String move semantics (String wraps Vec<char> which has Drop) ---
+fn consume_string(s: String) {}
+
+test "string move once ok" {
+    let s = String::new("hello");
+    consume_string(s);
+}
+
+// --- Wrapper struct with Drop field ---
+struct WrapString {
+    inner: String;
+}
+
+fn consume_wrap(w: WrapString) {}
+
+test "wrapper move once ok" {
+    let s = String::new("world");
+    let w = WrapString { inner: s };
+    consume_wrap(w);
 }

@@ -769,6 +769,51 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
         EMIT(ctx, ")\n{\n");
         emitter_indent(&ctx->emitter);
         ctx->cg.defer_count = 0;
+
+        // Set up drop flags for parameters with destructors (e.g. String, Vec)
+        for (int ai = 0; ai < arg_count && ai < node->func.arg_count; ai++)
+        {
+            Type *arg_type = node->func.arg_types[ai];
+            if (!arg_type)
+            {
+                continue;
+            }
+            int has_drop = 0;
+            char *drop_type_name = NULL;
+            if (arg_type->kind == TYPE_STRUCT && arg_type->name)
+            {
+                ASTNode *def = find_struct_def(ctx, arg_type->name);
+                if (def && def->type == NODE_STRUCT && def->type_info &&
+                    def->type_info->traits.has_drop)
+                {
+                    has_drop = 1;
+                    drop_type_name = arg_type->name;
+                }
+            }
+            if (has_drop && ai < 32 && arg_names[ai])
+            {
+                EMIT(ctx, "int __z_drop_flag_%s = 1;\n", arg_names[ai]);
+                ASTNode *defer_node = xmalloc(sizeof(ASTNode));
+                defer_node->token = node->token;
+                defer_node->type = NODE_RAW_STMT;
+                size_t stmt_sz = 256 + strlen(arg_names[ai]) * 2 + strlen(drop_type_name);
+                char *stmt_str = xmalloc(stmt_sz);
+                if (strcmp(arg_names[ai], "self") == 0)
+                {
+                    snprintf(stmt_str, stmt_sz, "if (__z_drop_flag_%s) %s__Drop__glue(%s);",
+                             arg_names[ai], drop_type_name, arg_names[ai]);
+                }
+                else
+                {
+                    snprintf(stmt_str, stmt_sz, "if (__z_drop_flag_%s) %s__Drop__glue(&%s);",
+                             arg_names[ai], drop_type_name, arg_names[ai]);
+                }
+                defer_node->raw_stmt.content = stmt_str;
+                defer_node->line = node->line;
+                ctx->cg.defer_stack[ctx->cg.defer_count++] = defer_node;
+            }
+        }
+
         char *prev_ret = ctx->cg.current_func_ret_type;
         Type *prev_ret_info = ctx->cg.current_func_ret_type_info;
         ctx->cg.current_func_ret_type = node->func.ret_type;
@@ -786,7 +831,7 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
         emitter_dedent(&ctx->emitter);
         EMIT(ctx, "}\n");
 
-        // 4. Poll function — calls _impl_, stores result
+        // 4. Poll function — calls _impl_, stores result, zeroes moved params
         EMIT(ctx, "int %s_poll(void *ctx)\n", final_name);
         EMIT(ctx, "{\n");
         emitter_indent(&ctx->emitter);
@@ -810,6 +855,25 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
                 EMIT(ctx, "%sf->%s", i > 0 ? ", " : "", arg_names[i]);
             }
             EMIT(ctx, ");\n");
+            // Also drop the params that were passed by value
+        }
+        // Zero out future fields for types with destructors (ownership moved to _impl_)
+        for (int ai = 0; ai < arg_count && ai < node->func.arg_count; ai++)
+        {
+            Type *arg_type = node->func.arg_types[ai];
+            if (!arg_type)
+            {
+                continue;
+            }
+            if (arg_type->kind == TYPE_STRUCT && arg_type->name)
+            {
+                ASTNode *def = find_struct_def(ctx, arg_type->name);
+                if (def && def->type == NODE_STRUCT && def->type_info &&
+                    def->type_info->traits.has_drop && ai < 32 && arg_names[ai])
+                {
+                    EMIT(ctx, "memset(&f->%s, 0, sizeof(f->%s));\n", arg_names[ai], arg_names[ai]);
+                }
+            }
         }
         EMIT(ctx, "return 1;\n");
         emitter_dedent(&ctx->emitter);
