@@ -154,3 +154,9 @@ impl Set<T> {
         self.len = 0;
     }
 }
+
+impl Drop for Set<T> {
+    fn drop(self) {
+        self.free();
+    }
+}
