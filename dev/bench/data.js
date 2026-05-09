@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778340752893,
+  "lastUpdate": 1778341689233,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -1268,6 +1268,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Runtime (sha256)",
             "value": 53,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sort_large)",
+            "value": 65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "659f254a4f5773950b35d623129d88a0a3b769a9",
+          "message": "zenc: more move checker tests.",
+          "timestamp": "2026-05-09T16:47:23+01:00",
+          "tree_id": "a9762893e4683626e4704323027866d5c21049a7",
+          "url": "https://github.com/zenc-lang/zenc/commit/659f254a4f5773950b35d623129d88a0a3b769a9"
+        },
+        "date": 1778341688631,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 13660,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 34,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (sha256)",
+            "value": 52,
             "unit": "ms"
           },
           {
