@@ -1,0 +1,31 @@
+// Test assertion helpers
+
+fn expect_eq(actual: int, expected: int, msg: string) {
+    if (actual != expected) {
+        println "  FAIL: {msg}";
+        println "    expected: {expected}";
+        println "    actual:   {actual}";
+    }
+    expect(actual == expected, msg);
+}
+
+fn expect_ne(actual: int, expected: int, msg: string) {
+    if (actual == expected) {
+        println "  FAIL: {msg}";
+        println "    expected not: {expected}";
+        println "    actual:       {actual}";
+    }
+    expect(actual != expected, msg);
+}
+
+fn expect_approx_eq(actual: f64, expected: f64, epsilon: f64, msg: string) {
+    let diff = actual - expected;
+    let abs_diff = if (diff < 0.0) { -diff } else { diff };
+    if (abs_diff > epsilon) {
+        println "  FAIL: {msg}";
+        println "    expected (approx): {expected}";
+        println "    actual:            {actual}";
+        println "    epsilon:           {epsilon}";
+    }
+    expect(abs_diff <= epsilon, msg);
+}

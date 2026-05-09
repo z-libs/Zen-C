@@ -32,8 +32,6 @@ typedef struct
 } CValue;
 
 static const CValue val_null = {VAL_NULL, {0}};
-static const CValue val_true = {VAL_BOOL, {1}};
-static const CValue val_false = {VAL_BOOL, {0}};
 
 // Scope entry
 typedef struct CScope

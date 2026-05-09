@@ -31,7 +31,7 @@ else
     DEPFLAGS = -MMD -MP
     TCC_EXTRA =
 endif
-CFLAGS = -std=gnu11 -g -Wno-implicit-function-declaration -Wno-int-conversion $(DEPFLAGS) $(TCC_EXTRA) $(if $(filter 1,$(WERROR)),-Werror,) -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics -I./std/third-party/tre/include $(DEFINES)
+CFLAGS = -std=gnu11 -g -Wall -Wextra -Wshadow $(DEPFLAGS) $(TCC_EXTRA) $(if $(filter 1,$(WERROR)),-Werror,) -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics -I./std/third-party/tre/include $(DEFINES)
 
 # Toggle plugins
 ifeq ($(NO_PLUGINS), 1)

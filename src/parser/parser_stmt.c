@@ -24,6 +24,43 @@ extern char *g_current_filename;
  * This is called when array iteration is detected in for-in loops,
  * to ensure the Slice<T>, SliceIter<T>, and Option<T> templates are available.
  */
+static void auto_import_std_test(ParserContext *ctx)
+{
+    // Check if already imported by looking for a known symbol
+    if (find_func(ctx, "expect_eq"))
+    {
+        return;
+    }
+
+    char *resolved = z_resolve_path("std/test.zc", g_current_filename);
+    if (!resolved)
+    {
+        return;
+    }
+
+    if (is_file_imported(ctx, resolved))
+    {
+        zfree(resolved);
+        return;
+    }
+    mark_file_imported(ctx, resolved);
+
+    char *src = load_file(resolved);
+    if (!src)
+    {
+        zfree(resolved);
+        return;
+    }
+
+    Lexer i;
+    lexer_init(&i, src);
+    char *saved_fn = g_current_filename;
+    g_current_filename = resolved;
+    parse_program_nodes(ctx, &i);
+    g_current_filename = saved_fn;
+    zfree(resolved);
+}
+
 static void auto_import_std_slice(ParserContext *ctx)
 {
     // Check if already imported via templates
@@ -1063,6 +1100,9 @@ ASTNode *parse_asm(ParserContext *ctx, Lexer *l)
 
 ASTNode *parse_test(ParserContext *ctx, Lexer *l)
 {
+    // Auto-import test helpers (expect_eq, expect_ne, expect_approx_eq)
+    auto_import_std_test(ctx);
+
     lexer_next(l); // eat 'test'
     Token t = lexer_next(l);
     if (t.type != TOK_STRING && t.type != TOK_RAW_STRING)
@@ -1092,17 +1132,29 @@ ASTNode *parse_assert(ParserContext *ctx, Lexer *l)
     ASTNode *cond = parse_expression(ctx, l);
 
     char *msg = NULL;
+    int is_literal = 0;
     if (lexer_peek(l).type == TOK_COMMA)
     {
         lexer_next(l);
         Token st = lexer_next(l);
-        if (st.type != TOK_STRING)
+        if (st.type == TOK_STRING)
+        {
+            is_literal = 1;
+            msg = xmalloc(st.len + 1);
+            strncpy(msg, st.start, st.len);
+            msg[st.len] = 0;
+        }
+        else if (st.type == TOK_IDENT)
+        {
+            is_literal = 0;
+            msg = xmalloc(st.len + 1);
+            strncpy(msg, st.start, st.len);
+            msg[st.len] = 0;
+        }
+        else
         {
             zpanic_at(st, "Expected message string");
         }
-        msg = xmalloc(st.len + 1);
-        strncpy(msg, st.start, st.len);
-        msg[st.len] = 0;
     }
 
     if (lexer_peek(l).type == TOK_RPAREN)
@@ -1118,6 +1170,7 @@ ASTNode *parse_assert(ParserContext *ctx, Lexer *l)
     n->token = tk;
     n->assert_stmt.condition = cond;
     n->assert_stmt.message = msg;
+    n->assert_stmt.message_is_literal = is_literal;
     return n;
 }
 
@@ -1132,17 +1185,29 @@ ASTNode *parse_expect(ParserContext *ctx, Lexer *l)
     ASTNode *cond = parse_expression(ctx, l);
 
     char *msg = NULL;
+    int is_literal = 0;
     if (lexer_peek(l).type == TOK_COMMA)
     {
         lexer_next(l);
         Token st = lexer_next(l);
-        if (st.type != TOK_STRING)
+        if (st.type == TOK_STRING)
+        {
+            is_literal = 1;
+            msg = xmalloc(st.len + 1);
+            strncpy(msg, st.start, st.len);
+            msg[st.len] = 0;
+        }
+        else if (st.type == TOK_IDENT)
+        {
+            is_literal = 0;
+            msg = xmalloc(st.len + 1);
+            strncpy(msg, st.start, st.len);
+            msg[st.len] = 0;
+        }
+        else
         {
             zpanic_at(st, "Expected message string");
         }
-        msg = xmalloc(st.len + 1);
-        strncpy(msg, st.start, st.len);
-        msg[st.len] = 0;
     }
 
     if (lexer_peek(l).type == TOK_RPAREN)
@@ -1158,6 +1223,7 @@ ASTNode *parse_expect(ParserContext *ctx, Lexer *l)
     n->token = tk;
     n->assert_stmt.condition = cond;
     n->assert_stmt.message = msg;
+    n->assert_stmt.message_is_literal = is_literal;
     return n;
 }
 
