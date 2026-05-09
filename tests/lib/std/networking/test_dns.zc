@@ -2,19 +2,14 @@
 import "std/net/dns.zc"
 import "std/string.zc"
 
-fn assert_true(cond: bool, msg: char*) {
-    if (!cond) {
-        !"Assertion failed: {msg}";
-        exit(1);
-    }
-}
+
 
 test "DNS Resolve" {
     let res = Dns::resolve("localhost");
-    assert_true(!res.is_err(), "Resolve localhost");
+    assert(!res.is_err(), "Resolve localhost");
     
     let ip = res.unwrap();
-    assert_true(!ip.is_empty(), "Resolved IP not empty");
-    assert_true(ip.eq_str("127.0.0.1"), "Resolved to 127.0.0.1");
+    assert(!ip.is_empty(), "Resolved IP not empty");
+    assert(ip.eq_str("127.0.0.1"), "Resolved to 127.0.0.1");
     ip.free();
 }

@@ -35,8 +35,5 @@ test "drop_flags_variable_move" {
     // buffer dtor: SKIPPED (flag=0)
     // buf dtor: CALLED (flag=1)
     // Total: 1
-    if (DTOR_COUNT != 1) {
-        println "Error: Destructor called {DTOR_COUNT} times, expected 1";
-        exit(1);
-    }
+    assert(DTOR_COUNT == 1, "Error: Destructor called {DTOR_COUNT} times, expected 1");
 }

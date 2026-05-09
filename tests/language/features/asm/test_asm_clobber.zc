@@ -12,9 +12,6 @@ fn add(a: int, b: int) -> int {
 
 test "asm_clobber" {
     let res = add(10, 20);
-    if (res != 30) {
-        println "Failed: Expected 30, got {res}";
-        exit(1);
-    }
+    assert(res == 30, "Failed: Expected 30, got {res}");
     println "Success: asm with clobber works properly";
 }

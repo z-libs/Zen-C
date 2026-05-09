@@ -36,10 +36,7 @@ test "Resource Semantics" {
     let b2 = b1.clone(); 
     // let b3 = b1; // This would move if uncommented.
     
-    if b2.val != 99 { 
-        !"Clone failed";
-        exit(1); 
-    }
+    assert(b2.val == 99, "Clone failed");
     
     // Re-initialization
     // struct Resource (Global)

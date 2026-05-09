@@ -43,18 +43,12 @@ test "test_net" {
         l.close();
     });
     
-    if (t.is_err()) {
-        !"Thread spawn failed";
-        exit(1);
-    }
+    assert(!t.is_err(), "Thread spawn failed");
     
     sleep_ms(100);
     
     let stream_res = TcpStream::connect("127.0.0.1", 9090);
-    if (stream_res.is_err()) {
-        !"Client connect failed";
-        exit(1);
-    }
+    assert(!stream_res.is_err(), "Client connect failed");
     
     let stream = stream_res.unwrap();
     stream.write("Ping", 4);

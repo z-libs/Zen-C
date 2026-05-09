@@ -45,10 +45,6 @@ fn add_five(x: int) -> int {
 test "test_asm_params" {
     println "Testing assembly parameters...";
     let val = add_five(10);
-    if (val == 15) {
-        println "-> Success! add_five(10) = 15";
-    } else {
-        println "-> Failed: expected 15, got {val}";
-        exit(1);
-    }
+    assert(val == 15, "Failed: expected 15, got {val}");
+    println "-> Success! add_five(10) = 15";
 }

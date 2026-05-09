@@ -13,7 +13,7 @@ fn main() {
             assert(strcmp(d, "dir") == 0, "dir == 'dir'");
             assert(strcmp(f, "file") == 0, "file == 'file'");
         }
-        _ => { exit(1); }
+        _ => { assert(false, "Should match Create variant"); }
     }
 
     // Test direct tuple with pointer

@@ -2,12 +2,7 @@
 import "std/net/websocket.zc"
 import "std/thread.zc"
 
-fn assert_true(cond: bool, msg: char*) {
-    if (!cond) {
-        !"Assertion failed: {msg}";
-        exit(1);
-    }
-}
+
 
 test "WebSocket Handshake and Frame" {
     // Server Thread
@@ -54,7 +49,7 @@ test "WebSocket Handshake and Frame" {
     buf[n] = 0;
     
     // Verify Accept Header
-    assert_true(strstr(&buf[0], "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=") != NULL, "Handshake verification");
+    assert(strstr(&buf[0], "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=") != NULL, "Handshake verification");
     
     // Send Frame (Masked "Hello")
     let frame: u8[11];
@@ -70,7 +65,7 @@ test "WebSocket Handshake and Frame" {
     let total_read = 0;
     while (total_read < 7) {
         let n = client.read(&echo_buf[total_read], 100 - total_read).unwrap();
-        if (n == 0) { assert_true(false, "Connection closed early"); }
+        assert(n != 0, "Connection closed early");
         total_read = total_read + n;
     }
     echo_buf[total_read] = 0;
@@ -78,7 +73,7 @@ test "WebSocket Handshake and Frame" {
     let b1 = (u8)echo_buf[0];
     let b2 = (u8)echo_buf[1];
     
-    assert_true(b1 == 0x81, "Opcode Text");
-    assert_true(b2 == 0x05, "Len 5");
-    assert_true(strncmp(&echo_buf[2], "Hello", 5) == 0, "Payload match");
+    assert(b1 == 0x81, "Opcode Text");
+    assert(b2 == 0x05, "Len 5");
+    assert(strncmp(&echo_buf[2], "Hello", 5) == 0, "Payload match");
 }

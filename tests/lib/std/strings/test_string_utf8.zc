@@ -3,24 +3,15 @@ import "std/string.zc"
 test "utf8_basic_ascii" {
     let s = String::from("Hello");
     
-    if (s.utf8_len() != 5) {
-        println "ASCII Len failed";
-        exit(1);
-    }
+    assert(s.utf8_len() == 5, "ASCII Len failed");
     
     let h = s.utf8_at(0);
     let t1 = String::from("H");
-    if (!h.eq(&t1)) {
-        println "ASCII At failed";
-        exit(1);
-    }
+    assert(h.eq(&t1), "ASCII At failed");
     
     let sub = s.utf8_substr(1, 4);
     let t2 = String::from("ello");
-    if (!sub.eq(&t2)) {
-        println "ASCII Substr failed";
-        exit(1);
-    }
+    assert(sub.eq(&t2), "ASCII Substr failed");
 }
 
 test "utf8_multibyte" {
@@ -30,27 +21,15 @@ test "utf8_multibyte" {
     
     let s = String::from("Hey 🌎!");
     
-    if (s.length() != 9) {
-        println "Byte length unexpected: {s.length()}";
-        exit(1);
-    }
+    assert(s.length() == 9, "Byte length unexpected");
 
-    if (s.utf8_len() != 6) {
-        println "UTF8 Len failed. Got {s.utf8_len()}, expected 6";
-        exit(1);
-    }
+    assert(s.utf8_len() == 6, "UTF8 Len failed");
     
     let globe = s.utf8_at(4);
     let t3 = String::from("🌎");
-    if (!globe.eq(&t3)) {
-        println "UTF8 At failed";
-        exit(1);
-    }
+    assert(globe.eq(&t3), "UTF8 At failed");
     
     let sub = s.utf8_substr(4, 2); // "🌎!"
     let t4 = String::from("🌎!");
-    if (!sub.eq(&t4)) {
-        println "UTF8 Substr failed";
-        exit(1);
-    }
+    assert(sub.eq(&t4), "UTF8 Substr failed");
 }

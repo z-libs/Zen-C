@@ -7,48 +7,28 @@ test "test_loop_edge_cases" {
     for i in 0..0 {
         count1++;
     }
-    if (count1 == 0) {
-        println "  -> Empty range (0..0): Passed";
-    } else {
-        println "  -> Empty range (0..0): Failed";
-        exit(1);
-    }
+    assert(count1 == 0, "empty range (0..0) should not iterate");
     
     // Single iteration range (0..1)
     let count2 = 0;
     for i in 0..1 {
         count2++;
     }
-    if (count2 == 1) {
-        println "  -> Single iteration (0..1): Passed";
-    } else {
-        println "  -> Single iteration (0..1): Failed";
-        exit(1);
-    }
+    assert(count2 == 1, "single iteration (0..1) should iterate once");
     
     // Repeat 0 times (should not execute)
     let count3 = 0;
     for _ in 0..0 {
         count3++;
     }
-    if (count3 == 0) {
-        println "  -> Repeat 0 times: Passed";
-    } else {
-        println "  -> Repeat 0 times: Failed";
-        exit(1);
-    }
+    assert(count3 == 0, "repeat 0 times should not execute");
     
     // Repeat 1 time
     let count4 = 0;
     for _ in 0..1 {
         count4++;
     }
-    if (count4 == 1) {
-        println "  -> Repeat 1 time: Passed";
-    } else {
-        println "  -> Repeat 1 time: Failed";
-        exit(1);
-    }
+    assert(count4 == 1, "repeat 1 time should execute once");
     
     // Nested loops
     let total = 0;
@@ -57,12 +37,7 @@ test "test_loop_edge_cases" {
             total = total + 1;
         }
     }
-    if (total == 6) {
-        println "  -> Nested for-in loops: Passed";
-    } else {
-        println "  -> Nested for-in loops: Failed";
-        exit(1);
-    }
+    assert(total == 6, "nested for-in loops (3x2) should total 6");
     
     // Break in nested loop  
     let outer_count = 0;
@@ -76,24 +51,14 @@ test "test_loop_edge_cases" {
             }
         }
     }
-    if (outer_count == 3) {
-        println "  -> Nested loop with break: Passed";
-    } else {
-        println "  -> Nested loop with break: Failed";
-        exit(1);
-    }
+    assert(outer_count == 3, "nested loop with break should iterate outer 3 times");
     
     // Large step value
     let count7 = 0;
     for i in 0..100 step 25 {
         count7++;
     }
-    if (count7 == 4) {
-        println "  -> Large step value (step 25): Passed";
-    } else {
-        println "  -> Large step value: Failed";
-        exit(1);
-    }
+    assert(count7 == 4, "large step value (step 25) should iterate 4 times");
     
     println "All loop edge cases passed!";
 }

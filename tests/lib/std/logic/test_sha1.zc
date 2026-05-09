@@ -2,12 +2,7 @@
 import "std/crypto/sha1.zc"
 import "std/string.zc"
 
-fn assert_true(cond: bool, msg: char*) {
-    if (!cond) {
-        !"Assertion failed: {msg}";
-        exit(1);
-    }
-}
+
 
 test "SHA1 Digest" {
     // "abc"
@@ -25,7 +20,7 @@ test "SHA1 Digest" {
         hex_str.append_c(&buf[0]);
     }
     
-    assert_true(hex_str.eq_str("a9993e364706816aba3e25717850c26c9cd0d89d"), "SHA1(abc)");
+    assert(hex_str.eq_str("a9993e364706816aba3e25717850c26c9cd0d89d"), "SHA1(abc)");
     
     hex_str.free();
 }

@@ -4,22 +4,19 @@ test "string_split_basic" {
     let s = String::from("a,b,c");
     let parts = s.split(',');
     
-    if (parts.length() != 3) {
-        println "Split length fail: {parts.length()}";
-        exit(1);
-    }
+    assert(parts.length() == 3, "Split length fail");
     
     let p0 = parts.get(0);
     let t0 = String::from("a");
-    if (!p0.eq(&t0)) exit(1);
+    assert(p0.eq(&t0), "string_split_basic: p0 mismatch");
     
     let p1 = parts.get(1);
     let t1 = String::from("b");
-    if (!p1.eq(&t1)) exit(1);
+    assert(p1.eq(&t1), "string_split_basic: p1 mismatch");
     
     let p2 = parts.get(2);
     let t2 = String::from("c");
-    if (!p2.eq(&t2)) exit(1);
+    assert(p2.eq(&t2), "string_split_basic: p2 mismatch");
     
 }
 
@@ -27,23 +24,17 @@ test "string_split_edge" {
     let s = String::from("hello");
     let parts = s.split(' '); // Not found
     
-    if (parts.length() != 1) {
-        println "Split edge 1 failed";
-        exit(1);
-    }
+    assert(parts.length() == 1, "Split edge 1 failed");
     
     let p0 = parts.get(0);
-    if (!p0.eq(&s)) exit(1);
+    assert(p0.eq(&s), "string_split_edge: p0 equals s");
     
 
     
     let s2 = String::from("a,,b");
     let parts2 = s2.split(',');
-    if (parts2.length() != 3) {
-        println "Split edge 2 failed: {parts2.length()}";
-        exit(1);
-    }
+    assert(parts2.length() == 3, "Split edge 2 failed");
     
     let empty = parts2.get(1);
-    if (!empty.is_empty()) exit(1);
+    assert(empty.is_empty(), "string_split_edge: empty part is empty");
 }

@@ -18,41 +18,21 @@ test "test_guard_unless" {
     
     // Unless with true condition (should NOT enter block)
     let res1 = check_positive(10);
-    if (res1 == 20) {
-        println "  -> unless (pass condition): Passed";
-    } else {
-        println "  -> unless (pass condition): Failed";
-        exit(1);
-    }
+    assert(res1 == 20, "check_positive(10) should return 20");
     
     // Unless with false condition (should enter block)
     let res2 = check_positive(-5);
-    if (res2 == -1) {
-        println "  -> unless (fail condition): Passed";
-    } else {
-        println "  -> unless (fail condition): Failed";
-        exit(1);
-    }
+    assert(res2 == -1, "check_positive(-5) should return -1 (unless triggered)");
     
     // Guard with valid pointer
     let val = 42;
     let p = &val;
     let res3 = safe_access(p);
-    if (res3 == 42) {
-        println "  -> guard (valid ptr): Passed";
-    } else {
-        println "  -> guard (valid ptr): Failed";
-        exit(1);
-    }
+    assert(res3 == 42, "safe_access(&val) should return 42");
     
     // Guard with null pointer
     let res4 = safe_access(NULL);
-    if (res4 == -999) {
-        println "  -> guard (null ptr): Passed";
-    } else {
-        println "  -> guard (null ptr): Failed";
-        exit(1);
-    }
+    assert(res4 == -999, "safe_access(NULL) should return -999 (guard triggered)");
     
     println "All guard/unless tests passed!";
     

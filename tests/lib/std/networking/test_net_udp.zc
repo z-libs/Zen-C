@@ -2,23 +2,18 @@
 import "std/net/udp.zc"
 import "std/io.zc"
 
-fn assert_true(cond: bool, msg: char*) {
-    if (!cond) {
-        !"Assertion failed: {msg}";
-        exit(1);
-    }
-}
+
 
 test "UDP Bind, Send, Recv" {
     // Server Socket
     let res_a = UdpSocket::bind("127.0.0.1", 9000);
-    assert_true(!res_a.is_err(), "Bind Server");
+    assert(!res_a.is_err(), "Bind Server");
     let server = res_a.unwrap();
     defer server.close();
 
     // Client Socket
     let res_b = UdpSocket::bind("127.0.0.1", 9001);
-    assert_true(!res_b.is_err(), "Bind Client");
+    assert(!res_b.is_err(), "Bind Client");
     let client = res_b.unwrap();
     defer client.close();
 
@@ -26,12 +21,12 @@ test "UDP Bind, Send, Recv" {
     let msg = "Hello UDP";
     let len = strlen(msg);
     let send_res = client.send_to(msg, len, "127.0.0.1", 9000);
-    assert_true(!send_res.is_err(), "SendTo");
+    assert(!send_res.is_err(), "SendTo");
 
     // Recv
     let buf: char[128];
     let recv_res = server.recv_from(&buf[0], 128);
-    assert_true(!recv_res.is_err(), "RecvFrom");
+    assert(!recv_res.is_err(), "RecvFrom");
     
     let res = recv_res.unwrap();
     let n = res.n;
@@ -39,5 +34,5 @@ test "UDP Bind, Send, Recv" {
     buf[n] = 0;
     res.host.free();
 
-    assert_true(strcmp(&buf[0], msg) == 0, "Message content match");
+    assert(strcmp(&buf[0], msg) == 0, "Message content match");
 }

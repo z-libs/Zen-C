@@ -7,22 +7,20 @@ test "test_lambda_arrow" {
     let doubler = x -> x * 2;
     let res1 = doubler(5);
     "doubler(5) = {res1}";
-    if res1 != 10 { exit(1); }
+    assert(res1 == 10, "doubler(5) should be 10");
 
     let add = (x, y) -> x + y;
     let res2 = add(10, 20);
     "add(10, 20) = {res2}";
-    if res2 != 30 { exit(1); }
+    assert(res2 == 30, "add(10, 20) should be 30");
     
     let res3 = compute((a, b) -> a * b, 3, 4);
     "compute((a, b) -> a * b, 3, 4) = {res3}";
-    if res3 != 12 { exit(1); }
+    assert(res3 == 12, "compute((a, b) -> a * b, 3, 4) should be 12");
 }
 
 test "lambda_inference_repro" {
     let dble = x -> x * 2.0;
     let res = dble(9.0);
-    if res != 18.0 {
-        exit(1);
-    }
+    assert(res == 18.0, "dble(9.0) should be 18.0");
 }

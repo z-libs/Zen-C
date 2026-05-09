@@ -10,10 +10,7 @@ fn fibonacci(n: int) -> int {
 fn test_recursion() {
     let fib10 = fibonacci(10);
     
-    if (fib10 != 55) {
-        println "FAIL: fibonacci(10) should be 55";
-        exit(1);
-    }
+    assert(fib10 == 55, "fibonacci(10) should be 55");
     
     println "  -> Recursive function works";
 }
@@ -25,10 +22,7 @@ fn add_three(a: int, b: int, c: int) -> int {
 fn test_multi_params() {
     let result = add_three(1, 2, 3);
     
-    if (result != 6) {
-        println "FAIL: add_three(1,2,3) should be 6";
-        exit(1);
-    }
+    assert(result == 6, "add_three(1,2,3) should be 6");
     
     println "  -> Multi-parameter function works";
 }
@@ -40,10 +34,7 @@ fn double_val(x: int) -> int {
 fn test_nested_calls() {
     let result = double_val(double_val(double_val(2)));
     
-    if (result != 16) {
-        println "FAIL: nested calls failed";
-        exit(1);
-    }
+    assert(result == 16, "nested calls failed");
     
     println "  -> Nested function calls work";
 }
@@ -72,10 +63,7 @@ fn test_struct_methods() {
     c.increment();
     c.increment();
     
-    if (c.get() != 3) {
-        println "FAIL: Counter should be 3";
-        exit(1);
-    }
+    assert(c.get() == 3, "Counter should be 3");
     
     println "  -> Struct methods work";
 }
@@ -84,18 +72,12 @@ fn test_casting() {
     let f: float = 3.7;
     let i: int = (int)f;
     
-    if (i != 3) {
-        println "FAIL: float to int cast failed";
-        exit(1);
-    }
+    assert(i == 3, "float to int cast failed");
     
     let i2: int = 42;
     let f2: float = (float)i2;
     
-    if (f2 < 41.9 || f2 > 42.1) {
-        println "FAIL: int to float cast failed";
-        exit(1);
-    }
+    assert(f2 >= 41.9 && f2 <= 42.1, "int to float cast failed");
     
     println "  -> Type casting works";
 }
@@ -108,20 +90,11 @@ fn test_bitwise() {
     let or_result = a | b;   // 0b1110 = 14
     let xor_result = a ^ b;  // 0b0110 = 6
     
-    if (and_result != 8) {
-        println "FAIL: bitwise AND failed";
-        exit(1);
-    }
+    assert(and_result == 8, "bitwise AND failed");
     
-    if (or_result != 14) {
-        println "FAIL: bitwise OR failed";
-        exit(1);
-    }
+    assert(or_result == 14, "bitwise OR failed");
     
-    if (xor_result != 6) {
-        println "FAIL: bitwise XOR failed";
-        exit(1);
-    }
+    assert(xor_result == 6, "bitwise XOR failed");
     
     println "  -> Bitwise operations work";
 }
@@ -130,18 +103,12 @@ fn test_shift() {
     let x = 1;
     let left = x << 4;   // 16
     
-    if (left != 16) {
-        println "FAIL: left shift failed";
-        exit(1);
-    }
+    assert(left == 16, "left shift failed");
     
     let y = 32;
     let right = y >> 2;  // 8
     
-    if (right != 8) {
-        println "FAIL: right shift failed";
-        exit(1);
-    }
+    assert(right == 8, "right shift failed");
     
     println "  -> Shift operations work";
 }
@@ -151,10 +118,7 @@ fn test_modulo() {
     let b = 5;
     let result = a % b;
     
-    if (result != 2) {
-        println "FAIL: modulo operation failed";
-        exit(1);
-    }
+    assert(result == 2, "modulo operation failed");
     
     println "  -> Modulo operator works";
 }
@@ -167,10 +131,7 @@ fn test_compound_expr() {
     let result = (x + y) * z - (y / 2);
     // (5 + 10) * 3 - (10 / 2) = 15 * 3 - 5 = 45 - 5 = 40
     
-    if (result != 40) {
-        println "FAIL: compound expression failed";
-        exit(1);
-    }
+    assert(result == 40, "compound expression failed");
     
     println "  -> Compound expressions work";
 }
@@ -179,16 +140,10 @@ fn test_increment_style() {
     let x = 5;
     x = x + 1;
     
-    if (x != 6) {
-        println "FAIL: increment style failed";
-        exit(1);
-    }
+    assert(x == 6, "increment style failed");
     
     x = x - 1;
-    if (x != 5) {
-        println "FAIL: decrement style failed";
-        exit(1);
-    }
+    assert(x == 5, "decrement style failed");
     
     print "  -> Increment/decrement style works";
 }

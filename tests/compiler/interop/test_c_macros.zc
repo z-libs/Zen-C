@@ -5,12 +5,7 @@
 test "test_c_macros" {
     let x = MAX(10, 20);
     
-    if x == 20 {
-        println "MAX macro worked";
-    } else {
-        println "MAX macro failed";
-        exit(1);
-    }
+    assert(x == 20, "MAX(10, 20) should be 20");
 
     #ifdef DEBUG_MODE
         println "Debug mode active";

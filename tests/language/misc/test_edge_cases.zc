@@ -9,10 +9,7 @@ fn test_empty_struct() {
     let e1 = Empty {};
     let e2 = Empty {};
     
-    if (!e1.eq(&e2)) {
-        println "FAIL: Empty struct eq failed";
-        exit(1);
-    }
+    assert(e1.eq(&e2), "Empty struct eq failed");
     
     println "  -> Empty struct with @derive(Eq) works";
 }
@@ -35,15 +32,9 @@ fn test_many_fields() {
     let m2 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8 };
     let m3 = ManyFields { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 9 }; // h differs
     
-    if (!m1.eq(&m2)) {
-        println "FAIL: equal structs not detected as equal";
-        exit(1);
-    }
+    assert(m1.eq(&m2), "equal structs not detected as equal");
     
-    if (m1.eq(&m3)) {
-        println "FAIL: different structs detected as equal";
-        exit(1);
-    }
+    assert(!m1.eq(&m3), "different structs detected as equal");
     
     println "  -> ManyFields @derive(Eq) works correctly";
 }
@@ -62,16 +53,10 @@ fn test_pointer_equality() {
     let ptr3: Point* = &p2;
     
     // Same pointer should be equal
-    if (ptr1 != ptr2) {
-        println "FAIL: same pointer not equal";
-        exit(1);
-    }
+    assert(ptr1 == ptr2, "same pointer not equal");
     
     // Different pointers (even to equal values) should not be pointer-equal
-    if (ptr1 == ptr3) {
-        println "FAIL: different pointers compare equal";
-        exit(1);
-    }
+    assert(ptr1 != ptr3, "different pointers compare equal");
     
     print "  -> Pointer equality uses == not _eq";
 }
@@ -80,10 +65,7 @@ fn test_pointer_equality() {
 fn test_long_string() {
     let s = String::from("This is a very long string that should test the string handling capabilities of the compiler and make sure that buffer allocations are correct and that there are no overflow issues with long strings.");
     
-    if (s.length() < 100) {
-        println "FAIL: long string length incorrect";
-        exit(1);
-    }
+    assert(s.length() >= 100, "long string length incorrect");
     
     print "  -> Long string handling works";
 }
@@ -92,10 +74,7 @@ fn test_long_string() {
 fn test_null_pointer() {
     let ptr: int* = NULL;
     
-    if (ptr != NULL) {
-        println "FAIL: NULL pointer check failed";
-        exit(1);
-    }
+    assert(ptr == NULL, "NULL pointer check failed");
     
     println "  -> NULL pointer handling works";
 }
@@ -105,15 +84,9 @@ fn test_numeric_edges() {
     let max_int: int = 2147483647;
     let min_int: int = -1000000000;
     
-    if (max_int <= 0) {
-        println "FAIL: max_int is wrong";
-        exit(1);
-    }
+    assert(max_int > 0, "max_int is wrong");
     
-    if (min_int >= 0) {
-        println "FAIL: min_int is wrong";
-        exit(1);
-    }
+    assert(min_int < 0, "min_int is wrong");
     
     println "  -> Numeric edge cases work";
 }
@@ -123,15 +96,9 @@ fn test_boolean_ops() {
     let a = true;
     let b = false;
     
-    if (!(a && !b)) {
-        println "FAIL: boolean AND failed";
-        exit(1);
-    }
+    assert(a && !b, "boolean AND failed");
     
-    if (!(a || b)) {
-        println "FAIL: boolean OR failed";
-        exit(1);
-    }
+    assert(a || b, "boolean OR failed");
     
     println "  -> Boolean operations work\n";
 }

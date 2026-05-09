@@ -54,21 +54,13 @@ fn add_five_64_bit(x: i64) -> i64 {
 test "test_asm_params_arm64" {
     println "Testing assembly parameters...";
     let val = add_five_32_bit(10);
-    if (val == 15) {
-        println "-> Success! add_five_32_bit(10) = 15";
-    } else {
-        println "-> Failed: expected 15, got {val}";
-        exit(1);
-    }
+    assert(val == 15, "Failed: expected 15, got {val}");
+    println "-> Success! add_five_32_bit(10) = 15";
 }
 
 test "test_asm_64_bit_register_arm64" {
     println "Testing assembly parameters...";
     let val = add_five_64_bit(10);
-    if (val == 15) {
-        println "-> Success! add_five_64_bit(10) = 15";
-    } else {
-        println "-> Failed: expected 15, got {val}";
-        exit(1);
-    }
+    assert(val == 15, "Failed: expected 15, got {val}");
+    println "-> Success! add_five_64_bit(10) = 15";
 }

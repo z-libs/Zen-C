@@ -4,12 +4,7 @@ import "math.h" as m;
 test "test_c_import" {
     let x = m::sin(0.0);
     
-    if x == 0.0 {
-        println "Success: m::sin(0.0) == 0.0";
-    } else {
-        println "Failure: Unexpected result";
-        exit(1);
-    }
+    assert(x == 0.0, "m::sin(0.0) should be 0.0");
     }
 }
 
@@ -18,9 +13,5 @@ extern fn abs(x: int) -> int;
 test "test_interop_abs" {
     let x = -10;
     let y = abs(x);
-    if (y == 10) println "Abs works";
-    else {
-        println "Abs failed";
-        exit(1);
-    }
+    assert(y == 10, "abs(-10) should return 10");
 }

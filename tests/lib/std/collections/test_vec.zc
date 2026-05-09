@@ -1,20 +1,8 @@
 import "std/vec.zc"
 import "std/io.zc"
 
-// Helper for assertions
-fn assert_true(cond: bool, msg: char*) {
-    if (!cond) {
-        print "Assertion failed: {msg}\n";
-        exit(1);
-    }
-}
-
-fn assert_eq(a: int, b: int, msg: char*) {
-    if (a != b) {
-        print "Assertion failed: {msg} (Expected {a}, Got {b})\n";
-        exit(1);
-    }
-}
+// Note: assertions use assert(cond, "msg") directly
+// to avoid the string literal requirement.
 
 @derive(Eq, Clone)
 struct Point {
@@ -25,39 +13,39 @@ struct Point {
 test "Vec Basics (Construction, Push, Pop, Access)" {
     print "Testing Vec basics...\n";
     let v = Vec<int>::new();
-    assert_eq(v.len, 0, "Initial len");
-    assert_eq(v.cap, 0, "Initial cap");
+    assert(v.len == 0, "Initial len");
+    assert(v.cap == 0, "Initial cap");
 
     v.push(10);
     v.push(20);
     v.push(30);
 
-    assert_eq(v.len, 3, "Len after push");
-    assert_eq(v.get(0), 10, "get(0)");
-    assert_eq(v.get(1), 20, "get(1)");
-    assert_eq(v.get(2), 30, "get(2)");
-    assert_eq(v.last(), 30, "last()");
-    assert_eq(v.first(), 10, "first()");
+    assert(v.len == 3, "Len after push");
+    assert(v.get(0) == 10, "get(0)");
+    assert(v.get(1) == 20, "get(1)");
+    assert(v.get(2) == 30, "get(2)");
+    assert(v.last() == 30, "last()");
+    assert(v.first() == 10, "first()");
 
-    assert_eq(v.pop(), 30, "pop()");
-    assert_eq(v.len, 2, "Len after pop");
+    assert(v.pop() == 30, "pop()");
+    assert(v.len == 2, "Len after pop");
 
     v.set(0, 99);
-    assert_eq(v.get(0), 99, "set()");
+    assert(v.get(0) == 99, "set()");
     
     // Explicit clean up check (safe idempotent free)
     v.free();
-    assert_eq(v.len, 0, "Len after free");
+    assert(v.len == 0, "Len after free");
 }
 
 test "Vec Capacity and Allocation" {
     print "Testing Vec capacity...\n";
     // with_capacity
     let v1 = Vec<int>::with_capacity(10);
-    assert_eq(v1.len, 0, "with_capacity len");
-    assert_eq(v1.cap, 10, "with_capacity cap");
+    assert(v1.len == 0, "with_capacity len");
+    assert(v1.cap == 10, "with_capacity cap");
     v1.push(1);
-    assert_eq(v1.cap, 10, "Cap should not change yet");
+    assert(v1.cap == 10, "Cap should not change yet");
 
     // Implicit grow
     let v2 = Vec<int>::new();
@@ -67,9 +55,9 @@ test "Vec Capacity and Allocation" {
         v2.push(i);
         i = i + 1;
     }
-    assert_true(v2.cap >= 9, "Capacity grew to hold 9 items");
+    assert(v2.cap >= 9, "Capacity grew to hold 9 items");
     // Expected strategy: 0 -> 8 -> 16
-    assert_eq(v2.cap, 16, "Growth strategy check (8->16)");
+    assert(v2.cap == 16, "Growth strategy check (8->16)");
 }
 
 test "Vec Modification (Insert, Append, Remove, Clear)" {
@@ -79,26 +67,26 @@ test "Vec Modification (Insert, Append, Remove, Clear)" {
     v.push(3);
     
     v.insert(1, 2); // [1, 2, 3]
-    assert_eq(v.get(1), 2, "insert middle");
-    assert_eq(v.len, 3, "insert len");
+    assert(v.get(1) == 2, "insert middle");
+    assert(v.len == 3, "insert len");
 
     let v2 = Vec<int>::new();
     v2.push(4);
     v2.push(5);
     v.append(v2);
-    assert_eq(v.len, 5, "append len");
+    assert(v.len == 5, "append len");
     for i in 0..5 {
-        assert_eq(v.get(i), i + 1, "append value");
+        assert(v.get(i) == i + 1, "append value");
     }
 
     let val = v.remove(0); // [2, 3, 4, 5]
-    assert_eq(val, 1, "remove return");
-    assert_eq(v.get(0), 2, "remove shift");
-    assert_eq(v.len, 4, "remove len");
+    assert(val == 1, "remove return");
+    assert(v.get(0) == 2, "remove shift");
+    assert(v.len == 4, "remove len");
 
     v.clear();
-    assert_eq(v.len, 0, "clear len");
-    assert_true(v.is_empty(), "is_empty");
+    assert(v.len == 0, "clear len");
+    assert(v.is_empty(), "is_empty");
 }
 
 test "Vec Extensions (pop_opt)" {
@@ -107,11 +95,11 @@ test "Vec Extensions (pop_opt)" {
     v.push(42);
     
     let opt = v.pop_opt();
-    assert_true(!opt.is_none(), "pop_opt some");
-    assert_eq(opt.unwrap(), 42, "pop_opt val");
+    assert(!opt.is_none(), "pop_opt some");
+    assert(opt.unwrap() == 42, "pop_opt val");
     
     let empty = v.pop_opt();
-    assert_true(empty.is_none(), "pop_opt none");
+    assert(empty.is_none(), "pop_opt none");
 }
 
 test "Vec Iteration (Reference and Value)" {
@@ -125,21 +113,21 @@ test "Vec Iteration (Reference and Value)" {
     for p in v {
         sum_val = sum_val + p.x;
     }
-    assert_eq(sum_val, 30, "Value iteration sum");
+    assert(sum_val == 30, "Value iteration sum");
 
     // 2. Reference Iteration (Sugar &v) - In-place modification
     for p in &v {
         (*p).x = (*p).x + 1;
     }
-    assert_eq(v.get(0).x, 11, "Ref iter mod 0");
-    assert_eq(v.get(1).x, 21, "Ref iter mod 1");
+    assert(v.get(0).x == 11, "Ref iter mod 0");
+    assert(v.get(1).x == 21, "Ref iter mod 1");
 
     // 3. Explicit iter_ref()
     for p in v.iter_ref() {
         (*p).y = (*p).y + 2;
     }
-    assert_eq(v.get(0).y, 12, "Explicit ref iter mod 0");
-    assert_eq(v.get(1).y, 22, "Explicit ref iter mod 1");
+    assert(v.get(0).y == 12, "Explicit ref iter mod 0");
+    assert(v.get(1).y == 22, "Explicit ref iter mod 1");
 }
 
 test "Vec Clone and Drop" {
@@ -149,12 +137,12 @@ test "Vec Clone and Drop" {
     v.push(200);
 
     let v2 = v.clone();
-    assert_eq(v2.len, 2, "Clone len");
-    assert_eq(v2.get(0), 100, "Clone val 0");
+    assert(v2.len == 2, "Clone len");
+    assert(v2.get(0) == 100, "Clone val 0");
     
     v.set(0, 999);
-    assert_eq(v.get(0), 999, "Original mod");
-    assert_eq(v2.get(0), 100, "Clone independent");
+    assert(v.get(0) == 999, "Original mod");
+    assert(v2.get(0) == 100, "Clone independent");
 
     // Drop is implicit at end of scope.
     // We trust valgrind/previous verification for actual memory free.
@@ -169,9 +157,9 @@ test "Vec Utils (Reverse, Contains)" {
     v.push(3);
 
     v.reverse(); // [3, 2, 1]
-    assert_eq(v.get(0), 3, "Reverse 0");
-    assert_eq(v.get(2), 1, "Reverse 2");
+    assert(v.get(0) == 3, "Reverse 0");
+    assert(v.get(2) == 1, "Reverse 2");
 
-    assert_true(v.contains(2), "Contains true");
-    assert_true(!v.contains(99), "Contains false");
+    assert(v.contains(2), "Contains true");
+    assert(!v.contains(99), "Contains false");
 }

@@ -18,15 +18,9 @@ test "map_iterator" {
         println "Key: {entry.key}, Val: {entry.val}";
     }
     
-    if (count != 3) {
-        println "Map iterator count failed: {count}";
-        exit(1);
-    }
+    assert(count == 3, "Map iterator count failed");
     
-    if (sum != 6) {
-        println "Map iterator sum failed: {sum}";
-        exit(1);
-    }
+    assert(sum == 6, "Map iterator sum failed");
     
     m.free();
 }

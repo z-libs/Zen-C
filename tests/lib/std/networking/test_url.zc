@@ -1,26 +1,21 @@
 
 import "std/net/url.zc"
 
-fn assert_true(cond: bool, msg: char*) {
-    if (!cond) {
-        !"Assertion failed: {msg}";
-        exit(1);
-    }
-}
+
 
 test "URL Parser" {
     // Case 1: Full URL
     let s1 = String::new("http://example.com:8080/path/to/resource?query=1");
     let u1_res = Url::parse(s1);
     
-    assert_true(!u1_res.is_err(), "Parse Full URL");
+    assert(!u1_res.is_err(), "Parse Full URL");
     let u1 = u1_res.unwrap();
     
-    assert_true(u1.scheme.eq_str("http"), "Scheme");
-    assert_true(u1.host.eq_str("example.com"), "Host");
-    assert_true(u1.port == 8080, "Port");
-    assert_true(u1.path.eq_str("/path/to/resource"), "Path");
-    assert_true(u1.query.eq_str("query=1"), "Query");
+    assert(u1.scheme.eq_str("http"), "Scheme");
+    assert(u1.host.eq_str("example.com"), "Host");
+    assert(u1.port == 8080, "Port");
+    assert(u1.path.eq_str("/path/to/resource"), "Path");
+    assert(u1.query.eq_str("query=1"), "Query");
     
 
     // Case 2: Simple HTTPS (default port)
@@ -28,8 +23,8 @@ test "URL Parser" {
     let u2_res = Url::parse(s2);
     let u2 = u2_res.unwrap();
     
-    assert_true(u2.port == 443, "Default HTTPS Port");
-    assert_true(u2.path.eq_str("/"), "Index Path");
+    assert(u2.port == 443, "Default HTTPS Port");
+    assert(u2.path.eq_str("/"), "Index Path");
     
 
     // Case 3: No path
@@ -37,5 +32,5 @@ test "URL Parser" {
     let u3_res = Url::parse(s3);
     let u3 = u3_res.unwrap();
     
-    assert_true(u3.path.eq_str("/"), "Implicit Path /");    
+    assert(u3.path.eq_str("/"), "Implicit Path /");    
 }

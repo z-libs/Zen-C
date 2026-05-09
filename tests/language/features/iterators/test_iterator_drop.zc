@@ -44,8 +44,5 @@ test "iterator_drop" {
         // Iterator should be dropped here
     }
 
-    if (DROP_CALLED != 1) {
-        println "Error: Iterator was not dropped! (DROP_CALLED={DROP_CALLED})";
-        exit(1);
-    }
+    assert(DROP_CALLED == 1, "Error: Iterator was not dropped! (DROP_CALLED={DROP_CALLED})");
 }

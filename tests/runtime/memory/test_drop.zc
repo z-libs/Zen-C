@@ -19,8 +19,5 @@ test "drop_trait" {
         // Scope ends here, drop should be called
     }
     
-    if (DROP_CALLED != 1) {
-        println "Error: Drop was not called!";
-        exit(1);
-    }
+    assert(DROP_CALLED == 1, "Drop was not called!");
 }

@@ -1,19 +1,11 @@
 
 import "std/encoding/base64.zc"
 
-fn assert_true(cond: bool, msg: char*) {
-    if (!cond) {
-        !"Assertion failed: {msg}";
-        exit(1);
-    }
-}
+
 
 fn check(input: char*, expected: char*) {
     let s = Base64::encode((u8*)input, strlen(input));
-    if (!s.eq_str(expected)) {
-        !"Encoded '{input}' expected '{expected}', got '{s.c_str()}'";
-        exit(1);
-    }
+    assert(s.eq_str(expected), "Encoded '{input}' expected '{expected}', got '{s.c_str()}'");
     s.free();
 }
 

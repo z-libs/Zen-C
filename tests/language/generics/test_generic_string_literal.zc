@@ -35,7 +35,5 @@ test "generic_string_substitution" {
     // Instantiate with 'int' so that if substitution happened, 'T' would become 'int'
     let checker = StringChecker<int>{ dummy: 0 };
     
-    if (!checker.check()) {
-        exit(1);
-    }
+    assert(checker.check(), "StringChecker::check should return true");
 }
