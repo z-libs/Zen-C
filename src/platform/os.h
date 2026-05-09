@@ -85,15 +85,6 @@ static inline const char *z_get_null_redirect(void)
 #endif
 }
 
-static inline const char *z_get_comptime_link_flags(void)
-{
-#if ZC_OS_WINDOWS
-    return " std/third-party/tre/lib/*.c";
-#else
-    return "";
-#endif
-}
-
 static inline const char *z_get_run_prefix(void)
 {
 #if ZC_OS_WINDOWS

@@ -15,7 +15,6 @@
 #include "analysis/move_check.h"
 
 char *curr_func_ret = NULL;
-char *run_comptime_block(ParserContext *ctx, Lexer *l);
 ASTNode *parse_expect(ParserContext *ctx, Lexer *l);
 extern char *g_current_filename;
 
@@ -3155,41 +3154,11 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
     }
     if (tk.type == TOK_COMPTIME)
     {
-        char *src = run_comptime_block(ctx, l);
-        Lexer new_l;
-        lexer_init(&new_l, src);
-        ASTNode *head = NULL, *tail = NULL;
-
-        while (lexer_peek(&new_l).type != TOK_EOF)
-        {
-            ASTNode *inner_s = parse_statement(ctx, &new_l);
-            if (!inner_s)
-            {
-                break;
-            }
-            if (!head)
-            {
-                head = inner_s;
-            }
-            else
-            {
-                tail->next = inner_s;
-            }
-            tail = inner_s;
-            while (tail->next)
-            {
-                tail = tail->next;
-            }
-        }
-
-        if (head && !head->next)
-        {
-            return head;
-        }
-
-        ASTNode *b = ast_create(NODE_BLOCK);
-        b->block.statements = head;
-        return b;
+        ASTNode *body = parse_comptime_body(ctx, l);
+        ASTNode *ct = ast_create(NODE_COMPTIME);
+        ct->comptime.body = body;
+        ct->comptime.generated = NULL;
+        return ct;
     }
     if (tk.type == TOK_EXPECT)
     {
@@ -3810,33 +3779,19 @@ ASTNode *parse_block(ParserContext *ctx, Lexer *l)
 
         if (tk.type == TOK_COMPTIME)
         {
-            char *src = run_comptime_block(ctx, l);
-            Lexer new_l;
-            lexer_init(&new_l, src);
-            // Parse statements from the generated source
-            while (lexer_peek(&new_l).type != TOK_EOF)
+            ASTNode *body = parse_comptime_body(ctx, l);
+            ASTNode *ct = ast_create(NODE_COMPTIME);
+            ct->comptime.body = body;
+            ct->comptime.generated = NULL;
+            if (!head)
             {
-                ASTNode *s = parse_statement(ctx, &new_l);
-                if (!s)
-                {
-                    break; // EOF or error handling dependency
-                }
-
-                // Link
-                if (!head)
-                {
-                    head = s;
-                }
-                else
-                {
-                    tail->next = s;
-                }
-                tail = s;
-                while (tail->next)
-                {
-                    tail = tail->next;
-                }
+                head = ct;
             }
+            else
+            {
+                tail->next = ct;
+            }
+            tail = ct;
             continue;
         }
 
@@ -4678,10 +4633,10 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     return import_node;
 }
 
-// Helper: Execute comptime block and return generated source
-char *run_comptime_block(ParserContext *ctx, Lexer *l)
+// Helper: Parse the body of a comptime block and return the parsed statements.
+// Consumes the 'comptime {' tokens and extracts the balanced block content.
+ASTNode *parse_comptime_body(ParserContext *ctx, Lexer *l)
 {
-    (void)ctx;
     z_parse_expect(l, TOK_COMPTIME, "comptime");
     z_parse_expect(l, TOK_LBRACE, "expected { after comptime");
 
@@ -4694,6 +4649,11 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
         {
             zpanic_at(t, "Unexpected EOF in comptime block");
         }
+        if (t.type == TOK_STRING || t.type == TOK_FSTRING || t.type == TOK_RAW_STRING)
+        {
+            // Skip string literals to avoid counting {} inside strings
+            continue;
+        }
         if (t.type == TOK_LBRACE)
         {
             depth++;
@@ -4703,217 +4663,30 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
             depth--;
         }
     }
-    // End is passed the closing brace, so pos points after it.
-    // The code block is between start and (current pos - 1)
     int len = (l->src + l->pos - 1) - start;
     char *code = xmalloc(len + 1);
     strncpy(code, start, len);
     code[len] = 0;
 
-    // Wrap in block to parse mixed statements/declarations
-    int wrapped_len = len + 4; // "{ " + code + " }"
-    char *wrapped_code = xmalloc(wrapped_len + 1);
-    sprintf(wrapped_code, "{ %s }", code);
-
-    Lexer cl;
-    lexer_init(&cl, wrapped_code);
-    ParserContext cctx;
-    memset(&cctx, 0, sizeof(cctx));
-    cctx.global_scope = symbol_scope_create(NULL, "Global");
-    cctx.current_scope = cctx.global_scope;
-    register_builtins(&cctx);
-    register_comptime_builtins(&cctx);
-    cctx.has_external_includes = 1; // Suppress undefined warnings for comptime helpers
-    cctx.is_comptime = 1;
-
-    ASTNode *block = parse_block(&cctx, &cl);
-    ASTNode *nodes = block ? block->block.statements : NULL;
-
-    zfree(wrapped_code);
-
-    static int comptime_temp_counter = 0;
-    char filename[64];
-    snprintf(filename, sizeof(filename), "_tmp_comptime_%d_%d.c", (int)getpid(),
-             comptime_temp_counter++);
-    FILE *f = fopen(filename, "w");
-    if (!f)
-    {
-        zpanic_at(lexer_peek(l), "Could not create temp file %s", filename);
-        return NULL; // Prevent crash in LSP mode
-    }
-
-    emitter_push(&ctx->emitter);
-    emitter_init_file(&ctx->emitter, f);
-    emitter_init_file(&cctx.emitter, f);
-    emit_preamble(ctx);
-    EMIT(ctx, "%s",
-         "size_t _z_check_bounds(size_t index, size_t size) { if (index >= size) { fprintf(stderr, "
-         "\"Index out of bounds: %zu >= %zu\\n\", index, size); exit(1); } return index; }\n");
-
-    // Comptime helper functions
-    EMIT(ctx, "%s", "void yield(const char* s) { printf(\"%s\", s); }\n");
-    EMIT(ctx, "%s", "void code(const char* s) { printf(\"%s\", s); }\n"); // Alias for yield
-    EMIT(ctx, "%s",
-         "void compile_error(const char* s) { fprintf(stderr, \"Compile-time error: %s\\n\", s); "
-         "exit(1); }\n");
-    EMIT(ctx, "%s",
-         "void compile_warn(const char* s) { fprintf(stderr, \"Compile-time warning: %s\\n\", s); "
-         "}\n");
-
-    // Build metadata constants
-    EMIT(ctx, "#define __COMPTIME_TARGET__ \"%s\"\n", z_get_system_name());
-    EMIT(ctx, "#define __COMPTIME_FILE__ \"%s\"\n", g_current_filename);
-
-    VisitedModules *visited = NULL;
-    ASTNode *curr = nodes;
-    ASTNode *stmts = NULL;
-    ASTNode *stmts_tail = NULL;
-
-    while (curr)
-    {
-        ASTNode *next = curr->next;
-        curr->next = NULL;
-
-        if (curr->type == NODE_INCLUDE)
-        {
-            emit_includes_and_aliases(ctx, curr, &visited);
-        }
-        else if (curr->type == NODE_STRUCT)
-        {
-            emit_struct_defs(&cctx, curr, &visited);
-        }
-        else if (curr->type == NODE_ENUM)
-        {
-            emit_enum_protos(&cctx, curr);
-        }
-        else if (curr->type == NODE_CONST)
-        {
-            emit_globals(&cctx, curr, &visited);
-        }
-
-        else if (curr->type == NODE_FUNCTION)
-        {
-            codegen_node_single(&cctx, curr);
-        }
-        else if (curr->type == NODE_IMPL)
-        {
-            // Impl support pending
-        }
-        else
-        {
-            // Statement or expression -> main
-            if (!stmts)
-            {
-                stmts = curr;
-            }
-            else
-            {
-                stmts_tail->next = curr;
-            }
-            stmts_tail = curr;
-        }
-        curr = next;
-    }
-
-    {
-        StructRef *ref = ctx->parsed_funcs_list;
-        while (ref)
-        {
-            ASTNode *fn = ref->node;
-            if (fn && fn->type == NODE_FUNCTION && fn->func.is_comptime)
-            {
-                emit_func_signature(ctx, fn, NULL);
-                EMIT(ctx, ";\n");
-                codegen_node_single(ctx, fn);
-            }
-            ref = ref->next;
-        }
-    }
-
-    EMIT(ctx, "int main() {\n");
-    curr = stmts;
-    while (curr)
-    {
-        if (curr->type >= NODE_EXPR_BINARY && curr->type <= NODE_EXPR_SLICE)
-        {
-            codegen_expression(&cctx, curr);
-            EMIT(ctx, ";\n");
-        }
-        else
-        {
-            codegen_node_single(&cctx, curr);
-        }
-        curr = curr->next;
-    }
-    EMIT(ctx, "return 0;\n}\n");
-    fclose(f);
-    emitter_pop(&ctx->emitter);
-
-    char cmdbuf[MAX_PATH_LEN * 3];
-    char bin[MAX_PATH_LEN];
-
-    sprintf(bin, "%s%s", filename, z_get_exe_ext());
-
-    // Use quotes for paths to prevent injection/errors with spaces
-#if ZC_OS_WINDOWS
-    // On Windows, system() uses cmd.exe /c. If the command starts with a quote and has multiple
-    // quotes, cmd.exe strips the first and last quote. Wrapping the whole thing in another pair of
-    // quotes fixes this.
-    snprintf(cmdbuf, sizeof(cmdbuf),
-             "\"%s \"%s\" -o \"%s\" -Istd -Istd/third-party/tre/include %s\"", g_config.cc,
-             filename, bin, z_get_comptime_link_flags());
-#else
-    snprintf(cmdbuf, sizeof(cmdbuf), "%s \"%s\" -o \"%s\" -Istd -Istd/third-party/tre/include %s",
-             g_config.cc, filename, bin, z_get_comptime_link_flags());
-#endif
-
-    if (!g_config.verbose)
-    {
-        strcat(cmdbuf, z_get_null_redirect());
-    }
-
-    int res = system(cmdbuf);
-    if (res != 0)
-    {
-        zpanic_at(lexer_peek(l), "Comptime compilation failed for:\n%s", code);
-    }
-
-    char out_file[MAX_PATH_LEN];
-    sprintf(out_file, "%s.out", filename);
-
-    // Execution command
-#if ZC_OS_WINDOWS
-    snprintf(cmdbuf, sizeof(cmdbuf), "\"%s\"%s\" > \"%s\"\"", z_get_run_prefix(), bin, out_file);
-#else
-    snprintf(cmdbuf, sizeof(cmdbuf), "%s\"%s\" > \"%s\"", z_get_run_prefix(), bin, out_file);
-#endif
-
-    if (system(cmdbuf) != 0)
-    {
-        zpanic_at(lexer_peek(l), "Comptime execution failed");
-    }
-
-    char *output_src = load_file(out_file);
-    if (!output_src)
-    {
-        output_src = xstrdup(""); // Empty output is valid
-    }
-
-    remove(filename);
-    remove(bin);
-    remove(out_file);
+    // Wrap in a block for parsing
+    int wrapped_len = len + 4;
+    char *wrapped = xmalloc(wrapped_len + 1);
+    sprintf(wrapped, "{ %s }", code);
     zfree(code);
 
-    return output_src;
-}
+    Lexer cl;
+    lexer_init(&cl, wrapped);
+    ASTNode *block = parse_block(ctx, &cl);
+    zfree(wrapped);
+    if (!block)
+    {
+        return NULL;
+    }
 
-ASTNode *parse_comptime(ParserContext *ctx, Lexer *l)
-{
-    char *output_src = run_comptime_block(ctx, l);
-
-    Lexer new_l;
-    lexer_init(&new_l, output_src);
-    return parse_program_nodes(ctx, &new_l);
+    ASTNode *stmts = block->block.statements;
+    block->block.statements = NULL;
+    ast_free(block);
+    return stmts;
 }
 
 // Parse plugin block: plugin name ... end

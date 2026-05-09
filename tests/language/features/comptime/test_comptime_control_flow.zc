@@ -1,0 +1,40 @@
+comptime {
+    let sum = 0;
+    for i in 0..5 {
+        sum = sum + i;
+    }
+    if (sum == 10) {
+        yield("def FOR_SUM = 10;");
+    }
+}
+
+test "comptime_for_range" {
+    assert(FOR_SUM == 10, "comptime for-range");
+}
+
+comptime {
+    let n = 0;
+    while (n < 3) {
+        n = n + 1;
+    }
+    if (n == 3) {
+        yield("def WHILE_N = 3;");
+    }
+}
+
+test "comptime_while" {
+    assert(WHILE_N == 3, "comptime while");
+}
+
+comptime {
+    let condition = 1;
+    if (condition) {
+        yield("def IF_BRANCH = 1;");
+    } else {
+        yield("def ELSE_BRANCH = 1;");
+    }
+}
+
+test "comptime_if" {
+    assert(IF_BRANCH == 1, "comptime if-true");
+}

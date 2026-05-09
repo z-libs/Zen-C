@@ -647,529 +647,25 @@ void sync_all_link_names(ParserContext *ctx, ASTNode *root);
  */
 void register_builtins(ParserContext *ctx);
 void register_comptime_builtins(ParserContext *ctx);
-
-/**
- * @brief Adds an instantiated function to the list.
- */
-void add_instantiated_func(ParserContext *ctx, ASTNode *fn);
-int check_duplicate_variants(ASTNode *v1, ASTNode *v2);
-void append_to_gen(char **gen, size_t *cap, const char *s);
-void append_to_gen_fmt(char **gen, size_t *cap, const char *fmt, ...);
-char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *content, int newline,
-                           const char *target, char ***used_syms, int *count, int check_symbols,
-                           int is_raw, int is_expr);
-
-/**
- * @brief Instantiates a generic struct/function.
- */
-void instantiate_generic(ParserContext *ctx, const char *name, const char *concrete_type,
-                         const char *unmangled_type, Token t);
-
-/**
- * @brief Instantiates a multi-parameter generic.
- */
-void instantiate_generic_multi(ParserContext *ctx, const char *name, char **args, int arg_count,
-                               Token t);
-
-/**
- * @brief Sanitizes a mangled name for use in codegen.
- */
-char *sanitize_mangled_name(const char *name);
-
-/**
- * @brief Registers a type alias.
- */
-TypeAlias *find_type_alias_node(ParserContext *ctx, const char *name);
-void register_type_alias(ParserContext *ctx, const char *alias, const char *original,
-                         Type *type_info, int is_opaque, const char *defined_in_file, Token tok,
-                         int is_export);
-
-/**
- * @brief Registers an implementation.
- */
-void register_impl(ParserContext *ctx, const char *trait, const char *strct);
-
-/**
- * @brief Checks if a type implements a trait.
- */
-int check_impl(ParserContext *ctx, const char *trait, const char *strct);
-
-/**
- * @brief Registers a template.
- */
-void register_template(ParserContext *ctx, const char *name, ASTNode *node);
-
-/**
- * @brief Registers a deprecated function.
- */
-void register_deprecated_func(ParserContext *ctx, const char *name, const char *reason);
-
-/**
- * @brief Finds a deprecated function.
- */
-DeprecatedFunc *find_deprecated_func(ParserContext *ctx, const char *name);
-
-/**
- * @brief Parses a single parameter arrow lambda.
- */
-ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_name,
-                                   int default_capture_mode);
-
-/**
- * @brief Parses a multi-parameter arrow lambda.
- */
-ASTNode *parse_arrow_lambda_multi(ParserContext *ctx, Lexer *l, char **param_names,
-                                  Type **param_types, int num_params, int default_capture_mode);
-
-// Utils
-
-/**
- * @brief Parses and converts arguments.
- */
-char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
-                             ASTNode ***default_values_out, int *count_out, Type ***types_out,
-                             char ***names_out, int *is_varargs_out, char ***ctype_overrides_out);
-
-/**
- * @brief Audit and potentially deprecate C-style preprocessor directives.
- */
-void parser_audit_preprocessor(struct ParserContext *ctx, Token tok);
-
-/**
- * @brief Attempt to parse a #define macro as a constant integer.
- */
-void try_parse_macro_const(struct ParserContext *ctx, const char *content);
-
-/**
- * @brief Scan a C header line for function prototypes.
- * Registers discovered function names as extern symbols.
- */
-void try_parse_c_function_decl(struct ParserContext *ctx, const char *line);
-
-/**
- * @brief Scan a C header line for struct/union declarations.
- * Registers discovered type names as opaque type aliases.
- */
-void try_parse_c_struct_decl(struct ParserContext *ctx, const char *line);
-
-/**
- * @brief Recursively scan a C header file for declarations.
- * Follows nested #include "..." directives and extracts macros,
- * function prototypes, and struct/union declarations.
- */
-void scan_c_header_contents(struct ParserContext *ctx, const char *path, int depth);
-
-/**
- * @brief Checks if a file has been imported.
- */
-int is_file_imported(ParserContext *ctx, const char *path);
-
-/**
- * @brief Marks a file as imported.
- */
-void mark_file_imported(ParserContext *ctx, const char *path);
-
-/**
- * @brief Registers a plugin.
- */
-void register_plugin(ParserContext *ctx, const char *name, const char *alias);
-
-/**
- * @brief Resolves a plugin by name or alias.
- */
-const char *resolve_plugin(ParserContext *ctx, const char *name_or_alias);
-
-/**
- * @brief Prints type definitions to a file.
- */
-void print_type_defs(ParserContext *ctx, ASTNode *nodes);
-
-// String manipulation
-
-/**
- * @brief Extracts the inner content of a string literal token.
- * Handles single-line, multi-line, f-string and raw string formats.
- * caller must free the returned string.
- */
-char *token_get_string_content(Token t);
-
-/**
- * @brief Replaces a substring in a string.
- */
-
-char *replace_in_string(const char *src, const char *old_w, const char *new_w);
-
-/**
- * @brief Replaces a type string in a string.
- */
-char *replace_type_str(const char *src, const char *param, const char *concrete,
-                       const char *old_struct, const char *new_struct);
-
-/**
- * @brief Replaces a type formal in a type.
- */
-Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os, const char *ns);
-
-/**
- * @brief Copies an AST node and replaces its type parameters.
- */
-ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char *os,
-                            const char *ns);
-char *extract_module_name(const char *path);
-
-// Enum helpers
-/**
- * @brief Registers an enum variant.
- */
-void register_enum_variant(ParserContext *ctx, const char *vname, const char *ename, int tag);
-
-/**
- * @brief Finds an enum variant.
- */
-EnumVariantReg *find_enum_variant(ParserContext *ctx, const char *name);
-
-// Lambda helpers
-/**
- * @brief Registers a lambda.
- */
-void register_lambda(ParserContext *ctx, ASTNode *node);
-
-/**
- * @brief Analyzes lambda captures.
- */
-void analyze_lambda_captures(ParserContext *ctx, ASTNode *lambda);
-
-// Type registration
-/**
- * @brief Registers a slice type.
- */
-void register_slice(ParserContext *ctx, const char *type);
-
-/**
- * @brief Registers a tuple type.
- */
-void register_tuple(ParserContext *ctx, const char *sig);
+char *sanitize_mangled_name(const char *s);
 void register_tuple_with_types(ParserContext *ctx, const char *sig, const char **types, int count);
+ASTNode *parse_tuple_expression(ParserContext *ctx, Lexer *l, const char *type_name, ASTNode *expr);
 
-// Struct lookup
-/**
- * @brief Finds a struct definition.
- */
-ASTNode *find_struct_def(ParserContext *ctx, const char *name);
-ASTNode *find_trait_def(ParserContext *ctx, const char *name);
-
-/**
- * @brief Finds an already-registered concrete struct definition.
- */
-ASTNode *find_concrete_struct_def(ParserContext *ctx, const char *name);
-
-/**
- * @brief Registers a struct definition.
- */
-void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node);
-
-// Module system
-/**
- * @brief Finds a module.
- */
-Module *find_module(ParserContext *ctx, const char *alias);
-
-/**
- * @brief Registers a module.
- */
-void register_module(ParserContext *ctx, const char *alias, const char *path);
-
-/**
- * @brief Registers a selective import.
- */
-void register_selective_import(ParserContext *ctx, const char *symbol, const char *alias,
-                               const char *source_module);
-
-/**
- * @brief Finds a selective import.
- */
-SelectiveImport *find_selective_import(ParserContext *ctx, const char *name);
-
-// Type Aliases
-
-/**
- * @brief Finds a type alias.
- */
-const char *find_type_alias(ParserContext *ctx, const char *alias);
-
-// External symbol tracking (C interop)
-/**
- * @brief Registers an external symbol.
- */
-void register_extern_symbol(ParserContext *ctx, const char *name);
-
-/**
- * @brief Checks if a symbol is external.
- */
-int is_extern_symbol(ParserContext *ctx, const char *name);
-
-/**
- * @brief Checks if a symbol should suppress an undefined warning.
- */
-int should_suppress_undef_warning(ParserContext *ctx, const char *name);
-
-// Initialization
-/**
- * @brief Initializes built-in types and symbols.
- */
-void init_builtins();
-
-// Expression rewriting
-/**
- * @brief Rewrites expression methods.
- */
-char *rewrite_expr_methods(ParserContext *ctx, char *raw);
-
-/**
- * @brief Processes a formatted string.
- */
-char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms, int *count);
-
-/**
- * @brief Instantiates a function template.
- */
-char *instantiate_function_template(ParserContext *ctx, const char *name, const char *concrete_type,
-                                    const char *unmangled_type);
-
-/**
- * @brief Finds a function.
- */
-FuncSig *find_func(ParserContext *ctx, const char *name);
-
-/**
- * @brief Parses a type formal.
- */
-Type *parse_type_formal(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Checks compatibility of opaque aliases (allows access within defining file).
- */
-int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b);
-
-/**
- * @brief Parses a type.
- */
-char *parse_type(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a type base.
- */
-Type *parse_type_base(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an expression.
- */
-ASTNode *parse_expression(ParserContext *ctx, Lexer *l);
-ASTNode *parse_tuple_expression(ParserContext *ctx, Lexer *l, const char *type_name,
-                                ASTNode *first_elem);
-
-/**
- * @brief Parses an expression with minimum precedence.
- */
-ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec);
-
-/**
- * @brief Parses a primary expression (literal, variable, grouping).
- */
-ASTNode *parse_primary(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a lambda.
- */
-ASTNode *parse_lambda(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a condition.
- */
-char *parse_condition_raw(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an array literal.
- */
-char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st);
-
-/**
- * @brief Parses a tuple literal.
- */
-char *parse_tuple_literal(ParserContext *ctx, Lexer *l, const char *tn);
-
-/**
- * @brief Parses an embed.
- */
-ASTNode *parse_embed(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a macro call.
- */
-ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *name);
-
-/**
- * @brief Parses a statement.
- */
-ASTNode *parse_statement(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Normalizes raw block content (strips \r from CRLF sequences).
- */
-char *normalize_raw_content(const char *content);
-
-/**
- * @brief Parses a block of statements { ... }.
- */
-ASTNode *parse_block(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an if statement.
- */
-ASTNode *parse_if(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a while loop.
- */
-ASTNode *parse_while(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a for loop.
- */
-ASTNode *parse_for(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a loop.
- */
-ASTNode *parse_loop(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a repeat loop.
- */
-ASTNode *parse_repeat(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an unless statement.
- */
-ASTNode *parse_unless(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a guard statement.
- */
-ASTNode *parse_guard(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a match statement.
- */
-ASTNode *parse_match(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a return statement.
- */
-ASTNode *parse_return(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Processes a formatted string.
- */
-char *escape_c_string(const char *input);
-
-/**
- * @brief Parses an assert statement.
- */
-ASTNode *parse_assert(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a defer statement.
- */
-ASTNode *parse_defer(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an asm statement.
- */
-ASTNode *parse_asm(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a plugin statement.
- */
-ASTNode *parse_plugin(ParserContext *ctx, Lexer *l, Token tok);
-
-/**
- * @brief Parses a variable declaration.
- */
-ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export);
-
-/**
- * @brief Parses a def statement.
- */
-ASTNode *parse_def(ParserContext *ctx, Lexer *l, int is_export);
-
-/**
- * @brief Parses a type alias.
- */
-ASTNode *parse_type_alias(ParserContext *ctx, Lexer *l, int is_opaque, int is_export);
-
-/**
- * @brief Parses a function definition.
- */
-ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_extern,
-                        const char *link_name, int is_export);
-
-/**
- * @brief Parses a struct or union definition.
- */
-ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque, int is_extern,
-                      const char *link_name, int is_export);
-
-/**
- * @brief Parses an enum definition.
- */
-ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_export);
-
-/**
- * @brief Parses a trait definition.
- */
-ASTNode *parse_trait(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an implementation.
- */
-ASTNode *parse_impl(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an implementation trait.
- */
-ASTNode *parse_impl_trait(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Transforms an expression into a trait object (fat pointer).
- */
-ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
-                                   ASTNode *source_expr);
-
-/**
- * @brief Parses a test definition.
- */
-ASTNode *parse_test(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an include statement.
- */
-ASTNode *parse_include(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses an import statement.
- */
-ASTNode *parse_import(ParserContext *ctx, Lexer *l);
-
-/**
- * @brief Parses a comptime statement.
- */
-ASTNode *parse_comptime(ParserContext *ctx, Lexer *l);
+/** @brief Parses just the comptime block body, returning the statement list. */
+ASTNode *parse_comptime_body(ParserContext *ctx, Lexer *l);
 
 /**
  * @brief Patches self arguments in a function.
  */
 char *patch_self_args(const char *args, const char *struct_name);
+char *escape_c_string(const char *input);
+char *replace_type_str(const char *src, const char *param, const char *concrete,
+                       const char *old_struct, const char *new_struct);
+char *resolve_struct_name_from_type(ParserContext *ctx, Type *t, int *is_ptr_out,
+                                    char **allocated_out);
+char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *content, int newline,
+                           const char *target, char ***used_syms, int *count, int check_symbols,
+                           int is_raw, int is_expr);
 
 /**
  * @brief Checks if a token is a reserved keyword.
@@ -1190,5 +686,81 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l);
  * @brief Collapses triple or more underscores into a double underscore.
  */
 char *merge_underscores(const char *name);
+
+// --- Parser function declarations (needed to avoid implicit declarations) ---
+ASTNode *parse_statement(ParserContext *ctx, Lexer *l);
+ASTNode *parse_block(ParserContext *ctx, Lexer *l);
+ASTNode *parse_expression(ParserContext *ctx, Lexer *l);
+ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec);
+ASTNode *parse_return(ParserContext *ctx, Lexer *l);
+ASTNode *parse_assert(ParserContext *ctx, Lexer *l);
+ASTNode *parse_plugin(ParserContext *ctx, Lexer *l, Token tk);
+char *token_get_string_content(Token t);
+ASTNode *find_struct_def(ParserContext *ctx, const char *name);
+ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_extern,
+                        const char *link_name, int is_export);
+ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_packed, int align,
+                      const char *link_name, int is_export);
+ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_export);
+ASTNode *parse_impl(ParserContext *ctx, Lexer *l);
+ASTNode *parse_trait(ParserContext *ctx, Lexer *l);
+ASTNode *parse_include(ParserContext *ctx, Lexer *l);
+ASTNode *parse_import(ParserContext *ctx, Lexer *l);
+ASTNode *parse_def(ParserContext *ctx, Lexer *l, int is_export);
+ASTNode *parse_test(ParserContext *ctx, Lexer *l);
+ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export);
+ASTNode *parse_type_alias(ParserContext *ctx, Lexer *l, int is_opaque, int is_export);
+char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults,
+                             ASTNode ***default_values, int *count, Type ***arg_types,
+                             char ***param_names, int *is_varargs, char ***ctype_overrides);
+Type *parse_type_formal(ParserContext *ctx, Lexer *l);
+FuncSig *find_func(ParserContext *ctx, const char *name);
+EnumVariantReg *find_enum_variant(ParserContext *ctx, const char *name);
+TypeAlias *find_type_alias_node(ParserContext *ctx, const char *name);
+char *extract_module_name(const char *path);
+ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait, ASTNode *expr);
+int check_impl(ParserContext *ctx, const char *trait_name, const char *type_name);
+int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b);
+Module *find_module(ParserContext *ctx, const char *alias);
+SelectiveImport *find_selective_import(ParserContext *ctx, const char *name);
+ASTNode *find_concrete_struct_def(ParserContext *ctx, const char *name);
+const char *find_type_alias(ParserContext *ctx, const char *alias);
+Type *parse_type_base(ParserContext *ctx, Lexer *l);
+char *parse_type(ParserContext *ctx, Lexer *l);
+ASTNode *find_trait_def(ParserContext *ctx, const char *name);
+int is_extern_symbol(ParserContext *ctx, const char *name);
+int is_file_imported(ParserContext *ctx, const char *path);
+void mark_file_imported(ParserContext *ctx, const char *path);
+int should_suppress_undef_warning(ParserContext *ctx, const char *name);
+void init_builtins(void);
+void register_extern_symbol(ParserContext *ctx, const char *name);
+void register_impl(ParserContext *ctx, const char *trait, const char *type);
+void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node);
+void register_type_alias(ParserContext *ctx, const char *alias, const char *original, Type *type,
+                         int is_opaque, const char *defined_in_file, Token tok, int is_export);
+void register_slice(ParserContext *ctx, const char *type);
+void register_lambda(ParserContext *ctx, ASTNode *node);
+void register_template(ParserContext *ctx, const char *name, ASTNode *node);
+void register_enum_variant(ParserContext *ctx, const char *vname, const char *ename, int tag);
+void register_plugin(ParserContext *ctx, const char *name, const char *alias);
+void register_selective_import(ParserContext *ctx, const char *symbol, const char *alias,
+                               const char *source_module);
+void register_deprecated_func(ParserContext *ctx, const char *name, const char *replacement);
+void try_parse_macro_const(ParserContext *ctx, const char *name);
+void parser_audit_preprocessor(ParserContext *ctx, Token t);
+char *normalize_raw_content(const char *content);
+char *rewrite_expr_methods(ParserContext *ctx, char *raw);
+char *parse_condition_raw(ParserContext *ctx, Lexer *l);
+const char *resolve_plugin(ParserContext *ctx, const char *name_or_alias);
+char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st);
+char *parse_tuple_literal(ParserContext *ctx, Lexer *l, const char *tn);
+ASTNode *parse_embed(ParserContext *ctx, Lexer *l);
+ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name);
+char *instantiate_function_template(ParserContext *ctx, const char *name, const char *arg1,
+                                    const char *arg2);
+void instantiate_generic(ParserContext *ctx, const char *name, const char *arg_str,
+                         const char *arg_name, Token t);
+void instantiate_generic_multi(ParserContext *ctx, const char *name, char **args, int arg_count,
+                               Token t);
 
 #endif // PARSER_H

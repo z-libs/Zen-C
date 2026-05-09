@@ -1,6 +1,7 @@
 #include "../constants.h"
 
 #include "typecheck.h"
+#include "comptime_interpreter.h"
 #include "diagnostics/diagnostics.h"
 #include "move_check.h"
 #include "platform/misra.h"
@@ -3775,6 +3776,45 @@ static void check_node(TypeChecker *tc, ASTNode *node, int depth)
             }
         }
         break;
+    case NODE_COMPTIME:
+    {
+        // Register comptime builtins for the body
+        register_comptime_builtins(tc->pctx);
+
+        // Type-check the comptime body
+        ASTNode *stmt = node->comptime.body;
+        while (stmt)
+        {
+            check_node(tc, stmt, depth + 1);
+            stmt = stmt->next;
+        }
+
+        // Interpret the comptime body
+        char *output = interpret_comptime(tc->pctx, node->comptime.body, g_current_filename);
+        if (!output)
+        {
+            break;
+        }
+
+        // Parse generated source code
+        if (output[0])
+        {
+            Lexer out_l;
+            lexer_init(&out_l, output);
+            node->comptime.generated = parse_program_nodes(tc->pctx, &out_l);
+
+            // Type-check generated nodes
+            ASTNode *gen = node->comptime.generated;
+            while (gen)
+            {
+                check_node(tc, gen, depth + 1);
+                gen = gen->next;
+            }
+        }
+        zfree(output);
+        break;
+    }
+
     default:
         // Generic recursion for lists and other nodes.
         // Special case for Return to trigger move?

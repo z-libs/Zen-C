@@ -1,0 +1,10 @@
+comptime {
+    expect(1 + 1 == 2, "basic arithmetic should work");
+    expect(2 * 3 == 6, "multiplication should work");
+    expect(10 > 5, "comparison should work");
+    yield("def COMPTIME_EXPECT_OK = 1;");
+}
+
+test "comptime_expect_passes" {
+    assert(COMPTIME_EXPECT_OK == 1, "comptime expect passed");
+}

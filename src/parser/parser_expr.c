@@ -2105,6 +2105,10 @@ static ASTNode *parse_intrinsic(ParserContext *ctx, Lexer *l)
 }
 
 static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l);
+ASTNode *parse_arrow_lambda_single(ParserContext *ctx, Lexer *l, char *param_name, int is_async);
+ASTNode *parse_arrow_lambda_multi(ParserContext *ctx, Lexer *l, char **param_names,
+                                  Type **param_types, int count, int is_async);
+ASTNode *parse_tuple_expression(ParserContext *ctx, Lexer *l, const char *type_name, ASTNode *expr);
 
 ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
 {

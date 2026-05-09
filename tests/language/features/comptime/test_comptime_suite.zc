@@ -1,8 +1,5 @@
-
 comptime {
-    printf("fn generated_func() {{\n");
-    printf("    println \"  I was generated at compile time!\";\n");
-    printf("}\n");
+    yield("def GENERATED_VAL = 42;");
 }
 
 @comptime
@@ -11,8 +8,7 @@ fn double_ct(x: int) -> int {
 }
 
 test "test_comptime_block" {
-    println "Running Comptime Test...";
-    generated_func();
+    assert(GENERATED_VAL == 42, "generated constant works");
     println "Comptime Test Complete.";
 }
 
@@ -24,6 +20,6 @@ test "test_comptime_attr" {
 
 test "test_comptime_fn" {
     comptime {
-        println "println \"Hello from comptime fn!\";";
+        yield("println \"Hello from comptime fn!\";");
     }
 }

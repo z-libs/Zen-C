@@ -1,4 +1,3 @@
-
 import "std/string.zc"
 
 // Move semantics tests

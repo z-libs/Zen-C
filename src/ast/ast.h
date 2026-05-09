@@ -183,6 +183,7 @@ typedef enum
     NODE_VA_ARG,             ///< va_arg intrinsic.
     NODE_PREPROC_DIRECTIVE,  ///< C-style preprocessor directive (#define, etc).
     NODE_IMPORT,             ///< Import statement (recursive).
+    NODE_COMPTIME,           ///< Comptime block (interpreted at compile time).
     NODE_AST_COMMENT         ///< Comment node.
 } NodeType;
 
@@ -707,6 +708,12 @@ struct ASTNode
         {
             char *content;
         } comment;
+
+        struct
+        {
+            ASTNode *body;      ///< The comptime block body (parsed statements).
+            ASTNode *generated; ///< Generated AST nodes (from yield() output).
+        } comptime;
     };
 };
 

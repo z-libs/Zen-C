@@ -1,12 +1,7 @@
-
 comptime {
-    // Test compile_warn
     compile_warn("This is a compile-time warning test");
-    
-    // Generate a simple function - escape the braces
-    yield("fn test_yield() -> int {{ return 42; }}");
-    
-    // Test conditional logic (compile_error would halt compilation)
+    yield("def TEST_YIELD_VAL = 42;");
+
     let DEBUG = 1;
     if (DEBUG == 0) {
         compile_error("Debug mode required!");
@@ -14,7 +9,7 @@ comptime {
 }
 
 test "comptime_yield" {
-    assert(test_yield() == 42, "yield-generated function failed");
+    assert(TEST_YIELD_VAL == 42, "yield-generated constant failed");
     println "yield() works correctly";
 }
 

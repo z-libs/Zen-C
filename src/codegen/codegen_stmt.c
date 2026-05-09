@@ -650,6 +650,14 @@ static void handle_node_defer(ParserContext *ctx, ASTNode *node)
     }
 }
 
+static void handle_node_comptime(ParserContext *ctx, ASTNode *node)
+{
+    if (node->comptime.generated)
+    {
+        codegen_walker(ctx, node->comptime.generated);
+    }
+}
+
 static void handle_node_block(ParserContext *ctx, ASTNode *node)
 {
     int saved = ctx->cg.defer_count;
@@ -1677,6 +1685,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         [NODE_UNLESS] = handle_node_unless,
         [NODE_GUARD] = handle_node_guard,
         [NODE_WHILE] = handle_node_while,
+        [NODE_COMPTIME] = handle_node_comptime,
     };
 
     if (node->type >= 0 && node->type < 256 && handlers[node->type])

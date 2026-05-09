@@ -582,9 +582,209 @@ static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs)
     }
 }
 
+// Walk the AST and replace NODE_COMPTIME nodes with their generated children.
+// This must run before codegen so that emitted declarations (structs, functions)
+// appear in the root children list.
+static void flatten_comptime_nodes(ASTNode *parent)
+{
+    if (!parent)
+    {
+        return;
+    }
+
+    // For blocks: walk block.statements
+    if (parent->type == NODE_BLOCK)
+    {
+        ASTNode **pp = &parent->block.statements;
+        while (pp && *pp)
+        {
+            if ((*pp)->type == NODE_COMPTIME && (*pp)->comptime.generated)
+            {
+                ASTNode *gen = (*pp)->comptime.generated;
+                ASTNode *gen_last = gen;
+                while (gen_last && gen_last->next)
+                {
+                    gen_last = gen_last->next;
+                }
+                if ((*pp)->next)
+                {
+                    if (gen_last)
+                    {
+                        gen_last->next = (*pp)->next;
+                    }
+                }
+                *pp = gen;
+                if (!*pp)
+                {
+                    break;
+                }
+            }
+            else
+            {
+                flatten_comptime_nodes(*pp);
+                if (*pp)
+                {
+                    pp = &(*pp)->next;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        return;
+    }
+
+    // For root: walk root.children
+    if (parent->type == NODE_ROOT)
+    {
+        ASTNode **pp = &parent->root.children;
+        while (pp && *pp)
+        {
+            if ((*pp)->type == NODE_COMPTIME && (*pp)->comptime.generated)
+            {
+                ASTNode *gen = (*pp)->comptime.generated;
+                ASTNode *gen_last = gen;
+                while (gen_last && gen_last->next)
+                {
+                    gen_last = gen_last->next;
+                }
+                if ((*pp)->next)
+                {
+                    if (gen_last)
+                    {
+                        gen_last->next = (*pp)->next;
+                    }
+                }
+                *pp = gen;
+                if (!*pp)
+                {
+                    break;
+                }
+            }
+            else
+            {
+                flatten_comptime_nodes(*pp);
+                if (*pp)
+                {
+                    pp = &(*pp)->next;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        return;
+    }
+
+    // For if/while/for/etc: recurse into sub-blocks
+    if (parent->type == NODE_IF)
+    {
+        if (parent->if_stmt.then_body)
+        {
+            flatten_comptime_nodes(parent->if_stmt.then_body);
+        }
+        if (parent->if_stmt.else_body)
+        {
+            flatten_comptime_nodes(parent->if_stmt.else_body);
+        }
+    }
+    if (parent->type == NODE_WHILE && parent->while_stmt.body)
+    {
+        flatten_comptime_nodes(parent->while_stmt.body);
+    }
+    if (parent->type == NODE_FOR && parent->for_stmt.body)
+    {
+        flatten_comptime_nodes(parent->for_stmt.body);
+    }
+    if (parent->type == NODE_FOR_RANGE && parent->for_range.body)
+    {
+        flatten_comptime_nodes(parent->for_range.body);
+    }
+    if (parent->type == NODE_LOOP && parent->loop_stmt.body)
+    {
+        flatten_comptime_nodes(parent->loop_stmt.body);
+    }
+    if (parent->type == NODE_REPEAT && parent->repeat_stmt.body)
+    {
+        flatten_comptime_nodes(parent->repeat_stmt.body);
+    }
+    if (parent->type == NODE_MATCH)
+    {
+        ASTNode *c = parent->match_stmt.cases;
+        while (c)
+        {
+            if (c->type == NODE_MATCH_CASE && c->match_case.body)
+            {
+                flatten_comptime_nodes(c->match_case.body);
+            }
+            c = c->next;
+        }
+    }
+    if (parent->type == NODE_FUNCTION && parent->func.body)
+    {
+        flatten_comptime_nodes(parent->func.body);
+    }
+    if (parent->type == NODE_TEST && parent->test_stmt.body)
+    {
+        flatten_comptime_nodes(parent->test_stmt.body);
+    }
+    if (parent->type == NODE_DEFER && parent->defer_stmt.stmt)
+    {
+        flatten_comptime_nodes(parent->defer_stmt.stmt);
+    }
+    if (parent->type == NODE_GUARD && parent->guard_stmt.body)
+    {
+        flatten_comptime_nodes(parent->guard_stmt.body);
+    }
+    if (parent->type == NODE_UNLESS && parent->unless_stmt.body)
+    {
+        flatten_comptime_nodes(parent->unless_stmt.body);
+    }
+    if (parent->type == NODE_DO_WHILE && parent->do_while_stmt.body)
+    {
+        flatten_comptime_nodes(parent->do_while_stmt.body);
+    }
+
+    // For lambda/impl bodies
+    if (parent->type == NODE_LAMBDA && parent->lambda.body)
+    {
+        flatten_comptime_nodes(parent->lambda.body);
+    }
+    if (parent->type == NODE_IMPL)
+    {
+        ASTNode *m = parent->impl.methods;
+        while (m)
+        {
+            if (m->type == NODE_FUNCTION && m->func.body)
+            {
+                flatten_comptime_nodes(m->func.body);
+            }
+            m = m->next;
+        }
+    }
+
+    // For function declaration bodies
+    if (parent->type == NODE_FUNCTION && parent->func.body)
+    {
+        flatten_comptime_nodes(parent->func.body);
+    }
+}
+
 // Main entry point for code generation.
 void codegen_node(ParserContext *ctx, ASTNode *node)
 {
+    // Flatten any NODE_COMPTIME blocks into their generated AST nodes
+    if (node)
+    {
+        flatten_comptime_nodes(node);
+    }
+
+    if (!node)
+    {
+        return;
+    }
     if (node->type == NODE_ROOT)
     {
         ctx->current_scope = ctx->global_scope;

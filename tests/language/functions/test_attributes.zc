@@ -123,7 +123,9 @@ fn comp_helper() -> int {
 
 comptime {
     let val = comp_helper();
-    assert(val == 123, "Comptime check failed!");
+    if (val != 123) {
+        compile_error("Comptime check failed!");
+    }
 }
 
 @export

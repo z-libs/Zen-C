@@ -1,0 +1,23 @@
+comptime {
+    let a = 100;
+    let b = 200;
+    let c = a + b;
+    yield("def STRING_SUM = ");
+    yield(c);
+    yield(";");
+}
+
+test "comptime_yield_int" {
+    assert(STRING_SUM == 300, "comptime yield int");
+}
+
+comptime {
+    let greeting = "Hello";
+    let name = "World";
+    let msg = greeting + name;
+    yield("def MSG_OK = 1;");
+}
+
+test "comptime_string_concat" {
+    assert(MSG_OK == 1, "comptime string concat works");
+}

@@ -1,0 +1,24 @@
+comptime {
+    let x = 10;
+    let y = 20;
+    let sum = x + y;
+    let diff = y - x;
+    let prod = x * y;
+    let quot = y / x;
+    let rem = y % 3;
+    let neg = -x;
+    if (sum == 30 && diff == 10 && prod == 200 && quot == 2 && rem == 2 && neg == -10) {
+        yield("def ARITH_OK = 1;");
+    }
+}
+
+test "comptime_arithmetic" {
+    assert(ARITH_OK == 1, "comptime arithmetic");
+}
+
+test "comptime_reassign" {
+    let v = 0;
+    v = 5;
+    v = v + 3;
+    assert(v == 8, "comptime reassignment");
+}

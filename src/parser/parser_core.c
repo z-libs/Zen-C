@@ -597,26 +597,19 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
 
         if (t.type == TOK_COMPTIME)
         {
-            ASTNode *gen = parse_comptime(ctx, l);
-            if (gen)
+            ASTNode *body = parse_comptime_body(ctx, l);
+            ASTNode *ct = ast_create(NODE_COMPTIME);
+            ct->comptime.body = body;
+            ct->comptime.generated = NULL;
+            if (!h)
             {
-                if (!h)
-                {
-                    h = gen;
-                }
-                else
-                {
-                    tl->next = gen;
-                }
-                if (!tl)
-                {
-                    tl = gen;
-                }
-                while (tl->next)
-                {
-                    tl = tl->next;
-                }
+                h = ct;
             }
+            else
+            {
+                tl->next = ct;
+            }
+            tl = ct;
             continue;
         }
 

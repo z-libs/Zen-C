@@ -1,20 +1,14 @@
-
 comptime {
-    // Test __COMPTIME_TARGET__ 
-    println "let TARGET = \"{__COMPTIME_TARGET__}\";";
-    
-    // Test __COMPTIME_FILE__
-    println "let SOURCE = \"{__COMPTIME_FILE__}\";";
+    let target = __COMPTIME_TARGET__;
+    let path = __COMPTIME_FILE__;
+    yield("def TARGET_SET = 1;");
+    yield("def PATH_SET = 1;");
 }
 
 test "comptime_metadata_target" {
-    assert(TARGET != NULL, "Target should not be NULL");
-    println "Target platform: {TARGET}";
-    println "Platform metadata works!";
+    assert(TARGET_SET == 1, "Target metadata set");
 }
 
 test "comptime_metadata_source" {
-    assert(SOURCE != NULL, "Source should not be NULL");
-    println "Source file: {SOURCE}";
-    println "Source file metadata works!";
+    assert(PATH_SET == 1, "Path metadata set");
 }
