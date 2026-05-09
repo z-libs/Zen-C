@@ -547,6 +547,7 @@ static CValue call_builtin(CInterp *ci, const char *name, ASTNode *args)
 
     if (strcmp(name, "yield") == 0 || strcmp(name, "code") == 0)
     {
+        char int_buf[32];
         const char *s = "";
         if (arg.type == VAL_STRING)
         {
@@ -554,9 +555,8 @@ static CValue call_builtin(CInterp *ci, const char *name, ASTNode *args)
         }
         else if (arg.type == VAL_INT)
         {
-            char buf[32];
-            snprintf(buf, sizeof(buf), "%lld", (long long)arg.as.i);
-            s = buf;
+            snprintf(int_buf, sizeof(int_buf), "%lld", (long long)arg.as.i);
+            s = int_buf;
         }
         yield_append(ci, s);
         val_free(&arg);
