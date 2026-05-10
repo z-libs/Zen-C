@@ -79,7 +79,7 @@
     "#define _z_128_map\n"                                                                         \
     "#endif\n"                                                                                     \
     "#ifdef __OBJC__\n"                                                                            \
-    "#define _z_objc_map ,id: \"%s\"\n"                                                            \
+    "#define _z_objc_map\n"                                                                        \
     "#define _z_objc_arg_map(x) ,id: [(id)(x) description].UTF8String\n"                           \
     "#else\n"                                                                                      \
     "#define _z_objc_map\n"                                                                        \
