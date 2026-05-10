@@ -1,0 +1,14 @@
+// EXPECT: FAIL
+// features/move: String used after move inside a loop without break
+
+import "std/string.zc"
+
+fn consume(s: String) {}
+
+fn main() {
+    let s = String::new("loop test")
+
+    for _ in 0..=1 {
+        consume(s)
+    }
+}

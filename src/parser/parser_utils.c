@@ -6296,10 +6296,8 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
 
     if (!plugin)
     {
-        fprintf(stderr,
-                COLOR_RED "Error:" COLOR_RESET " Could not load plugin '%s'\n"
-                          "       Tried built-ins and dynamic loading (.so)\n",
-                name);
+        zerror_at((Token){0}, "Could not load plugin '%s' (tried built-ins and dynamic loading)",
+                  name);
         if (g_config.mode_lsp)
         {
             // Register alias anyway to avoid redundant "Unknown plugin" noise

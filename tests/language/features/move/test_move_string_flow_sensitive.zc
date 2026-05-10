@@ -1,0 +1,18 @@
+// EXPECT: FAIL
+// features/move: String use-after-move in if/else branches
+
+import "std/string.zc"
+
+fn consume(s: String) {}
+
+fn main() {
+    let s = String::new("hello")
+
+    if (true) {
+        consume(s)
+    } else {
+        consume(s)
+    }
+
+    consume(s)
+}

@@ -1,0 +1,23 @@
+// EXPECT: FAIL
+// features/move: wrapper with String field, use-after-move in if/else
+
+import "std/string.zc"
+
+struct WrapString {
+    inner: String;
+}
+
+fn consume(w: WrapString) {}
+
+fn main() {
+    let s = String::new("world")
+    let w = WrapString { inner: s }
+
+    if (true) {
+        consume(w)
+    } else {
+        consume(w)
+    }
+
+    consume(w)
+}

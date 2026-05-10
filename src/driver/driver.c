@@ -155,9 +155,7 @@ int driver_compile(ZenCompiler *compiler)
             char *extra_src = load_file(path);
             if (!extra_src)
             {
-                fprintf(stderr,
-                        COLOR_BOLD COLOR_RED "error" COLOR_RESET ": could not read file '%s'\n",
-                        extra_path);
+                zerror_at((Token){0}, "could not read file '%s'", extra_path);
                 if (real_path)
                 {
                     zfree(real_path);
