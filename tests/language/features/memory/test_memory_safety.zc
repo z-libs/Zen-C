@@ -10,19 +10,19 @@ let DROP_COUNT = 0;
 // trait Drop defined in std/mem.zc
 
 struct Resource {
-    id: int;
+    id_val: int;
 }
 
 impl Drop for Resource {
     fn drop(self) {
-        println "Dropping Resource {self.id}";
+        println "Dropping Resource {self.id_val}";
         DROP_COUNT = DROP_COUNT + 1;
     }
 }
 
-fn create_resource(id: int) {
-    let r = Resource{id: id};
-    println "Created Resource {r.id}";
+fn create_resource(id_val: int) {
+    let r = Resource{id_val: id_val};
+    println "Created Resource {r.id_val}";
 }
 
 struct Point {
@@ -81,8 +81,8 @@ fn get_resource() -> int {
     return 42;
 }
 
-fn release_resource(id: int) {
-    if (id == 42) println "resource 42 released";
+fn release_resource(id_val: int) {
+    if (id_val == 42) println "resource 42 released";
     else println "resource released (unknown)";
 }
 
@@ -173,8 +173,8 @@ test "test_raii_drop" {
     "Exited scope.";
     assert(DROP_COUNT == 1, "Expected Drop to be called once");
     {
-        let r2 = Resource{id: 2};
-        let r3 = Resource{id: 3};
+        let r2 = Resource{id_val: 2};
+        let r3 = Resource{id_val: 3};
     } 
     assert(DROP_COUNT == 3, "Expected 3 total drops");
 }

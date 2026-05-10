@@ -128,6 +128,17 @@ else
 
 fi
 
+# Filter by ZC_TEST_FILTER env var if set (path/name substring match, case-insensitive)
+if [ -n "$ZC_TEST_FILTER" ]; then
+    mapfile -t FILTERED < <(printf "%s\n" "${TEST_LIST[@]}" | grep -i "$ZC_TEST_FILTER")
+    TEST_LIST=("${FILTERED[@]}")
+    if [ ${#TEST_LIST[@]} -eq 0 ]; then
+        echo "** No tests match filter '$ZC_TEST_FILTER' **"
+        exit 0
+    fi
+    echo "** Filtering by: $ZC_TEST_FILTER (${#TEST_LIST[@]} tests match) **"
+fi
+
 if [ ${#TEST_LIST[@]} -eq 0 ]; then
     echo "** Nothing to do **"
     exit 0
