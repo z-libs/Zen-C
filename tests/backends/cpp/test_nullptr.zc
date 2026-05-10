@@ -1,0 +1,9 @@
+// backends/cpp: nullptr keyword in C++ mode
+// In C++ mode, NULL maps to nullptr. In C mode, NULL is (void*)0.
+
+fn main() {
+    let p: int* = NULL;
+    if (p == NULL) {
+        // expected: NULL pointer
+    }
+}

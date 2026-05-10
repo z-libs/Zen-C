@@ -227,6 +227,64 @@ jobs:
           *.out.cpp
         if-no-files-found: warn
 
+  test-cuda-syntax:
+    name: CUDA Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Dependencies
+      run: sudo apt-get update && sudo apt-get install -y libtcc-dev g++
+    - name: Build
+      run: make ZC_HAS_JIT=1
+    - name: Check CUDA output syntax
+      run: |
+        FAILED=0
+        for f in $(find tests -name "test_*.zc" -not -path "*/misra/*" | sort); do
+          head -1 "$f" | grep -q "EXPECT: FAIL" && continue
+          base=$(basename "$f" .zc)
+          ./zc transpile "$f" --cuda -o "/tmp/${base}.cu" 2>/dev/null || continue
+          g++ -fsyntax-only -std=gnu++17 -I. -Istd/third-party/tre/include "/tmp/${base}.cu" 2>/dev/null || \
+            { echo "FAIL: $f"; FAILED=$((FAILED + 1)); }
+        done
+        echo "CUDA syntax check: $FAILED failures"
+        [ "$FAILED" -eq 0 ] || exit 1
+    - name: Upload Failed CUDA Artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-cuda-artifacts
+        path: /tmp/*.cu
+        if-no-files-found: warn
+
+  test-objc-syntax:
+    name: ObjC Syntax Check
+    runs-on: macos-15
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Dependencies
+      run: brew install libtcc 2>/dev/null || true
+    - name: Build
+      run: make ZC_HAS_JIT=0
+    - name: Check ObjC output syntax
+      run: |
+        FAILED=0
+        for f in $(find tests -name "test_*.zc" -not -path "*/misra/*" | sort); do
+          head -1 "$f" | grep -q "EXPECT: FAIL" && continue
+          base=$(basename "$f" .zc)
+          ./zc transpile "$f" --objc -o "/tmp/${base}.m" 2>/dev/null || continue
+          clang -fsyntax-only -x objective-c -I. -Istd/third-party/tre/include "/tmp/${base}.m" 2>/dev/null || \
+            { echo "FAIL: $f"; FAILED=$((FAILED + 1)); }
+        done
+        echo "ObjC syntax check: $FAILED failures"
+        [ "$FAILED" -eq 0 ] || exit 1
+    - name: Upload Failed ObjC Artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-objc-artifacts
+        path: /tmp/*.m
+        if-no-files-found: warn
+
   test-sanitizers:
     name: Sanitizers (ASAN/UBSAN)
     runs-on: ubuntu-latest

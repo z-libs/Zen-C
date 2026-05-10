@@ -322,7 +322,7 @@ uninstall-ape:
 
 # Clean
 clean:
-	$(RM) $(OBJ_DIR) obj-ape obj-fuzz obj-fuzz-cmplog $(TARGET) out.c out.cpp out.m plugins/*.so a.out* out test_out_* rule_*
+	$(RM) $(OBJ_DIR) obj-ape obj-fuzz obj-fuzz-cmplog $(TARGET) out.c out.cpp out.m out.cu plugins/*.so a.out* out test_out_* rule_*
 	@echo "=> Clean complete!"
 
 # Code Formatting

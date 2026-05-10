@@ -1,0 +1,8 @@
+// backends/cuda: basic kernel launch syntax with @global attribute
+
+@global
+fn empty_kernel() {}
+
+fn main() {
+    launch empty_kernel() with { grid: 1, block: 1 };
+}

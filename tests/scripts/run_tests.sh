@@ -120,7 +120,12 @@ fi
 if [ ${#TEST_FILES[@]} -gt 0 ]; then
     mapfile -t TEST_LIST < <(printf "%s\n" "${TEST_FILES[@]}" | grep "$TEST_DIR"/)
 else
-    mapfile -t TEST_LIST < <(find "$TEST_DIR" -name "*.zc" -not -name "_*.zc" | sort)
+    mapfile -t TEST_LIST < <(find "$TEST_DIR" -name "*.zc" -not -name "_*.zc" -not -path "*/backends/*" | sort)
+    if [ $USE_CPP -eq 1 ] && [ -d "$TEST_DIR/backends/cpp" ]; then
+        mapfile -t CPP_TESTS < <(find "$TEST_DIR/backends/cpp" -name "test_*.zc" | sort)
+        TEST_LIST=("${TEST_LIST[@]}" "${CPP_TESTS[@]}")
+    fi
+
 fi
 
 if [ ${#TEST_LIST[@]} -eq 0 ]; then
@@ -218,7 +223,7 @@ run_test() {
     else
         if [ $exit_code -eq 0 ]; then
             echo "PASS" > "$result_file.status"
-            rm -f "$tmp_out" "${tmp_out}.c" "${tmp_out}.cpp" "${tmp_out}.m"
+            rm -f "$tmp_out" "${tmp_out}.c" "${tmp_out}.cpp" "${tmp_out}.m" "${tmp_out}.cu"
         else
             echo "FAIL" > "$result_file.status"
             {

@@ -47,6 +47,10 @@ oom-*
 zc-fuzz-*
 scratch/
 test_out_*.out.c
+test_out_*.out.cu
+test_out_*.out.cpp
+test_out_*.out.m
+test_out_*.out
 trace.txt
 zc-*
 _tmp_comptime_*.c

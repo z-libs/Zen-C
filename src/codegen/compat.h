@@ -79,9 +79,8 @@
     "#define _z_128_map\n"                                                                         \
     "#endif\n"                                                                                     \
     "#ifdef __OBJC__\n"                                                                            \
-    "#define _z_objc_map ,id: \"%s\", Class: \"%s\", SEL: \"%s\"\n"                                \
-    "#define _z_objc_arg_map(x) ,id: [(id)(x) description].UTF8String, Class: "                    \
-    "class_getName((Class)(x)), SEL: sel_getName((SEL)(x))\n"                                      \
+    "#define _z_objc_map ,id: \"%s\"\n"                                                            \
+    "#define _z_objc_arg_map(x) ,id: [(id)(x) description].UTF8String\n"                           \
     "#else\n"                                                                                      \
     "#define _z_objc_map\n"                                                                        \
     "#define _z_objc_arg_map(x)\n"                                                                 \
@@ -105,8 +104,7 @@
     "#define _z_128_arg_map(x)\n"                                                                  \
     "#endif\n"                                                                                     \
     "#define _z_safe_bool(x) _Generic((x), _Bool: (x), default: (_Bool)0)\n"                       \
-    "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(_z_safe_bool(x)) _z_128_arg_map(x) "       \
-    "_z_objc_arg_map(x), "                                                                         \
+    "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(_z_safe_bool(x)) _z_128_arg_map(x), "      \
     "default: (x))\n"
 
 #ifdef __cplusplus

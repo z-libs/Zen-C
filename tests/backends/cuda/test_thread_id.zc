@@ -1,0 +1,13 @@
+// backends/cuda: thread_id builtin in kernel body
+
+@global
+fn kernel_with_id(a: int*, n: int) {
+    let i = thread_id();
+    if (i < n) {
+        a[i] = i;
+    }
+}
+
+fn main() {
+    launch kernel_with_id(null, 256) with { grid: 1, block: 256 };
+}

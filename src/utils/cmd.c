@@ -195,7 +195,8 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
     arg_list_add_from_string(list, g_cflags);
 
     // Suppress warnings triggered by transpiled code
-    if (!g_config.no_suppress_warnings)
+    // nvcc rejects these GCC-specific flags, so skip them for CUDA
+    if (!g_config.no_suppress_warnings && !g_config.use_cuda)
     {
         arg_list_add(list, "-Wno-parentheses");
         arg_list_add(list, "-Wno-unused-value");
@@ -206,6 +207,8 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
         arg_list_add(list, "-Wno-sign-compare");
         arg_list_add(list, "-Wno-missing-field-initializers");
     }
+    // nvcc needs -x cu when source is .c (non-CUDA extension)
+    // When transpiling to .cu, nvcc auto-detects CUDA from the extension
 
     // Freestanding
     if (g_config.is_freestanding)
@@ -220,10 +223,18 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
     }
 
     // C++ compatibility flags
-    if (g_config.use_cpp)
+    if (g_config.use_cpp && !g_config.use_cuda)
     {
         arg_list_add(list, "-fpermissive");
         arg_list_add(list, "-Wno-write-strings");
+    }
+
+    // ObjC mode: tell the compiler to treat input as Objective-C
+    if (g_config.use_objc)
+    {
+        arg_list_add(list, "-x");
+        arg_list_add(list, "objective-c");
+        arg_list_add(list, "-std=gnu11");
     }
 
     // Output file

@@ -325,6 +325,21 @@ int main(int argc, char **argv)
         else if (strcmp(arg, "--objc") == 0 || strcmp(arg, "--objective-c") == 0)
         {
             g_config.use_objc = 1;
+            if (!g_config.cc[0] || strcmp(g_config.cc, "gcc") == 0)
+            {
+                if (z_is_windows())
+                {
+                    snprintf(g_config.cc, sizeof(g_config.cc), "gcc");
+                }
+                else if (strcmp(z_get_system_name(), "macos") == 0)
+                {
+                    snprintf(g_config.cc, sizeof(g_config.cc), "clang");
+                }
+                else
+                {
+                    snprintf(g_config.cc, sizeof(g_config.cc), "gcc");
+                }
+            }
         }
         else if (strcmp(arg, "--cc") == 0)
         {

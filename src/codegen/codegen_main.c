@@ -811,7 +811,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
         }
 
         emit_includes_and_aliases(ctx, kids, &visited);
-        if (g_config.use_cpp)
+        if (g_config.use_cpp && !g_config.use_cuda && !g_config.use_objc)
         {
             EMIT(ctx, "\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n");
         }
@@ -1225,7 +1225,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
             EMIT(ctx, "\nint main() { return _z_run_tests(); }\n");
         }
 
-        if (g_config.use_cpp)
+        if (g_config.use_cpp && !g_config.use_cuda && !g_config.use_objc)
         {
             EMIT(ctx, "\n#ifdef __cplusplus\n}\n#endif\n");
         }
