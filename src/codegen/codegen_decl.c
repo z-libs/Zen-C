@@ -21,7 +21,8 @@ static void emit_freestanding_preamble(ParserContext *ctx)
     EMIT(ctx, "%s", ZC_TCC_COMPAT_STR);
     EMIT(ctx, "%s",
          "typedef size_t usize;\ntypedef char* string;\n"
-         "#ifndef any\ntypedef intptr_t any;\n#endif\n");
+         "#ifndef __CUDACC__\ntypedef intptr_t any;\n#else\ntypedef intptr_t zc_any;\n#define any "
+         "zc_any\n#endif\n");
     EMIT(ctx, "%s",
          "#define U0 void\n#define I8 int8_t\n#define U8 uint8_t\n#define I16 int16_t\n#define U16 "
          "uint16_t\n");
@@ -145,7 +146,8 @@ void emit_preamble(ParserContext *ctx)
 
         EMIT(ctx, "%s",
              "typedef size_t usize;\ntypedef char* string;\n"
-             "#ifndef any\ntypedef intptr_t any;\n#endif\n");
+             "#ifndef __CUDACC__\ntypedef intptr_t any;\n#else\ntypedef intptr_t zc_any;\n#define "
+             "any zc_any\n#endif\n");
         if (ctx->has_async)
         {
             EMIT(ctx, "%s", "typedef int (*PollFn)(void*);\n");

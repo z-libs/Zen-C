@@ -529,7 +529,7 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs)
 static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs)
 {
     (void)ctx;
-    if (g_config.use_cpp)
+    if (g_config.use_cpp && !g_config.use_cuda)
     {
         EMIT(ctx, "// Global Generic Drop Dispatch (C++ Overloads)\n");
         EMIT(ctx, "#ifdef __cplusplus\n");
