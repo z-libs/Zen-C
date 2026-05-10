@@ -706,8 +706,8 @@ ASTNode *parse_defer(ParserContext *ctx, Lexer *l)
     Token defer_token = lexer_next(l); // defer
 
     // Track that we're parsing inside a defer block
-    int prev_in_defer = ctx->in_defer_block;
-    ctx->in_defer_block = 1;
+    int prev_in_defer = ctx->cg.in_defer_block;
+    ctx->cg.in_defer_block = 1;
 
     ASTNode *s;
     if (lexer_peek(l).type == TOK_LBRACE)
@@ -719,7 +719,7 @@ ASTNode *parse_defer(ParserContext *ctx, Lexer *l)
         s = parse_statement(ctx, l);
     }
 
-    ctx->in_defer_block = prev_in_defer;
+    ctx->cg.in_defer_block = prev_in_defer;
 
     ASTNode *n = ast_create(NODE_DEFER);
     n->token = defer_token;
@@ -1231,7 +1231,7 @@ ASTNode *parse_return(ParserContext *ctx, Lexer *l)
 {
     Token return_token = lexer_next(l); // eat 'return'
 
-    if (ctx->in_defer_block)
+    if (ctx->cg.in_defer_block)
     {
         zpanic_at(return_token, "'return' is not allowed inside a 'defer' block");
     }
@@ -2420,11 +2420,11 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         // Always codegen the base expression first
         if (expr_node)
         {
-            emitter_push(&ctx->emitter);
-            emitter_init_buffer(&ctx->emitter);
+            emitter_push(&ctx->cg.emitter);
+            emitter_init_buffer(&ctx->cg.emitter);
             codegen_expression(ctx, expr_node);
-            char *expr_buf = emitter_take_string(&ctx->emitter);
-            emitter_pop(&ctx->emitter);
+            char *expr_buf = emitter_take_string(&ctx->cg.emitter);
+            emitter_pop(&ctx->cg.emitter);
             if (expr_buf)
             {
                 rw_expr = expr_buf;
@@ -3026,7 +3026,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     ZApi api;
     zptr_init_api(&api, g_current_filename, start_tok.line);
     api.out = capture;
-    api.hoist_out = ctx->hoist_out;
+    api.hoist_out = ctx->cg.hoist_out;
 
     found->fn(body, &api);
 
@@ -3372,7 +3372,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             Token break_token = lexer_next(l);
 
             // Error if break is used inside a defer block
-            if (ctx->in_defer_block)
+            if (ctx->cg.in_defer_block)
             {
                 zpanic_at(break_token, "'break' is not allowed inside a 'defer' block");
             }
@@ -3410,7 +3410,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             Token continue_token = lexer_next(l);
 
             // Error if continue is used inside a defer block
-            if (ctx->in_defer_block)
+            if (ctx->cg.in_defer_block)
             {
                 zpanic_at(continue_token, "'continue' is not allowed inside a 'defer' block");
             }
@@ -3581,7 +3581,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             Token goto_tok = lexer_next(l); // eat 'goto'
 
             // Error if goto is used inside a defer block
-            if (ctx->in_defer_block)
+            if (ctx->cg.in_defer_block)
             {
                 zpanic_at(goto_tok, "'goto' is not allowed inside a 'defer' block");
             }
@@ -3752,7 +3752,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
 
     // Auto-print in REPL: If no semicolon (implicit expr at block end)
     // and not an assignment, print it.
-    if (ctx->is_repl && s && !has_semi)
+    if (ctx->cg.is_repl && s && !has_semi)
     {
         int is_assign = 0;
         if (s->type == NODE_EXPR_BINARY)
@@ -3901,7 +3901,7 @@ ASTNode *parse_block(ParserContext *ctx, Lexer *l)
     }
 
     // Check for unused variables in this block scope
-    if (ctx->current_scope && !ctx->is_repl)
+    if (ctx->current_scope && !ctx->cg.is_repl)
     {
         ZenSymbol *sym = ctx->current_scope->symbols;
         while (sym)

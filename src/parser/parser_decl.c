@@ -25,7 +25,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_exter
 
     if (is_async)
     {
-        ctx->has_async = 1;
+        ctx->cg.has_async = 1;
     }
 
     // Check for C reserved word conflict

@@ -799,7 +799,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
         ctx->cg.global_user_structs = kids;
         VisitedModules *visited = NULL;
 
-        if (!ctx->skip_preamble)
+        if (!ctx->cg.skip_preamble)
         {
             emit_preamble(ctx);
         }
@@ -816,17 +816,17 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
             EMIT(ctx, "\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n");
         }
 
-        if (ctx->hoist_out)
+        if (ctx->cg.hoist_out)
         {
-            long pos = ftell(ctx->hoist_out);
-            rewind(ctx->hoist_out);
+            long pos = ftell(ctx->cg.hoist_out);
+            rewind(ctx->cg.hoist_out);
             char buf[4096];
             size_t n;
-            while (ctx->hoist_out && (n = fread(buf, 1, sizeof(buf), ctx->hoist_out)) > 0)
+            while (ctx->cg.hoist_out && (n = fread(buf, 1, sizeof(buf), ctx->cg.hoist_out)) > 0)
             {
-                emitter_write(&(ctx)->emitter, buf, 1 * n);
+                emitter_write(&(ctx)->cg.emitter, buf, 1 * n);
             }
-            fseek(ctx->hoist_out, pos, SEEK_SET);
+            fseek(ctx->cg.hoist_out, pos, SEEK_SET);
         }
 
         ASTNode *merged = NULL;

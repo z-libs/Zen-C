@@ -190,8 +190,8 @@ static int cmd_show(ReplState *state, const char *args)
     }
 
     ParserContext ctx = {0};
-    ctx.is_repl = 1;
-    ctx.skip_preamble = 1;
+    ctx.cg.is_repl = 1;
+    ctx.cg.skip_preamble = 1;
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
     Lexer l;
@@ -548,8 +548,8 @@ static int cmd_vars_funcs_structs(ReplState *state, const char *args)
     zfree(main_code);
 
     ParserContext ctx = {0};
-    ctx.is_repl = 1;
-    ctx.skip_preamble = 1;
+    ctx.cg.is_repl = 1;
+    ctx.cg.skip_preamble = 1;
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
 

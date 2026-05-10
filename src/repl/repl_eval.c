@@ -10,8 +10,8 @@
 char *repl_transpile(const char *zen_c_code)
 {
     ParserContext ctx = {0};
-    ctx.is_repl = 1;
-    ctx.skip_preamble = 0;
+    ctx.cg.is_repl = 1;
+    ctx.cg.skip_preamble = 0;
     ctx.on_error = repl_error_callback;
 
     Lexer lex;
@@ -23,9 +23,9 @@ char *repl_transpile(const char *zen_c_code)
         return NULL;
     }
 
-    emitter_init_buffer(&ctx.emitter);
+    emitter_init_buffer(&ctx.cg.emitter);
     codegen_node(&ctx, root);
-    return emitter_take_string(&ctx.emitter);
+    return emitter_take_string(&ctx.cg.emitter);
 }
 
 int is_header_line(const char *line)
@@ -305,8 +305,8 @@ void repl_update_symbols(ReplState *state)
     zfree(global_code);
     zfree(main_code);
     ParserContext ctx = {0};
-    ctx.is_repl = 1;
-    ctx.skip_preamble = 1;
+    ctx.cg.is_repl = 1;
+    ctx.cg.skip_preamble = 1;
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
     Lexer lex;

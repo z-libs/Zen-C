@@ -330,8 +330,8 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
         sprintf(check_buf, "%s;", raw_input);
 
         ParserContext pctx = {0};
-        pctx.is_repl = 1;
-        pctx.skip_preamble = 1;
+        pctx.cg.is_repl = 1;
+        pctx.cg.skip_preamble = 1;
         pctx.is_fault_tolerant = 1;
         pctx.on_error = repl_error_callback;
         Lexer l;

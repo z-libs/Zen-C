@@ -27,9 +27,9 @@ void lsp_project_init(const char *root_path)
     fprintf(stderr, "zls: Initializing project at %s\n", root_path);
 
     // Close any previous hoist_out before creating a new project context
-    if (g_project && g_project->ctx && g_project->ctx->hoist_out)
+    if (g_project && g_project->ctx && g_project->ctx->cg.hoist_out)
     {
-        fclose(g_project->ctx->hoist_out);
+        fclose(g_project->ctx->cg.hoist_out);
     }
 
     g_project = xcalloc(1, sizeof(LSPProject));
@@ -38,8 +38,8 @@ void lsp_project_init(const char *root_path)
     // Create a persistent global context
     g_project->ctx = xcalloc(1, sizeof(ParserContext));
     g_project->ctx->is_fault_tolerant = 1;
-    g_project->ctx->hoist_out = tmpfile(); // Support hoisting in LSP
-    if (!g_project->ctx->hoist_out)
+    g_project->ctx->cg.hoist_out = tmpfile(); // Support hoisting in LSP
+    if (!g_project->ctx->cg.hoist_out)
     {
         fprintf(stderr, "zls: Warning: Failed to create hoist_out temporary file. Hoisting will be "
                         "disabled.\n");

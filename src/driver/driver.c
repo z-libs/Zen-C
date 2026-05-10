@@ -93,8 +93,8 @@ int driver_compile(ZenCompiler *compiler)
     Lexer l;
     lexer_init(&l, src);
 
-    ctx.hoist_out = z_tmpfile();
-    if (!ctx.hoist_out)
+    ctx.cg.hoist_out = z_tmpfile();
+    if (!ctx.cg.hoist_out)
     {
         perror("tmpfile for hoisting");
         return 1;
@@ -305,7 +305,7 @@ int driver_compile(ZenCompiler *compiler)
         perror("fopen temp output");
         return 1;
     }
-    emitter_init_file(&ctx.emitter, out_f);
+    emitter_init_file(&ctx.cg.emitter, out_f);
     codegen_node(&ctx, root);
     fclose(out_f);
 

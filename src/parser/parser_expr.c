@@ -4881,6 +4881,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
     Token t = lexer_peek(l);
     ASTNode *lhs = NULL;
 
+    // --- PREFIX: ? prompt expression ---
     if (t.type == TOK_QUESTION)
     {
         Lexer lookahead = *l;
@@ -5140,6 +5141,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
             return call;
         }
     }
+    // --- PREFIX: ! stderr print ---
     if (t.type == TOK_OP && is_token(t, "!"))
     {
         Lexer lookahead = *l;
@@ -5176,6 +5178,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         }
     }
 
+    // --- PREFIX: await expression ---
     if (t.type == TOK_AWAIT)
     {
         lexer_next(l); // consume await
@@ -5301,6 +5304,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         goto after_unary;
     }
 
+    // --- PREFIX: unary operators (-, !, *, &, ~, ++, --, **, not) ---
     if ((t.type == TOK_OP && (is_token(t, "-") || is_token(t, "!") || is_token(t, "*") ||
                               is_token(t, "&") || is_token(t, "~") || is_token(t, "&&") ||
                               is_token(t, "++") || is_token(t, "--") || is_token(t, "**"))) ||
@@ -5455,6 +5459,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
     after_unary:; // Label to skip standard creation if overloaded
     }
 
+    // --- PREFIX: va_start/va_end/va_copy/va_arg intrinsics ---
     else if (is_token(t, "va_start"))
     {
         lexer_next(l);
@@ -5555,6 +5560,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         }
     }
 
+    // --- MAIN LOOP: binary operators + postfix operations ---
     while (1)
     {
         Token op = lexer_peek(l);

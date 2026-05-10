@@ -366,17 +366,16 @@ struct ParserContext
     char **extern_symbols;   ///< Explicitly declared extern symbols.
     int extern_symbol_count; ///< Count of external symbols.
 
-    // Codegen state:
-    Emitter emitter;    ///< Emitter for code generation.
-    FILE *hoist_out;    ///< File stream for hoisting code (e.g. from plugins).
-    int skip_preamble;  ///< If 1, codegen won't emit standard preamble (includes etc).
-    int is_repl;        ///< 1 if running in REPL mode.
-    int has_async;      ///< 1 if async/await features are used in the program.
-    int in_defer_block; ///< 1 if currently parsing inside a defer block.
-
     // Codegen context (mutable state during code generation):
     struct
     {
+        Emitter emitter;    ///< Emitter for code generation.
+        FILE *hoist_out;    ///< File stream for hoisting code (e.g. from plugins).
+        int skip_preamble;  ///< If 1, codegen won't emit standard preamble (includes etc).
+        int is_repl;        ///< 1 if running in REPL mode.
+        int has_async;      ///< 1 if async/await features are used in the program.
+        int in_defer_block; ///< 1 if currently parsing inside a defer block.
+
         ASTNode *global_user_structs; ///< List of user defined structs.
         char *current_impl_type;      ///< Type currently being implemented (in impl block).
         int tmp_counter;              ///< Counter for temporary variables.
