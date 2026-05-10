@@ -239,7 +239,16 @@ jobs:
     - name: Check CUDA output syntax
       run: |
         FAILED=0
-        for f in $(find tests -name "test_*.zc" -not -path "*/misra/*" | sort); do
+        # Run all tests excluding backends/, then add CUDA-specific backend tests
+        for f in $(find tests -name "test_*.zc" -not -path "*/misra/*" -not -path "*/backends/*" | sort); do
+          head -1 "$f" | grep -q "EXPECT: FAIL" && continue
+          base=$(basename "$f" .zc)
+          ./zc transpile "$f" --cuda -o "/tmp/${base}.cu" 2>/dev/null || continue
+          g++ -fsyntax-only -std=gnu++17 -I. -Istd/third-party/tre/include "/tmp/${base}.cu" 2>/dev/null || \
+            { echo "FAIL: $f"; FAILED=$((FAILED + 1)); }
+        done
+        # Also run CUDA-specific backend tests
+        for f in $(find tests/backends/cuda -name "test_*.zc" 2>/dev/null | sort); do
           head -1 "$f" | grep -q "EXPECT: FAIL" && continue
           base=$(basename "$f" .zc)
           ./zc transpile "$f" --cuda -o "/tmp/${base}.cu" 2>/dev/null || continue
@@ -268,7 +277,8 @@ jobs:
     - name: Check ObjC output syntax
       run: |
         FAILED=0
-        for f in $(find tests -name "test_*.zc" -not -path "*/misra/*" | sort); do
+        # Run all tests excluding backends/ and interop/ (interop needs external headers)
+        for f in $(find tests -name "test_*.zc" -not -path "*/misra/*" -not -path "*/backends/*" -not -path "*/interop/*" | sort); do
           head -1 "$f" | grep -q "EXPECT: FAIL" && continue
           base=$(basename "$f" .zc)
           ./zc transpile "$f" --objc -o "/tmp/${base}.m" 2>/dev/null || continue
