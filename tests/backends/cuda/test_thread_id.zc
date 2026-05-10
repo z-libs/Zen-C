@@ -1,3 +1,4 @@
+// REQUIRE: CUDA
 // backends/cuda: thread_id builtin in kernel body
 
 @global

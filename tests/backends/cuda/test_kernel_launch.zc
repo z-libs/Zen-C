@@ -1,3 +1,4 @@
+// REQUIRE: CUDA
 // backends/cuda: basic kernel launch syntax with @global attribute
 
 @global

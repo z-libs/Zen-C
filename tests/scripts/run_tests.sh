@@ -182,6 +182,18 @@ run_test() {
         echo "SKIP" > "$result_file.status"
         return
     fi
+    if grep -q "// REQUIRE: CUDA" "$test_file"; then
+        if ! echo "${zc_args[@]}" | grep -q -- "--cuda"; then
+            echo "SKIP" > "$result_file.status"
+            return
+        fi
+    fi
+    if grep -q "// REQUIRE: OBJC" "$test_file"; then
+        if ! echo "${zc_args[@]}" | grep -q -- "--objc"; then
+            echo "SKIP" > "$result_file.status"
+            return
+        fi
+    fi
 
     local tmp_out="test_out_parallel_${job_id}.out"
     local cmd_str="$ZC run \"$test_file\" -o \"$tmp_out\" -w --emit-c ${zc_args[*]}"
