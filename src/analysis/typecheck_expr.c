@@ -320,6 +320,12 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
         }
     }
 
+    // Rule 19.1: Check for self-assignment (x = x)
+    if (g_config.misra_mode && strcmp(op, "=") == 0)
+    {
+        misra_check_assignment_overlap(tc, node->binary.left, node->binary.right, node->token);
+    }
+
     Type *left_type = node->binary.left->type_info;
     Type *right_type = node->binary.right->type_info;
 
@@ -580,6 +586,20 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
             // Rule 10.4: Balancing
             misra_check_binary_op_essential_types(tc, node->binary.left, node->binary.right,
                                                   node->token);
+
+            // Rule 18.3: Relational operators on pointers (>, <, >=, <=)
+            if (g_config.misra_mode && (strcmp(op, "<") == 0 || strcmp(op, ">") == 0 ||
+                                        strcmp(op, "<=") == 0 || strcmp(op, ">=") == 0))
+            {
+                Type *l_resolved = resolve_alias(left_type);
+                Type *r_resolved = resolve_alias(right_type);
+                if (l_resolved->kind == TYPE_POINTER || r_resolved->kind == TYPE_POINTER)
+                {
+                    tc_error(
+                        tc, node->token,
+                        "MISRA Rule 18.3: relational operator shall not be applied to pointers");
+                }
+            }
 
             misra_check_string_compare(tc, left_type, right_type, node->token);
 
@@ -1041,6 +1061,12 @@ void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
                             ? node->call.callee->member.target
                             : NULL;
     check_all_args_side_effects(tc, receiver, node->call.args, node->token);
+
+    // Evaluation order check: function call arguments should not have conflicting side effects
+    if (g_config.misra_mode)
+    {
+        misra_check_evaluation_order(tc, node);
+    }
 }
 
 // ============================================================================

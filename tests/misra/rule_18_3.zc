@@ -1,4 +1,24 @@
-// MISRA Rule 18.3 Verification
-// N/A - Natively enforced by Zen C language constraints.
+// Rule 18.3: Relational operators shall not be applied to pointers
+
 fn main() {
+    let a: i32;
+    let b: i32;
+    let pa = &a;
+    let pb = &b;
+
+    // EXPECT: MISRA Rule 18.3
+    let _ = pa < pb;
+
+    // EXPECT: MISRA Rule 18.3
+    let _ = pa > pb;
+
+    // EXPECT: MISRA Rule 18.3
+    let _ = pa <= pb;
+
+    // EXPECT: MISRA Rule 18.3
+    let _ = pa >= pb;
+
+    // OK: == and != are allowed on pointers
+    let _ = pa == pb;
+    let _ = pa != pb;
 }

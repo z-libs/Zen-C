@@ -86,6 +86,7 @@ void misra_audit_unused_symbols(struct TypeChecker *tc);
 // Section 5: Identifiers
 void misra_audit_identifier_uniqueness(struct TypeChecker *tc);
 void misra_audit_block_scope(struct TypeChecker *tc);
+void misra_check_standard_macro_name(Token tok, const char *name);
 
 // Section 19: Overlapping Storage
 void misra_check_assignment_overlap(struct TypeChecker *tc, struct ASTNode *left,

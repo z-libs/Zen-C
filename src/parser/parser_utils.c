@@ -6701,6 +6701,12 @@ static void audit_section_5(ParserContext *ctx, Scope *scope, const char *name,
         return;
     }
 
+    // Rule 5.10: Identifier shall not have same name as a standard macro
+    if (g_config.misra_mode)
+    {
+        misra_check_standard_macro_name(tok, name);
+    }
+
     Scope *p = scope;
     int limit = (p == ctx->global_scope) ? 31 : 63;
 

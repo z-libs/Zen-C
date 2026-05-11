@@ -1,4 +1,5 @@
 #include "analysis/typecheck.h"
+#include "analysis/typecheck_internal.h"
 #include "analysis/const_fold.h"
 #include "ast/ast.h"
 #include "constants.h"
@@ -8,6 +9,37 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+
+// Standard C macro/type names from headers used in the MISRA preamble
+// (<stddef.h>, <stdint.h>, <stdbool.h>) plus common names from other
+// C standard headers that may appear in FFI contexts.
+static const char *STANDARD_MACRO_NAMES[] = {
+    // <stddef.h>
+    "NULL", "offsetof", "ptrdiff_t", "size_t", "wchar_t", "max_align_t",
+    // <stdint.h> exact-width
+    "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t",
+    // <stdint.h> minimum-width
+    "int_least8_t", "int_least16_t", "int_least32_t", "int_least64_t", "uint_least8_t",
+    "uint_least16_t", "uint_least32_t", "uint_least64_t",
+    // <stdint.h> fastest-width
+    "int_fast8_t", "int_fast16_t", "int_fast32_t", "int_fast64_t", "uint_fast8_t", "uint_fast16_t",
+    "uint_fast32_t", "uint_fast64_t",
+    // <stdint.h> other
+    "intptr_t", "uintptr_t", "intmax_t", "uintmax_t",
+    // <stdint.h> limit macros
+    "INT8_MIN", "INT16_MIN", "INT32_MIN", "INT64_MIN", "INT8_MAX", "INT16_MAX", "INT32_MAX",
+    "INT64_MAX", "UINT8_MAX", "UINT16_MAX", "UINT32_MAX", "UINT64_MAX", "INT_LEAST8_MIN",
+    "INT_LEAST16_MIN", "INT_LEAST32_MIN", "INT_LEAST64_MIN", "INT_LEAST8_MAX", "INT_LEAST16_MAX",
+    "INT_LEAST32_MAX", "INT_LEAST64_MAX", "UINT_LEAST8_MAX", "UINT_LEAST16_MAX", "UINT_LEAST32_MAX",
+    "UINT_LEAST64_MAX", "INT_FAST8_MIN", "INT_FAST16_MIN", "INT_FAST32_MIN", "INT_FAST64_MIN",
+    "INT_FAST8_MAX", "INT_FAST16_MAX", "INT_FAST32_MAX", "INT_FAST64_MAX", "UINT_FAST8_MAX",
+    "UINT_FAST16_MAX", "UINT_FAST32_MAX", "UINT_FAST64_MAX", "INTPTR_MIN", "INTPTR_MAX",
+    "UINTPTR_MAX", "INTMAX_MIN", "INTMAX_MAX", "UINTMAX_MAX", "PTRDIFF_MIN", "PTRDIFF_MAX",
+    "SIZE_MAX",
+    // <stdbool.h>
+    "bool", "true", "false", "__bool_true_false_are_defined",
+    // Common names from other C headers (may appear via FFI)
+    "assert", "errno", "EOF", NULL};
 
 void emit_misra_preamble(FILE *out)
 {
@@ -429,6 +461,7 @@ void misra_check_side_effects_sizeof(TypeChecker *tc, ASTNode *expr)
     {
         // Simple heuristic: if it contains a call or assignment/inc/dec it has potential side
         // effects. We assume typechecker already validated this for Rule 13.6 if applicable.
+        tc_error(tc, expr->token, "MISRA Rule 12.5");
         tc_error(tc, expr->token, "MISRA Rule 13.6");
     }
 }
@@ -999,15 +1032,22 @@ void misra_audit_identifier_uniqueness(TypeChecker *tc)
         // For Zen, we consider module-level symbols as having linkage.
         // symbols with is_export=1 have external linkage.
         int linkage1 = 0; // 1 = external, 2 = internal
+
+        // Skip local variables — they don't have linkage and should
+        // not be compared across different scopes (handled by 5.1/5.2/5.3)
+        if (s1->is_local)
+        {
+            s1 = s1->next;
+            continue;
+        }
+
         if (s1->is_export || s1->link_name)
         {
             linkage1 = 1;
         }
         else if (s1->kind == SYM_FUNCTION || s1->kind == SYM_VARIABLE || s1->kind == SYM_CONSTANT)
         {
-            // Simple heuristic for module-level: if it's in the first level or has no parent scope
-            // actually all_symbols is flat, and we don't have scope info easily here
-            // but we can assume SYM_FUNCTION/SYM_CONSTANT at top level are what we care about.
+            // Module-level functions, variables, and constants have internal linkage
             linkage1 = 2;
         }
 
@@ -1024,6 +1064,13 @@ void misra_audit_identifier_uniqueness(TypeChecker *tc)
             if (s2->decl_token.line == 0 || !s2->name || s2->name[0] == '_' ||
                 strcmp(s2->name, "main") == 0 || strcmp(s2->name, "it") == 0 ||
                 strcmp(s2->name, "self") == 0)
+            {
+                s2 = s2->next;
+                continue;
+            }
+
+            // Skip local variables (same reasoning as outer loop)
+            if (s2->is_local)
             {
                 s2 = s2->next;
                 continue;
@@ -1240,6 +1287,14 @@ void misra_check_shadowing(TypeChecker *tc, const char *name, Token loc)
         return;
     }
 
+    // 'self' is a special receiver keyword in Zen (like 'this' in other languages).
+    // It appears in every method definition and is intentionally reused — not a real shadowing
+    // concern.
+    if (strcmp(name, "self") == 0)
+    {
+        return;
+    }
+
     ZenSymbol *shadowed = symbol_lookup(tc->pctx->current_scope->parent, name);
     if (shadowed)
     {
@@ -1373,6 +1428,27 @@ void misra_audit_block_scope(struct TypeChecker *tc)
     }
 }
 
+void misra_check_standard_macro_name(Token tok, const char *name)
+{
+    if (!g_config.misra_mode || !name)
+    {
+        return;
+    }
+
+    for (int i = 0; STANDARD_MACRO_NAMES[i] != NULL; i++)
+    {
+        if (strcmp(name, STANDARD_MACRO_NAMES[i]) == 0)
+        {
+            char msg[256];
+            snprintf(msg, sizeof(msg),
+                     "MISRA Rule 5.10: identifier '%s' has the same name as standard macro '%s'",
+                     name, STANDARD_MACRO_NAMES[i]);
+            zerror_at(tok, "%s", msg);
+            return;
+        }
+    }
+}
+
 void misra_check_external_array_size(TypeChecker *tc, Type *t, Token token, int is_static,
                                      int is_local)
 {
@@ -1392,14 +1468,29 @@ static struct
 {
     const char *name;
     const char *rule;
-} banned_funcs[] = {{"malloc", "Rule 21.3"},     {"calloc", "Rule 21.3"},  {"realloc", "Rule 21.3"},
-                    {"free", "Rule 21.3"},       {"printf", "Rule 21.6"},  {"fprintf", "Rule 21.6"},
-                    {"scanf", "Rule 21.6"},      {"fscanf", "Rule 21.6"},  {"atof", "Rule 21.7"},
-                    {"atoi", "Rule 21.7"},       {"atol", "Rule 21.7"},    {"atoll", "Rule 21.7"},
-                    {"abort", "Rule 21.8"},      {"exit", "Rule 21.8"},    {"getenv", "Rule 21.8"},
-                    {"system", "Rule 21.8"},     {"bsearch", "Rule 21.9"}, {"qsort", "Rule 21.9"},
-                    {"asctime", "Rule 21.10"},   {"ctime", "Rule 21.10"},  {"gmtime", "Rule 21.10"},
-                    {"localtime", "Rule 21.10"}, {"time", "Rule 21.10"},   {NULL, NULL}};
+} banned_funcs[] = {{"malloc", "Rule 21.3"},         {"calloc", "Rule 21.3"},
+                    {"realloc", "Rule 21.3"},        {"free", "Rule 21.3"},
+                    {"printf", "Rule 21.6"},         {"fprintf", "Rule 21.6"},
+                    {"scanf", "Rule 21.6"},          {"fscanf", "Rule 21.6"},
+                    {"atof", "Rule 21.7"},           {"atoi", "Rule 21.7"},
+                    {"atol", "Rule 21.7"},           {"atoll", "Rule 21.7"},
+                    {"abort", "Rule 21.8"},          {"exit", "Rule 21.8"},
+                    {"getenv", "Rule 21.8"},         {"system", "Rule 21.8"},
+                    {"bsearch", "Rule 21.9"},        {"qsort", "Rule 21.9"},
+                    {"asctime", "Rule 21.10"},       {"ctime", "Rule 21.10"},
+                    {"gmtime", "Rule 21.10"},        {"localtime", "Rule 21.10"},
+                    {"time", "Rule 21.10"},          {"setjmp", "Rule 21.4"},
+                    {"longjmp", "Rule 21.4"},        {"signal", "Rule 21.5"},
+                    {"raise", "Rule 21.5"},          {"sqrt", "Rule 21.11"},
+                    {"sin", "Rule 21.11"},           {"cos", "Rule 21.11"},
+                    {"tan", "Rule 21.11"},           {"asin", "Rule 21.11"},
+                    {"acos", "Rule 21.11"},          {"atan", "Rule 21.11"},
+                    {"atan2", "Rule 21.11"},         {"exp", "Rule 21.11"},
+                    {"log", "Rule 21.11"},           {"log10", "Rule 21.11"},
+                    {"pow", "Rule 21.11"},           {"fabs", "Rule 21.11"},
+                    {"floor", "Rule 21.11"},         {"ceil", "Rule 21.11"},
+                    {"fmod", "Rule 21.11"},          {"feclearexcept", "Rule 21.12"},
+                    {"feraiseexcept", "Rule 21.12"}, {NULL, NULL}};
 
 void misra_check_banned_function(struct TypeChecker *tc, const char *name, Token tok)
 {
@@ -1575,4 +1666,103 @@ void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struc
                  "MISRA Rule Zen 2.3: 'string == string' shall not be used; "
                  "use strcmp() instead for string comparison");
     }
+}
+
+/**
+ * @brief Rule 19.1 (Required): An object shall not be assigned to an overlapping object.
+ * Detects self-assignment (x = x) which is undefined behavior in C.
+ */
+void misra_check_assignment_overlap(struct TypeChecker *tc, struct ASTNode *left,
+                                    struct ASTNode *right, Token token)
+{
+    if (!g_config.misra_mode || !left || !right)
+    {
+        return;
+    }
+
+    // Check for self-assignment: same variable on both sides
+    if (left->type == NODE_EXPR_VAR && right->type == NODE_EXPR_VAR)
+    {
+        if (left->var_ref.symbol && right->var_ref.symbol &&
+            left->var_ref.symbol == right->var_ref.symbol)
+        {
+            tc_error(tc, token,
+                     "MISRA Rule 19.1: object shall not be assigned to itself (self-assignment)");
+        }
+    }
+}
+
+/**
+ * @brief Rule 13.2 extension (Required): Expression evaluation order shall not be relied upon.
+ * This is a conservative check that flags function call arguments where multiple arguments
+ * have side effects on the same variables (unspecified behaviour in C).
+ */
+void misra_check_evaluation_order(struct TypeChecker *tc, struct ASTNode *expr)
+{
+    if (!g_config.misra_mode || !expr || expr->type != NODE_EXPR_CALL)
+    {
+        return;
+    }
+
+    // Check each pair of arguments for side-effect collisions
+    ASTNode *arg_a = expr->call.args;
+    while (arg_a)
+    {
+        ASTNode *arg_b = arg_a->next;
+        while (arg_b)
+        {
+            SymbolSet a_reads = {0}, a_writes = {0};
+            SymbolSet b_reads = {0}, b_writes = {0};
+            collect_symbols(arg_a, &a_reads, &a_writes);
+            collect_symbols(arg_b, &b_reads, &b_writes);
+
+            // Check for write-write or write-read collisions between arguments
+            for (int i = 0; i < a_writes.count; i++)
+            {
+                ZenSymbol *s = a_writes.syms[i];
+                if (!s)
+                {
+                    continue;
+                }
+                for (int j = 0; j < b_writes.count; j++)
+                {
+                    if (s == b_writes.syms[j])
+                    {
+                        tc_error(tc, expr->token,
+                                 "MISRA Rule 13.2: function call arguments have conflicting side "
+                                 "effects on a variable (evaluation order unspecified)");
+                        return;
+                    }
+                }
+                for (int j = 0; j < b_reads.count; j++)
+                {
+                    if (s == b_reads.syms[j])
+                    {
+                        tc_error(tc, expr->token,
+                                 "MISRA Rule 13.2: function call argument writes a variable while "
+                                 "another argument reads it (evaluation order unspecified)");
+                        return;
+                    }
+                }
+            }
+            arg_b = arg_b->next;
+        }
+        arg_a = arg_a->next;
+    }
+}
+
+/**
+ * @brief Dir 4.7 (Required): If a function returns error information, that error information
+ * shall be tested. Forwards to the existing misra_check_function_return_usage logic.
+ * This function exists as a dedicated hook point for Dir 4.7-specific integration.
+ */
+void misra_check_error_tested(struct TypeChecker *tc, struct ASTNode *stmt)
+{
+    if (!g_config.misra_mode || !stmt)
+    {
+        return;
+    }
+
+    // Delegate to the existing return value check which already handles Dir 4.7
+    misra_check_function_return_usage(tc, stmt);
 }

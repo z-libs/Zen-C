@@ -1,0 +1,4 @@
+// MISRA Dir 4.2 Verification
+// N/A - Natively enforced by Zen C language constraints.
+fn main() {
+}

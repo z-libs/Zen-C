@@ -1,4 +1,11 @@
-// MISRA Rule 22.6 Verification
-// N/A - Natively enforced by Zen C language constraints.
+// MISRA Rule 22.6: Unused I/O function return
+// Covered by Rule 17.7 / Dir 4.7 (return value must be used)
+
+fn foo() -> i32 {
+    return 42;
+}
+
 fn main() {
+    // EXPECT: MISRA Rule 17.7
+    foo();
 }

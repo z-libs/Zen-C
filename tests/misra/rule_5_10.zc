@@ -1,0 +1,10 @@
+// MISRA Rule 5.10: An identifier shall not have the same name as a standard macro.
+// EXPECT: MISRA Rule 5.10: identifier 'NULL' has the same name as standard macro 'NULL'
+// EXPECT: MISRA Rule 5.10: identifier 'bool' has the same name as standard macro 'bool'
+// EXPECT: MISRA Rule 5.10: identifier 'INT32_MAX' has the same name as standard macro 'INT32_MAX'
+
+fn main() {
+    let NULL = 0;            // Violation: standard macro name
+    let bool = true;         // Violation: standard macro name
+    let INT32_MAX: i32 = 0;  // Violation: standard macro name
+}

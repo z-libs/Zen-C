@@ -5,6 +5,7 @@
 def MAX_BUF = 1024;
 
 fn main() -> i32 {
+    // EXPECT: MISRA Rule 5.3
     let MAX_BUF = 10; // Error: MISRA Rule 5.5 (Collides with macro 'def')
     return 0;
 }

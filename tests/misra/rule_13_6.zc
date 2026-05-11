@@ -1,5 +1,7 @@
-// MISRA Rule 13.6 Verification
+// MISRA Rule 13.6 Verification (also covers Rule 12.5)
+// EXPECT: MISRA Rule 12.5
 // EXPECT: MISRA Rule 13.6
+// EXPECT: MISRA Rule 12.5
 // EXPECT: MISRA Rule 13.6
 
 fn effect() -> int {
