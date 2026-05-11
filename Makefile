@@ -89,6 +89,8 @@ SRCS = src/main.c \
        src/diagnostics/diagnostics.c \
        src/lexer/token.c \
        src/analysis/typecheck.c \
+       src/analysis/typecheck_expr.c \
+       src/analysis/typecheck_stmt.c \
        src/analysis/comptime_interpreter.c \
        src/analysis/move_check.c \
        src/analysis/const_fold.c \
@@ -252,7 +254,7 @@ $(ZC_BOOT_COM): $(ZC_BOOT_COM_BIN) ape/boot/.args
 	rm -f zenc.json facts.json docs.json
 
 # Install
-install: $(TARGET)
+install: $(TARGET) install-zls
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) -m 755 $(TARGET) $(BINDIR)/$(TARGET)
 	
@@ -284,9 +286,14 @@ install: $(TARGET)
 	@echo "=> Man pages installed to $(MANDIR)"
 	@echo "=> Standard library installed to $(SHAREDIR)/std"
 
+# Install zls (LSP binary, symlink to zc)
+install-zls:
+	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) -m 755 $(TARGET) $(BINDIR)/zls
+
 # Uninstall
 uninstall:
-	$(RM) $(BINDIR)/$(TARGET)
+	$(RM) $(BINDIR)/$(TARGET) $(BINDIR)/zls
 	$(RM) $(MANDIR)/man1/zc.1
 	$(RM) $(MANDIR)/man5/zc.5
 	$(RM) $(MANDIR)/man7/zc.7
@@ -367,6 +374,10 @@ test-lsp: $(TARGET) $(PLUGINS)
 	$(CC) $(CFLAGS) -DZC_NO_ARENA tests/compiler/lsp/lsp_test_runner.c src/lsp/cJSON.c -o tests/compiler/lsp/test_runner
 	@echo "=> Running LSP Tests"
 	./tests/compiler/lsp/test_runner
+
+test-lsp-smoke: $(TARGET) $(PLUGINS)
+	@echo "=> Running LSP Smoke Test"
+	./tests/scripts/run_lsp_smoke_test.py --zc ./zc
 
 # Build with alternative compilers
 zig:

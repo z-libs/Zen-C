@@ -24,8 +24,6 @@ void lsp_project_init(const char *root_path)
         return;
     }
 
-    fprintf(stderr, "zls: Initializing project at %s\n", root_path);
-
     // Close any previous hoist_out before creating a new project context
     if (g_project && g_project->ctx && g_project->ctx->cg.hoist_out)
     {
@@ -37,6 +35,7 @@ void lsp_project_init(const char *root_path)
 
     // Create a persistent global context
     g_project->ctx = xcalloc(1, sizeof(ParserContext));
+    g_project->ctx->compiler = &g_compiler;
     g_project->ctx->is_fault_tolerant = 1;
     g_project->ctx->cg.hoist_out = tmpfile(); // Support hoisting in LSP
     if (!g_project->ctx->cg.hoist_out)
@@ -67,8 +66,6 @@ void lsp_project_init(const char *root_path)
         snprintf(std_path, sizeof(std_path), "%s/std", g_config.root_path);
         zvec_push_Str(&g_config.include_paths, xstrdup(std_path));
     }
-
-    fprintf(stderr, "zls: Project initialized at %s\n", root_path);
 }
 
 void lsp_project_index_workspace()
@@ -82,7 +79,6 @@ void lsp_project_index_workspace()
     g_is_indexing = 1;
     scan_dir(g_project->root_path);
     g_is_indexing = 0;
-    fprintf(stderr, "zls: Project indexing complete\n");
 }
 
 // Default error handler for indexing phase
@@ -121,7 +117,6 @@ static void scan_file(const char *path)
         return;
     }
 
-    fprintf(stderr, "zls: Indexing %s\n", path);
     lsp_project_update_file(uri, src);
     zfree(src);
 }
@@ -163,7 +158,6 @@ static void scan_dir(const char *dir_path)
             }
             else if (S_ISREG(st.st_mode))
             {
-                fprintf(stderr, "zls: Indexing %s\n", path);
                 scan_file(path);
             }
         }
@@ -263,29 +257,22 @@ void lsp_project_update_file(const char *uri, const char *src)
         mark_file_imported(g_project->ctx, pf->path);
     }
 
-    fprintf(stderr, "zls: Parsing %s\n", pf->path);
     ASTNode *root = parse_program(g_project->ctx, &l);
     if (root)
     {
         pf->ast = root;
-        fprintf(stderr, "zls: Building index for %s\n", pf->path);
         pf->index = lsp_index_new();
         lsp_build_index(pf->index, root);
-        fprintf(stderr, "zls: Index built for %s\n", pf->path);
 
         if (!g_is_indexing)
         {
-            fprintf(stderr, "zls: Validating types for %s\n", pf->path);
             validate_types(g_project->ctx);
-            fprintf(stderr, "zls: Validation complete for %s\n", pf->path);
         }
     }
     else
     {
-        fprintf(stderr, "zls: Parse failed for %s (returned NULL)\n", pf->path);
         pf->ast = NULL;
     }
-    fprintf(stderr, "zls: Finished handling %s\n", pf->path);
 
     g_current_filename = saved_filename;
 }

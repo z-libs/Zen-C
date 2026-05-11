@@ -40,7 +40,6 @@ static void send_json_response(cJSON *root)
     char *str = cJSON_PrintUnformatted(root);
     if (str)
     {
-        fprintf(stderr, "zls: Sent: %s\n", str);
         fprintf(stdout, "Content-Length: %zu\r\n\r\n%s", strlen(str), str);
         fflush(stdout);
         zfree(str);
@@ -800,7 +799,6 @@ void lsp_completion(const char *uri, int line, int col, int id)
     cJSON_AddStringToObject(root, "jsonrpc", "2.0");
     cJSON_AddNumberToObject(root, "id", id);
     cJSON *items = cJSON_CreateArray();
-    fprintf(stderr, "zls: lsp_completion for %s at %d:%d\n", uri, line, col);
 
     ASTNode *target_func = NULL;
     int best_line = -1;

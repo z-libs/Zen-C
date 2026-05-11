@@ -1,4 +1,3 @@
-
 #include "json_rpc.h"
 #include "../constants.h"
 #include "zprep.h"
@@ -10,9 +9,24 @@
 // Simple Main Loop for LSP.
 int lsp_main(int argc, char **argv)
 {
-    (void)argc;
-    (void)argv;
-    fprintf(stderr, "zls: Zen Language Server starting...\n");
+    int verbose = 0;
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0)
+        {
+            verbose = 1;
+        }
+    }
+
+    // Redirect stderr to /dev/null unless --verbose is passed.
+    // This prevents the stderr pipe buffer from filling up and blocking the
+    // LSP's main loop, which previously caused "cannot resume dead coroutine"
+    // errors in Neovim's RPC client.
+    if (!verbose)
+    {
+        freopen("/dev/null", "w", stderr);
+    }
+
     g_config.mode_lsp = 1;
     g_config.json_output = 1;
 
@@ -68,7 +82,6 @@ int lsp_main(int argc, char **argv)
         body[content_len] = 0;
 
         // Process JSON-RPC.
-        fprintf(stderr, "zls: Received: %s\n", body);
         handle_request(body);
 
         libc_free(body);

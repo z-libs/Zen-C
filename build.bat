@@ -57,6 +57,8 @@ set SRCS=src\main.c ^
  src\driver\driver.c ^
  src\lexer\token.c ^
  src\analysis\typecheck.c ^
+ src\analysis\typecheck_expr.c ^
+ src\analysis\typecheck_stmt.c ^
  src\analysis\comptime_interpreter.c ^
  src\analysis\move_check.c ^
  src\analysis\const_fold.c ^
