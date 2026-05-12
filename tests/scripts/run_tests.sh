@@ -210,7 +210,7 @@ run_test() {
     local cmd_str="$ZC run \"$test_file\" -o \"$tmp_out\" -w --emit-c ${zc_args[*]}"
 
     run_single() {
-        $ZC run "$test_file" -o "$tmp_out" -w --emit-c "${zc_args[@]}" 2>&1 | tr -d '\0'
+        $ZC run "$test_file" -o "$tmp_out" -w --emit-c "${zc_args[@]}" 2>&1 | sed 's/\x0//g'
     }
 
     local output
