@@ -1,4 +1,5 @@
 #include "diagnostics.h"
+#include "../utils/colors.h"
 #include "constants.h"
 #include "parser.h"
 #include "lsp/cJSON.h"
@@ -758,71 +759,6 @@ void zerror_with_hints(Token t, const char *msg, const char *const *hints)
 }
 
 // Specific error types with helpful messages.
-void error_undefined_function(Token t, const char *func_name, const char *suggestion)
-{
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Undefined function '%s'", func_name);
-
-    if (suggestion)
-    {
-        char help[MAX_MANGLED_NAME_LEN];
-        snprintf(help, sizeof(help), "Did you mean '%s'?", suggestion);
-        zerror_with_suggestion(t, msg, help);
-    }
-    else
-    {
-        zerror_with_suggestion(t, msg, "Check if the function is defined or imported");
-    }
-}
-
-void error_wrong_arg_count(Token t, const char *func_name, int expected, int got)
-{
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Wrong number of arguments to function '%s'", func_name);
-
-    char help[MAX_SHORT_MSG_LEN];
-    snprintf(help, sizeof(help), "Expected %d argument%s, but got %d", expected,
-             expected == 1 ? "" : "s", got);
-
-    zerror_with_suggestion(t, msg, help);
-}
-
-void error_undefined_field(Token t, const char *struct_name, const char *field_name,
-                           const char *suggestion)
-{
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Struct '%s' has no field '%s'", struct_name, field_name);
-
-    if (suggestion)
-    {
-        char help[MAX_SHORT_MSG_LEN];
-        snprintf(help, sizeof(help), "Did you mean '%s'?", suggestion);
-        zerror_with_suggestion(t, msg, help);
-    }
-    else
-    {
-        zerror_with_suggestion(t, msg, "Check the struct definition");
-    }
-}
-
-void error_type_expected(Token t, const char *expected, const char *got)
-{
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Type mismatch");
-
-    char help[MAX_MANGLED_NAME_LEN];
-    snprintf(help, sizeof(help), "Expected type '%s', but found '%s'", expected, got);
-
-    zerror_with_suggestion(t, msg, help);
-}
-
-void error_cannot_index(Token t, const char *type_name)
-{
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Cannot index into type '%s'", type_name);
-
-    zerror_with_suggestion(t, msg, "Only arrays and slices can be indexed");
-}
 
 void warn_unused_variable(Token t, const char *var_name)
 {
@@ -844,37 +780,6 @@ void warn_shadowing(Token t, const char *var_name)
     char msg[MAX_SHORT_MSG_LEN];
     snprintf(msg, sizeof(msg), "Variable '%s' shadows a previous declaration", var_name);
     zwarn_with_suggestion(t, msg, "This can lead to confusion");
-}
-
-void warn_unreachable_code(Token t)
-{
-    if (!is_diag_enabled(DIAG_LOGIC_UNREACHABLE))
-    {
-        return;
-    }
-    zwarn_with_suggestion(t, "Unreachable code detected", "This code will never execute");
-}
-
-void warn_implicit_conversion(Token t, const char *from_type, const char *to_type)
-{
-    if (!is_diag_enabled(DIAG_CONVERSION_IMPLICIT))
-    {
-        return;
-    }
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Implicit conversion from '%s' to '%s'", from_type, to_type);
-    zwarn_with_suggestion(t, msg, "Consider using an explicit cast");
-}
-
-void warn_missing_return(Token t, const char *func_name)
-{
-    if (!is_diag_enabled(DIAG_LOGIC_MISSING_RETURN))
-    {
-        return;
-    }
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Function '%s' may not return a value in all paths", func_name);
-    zwarn_with_suggestion(t, msg, "Add a return statement or make the function return 'void'");
 }
 
 void warn_comparison_always_true(Token t, const char *reason)
@@ -906,37 +811,6 @@ void warn_unused_parameter(Token t, const char *param_name, const char *func_nam
     zwarn_with_suggestion(t, msg, "Consider prefixing with '_' if intentionally unused");
 }
 
-void warn_narrowing_conversion(Token t, const char *from_type, const char *to_type)
-{
-    if (!is_diag_enabled(DIAG_CONVERSION_NARROWING))
-    {
-        return;
-    }
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Narrowing conversion from '%s' to '%s'", from_type, to_type);
-    zwarn_with_suggestion(t, msg, "This may cause data loss");
-}
-
-void warn_division_by_zero(Token t)
-{
-    if (!is_diag_enabled(DIAG_SAFETY_DIV_ZERO))
-    {
-        return;
-    }
-    zwarn_with_suggestion(t, "Division by zero", "This will cause undefined behavior at runtime");
-}
-
-void warn_integer_overflow(Token t, const char *type_name, long long value)
-{
-    if (!is_diag_enabled(DIAG_SAFETY_INTEGER_OVERFLOW))
-    {
-        return;
-    }
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Integer literal %lld overflows type '%s'", value, type_name);
-    zwarn_with_suggestion(t, msg, "Value will be truncated");
-}
-
 void warn_array_bounds(Token t, int index, int size)
 {
     if (!is_diag_enabled(DIAG_SAFETY_ARRAY_BOUNDS))
@@ -960,17 +834,6 @@ void warn_format_string(Token t, int arg_num, const char *expected, const char *
     snprintf(msg, sizeof(msg), "Format argument %d: expected '%s', got '%s'", arg_num, expected,
              got);
     zwarn_with_suggestion(t, msg, "Mismatched format specifier may cause undefined behavior");
-}
-
-void warn_null_pointer(Token t, const char *expr)
-{
-    if (!is_diag_enabled(DIAG_SAFETY_NULL_PTR))
-    {
-        return;
-    }
-    char msg[MAX_SHORT_MSG_LEN];
-    snprintf(msg, sizeof(msg), "Potential null pointer access in '%s'", expr);
-    zwarn_with_suggestion(t, msg, "Add a null check before accessing");
 }
 
 void warn_void_main(Token t)

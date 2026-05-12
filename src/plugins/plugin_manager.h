@@ -1,4 +1,9 @@
 #ifndef PLUGIN_MANAGER_H
+#ifndef ZC_ALLOW_INTERNAL
+#error                                                                                             \
+    "plugins/plugin_manager.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define PLUGIN_MANAGER_H
 
 #include "../../plugins/zprep_plugin.h"

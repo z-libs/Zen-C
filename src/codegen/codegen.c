@@ -1100,11 +1100,16 @@ static void handle_try_expr(ParserContext *ctx, ASTNode *node)
 
 static void handle_plugin(ParserContext *ctx, ASTNode *node)
 {
-    ZPlugin *found = zptr_find_plugin(node->plugin_stmt.plugin_name);
+    ZPlugin *found = ctx->hook_find_plugin
+                         ? (ZPlugin *)ctx->hook_find_plugin(node->plugin_stmt.plugin_name)
+                         : NULL;
     if (found)
     {
         ZApi api;
-        zptr_init_api(&api, g_current_filename, node->line, ctx->config);
+        if (ctx->hook_plugin_init_api)
+        {
+            ctx->hook_plugin_init_api(&api, g_current_filename, node->line, ctx->config);
+        }
         api.out = ctx->cg.emitter.file;
         api.hoist_out = ctx->cg.hoist_out;
         found->fn(node->plugin_stmt.body, &api);

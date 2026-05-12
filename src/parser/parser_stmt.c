@@ -19,7 +19,6 @@ ASTNode *parse_expect(ParserContext *ctx, Lexer *l);
 extern char *g_current_filename;
 
 // Forward declaration from codegen module
-char *infer_type(ParserContext *ctx, ASTNode *node);
 
 /**
  * @brief Auto-imports std/slice.zc if not already imported.
@@ -734,7 +733,10 @@ ASTNode *parse_asm(ParserContext *ctx, Lexer *l)
 {
     (void)ctx; // suppress unused parameter warning
     Token t = lexer_peek(l);
-    zen_trigger_at(TRIGGER_ASM, t, ctx->config);
+    if (ctx->hook_zen_trigger)
+    {
+        ctx->hook_zen_trigger(TRIGGER_ASM, t, ctx->config);
+    }
     lexer_next(l); // eat 'asm'
 
     // Check for 'volatile'
@@ -1383,7 +1385,10 @@ ASTNode *parse_while(ParserContext *ctx, Lexer *l)
          cond->literal.int_val == 1) ||
         (cond->type == NODE_EXPR_VAR && strcmp(cond->var_ref.name, "true") == 0))
     {
-        zen_trigger_at(TRIGGER_WHILE_TRUE, cond->token, ctx->config);
+        if (ctx->hook_zen_trigger)
+        {
+            ctx->hook_zen_trigger(TRIGGER_WHILE_TRUE, cond->token, ctx->config);
+        }
     }
     ASTNode *body;
     if (lexer_peek(l).type == TOK_LBRACE)
@@ -2991,7 +2996,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
 
     // Find Plugin Definition
     // Verify plugin exists
-    ZPlugin *found = zptr_find_plugin(plugin_name);
+    ZPlugin *found = ctx->hook_find_plugin ? (ZPlugin *)ctx->hook_find_plugin(plugin_name) : NULL;
 
     if (!found)
     {
@@ -3023,7 +3028,10 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     }
 
     ZApi api;
-    zptr_init_api(&api, g_current_filename, start_tok.line, ctx->config);
+    if (ctx->hook_plugin_init_api)
+    {
+        ctx->hook_plugin_init_api(&api, g_current_filename, start_tok.line, ctx->config);
+    }
     api.out = capture;
     api.hoist_out = ctx->cg.hoist_out;
 
@@ -3617,7 +3625,10 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             ASTNode *n = ast_create(NODE_GOTO);
             n->goto_stmt.label_name = token_strdup(label);
             n->token = goto_tok;
-            zen_trigger_at(TRIGGER_GOTO, goto_tok, ctx->config);
+            if (ctx->hook_zen_trigger)
+            {
+                ctx->hook_zen_trigger(TRIGGER_GOTO, goto_tok, ctx->config);
+            }
             return n;
         }
 

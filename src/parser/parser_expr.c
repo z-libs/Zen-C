@@ -391,7 +391,6 @@ int is_struct_type(ParserContext *ctx, const char *type_name)
 }
 
 Type *get_field_type(ParserContext *ctx, Type *struct_type, const char *field_name);
-char *infer_type(ParserContext *ctx, ASTNode *node); // from codegen
 
 static void check_move_usage(ParserContext *ctx, ASTNode *node, Token t)
 {
@@ -5744,7 +5743,10 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 ASTNode *false_expr = parse_expr_prec(ctx, l, PREC_TERNARY); // Right associative
 
                 ASTNode *tern = ast_create(NODE_TERNARY);
-                zen_trigger_at(TRIGGER_TERNARY, lhs->token, ctx->config);
+                if (ctx->hook_zen_trigger)
+                {
+                    ctx->hook_zen_trigger(TRIGGER_TERNARY, lhs->token, ctx->config);
+                }
 
                 tern->token = lhs->token;
                 tern->ternary.cond = lhs;
@@ -6831,11 +6833,17 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         {
             if (is_token(op, "&") || is_token(op, "|") || is_token(op, "^"))
             {
-                zen_trigger_at(TRIGGER_BITWISE, op, ctx->config);
+                if (ctx->hook_zen_trigger)
+                {
+                    ctx->hook_zen_trigger(TRIGGER_BITWISE, op, ctx->config);
+                }
             }
             else if (is_token(op, "<<") || is_token(op, ">>"))
             {
-                zen_trigger_at(TRIGGER_BITWISE, op, ctx->config);
+                if (ctx->hook_zen_trigger)
+                {
+                    ctx->hook_zen_trigger(TRIGGER_BITWISE, op, ctx->config);
+                }
             }
         }
         bin->binary.left = lhs;

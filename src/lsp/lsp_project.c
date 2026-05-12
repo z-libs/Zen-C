@@ -1,4 +1,5 @@
 #include "lsp_project.h"
+#include "../utils/utils.h"
 #include "../constants.h"
 #include <dirent.h>
 #include <stdio.h>

@@ -1,4 +1,8 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "lsp/json_rpc.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef JSON_RPC_H
 #define JSON_RPC_H
 

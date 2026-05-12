@@ -1,3 +1,4 @@
+#include "../arena.h"
 #include "symbols.h"
 #include <stdio.h>
 #include <stdlib.h>

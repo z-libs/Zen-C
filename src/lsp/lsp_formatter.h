@@ -1,4 +1,8 @@
 #ifndef LSP_FORMATTER_H
+#ifndef ZC_ALLOW_INTERNAL
+#error "lsp/lsp_formatter.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define LSP_FORMATTER_H
 
 /**

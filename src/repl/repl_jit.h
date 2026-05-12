@@ -1,4 +1,8 @@
 /**
+#ifndef ZC_ALLOW_INTERNAL
+#error "repl/repl_jit.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
  * @file repl_jit.h
  * @brief JIT execution module using LibTCC.
  */

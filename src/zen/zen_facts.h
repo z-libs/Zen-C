@@ -1,4 +1,8 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "zen/zen_facts.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef ZEN_FACTS_H
 #define ZEN_FACTS_H
 

@@ -1,9 +1,13 @@
 #ifndef PLATFORM_MISRA_H
+#ifndef ZC_ALLOW_INTERNAL
+#error "platform/misra.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define PLATFORM_MISRA_H
 
 #include <stdio.h>
 #include <stdbool.h>
-#include "zprep.h" // For Token
+#include "../token.h"
 
 typedef struct Type Type;
 typedef struct ASTNode ASTNode;

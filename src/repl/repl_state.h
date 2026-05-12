@@ -1,4 +1,8 @@
 /**
+#ifndef ZC_ALLOW_INTERNAL
+#error "repl/repl_state.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
  * @file repl_state.h
  * @brief Shared state and types for the REPL subsystem.
  *
@@ -12,7 +16,6 @@
 #include "repl.h"
 #include "ast.h"
 #include "parser/parser.h"
-#include "zprep.h"
 #include "../platform/os.h"
 #include <stdio.h>
 #include <stdlib.h>

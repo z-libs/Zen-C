@@ -1,9 +1,15 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "ast/ast.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef AST_H
 #define AST_H
 
-#include "zprep.h"
+#include "token.h"
 #include <stdlib.h>
+
+typedef struct ParserContext ParserContext;
 
 // Forward declarations.
 struct ASTNode;
@@ -737,6 +743,9 @@ int is_float_type(Type *t);
 int is_composite_expression(ASTNode *node);
 char *type_to_string(Type *t);
 char *type_to_c_string(Type *t);
+char *infer_type(struct ParserContext *ctx, struct ASTNode *node);
+char *get_field_type_str(struct ParserContext *ctx, const char *struct_name,
+                         const char *field_name);
 Type *get_inner_type(Type *t);
 
 typedef struct TraitReg

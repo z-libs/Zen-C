@@ -1,9 +1,14 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "parser/parser.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef PARSER_H
 #define PARSER_H
 
 #include "ast.h"
-#include "zprep.h"
+#include "compiler.h"
+#include "../diagnostics/diagnostics.h"
 #include "../utils/emitter.h"
 
 // Operator precedence for expression parsing
@@ -404,7 +409,47 @@ struct ParserContext
 
     // Registry of traits (encapsulated)
     TraitReg *registered_traits;
+
+    // ============================================================
+    // Extensibility hooks — function pointers for optional modules.
+    // When NULL, the corresponding feature is disabled/no-op.
+    // Set by driver.c at startup based on configuration.
+    // ============================================================
+
+    /// Hook: identifier collision check (MISRA Rule 5.1/5.2)
+    void (*hook_check_identifier_collision)(Token tok, const char *name1, const char *name2,
+                                            int limit);
+
+    /// Hook: preprocessor expression check (MISRA Rule 20.8/20.9)
+    void (*hook_check_preprocessor_expr)(struct ParserContext *ctx, Token tok,
+                                         const char *expression);
+
+    /// Hook: standard macro name check (MISRA Rule 5.10)
+    void (*hook_check_standard_macro_name)(Token tok, const char *name);
+
+    /// Hook: plugin lookup
+    void *(*hook_find_plugin)(const char *name);
+
+    /// Hook: plugin API initialization
+    void (*hook_plugin_init_api)(void *api, const char *filename, int line,
+                                 struct CompilerConfig *cfg);
+
+    /// Hook: zen fact trigger
+    int (*hook_zen_trigger)(int t, Token location, struct CompilerConfig *cfg);
 };
+
+// ============================================================================
+// Intrusive linked-list iteration utilities
+// zlist.h (src/utils/zlist.h) provides full node-based doubly-linked lists.
+// These macros are for the compiler's existing intrusive singly-linked lists
+// where the `next` pointer is embedded directly in the struct.
+// ============================================================================
+#define LIST_FOR_EACH(head, cursor, next_field)                                                    \
+    for (cursor = (head); cursor; cursor = cursor->next_field)
+
+#define LIST_FOR_EACH_SAFE(head, cursor, tmp, next_field)                                          \
+    for (cursor = (head), tmp = cursor ? cursor->next_field : NULL; cursor;                        \
+         cursor = tmp, tmp = cursor ? cursor->next_field : NULL)
 
 // Recursion Safety
 #define MAX_RECURSION_DEPTH 1024

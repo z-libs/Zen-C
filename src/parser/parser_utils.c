@@ -1,7 +1,8 @@
 #include "../plugins/plugin_manager.h"
 #include "parser.h"
 #include "../utils/format_expr.h"
-#include "platform/misra.h"
+#include "../utils/colors.h"
+#include "../utils/utils.h"
 #include "../constants.h"
 #include "../ast/primitives.h"
 #include <ctype.h>
@@ -145,7 +146,10 @@ void parser_audit_preprocessor(ParserContext *ctx, Token tok)
                         *cr = 0;
                     }
 
-                    misra_check_preprocessor_expression_parser(ctx, tok, expr_buf);
+                    if (ctx->hook_check_preprocessor_expr)
+                    {
+                        ctx->hook_check_preprocessor_expr(ctx, tok, expr_buf);
+                    }
                     zfree(expr_buf);
                 }
             }
@@ -6241,17 +6245,18 @@ static const char *get_closest_type_hint(ParserContext *ctx, const char *name)
 void register_plugin(ParserContext *ctx, const char *name, const char *alias)
 {
     // Try to find existing (built-in) or already loaded plugin
-    ZPlugin *plugin = zptr_find_plugin(name);
+    ZPlugin *plugin = ctx->hook_find_plugin ? (ZPlugin *)ctx->hook_find_plugin(name) : NULL;
 
     // If not found, try to load it dynamically
     if (!plugin)
     {
 #ifdef ZC_STATIC_PLUGINS
-        plugin = zptr_find_plugin(name);
+        plugin = ctx->hook_find_plugin ? (ZPlugin *)ctx->hook_find_plugin(name) : NULL;
         if (!plugin && strchr(name, '/'))
         {
             const char *last_slash = strrchr(name, '/');
-            plugin = zptr_find_plugin(last_slash + 1);
+            plugin =
+                ctx->hook_find_plugin ? (ZPlugin *)ctx->hook_find_plugin(last_slash + 1) : NULL;
         }
 #endif
         if (!plugin)
@@ -6697,7 +6702,10 @@ static void audit_section_5(ParserContext *ctx, Scope *scope, const char *name,
     // Rule 5.10: Identifier shall not have same name as a standard macro
     if (ctx->config->misra_mode)
     {
-        misra_check_standard_macro_name(tok, name);
+        if (ctx->hook_check_standard_macro_name)
+        {
+            ctx->hook_check_standard_macro_name(tok, name);
+        }
     }
 
     Scope *p = scope;
@@ -6730,7 +6738,11 @@ static void audit_section_5(ParserContext *ctx, Scope *scope, const char *name,
                 // For distinctness, we check if they are different names but collide
                 if (strcmp(sh_actual_name, actual_name) != 0)
                 {
-                    misra_check_identifier_collision(tok, sh_actual_name, actual_name, limit);
+                    if (ctx->hook_check_identifier_collision)
+                    {
+                        ctx->hook_check_identifier_collision(tok, sh_actual_name, actual_name,
+                                                             limit);
+                    }
                 }
             }
 

@@ -1,4 +1,9 @@
 #ifndef TYPECHECK_INTERNAL_H
+#ifndef ZC_ALLOW_INTERNAL
+#error                                                                                             \
+    "analysis/typecheck_internal.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define TYPECHECK_INTERNAL_H
 
 #include "../constants.h"

@@ -1,4 +1,8 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "lsp/lsp_index.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef LSP_INDEX_H
 #define LSP_INDEX_H
 

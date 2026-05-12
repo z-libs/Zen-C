@@ -1,4 +1,8 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "repl/repl.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef REPL_H
 #define REPL_H
 

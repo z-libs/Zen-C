@@ -1,7 +1,8 @@
-
 #include "ast.h"
 #include "../parser/parser.h"
-#include "zprep.h"
+#include "../constants.h"
+#include "../arena.h"
+#include "../utils/colors.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -1052,3 +1053,533 @@ Type *get_inner_type(Type *t)
     }
     return t;
 }
+
+// ============================================================================
+// Type inference — resolve an expression node to its C type string.
+// (Moved from codegen_utils.c this is part of core, not codegen)
+// ============================================================================
+
+char *infer_type(ParserContext *ctx, ASTNode *node)
+{
+    if (!node || !ctx)
+    {
+        return NULL;
+    }
+
+    if (node->type_info && node->type_info->kind != TYPE_UNKNOWN)
+    {
+        char *t = type_to_c_string(node->type_info);
+        return t;
+    }
+
+    if (node->resolved_type && strcmp(node->resolved_type, "unknown") != 0)
+    {
+        if (strcmp(node->resolved_type, "c_int") == 0)
+        {
+            return "int";
+        }
+        if (strcmp(node->resolved_type, "c_uint") == 0)
+        {
+            return "unsigned int";
+        }
+        if (strcmp(node->resolved_type, "c_long") == 0)
+        {
+            return "long";
+        }
+        if (strcmp(node->resolved_type, "c_ulong") == 0)
+        {
+            return "unsigned long";
+        }
+        if (strcmp(node->resolved_type, "c_longlong") == 0)
+        {
+            return "long long";
+        }
+        if (strcmp(node->resolved_type, "c_ulonglong") == 0)
+        {
+            return "unsigned long long";
+        }
+        if (strcmp(node->resolved_type, "c_short") == 0)
+        {
+            return "short";
+        }
+        if (strcmp(node->resolved_type, "c_ushort") == 0)
+        {
+            return "unsigned short";
+        }
+        if (strcmp(node->resolved_type, "c_char") == 0)
+        {
+            return "char";
+        }
+        if (strcmp(node->resolved_type, "c_uchar") == 0)
+        {
+            return "unsigned char";
+        }
+
+        return node->resolved_type;
+    }
+
+    if (node->type == NODE_EXPR_LITERAL)
+    {
+        if (node->type_info)
+        {
+            return type_to_c_string(node->type_info);
+        }
+        return NULL;
+    }
+
+    if (node->type == NODE_EXPR_VAR)
+    {
+        ZenSymbol *sym = find_symbol_entry(ctx, node->var_ref.name);
+        if (sym)
+        {
+            if (sym->type_name)
+            {
+                return sym->type_name;
+            }
+            if (sym->type_info)
+            {
+                return type_to_c_string(sym->type_info);
+            }
+        }
+    }
+
+    if (node->type == NODE_EXPR_CALL)
+    {
+        if (node->call.callee->type == NODE_EXPR_VAR)
+        {
+            FuncSig *sig = find_func(ctx, node->call.callee->var_ref.name);
+            if (sig)
+            {
+                if (sig->is_async)
+                {
+                    if (sig->ret_type)
+                    {
+                        return type_to_c_string(sig->ret_type);
+                    }
+                    return "void";
+                }
+                if (sig->ret_type)
+                {
+                    return type_to_c_string(sig->ret_type);
+                }
+            }
+
+            // Fallback for known stdlib memory/file functions.
+            if (strcmp(node->call.callee->var_ref.name, "malloc") == 0 ||
+                strcmp(node->call.callee->var_ref.name, "calloc") == 0 ||
+                strcmp(node->call.callee->var_ref.name, "realloc") == 0 ||
+                strcmp(node->call.callee->var_ref.name, "fopen") == 0 ||
+                strcmp(node->call.callee->var_ref.name, "popen") == 0 ||
+                strcmp(node->call.callee->var_ref.name, "fdopen") == 0)
+            {
+                return "void*";
+            }
+            ASTNode *sdef = find_struct_def(ctx, node->call.callee->var_ref.name);
+            if (sdef)
+            {
+                return node->call.callee->var_ref.name;
+            }
+
+            // Check for enum variants (constructors)
+            EnumVariantReg *ev = find_enum_variant(ctx, node->call.callee->var_ref.name);
+            if (ev)
+            {
+                return ev->enum_name;
+            }
+        }
+        // Method call: target.method() - look up Type_method signature.
+        if (node->call.callee->type == NODE_EXPR_MEMBER)
+        {
+            char *target_type = infer_type(ctx, node->call.callee->member.target);
+            if (target_type)
+            {
+                char clean_type[MAX_TYPE_NAME_LEN];
+                snprintf(clean_type, sizeof(clean_type), "%s", target_type);
+
+                // Robustly strip all pointer levels for method lookup
+                char *ptr = strchr(clean_type, '*');
+                if (ptr)
+                {
+                    *ptr = 0;
+                }
+
+                char *base = clean_type;
+                if (strncmp(base, "struct ", 7) == 0)
+                {
+                    base += 7;
+                }
+
+                char func_base[MAX_MANGLED_NAME_LEN];
+                snprintf(func_base, sizeof(func_base), "%s__%s", base,
+                         node->call.callee->member.field);
+                char *func_name = merge_underscores(func_base);
+
+                FuncSig *sig = find_func(ctx, func_name);
+
+                if (sig && sig->ret_type)
+                {
+                    char *ret = type_to_c_string(sig->ret_type);
+                    zfree(func_name);
+                    return ret;
+                }
+                zfree(func_name);
+            }
+        }
+
+        if (node->call.callee->type == NODE_EXPR_VAR)
+        {
+            ZenSymbol *sym = find_symbol_entry(ctx, node->call.callee->var_ref.name);
+            if (sym && sym->type_info && sym->type_info->kind == TYPE_FUNCTION &&
+                sym->type_info->inner)
+            {
+                return type_to_c_string(sym->type_info->inner);
+            }
+        }
+    }
+
+    if (node->type == NODE_TRY)
+    {
+        char *inner_type = infer_type(ctx, node->try_stmt.expr);
+        if (inner_type)
+        {
+            // Extract T from Result<T> or Option<T>
+            char *start = strchr(inner_type, '<');
+            if (start)
+            {
+                start++; // Skip <
+                char *end = strrchr(inner_type, '>');
+                if (end && end > start)
+                {
+                    int len = end - start;
+                    char *extracted = xmalloc(len + 1);
+                    strncpy(extracted, start, len);
+                    extracted[len] = 0;
+                    return extracted;
+                }
+            }
+
+            // Find the struct/enum definition and look for "Ok" or "val"
+            char *search_name = inner_type;
+            if (strncmp(search_name, "struct ", 7) == 0)
+            {
+                search_name += 7;
+            }
+
+            ASTNode *def = find_struct_def(ctx, search_name);
+            if (!def)
+            {
+                // check enums list explicitly if not found in instantiated list
+                StructRef *er = ctx->parsed_enums_list;
+                while (er)
+                {
+                    if (er->node && er->node->type == NODE_ENUM &&
+                        strcmp(er->node->enm.name, search_name) == 0)
+                    {
+                        def = er->node;
+                        break;
+                    }
+                    er = er->next;
+                }
+            }
+
+            if (def)
+            {
+                if (def->type == NODE_ENUM)
+                {
+                    // Look for "Ok" variant
+                    ASTNode *var = def->enm.variants;
+                    while (var)
+                    {
+                        if (var->variant.name && strcmp(var->variant.name, "Ok") == 0)
+                        {
+                            if (var->variant.payload)
+                            {
+                                return type_to_c_string(var->variant.payload);
+                            }
+                            // Ok with no payload? Then it's void/u0.
+                            return "void";
+                        }
+                        var = var->next;
+                    }
+                }
+                else if (def->type == NODE_STRUCT)
+                {
+                    // Look for "val" field
+                    ASTNode *field = def->strct.fields;
+                    while (field)
+                    {
+                        if (field->field.name && strcmp(field->field.name, "val") == 0)
+                        {
+                            return xstrdup(field->field.type);
+                        }
+                        field = field->next;
+                    }
+                }
+            }
+        }
+    }
+
+    if (node->type == NODE_EXPR_MEMBER)
+    {
+        char *parent_type = infer_type(ctx, node->member.target);
+        if (!parent_type)
+        {
+            return NULL;
+        }
+
+        char clean_name[MAX_TYPE_NAME_LEN];
+        snprintf(clean_name, sizeof(clean_name), "%s", parent_type);
+        char *ptr = strchr(clean_name, '*');
+        if (ptr)
+        {
+            *ptr = 0;
+        }
+
+        return get_field_type_str(ctx, clean_name, node->member.field);
+    }
+
+    if (node->type == NODE_EXPR_BINARY)
+    {
+        if (strcmp(node->binary.op, "??") == 0)
+        {
+            return infer_type(ctx, node->binary.left);
+        }
+
+        const char *op = node->binary.op;
+        char *left_type = infer_type(ctx, node->binary.left);
+        char *right_type = infer_type(ctx, node->binary.right);
+
+        int is_logical = (strcmp(op, "&&") == 0 || strcmp(op, "||") == 0 || strcmp(op, "==") == 0 ||
+                          strcmp(op, "!=") == 0 || strcmp(op, "<") == 0 || strcmp(op, ">") == 0 ||
+                          strcmp(op, "<=") == 0 || strcmp(op, ">=") == 0);
+
+        if (is_logical)
+        {
+            return xstrdup("int");
+        }
+
+        if (left_type && strcmp(left_type, "usize") == 0)
+        {
+            return "usize";
+        }
+        if (right_type && strcmp(right_type, "usize") == 0)
+        {
+            return "usize";
+        }
+        if (left_type && strcmp(left_type, "double") == 0)
+        {
+            return "double";
+        }
+
+        return left_type ? left_type : right_type;
+    }
+
+    if (node->type == NODE_MATCH)
+    {
+        ASTNode *case_node = node->match_stmt.cases;
+        while (case_node)
+        {
+            char *type = infer_type(ctx, case_node->match_case.body);
+            if (type && strcmp(type, "void") != 0 && strcmp(type, "unknown") != 0)
+            {
+                return type;
+            }
+            case_node = case_node->next;
+        }
+        return NULL;
+    }
+
+    if (node->type == NODE_EXPR_INDEX)
+    {
+        char *array_type = infer_type(ctx, node->index.array);
+        if (array_type)
+        {
+            // If T*, returns T. If T[], returns T.
+            char *ptr = strrchr(array_type, '*');
+            if (ptr)
+            {
+                int len = ptr - array_type;
+                char *buf = xmalloc(len + 1);
+                strncpy(buf, array_type, len);
+                buf[len] = 0;
+                return buf;
+            }
+
+            if (strncmp(array_type, "Slice__", 7) == 0)
+            {
+                return xstrdup(array_type + 7);
+            }
+
+            char *search_name = array_type;
+            if (strncmp(search_name, "struct ", 7) == 0)
+            {
+                search_name += 7;
+            }
+
+            ASTNode *def = find_struct_def(ctx, search_name);
+            if (def && def->type_info && def->type_info->kind == TYPE_VECTOR &&
+                def->type_info->inner)
+            {
+                return type_to_c_string(def->type_info->inner);
+            }
+        }
+        return "int";
+    }
+
+    if (node->type == NODE_EXPR_UNARY)
+    {
+        if (strcmp(node->unary.op, "&") == 0)
+        {
+            char *inner = infer_type(ctx, node->unary.operand);
+            if (inner)
+            {
+                char *buf = xmalloc(strlen(inner) + 2);
+                sprintf(buf, "%s*", inner);
+                return buf;
+            }
+        }
+        if (strcmp(node->unary.op, "*") == 0)
+        {
+            char *inner = infer_type(ctx, node->unary.operand);
+            if (inner)
+            {
+                if (strcmp(inner, "string") == 0)
+                {
+                    return xstrdup("char");
+                }
+                char *ptr = strchr(inner, '*');
+                if (ptr)
+                {
+                    // Return base type (naive)
+                    int len = ptr - inner;
+                    char *dup = xmalloc(len + 1);
+                    strncpy(dup, inner, len);
+                    dup[len] = 0;
+                    return dup;
+                }
+            }
+        }
+        return infer_type(ctx, node->unary.operand);
+    }
+
+    if (node->type == NODE_AWAIT)
+    {
+        // Infer underlying type T from await Async<T>
+        // Check operand type for Generics <T>
+        char *op_type = infer_type(ctx, node->unary.operand);
+        if (op_type)
+        {
+            char *start = strchr(op_type, '<');
+            if (start)
+            {
+                start++; // Skip <
+                char *end = strrchr(op_type, '>');
+                if (end && end > start)
+                {
+                    int len = end - start;
+                    char *extracted = xmalloc(len + 1);
+                    strncpy(extracted, start, len);
+                    extracted[len] = 0;
+                    return extracted;
+                }
+            }
+        }
+
+        // Fallback: If it's a direct call await foo(), we can lookup signature even if generic
+        // syntax wasn't used
+        if (node->unary.operand->type == NODE_EXPR_CALL &&
+            node->unary.operand->call.callee->type == NODE_EXPR_VAR)
+        {
+            FuncSig *sig = find_func(ctx, node->unary.operand->call.callee->var_ref.name);
+            if (sig && sig->ret_type)
+            {
+                return type_to_c_string(sig->ret_type);
+            }
+        }
+
+        return "void*";
+    }
+
+    if (node->type == NODE_EXPR_CAST)
+    {
+        return node->cast.target_type;
+    }
+
+    if (node->type == NODE_EXPR_STRUCT_INIT)
+    {
+        return node->struct_init.struct_name;
+    }
+
+    if (node->type == NODE_EXPR_ARRAY_LITERAL)
+    {
+        if (node->type_info)
+        {
+            return type_to_c_string(node->type_info);
+        }
+        return NULL;
+    }
+
+    if (node->type == NODE_EXPR_LITERAL)
+    {
+        if (node->literal.type_kind == LITERAL_STRING)
+        {
+            return xstrdup("string");
+        }
+        if (node->literal.type_kind == LITERAL_CHAR)
+        {
+            return xstrdup("char");
+        }
+        if (node->literal.type_kind == LITERAL_FLOAT)
+        {
+            return "double";
+        }
+        return "int";
+    }
+
+    return NULL;
+}
+
+// Extract variable names from argument string.
+
+// Parse original method name from mangled name.
+
+// Replace string type in arguments.
+
+// Helper to emit auto type or fallback.
+
+// ============================================================================
+// Field type lookup — get the type string of a struct field.
+// (Moved from codegen_utils.c)
+// ============================================================================
+
+char *get_field_type_str(ParserContext *ctx, const char *struct_name, const char *field_name)
+{
+    char clean_name[MAX_TYPE_NAME_LEN];
+    strncpy(clean_name, struct_name, sizeof(clean_name) - 1);
+    clean_name[sizeof(clean_name) - 1] = 0;
+
+    char *ptr = strchr(clean_name, '<');
+    if (ptr)
+    {
+        *ptr = 0;
+    }
+
+    ASTNode *def = find_struct_def(ctx, clean_name);
+    if (!def)
+    {
+        return NULL;
+    }
+
+    ASTNode *f = def->strct.fields;
+    while (f)
+    {
+        if (strcmp(f->field.name, field_name) == 0)
+        {
+            return f->field.type;
+        }
+        f = f->next;
+    }
+    return NULL;
+}
+
+// Type inference.

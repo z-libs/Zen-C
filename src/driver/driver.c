@@ -22,6 +22,7 @@
 extern char *load_file(const char *fn);
 extern void init_builtins(void);
 extern void load_all_configs(CompilerConfig *cfg);
+extern void codegen_init_backends(void);
 extern void scan_build_directives(ParserContext *ctx, const char *src);
 extern void propagate_vector_inner_types(ParserContext *ctx);
 extern void propagate_drop_traits(ParserContext *ctx);
@@ -50,6 +51,7 @@ int driver_run(ZenCompiler *compiler)
     zptr_plugin_mgr_init();
 #endif
 
+    codegen_init_backends();
     load_all_configs(&compiler->config);
 
     int result = driver_compile(compiler);
@@ -80,6 +82,27 @@ int driver_compile(ZenCompiler *compiler)
     ctx.compiler = compiler;
     ctx.config = &compiler->config;
     g_parser_ctx = &ctx;
+
+    // Set runtime hooks based on configuration
+    if (ctx.config->misra_mode)
+    {
+        extern void misra_check_identifier_collision(Token tok, const char *name1,
+                                                     const char *name2, int limit);
+        extern void misra_check_preprocessor_expression_parser(ParserContext * ctx, Token tok,
+                                                               const char *expression);
+        extern void misra_check_standard_macro_name(Token tok, const char *name);
+
+        ctx.hook_check_identifier_collision = misra_check_identifier_collision;
+        ctx.hook_check_preprocessor_expr = misra_check_preprocessor_expression_parser;
+        ctx.hook_check_standard_macro_name = misra_check_standard_macro_name;
+    }
+
+    // Plugin hooks (always available)
+    ctx.hook_find_plugin = (void *(*)(const char *))zptr_find_plugin;
+    ctx.hook_plugin_init_api = (void (*)(void *, const char *, int, CompilerConfig *))zptr_init_api;
+
+    // Zen hooks
+    ctx.hook_zen_trigger = (int (*)(int, Token, CompilerConfig *))zen_trigger_at;
 
     char *src = load_file(compiler->config.input_file);
     if (!src)
@@ -253,11 +276,21 @@ int driver_compile(ZenCompiler *compiler)
         return 0;
     }
 
-    // Determine output file and temp source
-    const char *ext_p =
-        compiler->config.use_cuda
-            ? ".cu"
-            : (compiler->config.use_cpp ? ".cpp" : (compiler->config.use_objc ? ".m" : ".c"));
+    // Determine output file extension
+    const CodegenBackend *backend = codegen_get_backend(compiler->config.backend_name);
+    const char *ext_p = backend ? backend->extension : ".c";
+    if (compiler->config.use_cuda)
+    {
+        ext_p = ".cu";
+    }
+    else if (compiler->config.use_cpp)
+    {
+        ext_p = ".cpp";
+    }
+    else if (compiler->config.use_objc)
+    {
+        ext_p = ".m";
+    }
     char temp_source_buf[1024];
 
     if (!compiler->config.output_file)

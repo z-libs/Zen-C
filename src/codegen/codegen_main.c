@@ -774,7 +774,7 @@ static void flatten_comptime_nodes(ASTNode *parent)
 }
 
 // Main entry point for code generation.
-void codegen_node(ParserContext *ctx, ASTNode *node)
+void codegen_c_program(ParserContext *ctx, ASTNode *node)
 {
     // Flatten any NODE_COMPTIME blocks into their generated AST nodes
     if (node)

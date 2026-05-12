@@ -1,4 +1,8 @@
 #ifndef ZEN_COLORS_H
+#ifndef ZC_ALLOW_INTERNAL
+#error "utils/colors.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define ZEN_COLORS_H
 
 #include <stdio.h>

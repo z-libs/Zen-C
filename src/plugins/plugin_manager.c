@@ -1,5 +1,7 @@
 #include "plugin_manager.h"
 
+#include "../compiler.h"
+#include "../utils/colors.h"
 #include "../constants.h"
 #include "../diagnostics/diagnostics.h"
 #include <stdarg.h>

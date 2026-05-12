@@ -1,4 +1,5 @@
 #include "typecheck_internal.h"
+#include "../utils/utils.h"
 
 void check_expr_lambda(TypeChecker *tc, ASTNode *node, int depth);
 void apply_implicit_struct_pointer_conversions(TypeChecker *tc, ASTNode **expr_ptr,

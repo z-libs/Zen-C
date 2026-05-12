@@ -1,9 +1,14 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "codegen/codegen.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef CODEGEN_H
 #define CODEGEN_H
 
 #include "../ast/ast.h"
 #include "../token.h"
+#include "codegen_backend.h"
 #include <stdio.h>
 #include "../utils/emitter.h"
 
@@ -14,13 +19,19 @@ typedef struct ParserContext ParserContext;
 // Main codegen entry points.
 
 /**
- * @brief Generates code for a given AST node.
+ * @brief Generates code for a given AST node using the selected backend.
+ * Dispatches through the registered backend's emit_program.
  *
  * @param ctx Parser context.
  * @param node The AST node to generate code for.
- * @param out Output file stream.
  */
 void codegen_node(ParserContext *ctx, ASTNode *node);
+
+/**
+ * @brief Internal C codegen entry (used as the default backend).
+ * Called by codegen_node() when the "c" backend is active.
+ */
+void codegen_c_program(ParserContext *ctx, ASTNode *node);
 
 /**
  * @brief Generates code for a single AST node (non-recursive for siblings).
@@ -50,25 +61,18 @@ void codegen_expression_bare(ParserContext *ctx, ASTNode *node);
  */
 void codegen_match_internal(ParserContext *ctx, ASTNode *node, int use_result);
 
-// Utility functions (codegen_utils.c).
-char *infer_type(ParserContext *ctx, ASTNode *node);
-char *get_field_type_str(ParserContext *ctx, const char *struct_name, const char *field_name);
-char *extract_call_args(const char *args);
+// Utility functions (codegen_utils.c + codegen_shared.c).
+#include "codegen_shared.h"
+
 void emit_var_decl_type(ParserContext *ctx, const char *type_str, const char *var_name);
-char *replace_string_type(const char *args);
-const char *parse_original_method_name(const char *mangled);
 void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t);
 void emit_func_signature(ParserContext *ctx, ASTNode *func, const char *name_override);
-char *strip_template_suffix(const char *name);
 int emit_move_invalidation(ParserContext *ctx, ASTNode *node);
 void codegen_expression_with_move(ParserContext *ctx, ASTNode *node);
-int is_struct_return_type(const char *ret_type);
-int z_is_struct_type(Type *t);
 void emit_mangled_name(ParserContext *ctx, const char *base, const char *method);
 int is_simple_enum(ParserContext *ctx, const char *enum_name);
 int is_enum_type_name(ParserContext *ctx, const char *name);
 void handle_node_await_internal(ParserContext *ctx, ASTNode *node);
-const char *map_to_c_type(const char *t);
 
 // Declaration emission  (codegen_decl.c).
 /**

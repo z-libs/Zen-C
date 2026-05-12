@@ -1,8 +1,12 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "driver/driver.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef DRIVER_H
 #define DRIVER_H
 
-#include "../zprep.h"
+#include "../compiler.h"
 
 /**
  * @brief Orchestrates the compilation process based on the provided configuration.

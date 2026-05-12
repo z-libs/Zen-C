@@ -1,4 +1,8 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "codegen/compat.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef ZC_COMPAT_H
 #define ZC_COMPAT_H
 

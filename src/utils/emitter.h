@@ -1,4 +1,8 @@
 
+#ifndef ZC_ALLOW_INTERNAL
+#error "utils/emitter.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #ifndef EMITTER_H
 #define EMITTER_H
 

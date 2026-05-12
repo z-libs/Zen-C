@@ -1,8 +1,11 @@
 #ifndef ZEN_DOC_H
+#ifndef ZC_ALLOW_INTERNAL
+#error "zen/zen_doc.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define ZEN_DOC_H
 
 #include "../ast/ast.h"
-#include "../zprep.h"
 
 /**
  * @brief Generates documentation for the given program AST.

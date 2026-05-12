@@ -21,7 +21,7 @@ endif
 # To build with zig:   make CC="zig cc"
 GIT_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.1.0")
 SHAREDIR ?= /usr/local/share/zenc
-DEFINES = -DZEN_VERSION=\"$(GIT_VERSION)\" -DZEN_SHARE_DIR=\"$(SHAREDIR)\"
+DEFINES = -DZEN_VERSION=\"$(GIT_VERSION)\" -DZEN_SHARE_DIR=\"$(SHAREDIR)\" -DZC_ALLOW_INTERNAL
 WERROR ?= 0
 # TCC does not support -MMD -MP and may not search /usr/local/include
 ifeq ($(findstring tcc,$(CC)),tcc)
@@ -60,72 +60,8 @@ else
     endif
 endif
 
-SRCS = src/main.c \
-       src/driver/driver.c \
-       src/parser/parser_core.c \
-       src/parser/parser_expr.c \
-       src/parser/parser_stmt.c \
-       src/parser/parser_type.c \
-       src/parser/parser_utils.c \
-       src/parser/parser_decl.c \
-       src/parser/parser_struct.c \
-       src/ast/ast.c \
-       src/ast/primitives.c \
-       src/ast/symbols.c \
-       src/codegen/codegen.c \
-       src/codegen/codegen_stmt.c \
-       src/codegen/codegen_decl.c \
-       src/codegen/codegen_main.c \
-       src/codegen/codegen_utils.c \
-        src/utils/emitter.c \
-        src/utils/format_expr.c \
-        src/utils/utils.c \
-        src/utils/colors.c \
-        src/utils/cmd.c \
-       src/platform/os.c \
-       src/platform/console.c \
-       src/platform/dylib.c \
-       src/platform/misra.c \
-       src/utils/config.c \
-       src/diagnostics/diagnostics.c \
-       src/lexer/token.c \
-       src/analysis/typecheck.c \
-       src/analysis/typecheck_expr.c \
-       src/analysis/typecheck_stmt.c \
-       src/analysis/comptime_interpreter.c \
-       src/analysis/move_check.c \
-       src/analysis/const_fold.c \
-       src/lsp/json_rpc.c \
-       src/lsp/lsp_main.c \
-       src/lsp/lsp_analysis.c \
-       src/lsp/lsp_semantic.c \
-       src/lsp/lsp_index.c \
-       src/lsp/lsp_formatter.c \
-       src/lsp/lsp_project.c \
-       src/lsp/cJSON.c \
-       src/zen/zen_facts.c \
-       src/zen/zen_doc.c \
-       src/repl/repl.c \
-       src/repl/repl_highlight.c \
-       src/repl/repl_readline.c \
-       src/repl/repl_eval.c \
-       src/repl/repl_jit.c \
-       src/repl/repl_commands.c \
-       src/plugins/plugin_manager.c \
-       src/plugins/static_plugins.c \
-       std/third-party/tre/lib/regcomp.c \
-       std/third-party/tre/lib/regerror.c \
-       std/third-party/tre/lib/regexec.c \
-       std/third-party/tre/lib/tre-ast.c \
-       std/third-party/tre/lib/tre-compile.c \
-       std/third-party/tre/lib/tre-filter.c \
-       std/third-party/tre/lib/tre-match-approx.c \
-       std/third-party/tre/lib/tre-match-backtrack.c \
-       std/third-party/tre/lib/tre-match-parallel.c \
-       std/third-party/tre/lib/tre-mem.c \
-       std/third-party/tre/lib/tre-parse.c \
-       std/third-party/tre/lib/tre-stack.c \
-       std/third-party/tre/lib/xmalloc.c
+ # Source files read from src-sources.txt (single manifest shared by Makefile, CMakeLists.txt, build.bat)
+SRCS = $(shell cat src-sources.txt)
 
 OBJ_DIR = obj
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRCS))
@@ -234,9 +170,16 @@ libzc-tre.a: $(TRE_OBJS)
 	ar rcs $@ $^
 
 # Default: library-based build (fast incremental)
+# Link — order matters for static libraries: consumers first, providers last.
+# This avoids needing --whole-archive.
 $(TARGET): $(ALL_LIBS) $(OBJ_DIR)/src/main.o
 	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) -o $@ $(OBJ_DIR)/src/main.o -Wl,--start-group $(ALL_LIBS) -Wl,--end-group $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $(OBJ_DIR)/src/main.o \
+		libzc-driver.a libzc-repl.a libzc-lsp.a \
+		libzc-codegen.a libzc-analysis.a \
+		libzc-core.a libzc-misra.a libzc-zen.a libzc-plugin.a \
+		libzc-diag.a libzc-utils.a libzc-platform.a libzc-tre.a \
+		$(LIBS)
 	@echo "=> Build complete: $(TARGET) (libraries)"
 
 # Monolithic build (single link, portable fallback for systems without .a support)

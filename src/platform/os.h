@@ -1,4 +1,8 @@
 #ifndef ZC_PLATFORM_OS_H
+#ifndef ZC_ALLOW_INTERNAL
+#error "platform/os.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define ZC_PLATFORM_OS_H
 
 #include "lang.h"

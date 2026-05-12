@@ -1,4 +1,8 @@
 /*
+#ifndef ZC_ALLOW_INTERNAL
+#error "utils/zvec.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
  * zvec.h — Type-safe, zero-overhead dynamic arrays
  * Part of Zen Development Kit (ZDK)
  *

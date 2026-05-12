@@ -1,4 +1,8 @@
 #ifndef CONST_FOLD_H
+#ifndef ZC_ALLOW_INTERNAL
+#error "analysis/const_fold.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define CONST_FOLD_H
 
 #include "ast/ast.h"

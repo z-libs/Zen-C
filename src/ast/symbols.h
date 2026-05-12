@@ -1,8 +1,11 @@
 #ifndef SYMBOLS_H
+#ifndef ZC_ALLOW_INTERNAL
+#error "ast/symbols.h is internal to Zen C. Include the appropriate public header instead."
+#endif
+
 #define SYMBOLS_H
 
 #include "ast.h"
-#include "zprep.h"
 
 struct FuncSig;
 typedef struct FuncSig FuncSig;

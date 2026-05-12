@@ -28,6 +28,8 @@ if "%NO_PLUGINS%"=="1" (
 )
 
 rem Source files
+REM Source list duplicated from src-sources.txt (keep in sync!)
+REM Primary build files: Makefile and CMakeLists.txt read src-sources.txt directly.
 set SRCS=src\main.c ^
  src\parser\parser_core.c ^
  src\parser\parser_expr.c ^
