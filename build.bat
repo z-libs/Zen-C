@@ -46,6 +46,9 @@ set SRCS=src\main.c ^
  src\codegen\codegen_decl.c ^
  src\codegen\codegen_main.c ^
  src\codegen\codegen_utils.c ^
+ src\codegen\codegen_shared.c ^
+ src\codegen\codegen_backend_c.c ^
+ src\codegen\codegen_backend_astdump.c ^
  src\utils\emitter.c ^
  src\utils\format_expr.c ^
  src\utils\utils.c ^

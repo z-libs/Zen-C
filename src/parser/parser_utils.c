@@ -3717,19 +3717,20 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         new_node->cuda_launch.stream = copy_ast_replacing(n->cuda_launch.stream, p, c, os, ns);
         break;
     case NODE_VA_START:
-        new_node->va_start.ap = copy_ast_replacing(n->va_start.ap, p, c, os, ns);
-        new_node->va_start.last_arg = copy_ast_replacing(n->va_start.last_arg, p, c, os, ns);
+        new_node->va_start_args.ap = copy_ast_replacing(n->va_start_args.ap, p, c, os, ns);
+        new_node->va_start_args.last_arg =
+            copy_ast_replacing(n->va_start_args.last_arg, p, c, os, ns);
         break;
     case NODE_VA_END:
-        new_node->va_end.ap = copy_ast_replacing(n->va_end.ap, p, c, os, ns);
+        new_node->va_end_args.ap = copy_ast_replacing(n->va_end_args.ap, p, c, os, ns);
         break;
     case NODE_VA_COPY:
-        new_node->va_copy.dest = copy_ast_replacing(n->va_copy.dest, p, c, os, ns);
-        new_node->va_copy.src = copy_ast_replacing(n->va_copy.src, p, c, os, ns);
+        new_node->va_copy_args.dest = copy_ast_replacing(n->va_copy_args.dest, p, c, os, ns);
+        new_node->va_copy_args.src = copy_ast_replacing(n->va_copy_args.src, p, c, os, ns);
         break;
     case NODE_VA_ARG:
-        new_node->va_arg.ap = copy_ast_replacing(n->va_arg.ap, p, c, os, ns);
-        new_node->va_arg.type_info = replace_type_formal(n->va_arg.type_info, p, c, os, ns);
+        new_node->va_arg_val.ap = copy_ast_replacing(n->va_arg_val.ap, p, c, os, ns);
+        new_node->va_arg_val.type_info = replace_type_formal(n->va_arg_val.type_info, p, c, os, ns);
         break;
     default:
         break;
@@ -4189,18 +4190,18 @@ static void trigger_instantiations(ParserContext *ctx, ASTNode *node)
         trigger_instantiations(ctx, node->cuda_launch.stream);
         break;
     case NODE_VA_START:
-        trigger_instantiations(ctx, node->va_start.ap);
-        trigger_instantiations(ctx, node->va_start.last_arg);
+        trigger_instantiations(ctx, node->va_start_args.ap);
+        trigger_instantiations(ctx, node->va_start_args.last_arg);
         break;
     case NODE_VA_END:
-        trigger_instantiations(ctx, node->va_end.ap);
+        trigger_instantiations(ctx, node->va_end_args.ap);
         break;
     case NODE_VA_COPY:
-        trigger_instantiations(ctx, node->va_copy.dest);
-        trigger_instantiations(ctx, node->va_copy.src);
+        trigger_instantiations(ctx, node->va_copy_args.dest);
+        trigger_instantiations(ctx, node->va_copy_args.src);
         break;
     case NODE_VA_ARG:
-        trigger_instantiations(ctx, node->va_arg.ap);
+        trigger_instantiations(ctx, node->va_arg_val.ap);
         break;
     default:
         break;

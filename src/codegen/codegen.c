@@ -491,33 +491,33 @@ static void handle_await(ParserContext *ctx, ASTNode *node)
 static void handle_va_start(ParserContext *ctx, ASTNode *node)
 {
     EMIT(ctx, "va_start(");
-    codegen_expression(ctx, node->va_start.ap);
+    codegen_expression(ctx, node->va_start_args.ap);
     EMIT(ctx, ", ");
-    codegen_expression(ctx, node->va_start.last_arg);
+    codegen_expression(ctx, node->va_start_args.last_arg);
     EMIT(ctx, ")");
 }
 
 static void handle_va_end(ParserContext *ctx, ASTNode *node)
 {
-    EMIT(ctx, "va_end(");
-    codegen_expression(ctx, node->va_end.ap);
+    EMIT(ctx, "va_end_args(");
+    codegen_expression(ctx, node->va_end_args.ap);
     EMIT(ctx, ")");
 }
 
 static void handle_va_copy(ParserContext *ctx, ASTNode *node)
 {
     EMIT(ctx, "va_copy(");
-    codegen_expression(ctx, node->va_copy.dest);
+    codegen_expression(ctx, node->va_copy_args.dest);
     EMIT(ctx, ", ");
-    codegen_expression(ctx, node->va_copy.src);
+    codegen_expression(ctx, node->va_copy_args.src);
     EMIT(ctx, ")");
 }
 
 static void handle_va_arg(ParserContext *ctx, ASTNode *node)
 {
-    char *type_str = type_to_c_string(node->va_arg.type_info);
+    char *type_str = type_to_c_string(node->va_arg_val.type_info);
     EMIT(ctx, "va_arg(");
-    codegen_expression(ctx, node->va_arg.ap);
+    codegen_expression(ctx, node->va_arg_val.ap);
     EMIT(ctx, ", %s)", type_str);
     zfree(type_str);
 }

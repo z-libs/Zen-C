@@ -5458,7 +5458,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
     after_unary:; // Label to skip standard creation if overloaded
     }
 
-    // --- PREFIX: va_start/va_end/va_copy/va_arg intrinsics ---
+    // --- PREFIX: va_start/va_end_args/va_copy/va_arg intrinsics ---
     else if (is_token(t, "va_start"))
     {
         lexer_next(l);
@@ -5478,24 +5478,24 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
             zpanic_at(t, "Expected ')' after va_start args");
         }
         lhs = ast_create(NODE_VA_START);
-        lhs->va_start.ap = ap;
-        lhs->va_start.last_arg = last;
+        lhs->va_start_args.ap = ap;
+        lhs->va_start_args.last_arg = last;
     }
-    else if (is_token(t, "va_end"))
+    else if (is_token(t, "va_end_args"))
     {
         lexer_next(l);
         if (lexer_peek(l).type != TOK_LPAREN)
         {
-            zpanic_at(t, "Expected '(' after va_end");
+            zpanic_at(t, "Expected '(' after va_end_args");
         }
         lexer_next(l);
         ASTNode *ap = parse_expression(ctx, l);
         if (lexer_next(l).type != TOK_RPAREN)
         {
-            zpanic_at(t, "Expected ')' after va_end arg");
+            zpanic_at(t, "Expected ')' after va_end_args arg");
         }
         lhs = ast_create(NODE_VA_END);
-        lhs->va_end.ap = ap;
+        lhs->va_end_args.ap = ap;
     }
     else if (is_token(t, "va_copy"))
     {
@@ -5516,8 +5516,8 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
             zpanic_at(t, "Expected ')' after va_copy args");
         }
         lhs = ast_create(NODE_VA_COPY);
-        lhs->va_copy.dest = dest;
-        lhs->va_copy.src = src;
+        lhs->va_copy_args.dest = dest;
+        lhs->va_copy_args.src = src;
     }
     else if (is_token(t, "va_arg"))
     {
@@ -5541,8 +5541,8 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         }
 
         lhs = ast_create(NODE_VA_ARG);
-        lhs->va_arg.ap = ap;
-        lhs->va_arg.type_info = tinfo;
+        lhs->va_arg_val.ap = ap;
+        lhs->va_arg_val.type_info = tinfo;
         lhs->type_info = tinfo; // The expression evaluates to this type
     }
     else if (is_token(t, "sizeof"))

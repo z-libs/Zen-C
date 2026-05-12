@@ -208,23 +208,6 @@ typedef struct Attribute
     struct Attribute *next;
 } Attribute;
 
-// Save and undefine C standard macros that conflict with struct member names.
-// TCC expands these in struct context, GCC does not.
-#ifdef va_start
-#define _ZC_SAVED_va_start
-#undef va_start
-#endif
-
-#ifdef va_end
-#define _ZC_SAVED_va_end
-#undef va_end
-#endif
-
-#ifdef va_copy
-#define _ZC_SAVED_va_copy
-#undef va_copy
-#endif
-
 struct ASTNode
 {
     NodeType type;
@@ -715,24 +698,24 @@ struct ASTNode
         {
             ASTNode *ap;
             ASTNode *last_arg;
-        } va_start;
+        } va_start_args;
 
         struct
         {
             ASTNode *ap;
-        } va_end;
+        } va_end_args;
 
         struct
         {
             ASTNode *dest;
             ASTNode *src;
-        } va_copy;
+        } va_copy_args;
 
         struct
         {
             ASTNode *ap;
             Type *type_info;
-        } va_arg;
+        } va_arg_val;
 
         struct
         {
@@ -747,24 +730,6 @@ struct ASTNode
     };
 };
 
-// Restore C standard macros that were saved before the struct.
-#ifdef _ZC_SAVED_va_start
-#ifndef va_start
-#define va_start(v, l) __builtin_va_start(v, l)
-#endif
-#endif
-#ifdef _ZC_SAVED_va_end
-#ifndef va_end
-#define va_end(v) __builtin_va_end(v)
-#endif
-#endif
-#ifdef _ZC_SAVED_va_copy
-#ifndef va_copy
-#define va_copy(d, s) __builtin_va_copy(d, s)
-#endif
-#endif
-
-// ** Functions **
 ASTNode *ast_create(NodeType type);
 void ast_free(ASTNode *node);
 
