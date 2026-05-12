@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778589519300,
+  "lastUpdate": 1778614580642,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -2037,6 +2037,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Compiler (Full Suite Transpilation)",
             "value": 12139,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 28,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sha256)",
+            "value": 50,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sort_large)",
+            "value": 72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "5bb7006b8dde42349030bb8bea41b2df5b5f312d",
+          "message": "zenc: modular architecture",
+          "timestamp": "2026-05-12T20:35:27+01:00",
+          "tree_id": "c14a9d6e41f351d560c51919fa7835ebfd861311",
+          "url": "https://github.com/zenc-lang/zenc/commit/5bb7006b8dde42349030bb8bea41b2df5b5f312d"
+        },
+        "date": 1778614580077,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 12116,
             "unit": "ms"
           },
           {
