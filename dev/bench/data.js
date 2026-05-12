@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778582816308,
+  "lastUpdate": 1778587165904,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -1954,6 +1954,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Runtime (test_sha256)",
             "value": 53,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sort_large)",
+            "value": 65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "5f9f45ce1855b6275910bb76530260359e63882f",
+          "message": "zenc: Split zprep.h, decouple MISRA from typechecker.",
+          "timestamp": "2026-05-12T12:58:30+01:00",
+          "tree_id": "866632bfa1a7e6d30dd5b39dd3362e3508a8a6f4",
+          "url": "https://github.com/zenc-lang/zenc/commit/5f9f45ce1855b6275910bb76530260359e63882f"
+        },
+        "date": 1778587165209,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 13816,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 32,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sha256)",
+            "value": 52,
             "unit": "ms"
           },
           {
