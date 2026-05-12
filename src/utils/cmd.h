@@ -110,6 +110,7 @@ int arg_run(ArgList *list);
  */
 void arg_list_add_from_string(ArgList *list, const char *str);
 
-void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp_source_file, CompilerConfig *cfg);
+void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp_source_file,
+                            CompilerConfig *cfg);
 
 #endif

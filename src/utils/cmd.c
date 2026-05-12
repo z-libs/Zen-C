@@ -346,10 +346,8 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
         arg_list_add_fmt(list, "-I%s", abs_input_dir);
 
         // Only use -iquote for GCC, Clang, and Emscripten (TCC does not support it)
-        if (z_path_match_compiler(cfg->cc, "gcc") ||
-            z_path_match_compiler(cfg->cc, "g++") ||
-            z_path_match_compiler(cfg->cc, "clang") ||
-            z_path_match_compiler(cfg->cc, "emcc"))
+        if (z_path_match_compiler(cfg->cc, "gcc") || z_path_match_compiler(cfg->cc, "g++") ||
+            z_path_match_compiler(cfg->cc, "clang") || z_path_match_compiler(cfg->cc, "emcc"))
         {
             arg_list_add(list, "-iquote");
             arg_list_add(list, abs_input_dir);

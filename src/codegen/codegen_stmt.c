@@ -833,7 +833,10 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
                 }
                 defer_node->raw_stmt.content = stmt_str;
                 defer_node->line = node->line;
-                ctx->cg.defer_stack[ctx->cg.defer_count++] = defer_node;
+                if (ctx->cg.defer_count < MAX_DEFER)
+                {
+                    ctx->cg.defer_stack[ctx->cg.defer_count++] = defer_node;
+                }
             }
         }
 
@@ -1641,7 +1644,7 @@ static void handle_node_while(ParserContext *ctx, ASTNode *node)
     {
         EMIT(ctx, "%s:;\n", node->while_stmt.loop_label);
     }
-    ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
+    if (ctx->cg.loop_depth < 64) { ctx->cg.loop_defer_boundary[ctx->cg.loop_depth] = ctx->cg.defer_count; } ctx->cg.loop_depth++;
     EMIT(ctx, "while (");
     codegen_expression(ctx, node->while_stmt.condition);
     EMIT(ctx, ") ");
@@ -1717,7 +1720,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->for_stmt.loop_label);
         }
-        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
+        if (ctx->cg.loop_depth < 64) { ctx->cg.loop_defer_boundary[ctx->cg.loop_depth] = ctx->cg.defer_count; } ctx->cg.loop_depth++;
         EMIT(ctx, "for (");
         if (node->for_stmt.init)
         {
@@ -1846,7 +1849,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->do_while_stmt.loop_label);
         }
-        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
+        if (ctx->cg.loop_depth < 64) { ctx->cg.loop_defer_boundary[ctx->cg.loop_depth] = ctx->cg.defer_count; } ctx->cg.loop_depth++;
         EMIT(ctx, "do ");
         if (node->do_while_stmt.loop_label)
         {
@@ -1879,7 +1882,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->loop_stmt.loop_label);
         }
-        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
+        if (ctx->cg.loop_depth < 64) { ctx->cg.loop_defer_boundary[ctx->cg.loop_depth] = ctx->cg.defer_count; } ctx->cg.loop_depth++;
         EMIT(ctx, "while (1) ");
         if (node->loop_stmt.loop_label)
         {
@@ -1907,7 +1910,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         {
             EMIT(ctx, "%s:;\n", node->repeat_stmt.loop_label);
         }
-        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
+        if (ctx->cg.loop_depth < 64) { ctx->cg.loop_defer_boundary[ctx->cg.loop_depth] = ctx->cg.defer_count; } ctx->cg.loop_depth++;
         EMIT(ctx, "for (int _rpt_i = 0; _rpt_i < (%s); _rpt_i++) ", node->repeat_stmt.count);
         if (node->repeat_stmt.loop_label)
         {
@@ -1936,7 +1939,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             EMIT(ctx, "%s:;\n", node->for_range.loop_label);
         }
         // Track loop entry for defer boundary
-        ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
+        if (ctx->cg.loop_depth < 64) { ctx->cg.loop_defer_boundary[ctx->cg.loop_depth] = ctx->cg.defer_count; } ctx->cg.loop_depth++;
 
         EMIT(ctx, "for (");
         if (z_path_match_compiler(ctx->config->cc, "tcc"))

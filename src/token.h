@@ -86,11 +86,11 @@ typedef struct
  */
 typedef struct
 {
-    const char *src;   ///< Source code buffer.
-    int pos;           ///< Current position index.
-    int line;          ///< Current line number.
-    int col;           ///< Current column number.
-    int emit_comments; ///< 1 if comments should be emitted as tokens.
+    const char *src;        ///< Source code buffer.
+    int pos;                ///< Current position index.
+    int line;               ///< Current line number.
+    int col;                ///< Current column number.
+    int emit_comments;      ///< 1 if comments should be emitted as tokens.
     CompilerConfig *config; ///< Compiler config (for MISRA mode checks).
 } Lexer;
 
