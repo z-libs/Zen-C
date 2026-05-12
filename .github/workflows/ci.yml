@@ -91,7 +91,7 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get update && sudo apt-get install -y cppcheck libtcc-dev
     - name: Build Compiler
-      run: make ZC_HAS_JIT=1
+      run: rm -f zc && make ZC_HAS_JIT=1
     - name: Validate stdlib C Emission
       run: |
         mkdir -p .misra_bin
@@ -171,6 +171,7 @@ jobs:
     - name: Build
       shell: bash
       run: |
+        rm -f zc zc.exe  # ensure fresh build, not a stale APE binary
         export ZC_HAS_JIT=${{ matrix.zc_has_jit }}
         export PATH="/usr/lib/ccache:$PATH"
         WERROR_FLAG=""
@@ -213,7 +214,7 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get update && sudo apt-get install -y libtcc-dev g++
     - name: Build
-      run: make ZC_HAS_JIT=1
+      run: rm -f zc && make ZC_HAS_JIT=1
     - name: Run C++ Tests
       run: ./tests/scripts/run_tests.sh --cpp --no-source -j 2
     - name: Upload Failed Test Artifacts
@@ -235,7 +236,7 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get update && sudo apt-get install -y libtcc-dev g++
     - name: Build
-      run: make ZC_HAS_JIT=1
+      run: rm -f zc && make ZC_HAS_JIT=1
     - name: Check CUDA output syntax
       run: |
         FAILED=0
@@ -273,7 +274,7 @@ jobs:
     - name: Install Dependencies
       run: brew install libtcc 2>/dev/null || true
     - name: Build
-      run: make ZC_HAS_JIT=0
+      run: rm -f zc && make ZC_HAS_JIT=0
     - name: Check ObjC output syntax
       run: |
         FAILED=0
@@ -303,7 +304,7 @@ jobs:
     - name: Install libtcc-dev
       run: sudo apt-get update && sudo apt-get install -y libtcc-dev
     - name: Build with Sanitizers
-      run: make asan ZC_HAS_JIT=1
+      run: rm -f zc && make asan ZC_HAS_JIT=1
     - name: Run Tests with Sanitizers
       run: |
         export ASAN_OPTIONS=detect_leaks=0
@@ -328,7 +329,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y libtcc-dev
     - name: Build and Run LSP Tests
       run: |
-        make test-lsp ZC_HAS_JIT=1
+        rm -f zc && make test-lsp ZC_HAS_JIT=1
 
   ape:
     name: Build APE
@@ -362,7 +363,7 @@ jobs:
       run: |
         export PATH="$HOME/cosmocc/bin:$PATH"
         make clean
-        make ape ZC_HAS_JIT=0
+        rm -f zc && make ape ZC_HAS_JIT=0
 
     - name: Upload zc.com Artifact
       uses: actions/upload-artifact@v4
