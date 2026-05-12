@@ -35,7 +35,7 @@ static int cmd_plot(ReplState *state, const char *args)
     char *c_code = repl_transpile(full_code);
     if (c_code)
     {
-        repl_jit_execute(c_code);
+        repl_jit_execute(c_code, state->config);
         zfree(c_code);
     }
 
@@ -195,7 +195,7 @@ static int cmd_show(ReplState *state, const char *args)
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
     Lexer l;
-    lexer_init(&l, show_code);
+    lexer_init(&l, show_code, &g_compiler.config);
     ASTNode *nodes = parse_program(&ctx, &l);
 
     ASTNode *search = nodes;
@@ -554,7 +554,7 @@ static int cmd_vars_funcs_structs(ReplState *state, const char *args)
     ctx.on_error = repl_error_callback;
 
     Lexer l;
-    lexer_init(&l, code);
+    lexer_init(&l, code, &g_compiler.config);
     ASTNode *nodes = parse_program(&ctx, &l);
 
     ASTNode *search = nodes;

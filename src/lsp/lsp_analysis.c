@@ -88,9 +88,9 @@ void lsp_check_file(const char *uri, const char *json_src, int id)
     (void)id;
     if (!g_project)
     {
-        if (g_config.root_path)
+        if (g_compiler.config.root_path)
         {
-            lsp_project_init(g_config.root_path);
+            lsp_project_init(g_compiler.config.root_path);
         }
         else
         {

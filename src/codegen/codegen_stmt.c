@@ -2569,7 +2569,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         if (ctx->cg.current_lambda)
         {
             Lexer l;
-            lexer_init(&l, node->raw_stmt.content);
+            lexer_init(&l, node->raw_stmt.content, ctx->config);
             Token t;
             int last_pos = 0;
             while ((t = lexer_next(&l)).type != TOK_EOF)

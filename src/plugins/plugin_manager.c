@@ -66,7 +66,7 @@ static void plugin_note(const ZApi *api, const char *fmt, ...)
            api->current_line, msg);
 }
 
-void zptr_init_api(ZApi *api, const char *filename, int line)
+void zptr_init_api(ZApi *api, const char *filename, int line, CompilerConfig *cfg)
 {
     if (!api)
     {
@@ -81,10 +81,10 @@ void zptr_init_api(ZApi *api, const char *filename, int line)
     api->warn = plugin_warn;
     api->note = plugin_note;
 
-    api->config.is_debug = g_config.mode_debug;
-    api->config.verbose = g_config.verbose;
+    api->config.is_debug = cfg->mode_debug;
+    api->config.verbose = cfg->verbose;
     api->config.target = ZC_OS_NAME;
-    api->config.cc = g_config.cc;
+    api->config.cc = cfg->cc;
 }
 
 void zptr_register_plugin(ZPlugin *plugin)
@@ -272,11 +272,12 @@ ZPlugin *zptr_find_plugin(const char *name)
     (void)name;
     return NULL;
 }
-void zptr_init_api(ZApi *api, const char *filename, int line)
+void zptr_init_api(ZApi *api, const char *filename, int line, CompilerConfig *cfg)
 {
     (void)api;
     (void)filename;
     (void)line;
+    (void)cfg;
 }
 void zptr_plugin_mgr_cleanup(void)
 {

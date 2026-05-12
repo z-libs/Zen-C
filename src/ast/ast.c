@@ -832,25 +832,25 @@ static char *type_to_c_string_impl(Type *t)
 
     // Portable C Types (Map directly to C types)
     case TYPE_C_INT:
-        return xstrdup(g_config.misra_mode ? "int32_t" : "int");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "int32_t" : "int");
     case TYPE_C_UINT:
-        return xstrdup(g_config.misra_mode ? "uint32_t" : "unsigned int");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "uint32_t" : "unsigned int");
     case TYPE_C_LONG:
-        return xstrdup(g_config.misra_mode ? "int64_t" : "long");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "int64_t" : "long");
     case TYPE_C_ULONG:
-        return xstrdup(g_config.misra_mode ? "uint64_t" : "unsigned long");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "uint64_t" : "unsigned long");
     case TYPE_C_LONGLONG:
-        return xstrdup(g_config.misra_mode ? "int64_t" : "long long");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "int64_t" : "long long");
     case TYPE_C_ULONGLONG:
-        return xstrdup(g_config.misra_mode ? "uint64_t" : "unsigned long long");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "uint64_t" : "unsigned long long");
     case TYPE_C_SHORT:
-        return xstrdup(g_config.misra_mode ? "int16_t" : "short");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "int16_t" : "short");
     case TYPE_C_USHORT:
-        return xstrdup(g_config.misra_mode ? "uint16_t" : "unsigned short");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "uint16_t" : "unsigned short");
     case TYPE_C_CHAR:
-        return xstrdup(g_config.misra_mode ? "int8_t" : "char");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "int8_t" : "char");
     case TYPE_C_UCHAR:
-        return xstrdup(g_config.misra_mode ? "uint8_t" : "unsigned char");
+        return xstrdup(g_parser_ctx->config->misra_mode ? "uint8_t" : "unsigned char");
 
     case TYPE_INT:
         // 'int' in Zen C maps to 'i32' now for portability.

@@ -4,6 +4,8 @@
 
 #include "../zprep.h"
 
+typedef struct CompilerConfig CompilerConfig;
+
 /**
  * @brief Triggers for Zen facts (easter egg system).
  *
@@ -29,9 +31,9 @@ typedef enum
 
 void zen_init(void);
 
-int zen_trigger_at(ZenTrigger t, Token location);
+int zen_trigger_at(ZenTrigger t, Token location, CompilerConfig *cfg);
 
-void zen_trigger_global(void);
+void zen_trigger_global(CompilerConfig *cfg);
 
 const char *zen_get_fact(ZenTrigger t);
 

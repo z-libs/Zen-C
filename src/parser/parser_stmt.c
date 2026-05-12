@@ -35,7 +35,7 @@ static void auto_import_std_test(ParserContext *ctx)
         return;
     }
 
-    char *resolved = z_resolve_path("std/test.zc", g_current_filename);
+    char *resolved = z_resolve_path("std/test.zc", g_current_filename, ctx->config);
     if (!resolved)
     {
         return;
@@ -56,7 +56,7 @@ static void auto_import_std_test(ParserContext *ctx)
     }
 
     Lexer i;
-    lexer_init(&i, src);
+    lexer_init(&i, src, ctx->config);
     char *saved_fn = g_current_filename;
     g_current_filename = resolved;
     parse_program_nodes(ctx, &i);
@@ -78,7 +78,7 @@ static void auto_import_std_slice(ParserContext *ctx)
     }
 
     // Resolve path to std/slice.zc
-    char *resolved = z_resolve_path("std/slice.zc", g_current_filename);
+    char *resolved = z_resolve_path("std/slice.zc", g_current_filename, ctx->config);
     if (!resolved)
     {
         return; // Could not find slice.zc
@@ -101,7 +101,7 @@ static void auto_import_std_slice(ParserContext *ctx)
     }
 
     Lexer i;
-    lexer_init(&i, src);
+    lexer_init(&i, src, ctx->config);
 
     // Save and restore filename context
     char *saved_fn = g_current_filename;
@@ -501,7 +501,7 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                         if (payload_node_field)
                         {
                             Lexer tmp;
-                            lexer_init(&tmp, payload_node_field->field.type);
+                            lexer_init(&tmp, payload_node_field->field.type, ctx->config);
                             binding_type_info = parse_type_formal(ctx, &tmp);
                             binding_type = type_to_string(binding_type_info);
                             payload_node_field = payload_node_field->next;
@@ -734,7 +734,7 @@ ASTNode *parse_asm(ParserContext *ctx, Lexer *l)
 {
     (void)ctx; // suppress unused parameter warning
     Token t = lexer_peek(l);
-    zen_trigger_at(TRIGGER_ASM, t);
+    zen_trigger_at(TRIGGER_ASM, t, ctx->config);
     lexer_next(l); // eat 'asm'
 
     // Check for 'volatile'
@@ -1383,7 +1383,7 @@ ASTNode *parse_while(ParserContext *ctx, Lexer *l)
          cond->literal.int_val == 1) ||
         (cond->type == NODE_EXPR_VAR && strcmp(cond->var_ref.name, "true") == 0))
     {
-        zen_trigger_at(TRIGGER_WHILE_TRUE, cond->token);
+        zen_trigger_at(TRIGGER_WHILE_TRUE, cond->token, ctx->config);
     }
     ASTNode *body;
     if (lexer_peek(l).type == TOK_LBRACE)
@@ -2297,7 +2297,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         if (check_symbols)
         {
             Lexer lex;
-            lexer_init(&lex, clean_expr); // Scan original for symbols
+            lexer_init(&lex, clean_expr, ctx->config); // Scan original for symbols
             lex.line = srctoken.line;
             lex.col = srctoken.col;
 
@@ -2341,7 +2341,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
         // Parse expression fully
         Lexer lex;
-        lexer_init(&lex, clean_expr);
+        lexer_init(&lex, clean_expr, ctx->config);
         lex.line = srctoken.line;
         lex.col = srctoken.col;
 
@@ -3023,7 +3023,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     }
 
     ZApi api;
-    zptr_init_api(&api, g_current_filename, start_tok.line);
+    zptr_init_api(&api, g_current_filename, start_tok.line, ctx->config);
     api.out = capture;
     api.hoist_out = ctx->cg.hoist_out;
 
@@ -3617,7 +3617,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             ASTNode *n = ast_create(NODE_GOTO);
             n->goto_stmt.label_name = token_strdup(label);
             n->token = goto_tok;
-            zen_trigger_at(TRIGGER_GOTO, goto_tok);
+            zen_trigger_at(TRIGGER_GOTO, goto_tok, ctx->config);
             return n;
         }
 
@@ -4512,7 +4512,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     char *fn = token_get_string_content(t);
 
     // Resolve paths
-    char *resolved = z_resolve_path(fn, g_current_filename);
+    char *resolved = z_resolve_path(fn, g_current_filename, ctx->config);
     if (!resolved)
     {
         // Fallback for C headers: allow them to be "not found" locally (they might be system
@@ -4626,7 +4626,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     }
 
     Lexer i;
-    lexer_init(&i, src);
+    lexer_init(&i, src, ctx->config);
 
     // If this is a namespaced import or selective import, set the module prefix
     char *prev_module_prefix = ctx->current_module_prefix;
@@ -4740,7 +4740,7 @@ ASTNode *parse_comptime_body(ParserContext *ctx, Lexer *l)
     zfree(code);
 
     Lexer cl;
-    lexer_init(&cl, wrapped);
+    lexer_init(&cl, wrapped, ctx->config);
     ASTNode *block = parse_block(ctx, &cl);
     zfree(wrapped);
     if (!block)

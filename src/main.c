@@ -521,7 +521,7 @@ int main(int argc, char **argv)
         }
         else if (strcmp(arg, "--paths") == 0)
         {
-            print_search_paths();
+            print_search_paths(&g_compiler.config);
             return 0;
         }
     }

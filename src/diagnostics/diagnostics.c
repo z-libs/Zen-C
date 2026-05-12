@@ -4,6 +4,11 @@
 #include "lsp/cJSON.h"
 #include <stdio.h>
 
+static CompilerConfig *diag_cfg(void)
+{
+    return g_parser_ctx ? g_parser_ctx->config : &g_compiler.config;
+}
+
 static void emit_json(const char *level, Token t, const char *msg, const char *suggestion,
                       int diag_id)
 {
@@ -24,7 +29,7 @@ static void emit_json(const char *level, Token t, const char *msg, const char *s
     }
 
     char *json = cJSON_PrintUnformatted(root);
-    if (!g_config.mode_lsp)
+    if (!diag_cfg()->mode_lsp)
     {
         fprintf(stderr, "%s\n", json);
     }
@@ -60,7 +65,7 @@ static void emit_json(const char *level, Token t, const char *msg, const char *s
 
 void zpanic(const char *fmt, ...)
 {
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         char msg[MAX_ERROR_MSG_LEN];
         va_list a;
@@ -69,7 +74,7 @@ void zpanic(const char *fmt, ...)
         va_end(a);
         emit_json("error", (Token){0}, msg, NULL, DIAG_NONE);
         g_error_count++;
-        if (g_config.mode_lsp)
+        if (diag_cfg()->mode_lsp)
         {
             return;
         }
@@ -82,7 +87,7 @@ void zpanic(const char *fmt, ...)
     fprintf(stderr, COLOR_RESET "\n");
     va_end(a);
     g_error_count++;
-    if (g_config.mode_lsp)
+    if (diag_cfg()->mode_lsp)
     {
         return;
     }
@@ -97,7 +102,7 @@ void zfatal(const char *fmt, ...)
     vfprintf(stderr, fmt, a);
     fprintf(stderr, "\n");
     va_end(a);
-    if (g_config.mode_lsp)
+    if (diag_cfg()->mode_lsp)
     {
         return;
     }
@@ -107,11 +112,11 @@ void zfatal(const char *fmt, ...)
 // Warning system (non-fatal).
 void zwarn(const char *fmt, ...)
 {
-    if (g_config.quiet)
+    if (diag_cfg()->quiet)
     {
         return;
     }
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         char msg[MAX_ERROR_MSG_LEN];
         va_list a;
@@ -132,7 +137,7 @@ void zwarn(const char *fmt, ...)
 
 void zwarn_at_diag(int diag_id, Token t, const char *fmt, ...)
 {
-    if (g_config.quiet)
+    if (diag_cfg()->quiet)
     {
         return;
     }
@@ -142,7 +147,7 @@ void zwarn_at_diag(int diag_id, Token t, const char *fmt, ...)
     vsnprintf(msg, sizeof(msg), fmt, a);
     va_end(a);
 
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         emit_json("warning", t, msg, NULL, diag_id);
     }
@@ -161,11 +166,11 @@ void zwarn_at_diag(int diag_id, Token t, const char *fmt, ...)
 
 void zwarn_at(Token t, const char *fmt, ...)
 {
-    if (g_config.quiet)
+    if (diag_cfg()->quiet)
     {
         return;
     }
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         char msg[MAX_ERROR_MSG_LEN];
         va_list a;
@@ -216,11 +221,11 @@ void zwarn_at(Token t, const char *fmt, ...)
 
 void zwarn_with_suggestion_diag(int diag_id, Token t, const char *msg, const char *suggestion)
 {
-    if (g_config.quiet)
+    if (diag_cfg()->quiet)
     {
         return;
     }
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         emit_json("warning", t, msg, suggestion, diag_id);
         return;
@@ -230,11 +235,11 @@ void zwarn_with_suggestion_diag(int diag_id, Token t, const char *msg, const cha
 
 void zwarn_with_suggestion(Token t, const char *msg, const char *suggestion)
 {
-    if (g_config.quiet)
+    if (diag_cfg()->quiet)
     {
         return;
     }
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         emit_json("warning", t, msg, suggestion, DIAG_NONE);
         return;
@@ -280,7 +285,7 @@ void zwarn_with_suggestion(Token t, const char *msg, const char *suggestion)
 
 void zpanic_at(Token t, const char *fmt, ...)
 {
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         char msg[MAX_ERROR_MSG_LEN];
         va_list a;
@@ -294,7 +299,7 @@ void zpanic_at(Token t, const char *fmt, ...)
             g_parser_ctx->on_error(g_parser_ctx->error_callback_data, t, msg);
             return;
         }
-        if (g_config.mode_lsp)
+        if (diag_cfg()->mode_lsp)
         {
             return;
         }
@@ -349,7 +354,7 @@ void zpanic_at(Token t, const char *fmt, ...)
         return; // Recover!
     }
 
-    if (g_config.mode_lsp)
+    if (diag_cfg()->mode_lsp)
     {
         return;
     }
@@ -359,7 +364,7 @@ void zpanic_at(Token t, const char *fmt, ...)
 // Enhanced error with suggestion.
 void zpanic_with_suggestion(Token t, const char *msg, const char *suggestion)
 {
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         emit_json("error", t, msg, suggestion, DIAG_NONE);
         if (g_parser_ctx && g_parser_ctx->is_fault_tolerant && g_parser_ctx->on_error)
@@ -372,7 +377,7 @@ void zpanic_with_suggestion(Token t, const char *msg, const char *suggestion)
             g_error_count++;
             return;
         }
-        if (g_config.mode_lsp)
+        if (diag_cfg()->mode_lsp)
         {
             return;
         }
@@ -422,7 +427,7 @@ void zpanic_with_suggestion(Token t, const char *msg, const char *suggestion)
         return; // Recover!
     }
 
-    if (g_config.mode_lsp)
+    if (diag_cfg()->mode_lsp)
     {
         return;
     }
@@ -431,7 +436,7 @@ void zpanic_with_suggestion(Token t, const char *msg, const char *suggestion)
 
 void zpanic_with_hints(Token t, const char *msg, const char *const *hints)
 {
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         char combined_hints[MAX_PATH_LEN] = {0};
         if (hints)
@@ -457,7 +462,7 @@ void zpanic_with_hints(Token t, const char *msg, const char *const *hints)
             g_parser_ctx->on_error(g_parser_ctx->error_callback_data, t, full_msg);
             return;
         }
-        if (g_config.mode_lsp)
+        if (diag_cfg()->mode_lsp)
         {
             return;
         }
@@ -528,7 +533,7 @@ void zpanic_with_hints(Token t, const char *msg, const char *const *hints)
         return; // Recover!
     }
 
-    if (g_config.mode_lsp)
+    if (diag_cfg()->mode_lsp)
     {
         return;
     }
@@ -537,7 +542,7 @@ void zpanic_with_hints(Token t, const char *msg, const char *const *hints)
 
 void zerror_at(Token t, const char *fmt, ...)
 {
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         char msg[MAX_ERROR_MSG_LEN];
         va_list a;
@@ -605,7 +610,7 @@ void zerror_at(Token t, const char *fmt, ...)
 
 void zerror_with_suggestion(Token t, const char *msg, const char *suggestion)
 {
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         g_error_count++;
         emit_json("error", t, msg, suggestion, DIAG_NONE);
@@ -680,7 +685,7 @@ void zerror_with_hints(Token t, const char *msg, const char *const *hints)
         }
     }
 
-    if (g_config.json_output)
+    if (diag_cfg()->json_output)
     {
         emit_json("error", t, msg, combined_hints[0] ? combined_hints : NULL, DIAG_NONE);
         if (g_parser_ctx && g_parser_ctx->on_error)
@@ -982,7 +987,7 @@ void warn_misra_violation(Token t, const char *msg)
 {
     // Fire the MISRA warning if the explicit diag is enabled or if the global compiler flag is
     // active.
-    if (!is_diag_enabled(DIAG_MISRA_VIOLATION) && !g_config.misra_mode)
+    if (!is_diag_enabled(DIAG_MISRA_VIOLATION) && !diag_cfg()->misra_mode)
     {
         return;
     }
@@ -996,7 +1001,7 @@ int is_diag_enabled(DiagnosticID id)
         return 0;
     }
     // Check bitmask in g_config
-    return (g_config.diag_mask & ((uint64_t)1 << id)) != 0;
+    return (diag_cfg()->diag_mask & ((uint64_t)1 << id)) != 0;
 }
 
 void zwarn_diag(DiagnosticID id, Token t, const char *msg, const char *hint)
@@ -1044,11 +1049,11 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
         }
         else
         {
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
         }
         return 1;
     }
@@ -1056,13 +1061,13 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_PEDANTIC_STRICT_TYPING);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_PEDANTIC_STRICT_TYPING);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
         }
         else
         {
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_PEDANTIC_STRICT_TYPING);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_PEDANTIC_STRICT_TYPING);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_INTEROP_UNDEF_FUNC);
         }
         return 1;
     }
@@ -1070,13 +1075,13 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_UNUSED_VAR);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_UNUSED_PARAM);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_UNUSED_VAR);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_UNUSED_PARAM);
         }
         else
         {
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_UNUSED_VAR);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_UNUSED_PARAM);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_UNUSED_VAR);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_UNUSED_PARAM);
         }
         return 1;
     }
@@ -1084,15 +1089,15 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_SAFETY_NULL_PTR);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_SAFETY_DIV_ZERO);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_SAFETY_ARRAY_BOUNDS);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_SAFETY_NULL_PTR);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_SAFETY_DIV_ZERO);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_SAFETY_ARRAY_BOUNDS);
         }
         else
         {
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_SAFETY_NULL_PTR);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_SAFETY_DIV_ZERO);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_SAFETY_ARRAY_BOUNDS);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_SAFETY_NULL_PTR);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_SAFETY_DIV_ZERO);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_SAFETY_ARRAY_BOUNDS);
         }
         return 1;
     }
@@ -1100,15 +1105,15 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_LOGIC_UNREACHABLE);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_LOGIC_ALWAYS_TRUE);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_LOGIC_ALWAYS_FALSE);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_LOGIC_UNREACHABLE);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_LOGIC_ALWAYS_TRUE);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_LOGIC_ALWAYS_FALSE);
         }
         else
         {
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_LOGIC_UNREACHABLE);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_LOGIC_ALWAYS_TRUE);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_LOGIC_ALWAYS_FALSE);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_LOGIC_UNREACHABLE);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_LOGIC_ALWAYS_TRUE);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_LOGIC_ALWAYS_FALSE);
         }
         return 1;
     }
@@ -1116,13 +1121,13 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_CONVERSION_IMPLICIT);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_CONVERSION_NARROWING);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_CONVERSION_IMPLICIT);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_CONVERSION_NARROWING);
         }
         else
         {
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_CONVERSION_IMPLICIT);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_CONVERSION_NARROWING);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_CONVERSION_IMPLICIT);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_CONVERSION_NARROWING);
         }
         return 1;
     }
@@ -1130,13 +1135,13 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_STYLE_SHADOWING);
-            g_config.diag_mask |= ((uint64_t)1 << DIAG_STYLE_FORMAT);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_STYLE_SHADOWING);
+            diag_cfg()->diag_mask |= ((uint64_t)1 << DIAG_STYLE_FORMAT);
         }
         else
         {
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_STYLE_SHADOWING);
-            g_config.diag_mask &= ~((uint64_t)1 << DIAG_STYLE_FORMAT);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_STYLE_SHADOWING);
+            diag_cfg()->diag_mask &= ~((uint64_t)1 << DIAG_STYLE_FORMAT);
         }
         return 1;
     }
@@ -1144,11 +1149,11 @@ int set_diag_by_name(const char *name, int enabled)
     {
         if (enabled)
         {
-            g_config.diag_mask = 0xFFFFFFFFFFFFFFFF;
+            diag_cfg()->diag_mask = 0xFFFFFFFFFFFFFFFF;
         }
         else
         {
-            g_config.diag_mask = 0;
+            diag_cfg()->diag_mask = 0;
         }
         return 1;
     }

@@ -8,18 +8,23 @@
 #include "../platform/os.h"
 #include "../parser/parser.h"
 
-void print_search_paths()
+void print_search_paths(CompilerConfig *cfg)
 {
     printf("Search paths:\n");
-    for (size_t i = 0; i < g_config.include_paths.length; i++)
+    for (size_t i = 0; i < cfg->include_paths.length; i++)
     {
-        printf("  %s\n", g_config.include_paths.data[i]);
+        printf("  %s\n", cfg->include_paths.data[i]);
+    }
+    if (cfg->root_path)
+    {
+        printf("  %s\n", cfg->root_path);
+        printf("  %s/std\n", cfg->root_path);
     }
     printf("  ./\n");
-    if (g_config.root_path)
+    if (cfg->root_path)
     {
-        printf("  %s\n", g_config.root_path);
-        printf("  %s/std\n", g_config.root_path);
+        printf("  %s\n", cfg->root_path);
+        printf("  %s/std\n", cfg->root_path);
     }
 }
 
@@ -185,18 +190,19 @@ void print_command_help(const char *command)
     }
 }
 
-void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp_source_file)
+void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp_source_file,
+                            CompilerConfig *cfg)
 {
     // Compiler
-    arg_list_add_from_string(list, g_config.cc);
+    arg_list_add_from_string(list, cfg->cc);
 
     // GCC Flags
-    arg_list_add_from_string(list, g_config.gcc_flags);
+    arg_list_add_from_string(list, cfg->gcc_flags);
     arg_list_add_from_string(list, g_cflags);
 
     // Suppress warnings triggered by transpiled code
     // nvcc rejects these GCC-specific flags, so skip them for CUDA
-    if (!g_config.no_suppress_warnings && !g_config.use_cuda)
+    if (!cfg->no_suppress_warnings && !cfg->use_cuda)
     {
         arg_list_add(list, "-Wno-parentheses");
         arg_list_add(list, "-Wno-unused-value");
@@ -211,26 +217,26 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
     // When transpiling to .cu, nvcc auto-detects CUDA from the extension
 
     // Freestanding
-    if (g_config.is_freestanding)
+    if (cfg->is_freestanding)
     {
         arg_list_add(list, "-ffreestanding");
     }
 
     // Quiet
-    if (g_config.quiet)
+    if (cfg->quiet)
     {
         arg_list_add(list, "-w");
     }
 
     // C++ compatibility flags
-    if (g_config.use_cpp && !g_config.use_cuda)
+    if (cfg->use_cpp && !cfg->use_cuda)
     {
         arg_list_add(list, "-fpermissive");
         arg_list_add(list, "-Wno-write-strings");
     }
 
     // ObjC mode: tell the compiler to treat input as Objective-C
-    if (g_config.use_objc)
+    if (cfg->use_objc)
     {
         arg_list_add(list, "-x");
         arg_list_add(list, "objective-c");
@@ -243,17 +249,17 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
 
     // Input files
     arg_list_add(list, temp_source_file);
-    for (size_t i = 0; i < g_config.c_files.length; i++)
+    for (size_t i = 0; i < cfg->c_files.length; i++)
     {
-        arg_list_add(list, g_config.c_files.data[i]);
+        arg_list_add(list, cfg->c_files.data[i]);
     }
 
     // Platform flags
-    if (z_is_windows() && !g_config.is_freestanding)
+    if (z_is_windows() && !cfg->is_freestanding)
     {
         arg_list_add(list, "-static");
     }
-    if (!z_is_windows() && !g_config.is_freestanding)
+    if (!z_is_windows() && !cfg->is_freestanding)
     {
         arg_list_add(list, "-lm");
     }
@@ -266,17 +272,17 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
     }
 
     // Include paths
-    if (g_config.root_path && g_config.root_path[0])
+    if (cfg->root_path && cfg->root_path[0])
     {
         char abs_root[MAX_PATH_LEN];
-        z_get_absolute_path(g_config.root_path, abs_root, sizeof(abs_root));
+        z_get_absolute_path(cfg->root_path, abs_root, sizeof(abs_root));
         arg_list_add_fmt(list, "-I%s", abs_root);
 
         char tre_path[MAX_PATH_LEN + 128];
         snprintf(tre_path, sizeof(tre_path), "%s/std/third-party/tre/include", abs_root);
 
         int tre_found = 0;
-        if (!g_config.is_freestanding && access(tre_path, F_OK) == 0)
+        if (!cfg->is_freestanding && access(tre_path, F_OK) == 0)
         {
             arg_list_add_fmt(list, "-I%s", tre_path);
             tre_found = 1;
@@ -284,7 +290,7 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
 
         // Robust fallback: if not found via root_path, try relative to the executable's physical
         // location
-        if (!tre_found && !g_config.is_freestanding)
+        if (!tre_found && !cfg->is_freestanding)
         {
             char self_exe[MAX_PATH_SIZE];
             z_get_executable_path(self_exe, sizeof(self_exe));
@@ -301,7 +307,7 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
         }
 
         // Heuristic: try current directory if all else fails
-        if (!tre_found && !g_config.is_freestanding)
+        if (!tre_found && !cfg->is_freestanding)
         {
             if (access("std/third-party/tre/include", F_OK) == 0)
             {
@@ -312,38 +318,38 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
 
         // Final fallback: Always add the relative path just in case,
         // as the backend compiler is usually run from the same directory as zc.
-        if (!tre_found && !g_config.is_freestanding)
+        if (!tre_found && !cfg->is_freestanding)
         {
             arg_list_add(list, "-Istd/third-party/tre/include");
         }
     }
 
     // Always add standard library root as an include path for convenience
-    if (g_config.root_path)
+    if (cfg->root_path)
     {
-        arg_list_add_fmt(list, "-I%s", g_config.root_path);
+        arg_list_add_fmt(list, "-I%s", cfg->root_path);
     }
 
     // User-defined include paths
-    for (size_t i = 0; i < g_config.include_paths.length; i++)
+    for (size_t i = 0; i < cfg->include_paths.length; i++)
     {
         char abs_inc[MAX_PATH_LEN];
-        z_get_absolute_path(g_config.include_paths.data[i], abs_inc, sizeof(abs_inc));
+        z_get_absolute_path(cfg->include_paths.data[i], abs_inc, sizeof(abs_inc));
         arg_list_add_fmt(list, "-I%s", abs_inc);
     }
 
     // Input directory (to resolve relative includes in raw blocks)
-    if (g_config.input_dir)
+    if (cfg->input_dir)
     {
         char abs_input_dir[MAX_PATH_LEN];
-        z_get_absolute_path(g_config.input_dir, abs_input_dir, sizeof(abs_input_dir));
+        z_get_absolute_path(cfg->input_dir, abs_input_dir, sizeof(abs_input_dir));
         arg_list_add_fmt(list, "-I%s", abs_input_dir);
 
         // Only use -iquote for GCC, Clang, and Emscripten (TCC does not support it)
-        if (z_path_match_compiler(g_config.cc, "gcc") ||
-            z_path_match_compiler(g_config.cc, "g++") ||
-            z_path_match_compiler(g_config.cc, "clang") ||
-            z_path_match_compiler(g_config.cc, "emcc"))
+        if (z_path_match_compiler(cfg->cc, "gcc") ||
+            z_path_match_compiler(cfg->cc, "g++") ||
+            z_path_match_compiler(cfg->cc, "clang") ||
+            z_path_match_compiler(cfg->cc, "emcc"))
         {
             arg_list_add(list, "-iquote");
             arg_list_add(list, abs_input_dir);

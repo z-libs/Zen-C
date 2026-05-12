@@ -26,7 +26,7 @@ ZVEC_GENERATE_IMPL(char *, Str)
 /**
  * @brief Compiler configuration and flags.
  */
-typedef struct
+typedef struct CompilerConfig
 {
     char *input_file;     ///< Input source file path.
     zvec_Str extra_files; ///< Additional input files.
@@ -120,7 +120,7 @@ void arena_reset(zarena *a);
 /**
  * @brief Resolve a source file path using include paths and root path.
  */
-char *z_resolve_path(const char *filename, const char *relative_to);
+char *z_resolve_path(const char *filename, const char *relative_to, CompilerConfig *cfg);
 
 /**
  * @brief Load a file.
@@ -172,6 +172,6 @@ int levenshtein(const char *s1, const char *s2);
 /**
  * @brief Load all configurations (system, hidden project, visible project).
  */
-void load_all_configs(void);
+void load_all_configs(CompilerConfig *cfg);
 
 #endif

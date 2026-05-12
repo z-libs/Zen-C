@@ -1,6 +1,8 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
+typedef struct CompilerConfig CompilerConfig;
+
 /**
  * @brief Token types for the Lexer.
  */
@@ -89,6 +91,7 @@ typedef struct
     int line;          ///< Current line number.
     int col;           ///< Current column number.
     int emit_comments; ///< 1 if comments should be emitted as tokens.
+    CompilerConfig *config; ///< Compiler config (for MISRA mode checks).
 } Lexer;
 
 #ifdef __cplusplus
@@ -99,7 +102,7 @@ extern "C"
     /**
      * @brief Initialize the lexer.
      */
-    void lexer_init(Lexer *l, const char *src);
+    void lexer_init(Lexer *l, const char *src, CompilerConfig *cfg);
 
     /**
      * @brief Get the next token.

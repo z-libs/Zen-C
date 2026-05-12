@@ -174,11 +174,76 @@ ape: $(ZC_COM) $(ZC_BOOT_COM)
 plugins/%.so: plugins/%.zc $(TARGET)
 	$(ZC_RUN) build $< -shared -o $@
 
-# Link
-$(TARGET): $(OBJS)
+# Library groupings by directory
+CORE_OBJS    = $(filter $(OBJ_DIR)/src/ast/% $(OBJ_DIR)/src/parser/% $(OBJ_DIR)/src/lexer/%, $(OBJS))
+ANALYSIS_OBJS = $(filter $(OBJ_DIR)/src/analysis/%, $(OBJS))
+CODEGEN_OBJS  = $(filter $(OBJ_DIR)/src/codegen/%, $(OBJS))
+MISRA_OBJS   = $(filter $(OBJ_DIR)/src/platform/misra%, $(OBJS))
+PLATFORM_OBJS = $(filter $(OBJ_DIR)/src/platform/os% $(OBJ_DIR)/src/platform/console% $(OBJ_DIR)/src/platform/dylib%, $(OBJS))
+UTILS_OBJS   = $(filter $(OBJ_DIR)/src/utils/%, $(OBJS))
+LSP_OBJS     = $(filter $(OBJ_DIR)/src/lsp/%, $(OBJS))
+REPL_OBJS    = $(filter $(OBJ_DIR)/src/repl/%, $(OBJS))
+ZEN_OBJS     = $(filter $(OBJ_DIR)/src/zen/%, $(OBJS))
+PLUGIN_OBJS  = $(filter $(OBJ_DIR)/src/plugins/%, $(OBJS))
+DIAG_OBJS    = $(filter $(OBJ_DIR)/src/diagnostics/%, $(OBJS))
+DRIVER_OBJS  = $(filter $(OBJ_DIR)/src/driver/%, $(OBJS))
+TRE_OBJS     = $(filter $(OBJ_DIR)/std/third-party/tre/%, $(OBJS))
+
+ALL_LIBS = libzc-core.a libzc-analysis.a libzc-codegen.a libzc-misra.a \
+           libzc-platform.a libzc-utils.a libzc-lsp.a libzc-repl.a \
+           libzc-zen.a libzc-plugin.a libzc-diag.a libzc-driver.a \
+           libzc-tre.a
+
+libzc-core.a: $(CORE_OBJS)
+	ar rcs $@ $^
+
+libzc-analysis.a: $(ANALYSIS_OBJS)
+	ar rcs $@ $^
+
+libzc-codegen.a: $(CODEGEN_OBJS)
+	ar rcs $@ $^
+
+libzc-misra.a: $(MISRA_OBJS)
+	ar rcs $@ $^
+
+libzc-platform.a: $(PLATFORM_OBJS)
+	ar rcs $@ $^
+
+libzc-utils.a: $(UTILS_OBJS)
+	ar rcs $@ $^
+
+libzc-lsp.a: $(LSP_OBJS)
+	ar rcs $@ $^
+
+libzc-repl.a: $(REPL_OBJS)
+	ar rcs $@ $^
+
+libzc-zen.a: $(ZEN_OBJS)
+	ar rcs $@ $^
+
+libzc-plugin.a: $(PLUGIN_OBJS)
+	ar rcs $@ $^
+
+libzc-diag.a: $(DIAG_OBJS)
+	ar rcs $@ $^
+
+libzc-driver.a: $(DRIVER_OBJS)
+	ar rcs $@ $^
+
+libzc-tre.a: $(TRE_OBJS)
+	ar rcs $@ $^
+
+# Default: library-based build (fast incremental)
+$(TARGET): $(ALL_LIBS) $(OBJ_DIR)/src/main.o
 	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
-	@echo "=> Build complete: $(TARGET)"
+	$(CC) $(CFLAGS) -o $@ $(OBJ_DIR)/src/main.o -Wl,--start-group $(ALL_LIBS) -Wl,--end-group $(LIBS)
+	@echo "=> Build complete: $(TARGET) (libraries)"
+
+# Monolithic build (single link, portable fallback for systems without .a support)
+monolith: $(OBJS)
+	@$(MKDIR) $(dir $@)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
+	@echo "=> Build complete: $(TARGET) (monolith)"
 
 # Compile
 $(OBJ_DIR)/%.o: %.c
@@ -330,7 +395,7 @@ uninstall-ape:
 
 # Clean
 clean:
-	$(RM) $(OBJ_DIR) obj-ape obj-fuzz obj-fuzz-cmplog $(TARGET) out.c out.cpp out.m out.cu plugins/*.so a.out* out test_out_* rule_*
+	$(RM) $(OBJ_DIR) obj-ape obj-fuzz obj-fuzz-cmplog $(TARGET) libzc-*.a out.c out.cpp out.m out.cu plugins/*.so a.out* out test_out_* rule_*
 	@echo "=> Clean complete!"
 
 # Code Formatting

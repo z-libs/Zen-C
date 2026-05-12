@@ -1,5 +1,6 @@
 #include "zen_doc.h"
 #include "../ast/ast.h"
+#include "../parser/parser.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -324,7 +325,7 @@ static void generate_docs_internal(struct ParserContext *ctx, ASTNode *node, int
 
         case NODE_IMPORT:
         {
-            if (g_config.recursive_doc)
+            if (ctx->config->recursive_doc)
             {
                 printf("\n---\n# Module: %s\n", node->import_stmt.path);
                 if (node->doc_comment)
@@ -353,7 +354,7 @@ void generate_docs(struct ParserContext *ctx, ASTNode *root)
         return;
     }
 
-    printf("# Module: %s\n", g_config.input_file ? g_config.input_file : "Unknown");
+    printf("# Module: %s\n", ctx->config->input_file ? ctx->config->input_file : "Unknown");
     if (root->doc_comment)
     {
         print_markdown_doc(root->doc_comment);

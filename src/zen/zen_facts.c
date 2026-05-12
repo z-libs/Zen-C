@@ -219,9 +219,9 @@ void zzen_at(Token t, const char *msg, const char *url)
     }
 }
 
-int zen_trigger_at(ZenTrigger t, Token location)
+int zen_trigger_at(ZenTrigger t, Token location, CompilerConfig *cfg)
 {
-    if (g_config.quiet || !g_config.zen_mode)
+    if (cfg->quiet || !cfg->zen_mode)
     {
         return 0;
     }
@@ -274,9 +274,9 @@ int zen_trigger_at(ZenTrigger t, Token location)
     return 1;
 }
 
-void zen_trigger_global(void)
+void zen_trigger_global(CompilerConfig *cfg)
 {
-    if (g_config.quiet || !g_config.zen_mode)
+    if (cfg->quiet || !cfg->zen_mode)
     {
         return;
     }

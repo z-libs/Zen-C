@@ -64,7 +64,12 @@ typedef struct
     int doc_count;
 
     int aborted; /**< Flag set if user hit Ctrl+C to abort line. */
+
+    /* Compiler configuration for JIT and subprocess calls */
+    struct CompilerConfig *config;
 } ReplState;
+
+typedef struct CompilerConfig CompilerConfig;
 
 typedef struct
 {
@@ -91,12 +96,12 @@ void repl_update_symbols(ReplState *state);
 void repl_extract_c_code(const char *filename);
 char *repl_generate_plot_code(const char *expr);
 char *repl_transpile(const char *zen_c_code);
-int repl_jit_execute(const char *c_code);
+int repl_jit_execute(const char *c_code, CompilerConfig *cfg);
 
 int repl_dispatch_command(ReplState *state, const char *cmd_buf);
 void repl_print_help(void);
 
-void repl_state_init(ReplState *state, const char *self_path);
+void repl_state_init(ReplState *state, const char *self_path, CompilerConfig *cfg);
 void repl_state_free(ReplState *state);
 void repl_save_history(ReplState *state);
 void repl_history_add(ReplState *state, const char *line);

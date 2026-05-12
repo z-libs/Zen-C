@@ -22,17 +22,19 @@ static const char *get_home(void)
     return h;
 }
 
-void repl_state_init(ReplState *state, const char *self_path)
+void repl_state_init(ReplState *state, const char *self_path, CompilerConfig *cfg)
 {
-    memset(state, 0, sizeof(ReplState));
-    state->self_path = self_path;
+    (void)self_path;
+    memset(state, 0, sizeof(*state));
     state->history_cap = 64;
     state->history = malloc(state->history_cap * sizeof(char *));
     state->history_len = 0;
 
+    state->config = cfg;
+
     /* Ensure codegen knows we are using TCC for JIT */
-    strncpy(g_config.cc, "tcc", sizeof(g_config.cc) - 1);
-    g_config.cc[sizeof(g_config.cc) - 1] = '\0';
+    strncpy(cfg->cc, "tcc", sizeof(cfg->cc) - 1);
+    cfg->cc[sizeof(cfg->cc) - 1] = '\0';
 
     const char *home = get_home();
     if (home)
@@ -151,7 +153,7 @@ static void repl_load_init_script(ReplState *state)
 void run_repl(const char *self_path, int argc, char **argv)
 {
     ReplState state;
-    repl_state_init(&state, self_path);
+    repl_state_init(&state, self_path, &g_compiler.config);
     repl_load_history(&state);
 
     char *cmd_to_run = NULL;
@@ -335,7 +337,7 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
         pctx.is_fault_tolerant = 1;
         pctx.on_error = repl_error_callback;
         Lexer l;
-        lexer_init(&l, check_buf);
+        lexer_init(&l, check_buf, &g_compiler.config);
         ASTNode *node = parse_statement(&pctx, &l);
         zfree(check_buf);
 
@@ -360,7 +362,7 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
     char *c_code = repl_transpile(full_code);
     if (c_code)
     {
-        if (repl_jit_execute(c_code) != 0)
+        if (repl_jit_execute(c_code, state->config) != 0)
         {
             zfree(state->history[--state->history_len]);
         }

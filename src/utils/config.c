@@ -46,7 +46,7 @@ static void append_to_whitelist(char ***whitelist_ptr, cJSON *items)
     (*whitelist_ptr)[current_count + added] = NULL;
 }
 
-static int load_config_file(const char *path)
+static int load_config_file(const char *path, CompilerConfig *cfg)
 {
     FILE *f = fopen(path, "rb");
     if (!f)
@@ -78,12 +78,12 @@ static int load_config_file(const char *path)
         cJSON *c_funcs = cJSON_GetObjectItemCaseSensitive(json, "c_functions");
         if (c_funcs)
         {
-            append_to_whitelist(&g_config.c_function_whitelist, c_funcs);
+            append_to_whitelist(&cfg->c_function_whitelist, c_funcs);
         }
         cJSON *c_types = cJSON_GetObjectItemCaseSensitive(json, "c_types");
         if (c_types)
         {
-            append_to_whitelist(&g_config.c_type_whitelist, c_types);
+            append_to_whitelist(&cfg->c_type_whitelist, c_types);
         }
         cJSON_Delete(json);
         return 1;
@@ -91,7 +91,7 @@ static int load_config_file(const char *path)
     return 0;
 }
 
-void load_all_configs(void)
+void load_all_configs(CompilerConfig *cfg)
 {
     // 1. System-wide config
     int loaded_system = 0;
@@ -100,7 +100,7 @@ void load_all_configs(void)
     {
         char path[MAX_PATH_LEN];
         snprintf(path, sizeof(path), "%s/zenc.json", root);
-        if (load_config_file(path))
+        if (load_config_file(path, cfg))
         {
             loaded_system = 1;
         }
@@ -111,13 +111,13 @@ void load_all_configs(void)
     {
         char system_path[MAX_PATH_LEN];
         snprintf(system_path, sizeof(system_path), "%s/zenc.json", ZEN_SHARE_DIR);
-        load_config_file(system_path);
+        load_config_file(system_path, cfg);
     }
 #endif
 
     // 2. Hidden project config
-    load_config_file(".zenc.json");
+    load_config_file(".zenc.json", cfg);
 
     // 3. Visible project config (legacy/override)
-    load_config_file("zenc.json");
+    load_config_file("zenc.json", cfg);
 }

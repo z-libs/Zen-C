@@ -3579,7 +3579,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                 if (sig->defaults[i])
                 {
                     Lexer def_l;
-                    lexer_init(&def_l, sig->defaults[i]);
+                    lexer_init(&def_l, sig->defaults[i], ctx->config);
                     ASTNode *def = parse_expression(ctx, &def_l);
                     Type *expected = sig->arg_types[i];
                     if (expected && expected->name && is_trait(expected->name))
@@ -5744,7 +5744,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 ASTNode *false_expr = parse_expr_prec(ctx, l, PREC_TERNARY); // Right associative
 
                 ASTNode *tern = ast_create(NODE_TERNARY);
-                zen_trigger_at(TRIGGER_TERNARY, lhs->token);
+                zen_trigger_at(TRIGGER_TERNARY, lhs->token, ctx->config);
 
                 tern->token = lhs->token;
                 tern->ternary.cond = lhs;
@@ -6831,11 +6831,11 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
         {
             if (is_token(op, "&") || is_token(op, "|") || is_token(op, "^"))
             {
-                zen_trigger_at(TRIGGER_BITWISE, op);
+                zen_trigger_at(TRIGGER_BITWISE, op, ctx->config);
             }
             else if (is_token(op, "<<") || is_token(op, ">>"))
             {
-                zen_trigger_at(TRIGGER_BITWISE, op);
+                zen_trigger_at(TRIGGER_BITWISE, op, ctx->config);
             }
         }
         bin->binary.left = lhs;

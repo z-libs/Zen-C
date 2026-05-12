@@ -21,7 +21,7 @@
 // Forward declarations for functions defined in other modules
 extern char *load_file(const char *fn);
 extern void init_builtins(void);
-extern void load_all_configs(void);
+extern void load_all_configs(CompilerConfig *cfg);
 extern void scan_build_directives(ParserContext *ctx, const char *src);
 extern void propagate_vector_inner_types(ParserContext *ctx);
 extern void propagate_drop_traits(ParserContext *ctx);
@@ -50,7 +50,7 @@ int driver_run(ZenCompiler *compiler)
     zptr_plugin_mgr_init();
 #endif
 
-    load_all_configs();
+    load_all_configs(&compiler->config);
 
     int result = driver_compile(compiler);
 
@@ -68,7 +68,7 @@ int driver_run(ZenCompiler *compiler)
         printf(COLOR_BOLD COLOR_CYAN "   Evaluating" COLOR_RESET " Zen facts...\n");
         fflush(stdout);
     }
-    zen_trigger_global();
+    zen_trigger_global(&compiler->config);
 
     return result;
 }
@@ -92,7 +92,7 @@ int driver_compile(ZenCompiler *compiler)
     scan_build_directives(&ctx, src);
 
     Lexer l;
-    lexer_init(&l, src);
+    lexer_init(&l, src, ctx.config);
 
     ctx.cg.hoist_out = z_tmpfile();
     if (!ctx.cg.hoist_out)
@@ -172,7 +172,7 @@ int driver_compile(ZenCompiler *compiler)
 
             scan_build_directives(&ctx, extra_src);
             Lexer extra_l;
-            lexer_init(&extra_l, extra_src);
+            lexer_init(&extra_l, extra_src, ctx.config);
             ASTNode *extra_root = parse_program_nodes(&ctx, &extra_l);
 
             if (extra_root)
@@ -323,7 +323,7 @@ int driver_compile(ZenCompiler *compiler)
                                                        : (z_is_windows() ? "a.exe" : "a.out");
     ArgList compile_args;
     arg_list_init(&compile_args);
-    build_compile_arg_list(&compile_args, outfile, temp_source_buf);
+    build_compile_arg_list(&compile_args, outfile, temp_source_buf, &compiler->config);
 
     if (compiler->config.verbose)
     {

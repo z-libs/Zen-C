@@ -17,7 +17,7 @@ static void tcc_error_handler(void *opaque, const char *msg)
     fprintf(stderr, "\033[1;31mtcc error:\033[0m %s\n", msg);
 }
 
-int repl_jit_execute(const char *c_code)
+int repl_jit_execute(const char *c_code, CompilerConfig *cfg)
 {
     TCCState *s = tcc_new();
     if (!s)
@@ -30,10 +30,10 @@ int repl_jit_execute(const char *c_code)
     tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
 
     /* Add standard include paths if available */
-    if (g_config.root_path)
+    if (cfg->root_path)
     {
         char path[MAX_PATH_LEN];
-        snprintf(path, sizeof(path), "%s/std/include", g_config.root_path);
+        snprintf(path, sizeof(path), "%s/std/include", cfg->root_path);
         tcc_add_include_path(s, path);
     }
 
@@ -60,8 +60,9 @@ int repl_jit_execute(const char *c_code)
     return 0;
 }
 #else
-int repl_jit_execute(const char *c_code)
+int repl_jit_execute(const char *c_code, CompilerConfig *cfg)
 {
+    (void)cfg;
     /* Fallback for systems without libtcc: write to tmp, compile and run */
     const char *tmp_c = ".repl_fallback.c";
     const char *tmp_exe = ".repl_fallback.exe";

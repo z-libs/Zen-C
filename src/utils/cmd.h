@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+typedef struct CompilerConfig CompilerConfig;
+
 typedef struct
 {
     char *buf;
@@ -54,7 +56,7 @@ const char *cmd_to_string(CmdBuilder *cmd);
 /**
  * @brief Print compiler library search paths
  */
-void print_search_paths();
+void print_search_paths(CompilerConfig *cfg);
 
 /**
  * @brief Print compiler version
@@ -108,6 +110,6 @@ int arg_run(ArgList *list);
  */
 void arg_list_add_from_string(ArgList *list, const char *str);
 
-void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp_source_file);
+void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp_source_file, CompilerConfig *cfg);
 
 #endif

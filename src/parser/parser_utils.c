@@ -211,7 +211,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
 {
     CompilerConfig *cfg = &ctx->compiler->config;
     Lexer l;
-    lexer_init(&l, content);
+    lexer_init(&l, content, ctx->config);
     l.emit_comments = 0;
 
     lexer_next(&l); // Skip start
@@ -228,7 +228,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
     }
 
     // Now lex the rest
-    lexer_init(&l, p);
+    lexer_init(&l, p, ctx->config);
 
     // Expect 'define'
     Token def = lexer_next(&l);
@@ -4476,7 +4476,7 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
 
         // Parse expression fully to handle default arguments etc.
         Lexer expr_lex;
-        lexer_init(&expr_lex, expr_str);
+        lexer_init(&expr_lex, expr_str, ctx->config);
         ASTNode *expr_node = parse_expression(ctx, &expr_lex);
 
         // Codegen expression to temporary buffer

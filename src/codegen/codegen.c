@@ -1104,7 +1104,7 @@ static void handle_plugin(ParserContext *ctx, ASTNode *node)
     if (found)
     {
         ZApi api;
-        zptr_init_api(&api, g_current_filename, node->line);
+        zptr_init_api(&api, g_current_filename, node->line, ctx->config);
         api.out = ctx->cg.emitter.file;
         api.hoist_out = ctx->cg.hoist_out;
         found->fn(node->plugin_stmt.body, &api);

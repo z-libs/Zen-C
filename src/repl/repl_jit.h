@@ -10,12 +10,14 @@
 #include <libtcc.h>
 #endif
 
+typedef struct CompilerConfig CompilerConfig;
+
 /**
  * @brief Executes C code in-process using LibTCC.
  *
  * @param c_code The C source code string to compile and run.
  * @return int 0 on success, non-zero on error.
  */
-int repl_jit_execute(const char *c_code);
+int repl_jit_execute(const char *c_code, CompilerConfig *cfg);
 
 #endif /* REPL_JIT_H */

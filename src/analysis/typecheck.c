@@ -1468,7 +1468,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         if (output[0])
         {
             Lexer out_l;
-            lexer_init(&out_l, output);
+            lexer_init(&out_l, output, tc->pctx->config);
             node->comptime.generated = parse_program_nodes(tc->pctx, &out_l);
 
             // Type-check generated nodes

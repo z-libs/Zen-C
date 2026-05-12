@@ -1426,7 +1426,7 @@ static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char *
         if (code)
         {
             Lexer tmp;
-            lexer_init(&tmp, code);
+            lexer_init(&tmp, code, ctx->config);
             ASTNode *impl = parse_impl(ctx, &tmp);
             if (impl)
             {

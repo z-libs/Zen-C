@@ -15,7 +15,7 @@ char *repl_transpile(const char *zen_c_code)
     ctx.on_error = repl_error_callback;
 
     Lexer lex;
-    lexer_init(&lex, zen_c_code);
+    lexer_init(&lex, zen_c_code, &g_compiler.config);
 
     ASTNode *root = parse_program(&ctx, &lex);
     if (!root)
@@ -91,7 +91,7 @@ void repl_error_callback(void *data, Token t, const char *msg)
 int is_definition_of(const char *code, const char *name)
 {
     Lexer l;
-    lexer_init(&l, code);
+    lexer_init(&l, code, &g_compiler.config);
     Token t = lexer_next(&l);
     int is_header = 0;
     if (t.type == TOK_UNION)
@@ -310,7 +310,7 @@ void repl_update_symbols(ReplState *state)
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
     Lexer lex;
-    lexer_init(&lex, code);
+    lexer_init(&lex, code, &g_compiler.config);
     ASTNode *nodes = parse_program(&ctx, &lex);
     ASTNode *search = (nodes && nodes->type == NODE_ROOT) ? nodes->root.children : nodes;
     for (ASTNode *n = search; n; n = n->next)

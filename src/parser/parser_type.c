@@ -37,7 +37,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         {
             zfree(name);
             Lexer tmp;
-            lexer_init(&tmp, alias_node->original_type);
+            lexer_init(&tmp, alias_node->original_type, ctx->config);
 
             if (alias_node->is_opaque)
             {

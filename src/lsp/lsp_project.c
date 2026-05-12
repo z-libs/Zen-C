@@ -49,22 +49,24 @@ void lsp_project_init(const char *root_path)
     void lsp_default_on_error(void *data, Token t, const char *msg);
     g_project->ctx->on_error = lsp_default_on_error;
 
+    CompilerConfig *cfg = &g_project->ctx->compiler->config;
+
     // Add root path and std/ to include paths to resolve 'std.zc' etc.
     // Ensure we don't overflow the include_paths array (limit is 64)
-    zvec_push_Str(&g_config.include_paths, xstrdup(root_path));
+    zvec_push_Str(&cfg->include_paths, xstrdup(root_path));
 
     // In LSP mode, the workspace root should also be considered the root path for stdlib
     // resolution
     if (root_path)
     {
-        g_config.root_path = xstrdup(root_path);
+        cfg->root_path = xstrdup(root_path);
     }
 
-    if (g_config.root_path)
+    if (cfg->root_path)
     {
         char std_path[MAX_PATH_LEN];
-        snprintf(std_path, sizeof(std_path), "%s/std", g_config.root_path);
-        zvec_push_Str(&g_config.include_paths, xstrdup(std_path));
+        snprintf(std_path, sizeof(std_path), "%s/std", cfg->root_path);
+        zvec_push_Str(&cfg->include_paths, xstrdup(std_path));
     }
 }
 
@@ -239,7 +241,7 @@ void lsp_project_update_file(const char *uri, const char *src)
     g_current_filename = pf->path;
 
     Lexer l;
-    lexer_init(&l, src);
+    lexer_init(&l, src, g_project->ctx->config);
 
     // Reset parser context globals only for fresh manual updates.
     // During workspace indexing, we want to accumulate definitions.

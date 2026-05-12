@@ -3,6 +3,8 @@
 
 #include "../../plugins/zprep_plugin.h"
 
+typedef struct CompilerConfig CompilerConfig;
+
 // Initialize the plugin system.
 /**
  * @brief Initialize the plugin system.
@@ -33,7 +35,7 @@ ZPlugin *zptr_find_plugin(const char *name);
 /**
  * @brief Initialize a ZApi structure with host-provided context.
  */
-void zptr_init_api(ZApi *api, const char *filename, int line);
+void zptr_init_api(ZApi *api, const char *filename, int line, CompilerConfig *cfg);
 
 /**
  * @brief Cleanup the plugin system and free resources.

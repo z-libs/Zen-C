@@ -162,7 +162,7 @@ char *z_realpath_arena(const char *path)
     return xstrdup(path);
 }
 
-char *z_resolve_path(const char *fn, const char *relative_to)
+char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cfg)
 {
     if (!fn)
     {
@@ -206,9 +206,9 @@ char *z_resolve_path(const char *fn, const char *relative_to)
     }
 
     // 4. Include paths (-I)
-    for (size_t i = 0; i < g_config.include_paths.length; i++)
+    for (size_t i = 0; i < cfg->include_paths.length; i++)
     {
-        snprintf(path, sizeof(path), "%s/%s", g_config.include_paths.data[i], fn);
+        snprintf(path, sizeof(path), "%s/%s", cfg->include_paths.data[i], fn);
         if (access(path, R_OK) == 0)
         {
             return z_realpath_arena(path);
@@ -216,17 +216,17 @@ char *z_resolve_path(const char *fn, const char *relative_to)
     }
 
     // 5. Root path (ZC_ROOT)
-    if (g_config.root_path)
+    if (cfg->root_path)
     {
         // Try with std/ prefix (for stdlib modules like "slice.zc")
-        snprintf(path, sizeof(path), "%s/std/%s", g_config.root_path, fn);
+        snprintf(path, sizeof(path), "%s/std/%s", cfg->root_path, fn);
         if (access(path, R_OK) == 0)
         {
             return z_realpath_arena(path);
         }
 
         // Try as-is relative to root_path
-        snprintf(path, sizeof(path), "%s/%s", g_config.root_path, fn);
+        snprintf(path, sizeof(path), "%s/%s", cfg->root_path, fn);
         if (access(path, R_OK) == 0)
         {
             return z_realpath_arena(path);
@@ -263,7 +263,7 @@ char *z_resolve_path(const char *fn, const char *relative_to)
 
 char *load_file(const char *fn)
 {
-    char *resolved = z_resolve_path(fn, g_current_filename);
+    char *resolved = z_resolve_path(fn, g_current_filename, &g_compiler.config);
     if (!resolved)
     {
         return NULL;
@@ -634,7 +634,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                     {
                         *eq = '\0';
                     }
-                    zvec_push_Str(&g_config.cfg_defines, name);
+                    zvec_push_Str(&ctx->config->cfg_defines, name);
                 }
             }
             else if (0 == strncmp(directive, "shell:", 6))

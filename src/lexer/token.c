@@ -3,13 +3,14 @@
 
 extern char *g_current_filename;
 
-void lexer_init(Lexer *l, const char *src)
+void lexer_init(Lexer *l, const char *src, CompilerConfig *cfg)
 {
     l->src = src;
     l->pos = 0;
     l->line = 1;
     l->col = 1;
     l->emit_comments = 0;
+    l->config = cfg;
 }
 
 static int is_ident_start(char c)
@@ -139,7 +140,7 @@ Token lexer_next(Lexer *l)
         int len = 2;
         while (s[len] && s[len] != '\n')
         {
-            if (g_config.misra_mode)
+            if (l->config->misra_mode)
             {
                 if ((s[len] == '/' && s[len + 1] == '/') || (s[len] == '/' && s[len + 1] == '*'))
                 {
@@ -173,7 +174,7 @@ Token lexer_next(Lexer *l)
 
         while (s[0])
         {
-            if (g_config.misra_mode)
+            if (l->config->misra_mode)
             {
                 // Check for nested /* or //
                 if ((s[0] == '/' && s[1] == '*') || (s[0] == '/' && s[1] == '/'))
@@ -391,7 +392,7 @@ Token lexer_next(Lexer *l)
         }
         else
         {
-            if (s[0] == '0' && isdigit(s[1]) && g_config.misra_mode)
+            if (s[0] == '0' && isdigit(s[1]) && l->config->misra_mode)
             {
                 // Rule 7.1: Octal constants shall not be used (and leading zeros are disallowed).
                 zerror_at((Token){TOK_INT, s, 2, start_line, start_col, g_current_filename},

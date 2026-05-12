@@ -29,7 +29,7 @@ static void auto_import_std_mem(ParserContext *ctx)
     }
 
     // Resolve path to std/mem.zc
-    char *resolved = z_resolve_path("std/mem.zc", g_current_filename);
+    char *resolved = z_resolve_path("std/mem.zc", g_current_filename, ctx->config);
     if (!resolved)
     {
         return; // Could not find mem.zc
@@ -52,7 +52,7 @@ static void auto_import_std_mem(ParserContext *ctx)
     }
 
     Lexer i;
-    lexer_init(&i, src);
+    lexer_init(&i, src, ctx->config);
 
     // Save and restore filename context
     char *saved_fn = g_current_filename;
