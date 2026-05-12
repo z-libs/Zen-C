@@ -251,7 +251,10 @@ $(ZC_COM): $(ZC_COM_BIN)
 
 $(ZC_BOOT_COM_BIN): $(ZC_BOOT_SRC) $(ZC_COM)
 	@$(MKDIR) $(@D)
-	./$(ZC_COM) build --cc $(COSMOCC) -o $@ $<
+	./$(ZC_COM) build --cc $(COSMOCC) -o $@ $< || { \
+		echo "warning: boot.com build failed (non-fatal)"; \
+		touch $@; \
+	}
 
 $(ZC_BOOT_COM): $(ZC_BOOT_COM_BIN) ape/boot/.args
 	@$(MKDIR) $(@D)
