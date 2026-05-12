@@ -1,11 +1,12 @@
 #ifndef MOVE_CHECK_H
 #define MOVE_CHECK_H
 
-#include "../parser/parser.h"
-#include "typecheck.h"
+#include "ast/ast.h"
+#include "ast/symbols.h"
+#include "token.h"
 
-// Forward declaration
-struct TypeChecker;
+typedef struct ParserContext ParserContext;
+typedef struct TypeChecker TypeChecker;
 
 /**
  * @brief Status of a moved variable in a specific flow path.

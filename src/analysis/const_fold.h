@@ -2,7 +2,8 @@
 #define CONST_FOLD_H
 
 #include "ast/ast.h"
-#include "parser/parser.h"
+
+typedef struct ParserContext ParserContext;
 
 // Evaluates a constant integer expression.
 // Returns 1 if successful and sets *out_val.

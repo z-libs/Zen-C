@@ -1,5 +1,7 @@
 #include "../constants.h"
 #include "analysis/const_fold.h"
+#include "../parser/parser.h"
+#include "../ast/symbols.h"
 #include <string.h>
 #include <stdio.h>
 

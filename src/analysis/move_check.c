@@ -1,5 +1,7 @@
 #include "../constants.h"
 #include "move_check.h"
+#include "../parser/parser.h"
+#include "typecheck.h"
 #include "../diagnostics/diagnostics.h"
 #include <stdio.h>
 #include <string.h>

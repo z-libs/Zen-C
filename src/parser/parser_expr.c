@@ -1,5 +1,4 @@
 #include "parser.h"
-#include "../codegen/codegen.h"
 
 // Returns 1 if the token can serve as a field/method name in member access.
 // Accepts TOK_IDENT (normal names), TOK_INT (tuple access like .0),

@@ -11,7 +11,6 @@
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
-#include "../codegen/codegen.h"
 
 extern char *g_current_filename;
 

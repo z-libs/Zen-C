@@ -1,3 +1,4 @@
+#include "../parser/parser.h"
 
 #include "codegen.h"
 #include "zprep.h"

@@ -8,15 +8,18 @@
 #include <unistd.h>
 
 #include "../ast/ast.h"
+#include "../utils/format_expr.h"
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
-#include "../codegen/codegen.h"
 #include "analysis/move_check.h"
 
 char *curr_func_ret = NULL;
 ASTNode *parse_expect(ParserContext *ctx, Lexer *l);
 extern char *g_current_filename;
+
+// Forward declaration from codegen module
+char *infer_type(ParserContext *ctx, ASTNode *node);
 
 /**
  * @brief Auto-imports std/slice.zc if not already imported.
@@ -2420,11 +2423,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         // Always codegen the base expression first
         if (expr_node)
         {
-            emitter_push(&ctx->cg.emitter);
-            emitter_init_buffer(&ctx->cg.emitter);
-            codegen_expression(ctx, expr_node);
-            char *expr_buf = emitter_take_string(&ctx->cg.emitter);
-            emitter_pop(&ctx->cg.emitter);
+            char *expr_buf = format_expression_as_c(ctx, expr_node);
             if (expr_buf)
             {
                 rw_expr = expr_buf;

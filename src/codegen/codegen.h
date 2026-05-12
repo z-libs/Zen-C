@@ -3,10 +3,11 @@
 #define CODEGEN_H
 
 #include "../ast/ast.h"
-#include "../parser/parser.h"
-#include "../zprep.h"
+#include "../token.h"
 #include <stdio.h>
 #include "../utils/emitter.h"
+
+typedef struct ParserContext ParserContext;
 
 #define EMIT(ctx, ...) emitter_printf(&(ctx)->cg.emitter, ##__VA_ARGS__)
 

@@ -12,7 +12,6 @@
 #include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
-#include "../codegen/codegen.h"
 #include "analysis/move_check.h"
 
 ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_extern,

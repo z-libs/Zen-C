@@ -1,6 +1,6 @@
-#include "../codegen/codegen.h"
 #include "../plugins/plugin_manager.h"
 #include "parser.h"
+#include "../utils/format_expr.h"
 #include "platform/misra.h"
 #include "../constants.h"
 #include "../ast/primitives.h"
@@ -4480,14 +4480,7 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
         ASTNode *expr_node = parse_expression(ctx, &expr_lex);
 
         // Codegen expression to temporary buffer
-        char *code_buffer = NULL;
-        {
-            emitter_push(&ctx->cg.emitter);
-            emitter_init_buffer(&ctx->cg.emitter);
-            codegen_expression(ctx, expr_node);
-            code_buffer = emitter_take_string(&ctx->cg.emitter);
-            emitter_pop(&ctx->cg.emitter);
-        }
+        char *code_buffer = format_expression_as_c(ctx, expr_node);
 
         if (fmt)
         {
