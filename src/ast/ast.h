@@ -208,6 +208,23 @@ typedef struct Attribute
     struct Attribute *next;
 } Attribute;
 
+// Save and undefine C standard macros that conflict with struct member names.
+// TCC expands these in struct context, GCC does not.
+#ifdef va_start
+#define _ZC_SAVED_va_start
+#undef va_start
+#endif
+
+#ifdef va_end
+#define _ZC_SAVED_va_end
+#undef va_end
+#endif
+
+#ifdef va_copy
+#define _ZC_SAVED_va_copy
+#undef va_copy
+#endif
+
 struct ASTNode
 {
     NodeType type;
@@ -729,6 +746,23 @@ struct ASTNode
         } comptime;
     };
 };
+
+// Restore C standard macros that were saved before the struct.
+#ifdef _ZC_SAVED_va_start
+#ifndef va_start
+#define va_start(v, l) __builtin_va_start(v, l)
+#endif
+#endif
+#ifdef _ZC_SAVED_va_end
+#ifndef va_end
+#define va_end(v) __builtin_va_end(v)
+#endif
+#endif
+#ifdef _ZC_SAVED_va_copy
+#ifndef va_copy
+#define va_copy(d, s) __builtin_va_copy(d, s)
+#endif
+#endif
 
 // ** Functions **
 ASTNode *ast_create(NodeType type);
