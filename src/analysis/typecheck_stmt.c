@@ -12,7 +12,7 @@ void check_block(TypeChecker *tc, ASTNode *block, int depth)
         // Warn if we see code after a terminating statement
         if (seen_terminator && stmt->type != NODE_LABEL)
         {
-            const char *rule = g_config.misra_mode ? "MISRA Rule 2.1: " : "";
+            const char *rule = tc->pctx->config->misra_mode ? "MISRA Rule 2.1: " : "";
             const char *hints[] = {"Remove unreachable code or restructure control flow", NULL};
             char msg[256];
             snprintf(msg, sizeof(msg), "%sUnreachable code detected", rule);
@@ -20,7 +20,7 @@ void check_block(TypeChecker *tc, ASTNode *block, int depth)
             seen_terminator = 0; // Only warn once per block
         }
 
-        if (g_config.misra_mode)
+        if (tc->pctx->config->misra_mode)
         {
             // Rule 2.2: There shall be no dead code (expressions with no effect)
             // We ignore call expressions here as they are handled by Rule 17.7
@@ -97,7 +97,7 @@ void check_var_decl(TypeChecker *tc, ASTNode *node, int depth)
                                          node->var_decl.init_expr, 0);
             }
 
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 misra_check_pointer_conversion(tc, decl_type, init_type, node->token);
 
@@ -147,7 +147,7 @@ void check_var_decl(TypeChecker *tc, ASTNode *node, int depth)
         mark_symbol_valid(tc->pctx, new_sym, node);
     }
 
-    if (g_config.misra_mode && t && t->kind == TYPE_ARRAY)
+    if (tc->pctx->config->misra_mode && t && t->kind == TYPE_ARRAY)
     {
         // Rule 8.11: Array with external linkage shall have explicit size
         ZenSymbol *existing = tc_lookup(tc, node->var_decl.name);
@@ -313,7 +313,7 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
             misra_check_pointer_nesting(tc, param_type, node->token);
             misra_check_reserved_identifier(tc, node->func.param_names[i], node->token);
             tc_add_symbol(tc, node->func.param_names[i], param_type, node->token,
-                          g_config.misra_mode);
+                          tc->pctx->config->misra_mode);
         }
     }
 
@@ -363,7 +363,7 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
     tc->pctx->move_state = prev_move_state;
 
     // MISRA audits before leaving function scope
-    if (g_config.misra_mode && tc->pctx->current_scope)
+    if (tc->pctx->config->misra_mode && tc->pctx->current_scope)
     {
         for (int i = 0; i < node->func.arg_count; i++)
         {
@@ -394,7 +394,7 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
     }
 
     // MISRA Rule 15.5: A function shall have a single point of exit at the end.
-    if (g_config.misra_mode && tc->func_return_count > 1)
+    if (tc->pctx->config->misra_mode && tc->func_return_count > 1)
     {
         char msg[MAX_ERROR_MSG_LEN];
         snprintf(msg, sizeof(msg),
@@ -498,7 +498,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
         if (node->while_stmt.condition && node->while_stmt.condition->type_info)
         {
             Type *cond_type = resolve_alias(node->while_stmt.condition->type_info);
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 if (cond_type->kind != TYPE_BOOL)
                 {
@@ -541,7 +541,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
         if (node->for_stmt.condition && node->for_stmt.condition->type_info)
         {
             Type *cond_type = resolve_alias(node->for_stmt.condition->type_info);
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 if (cond_type->kind != TYPE_BOOL)
                 {
@@ -565,7 +565,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
         check_node(tc, node->for_stmt.body, depth + 1);
         check_node(tc, node->for_stmt.step, depth + 1); // step happens after body
 
-        if (g_config.misra_mode && node->for_stmt.step)
+        if (tc->pctx->config->misra_mode && node->for_stmt.step)
         {
             if (node->for_stmt.step->type == NODE_EXPR_BINARY)
             {
@@ -614,7 +614,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
         if (node->do_while_stmt.condition && node->do_while_stmt.condition->type_info)
         {
             Type *cond_type = resolve_alias(node->do_while_stmt.condition->type_info);
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 if (cond_type->kind != TYPE_BOOL)
                 {

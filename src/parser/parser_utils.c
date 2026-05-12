@@ -820,7 +820,7 @@ void skip_comments(Lexer *l)
     while (lexer_peek(l).type == TOK_COMMENT)
     {
         Token tk = lexer_next(l);
-        if (g_config.keep_comments && g_parser_ctx)
+        if (g_parser_ctx->config->keep_comments)
         {
             if (g_parser_ctx->last_doc_comment)
             {
@@ -995,7 +995,7 @@ void add_symbol_with_token(ParserContext *ctx, const char *n, const char *t, Typ
     }
 
     // In LSP/MISRA mode, check for existing symbol in the current scope to avoid duplicates
-    if (g_config.mode_lsp || g_config.misra_mode)
+    if (ctx->config->mode_lsp || ctx->config->misra_mode)
     {
         ZenSymbol *existing = symbol_lookup_local(ctx->current_scope, n);
         if (existing)
@@ -1090,7 +1090,7 @@ void register_func(ParserContext *ctx, Scope *scope, const char *name, int count
                    const char *link_name, Token decl_token, int is_export)
 {
     // In LSP/MISRA mode, check for existing function in the registry to avoid duplicates
-    if (g_config.mode_lsp || g_config.misra_mode)
+    if (ctx->config->mode_lsp || ctx->config->misra_mode)
     {
         FuncSig *existing = find_func(ctx, name);
         if (existing)
@@ -1108,7 +1108,7 @@ void register_func(ParserContext *ctx, Scope *scope, const char *name, int count
     }
 
     FuncSig *f = NULL;
-    if (g_config.mode_lsp || g_config.misra_mode)
+    if (ctx->config->mode_lsp || ctx->config->misra_mode)
     {
         f = find_func(ctx, name);
     }
@@ -1312,7 +1312,7 @@ void register_type_alias(ParserContext *ctx, const char *alias, const char *orig
                          int is_export)
 {
     // In LSP mode, check for existing type alias to avoid duplicates
-    if (g_config.mode_lsp)
+    if (ctx->config->mode_lsp)
     {
         TypeAlias *existing = find_type_alias_node(ctx, alias);
         if (existing)
@@ -1326,7 +1326,7 @@ void register_type_alias(ParserContext *ctx, const char *alias, const char *orig
     }
 
     TypeAlias *ta = NULL;
-    if (g_config.mode_lsp)
+    if (ctx->config->mode_lsp)
     {
         ta = find_type_alias_node(ctx, alias);
     }
@@ -1577,7 +1577,7 @@ void add_instantiated_func(ParserContext *ctx, ASTNode *fn)
 void register_enum_variant(ParserContext *ctx, const char *vname, const char *ename, int tag)
 {
     // In LSP mode, check for existing variant to avoid duplicates
-    if (g_config.mode_lsp)
+    if (ctx->config->mode_lsp)
     {
         EnumVariantReg *existing = find_enum_variant(ctx, vname);
         if (existing)
@@ -1848,7 +1848,7 @@ void register_tuple(ParserContext *ctx, const char *sig)
 void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node)
 {
     // In LSP mode, check for existing struct def to avoid duplicates
-    if (g_config.mode_lsp)
+    if (ctx->config->mode_lsp)
     {
         StructDef *existing = NULL;
         StructDef *curr = ctx->struct_defs;
@@ -1869,7 +1869,7 @@ void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node)
     }
 
     StructDef *d = NULL;
-    if (g_config.mode_lsp)
+    if (ctx->config->mode_lsp)
     {
         StructDef *curr = ctx->struct_defs;
         while (curr)
@@ -1894,7 +1894,7 @@ void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node)
     d->node = node;
 
     // MISRA Rule 5.7: Tag name shall be a unique identifier
-    if (g_config.misra_mode)
+    if (ctx->config->misra_mode)
     {
         ZenSymbol *all = ctx->all_symbols;
         while (all)
@@ -6298,7 +6298,7 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
     {
         zerror_at((Token){0}, "Could not load plugin '%s' (tried built-ins and dynamic loading)",
                   name);
-        if (g_config.mode_lsp)
+        if (ctx->config->mode_lsp)
         {
             // Register alias anyway to avoid redundant "Unknown plugin" noise
             ImportedPlugin *p = xmalloc(sizeof(ImportedPlugin));
@@ -6370,9 +6370,9 @@ int validate_types(ParserContext *ctx)
                     {
                         // Check dynamic whitelist from zenc.json
                         int whitelisted = 0;
-                        if (g_config.c_type_whitelist)
+                        if (ctx->config->c_type_whitelist)
                         {
-                            char **ptr = g_config.c_type_whitelist;
+                            char **ptr = ctx->config->c_type_whitelist;
                             while (*ptr)
                             {
                                 if (strcmp(u->name, *ptr) == 0)
@@ -6390,7 +6390,7 @@ int validate_types(ParserContext *ctx)
                             continue;
                         }
 
-                        if (!g_config.mode_lsp && !g_config.mode_doc)
+                        if (!ctx->config->mode_lsp && !ctx->config->mode_doc)
                         {
                             char msg[MAX_SHORT_MSG_LEN];
                             snprintf(msg, sizeof(msg),
@@ -6702,7 +6702,7 @@ static void audit_section_5(ParserContext *ctx, Scope *scope, const char *name,
     }
 
     // Rule 5.10: Identifier shall not have same name as a standard macro
-    if (g_config.misra_mode)
+    if (ctx->config->misra_mode)
     {
         misra_check_standard_macro_name(tok, name);
     }
@@ -6718,7 +6718,7 @@ static void audit_section_5(ParserContext *ctx, Scope *scope, const char *name,
             // Rule 5.3: Shadowing
             if (p != scope && strcmp(sh->name, name) == 0 && !ctx->silent_warnings)
             {
-                if (g_config.misra_mode)
+                if (ctx->config->misra_mode)
                 {
                     zerror_at(tok, "MISRA Rule 5.3");
                 }
@@ -6729,7 +6729,7 @@ static void audit_section_5(ParserContext *ctx, Scope *scope, const char *name,
             }
 
             // Rules 5.1/5.2: Distinctness
-            if (g_config.misra_mode)
+            if (ctx->config->misra_mode)
             {
                 const char *actual_name = link_name ? link_name : name;
                 const char *sh_actual_name = sh->link_name ? sh->link_name : sh->name;

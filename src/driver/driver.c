@@ -78,6 +78,7 @@ int driver_compile(ZenCompiler *compiler)
     ParserContext ctx;
     memset(&ctx, 0, sizeof(ctx));
     ctx.compiler = compiler;
+    ctx.config = &compiler->config;
     g_parser_ctx = &ctx;
 
     char *src = load_file(compiler->config.input_file);

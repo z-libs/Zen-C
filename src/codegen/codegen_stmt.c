@@ -582,7 +582,7 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, int use_result)
 
     if (is_expr)
     {
-        if (g_config.misra_mode && !has_wildcard)
+        if (ctx->config->misra_mode && !has_wildcard)
         {
             EMIT(ctx, " else { } /* MISRA 15.7 */ ");
         }
@@ -590,7 +590,7 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, int use_result)
     }
     else
     {
-        if (g_config.misra_mode && !has_wildcard)
+        if (ctx->config->misra_mode && !has_wildcard)
         {
             EMIT(ctx, " else { } /* MISRA 15.7 */ ");
         }
@@ -1031,7 +1031,7 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
     emit_func_signature(ctx, node, NULL);
     EMIT(ctx, "\n{\n");
     emitter_indent(&ctx->cg.emitter);
-    if (g_config.misra_mode && node->func.ret_type && strcmp(node->func.ret_type, "void") != 0)
+    if (ctx->config->misra_mode && node->func.ret_type && strcmp(node->func.ret_type, "void") != 0)
     {
         char *safe_ret_type = type_to_c_string(node->func.ret_type_info);
         EMIT(ctx, "%s _misra_ret = 0;\n", safe_ret_type);
@@ -1136,7 +1136,7 @@ static void handle_node_function(ParserContext *ctx, ASTNode *node)
     ctx->cg.current_func_ret_type_info = prev_ret_info;
     ctx->self_is_pointer = prev_self_is_ptr;
 
-    if (g_config.misra_mode)
+    if (ctx->config->misra_mode)
     {
         EMIT(ctx, "goto _misra_end_of_func;\n");
         EMIT(ctx, "_misra_end_of_func:\n");
@@ -1234,7 +1234,7 @@ static void handle_node_destruct_var(ParserContext *ctx, ASTNode *node)
         EMIT(ctx, "}\n");
 
         emit_source_mapping_duplicate(ctx, node);
-        if (z_path_match_compiler(g_config.cc, "tcc"))
+        if (z_path_match_compiler(ctx->config->cc, "tcc"))
         {
             EMIT(ctx, "__typeof__(_tmp_%d.%s) %s = _tmp_%d.%s;\n", id, check,
                  node->destruct.names[0], id, check);
@@ -1253,7 +1253,7 @@ static void handle_node_destruct_var(ParserContext *ctx, ASTNode *node)
             {
                 char *field = node->destruct.field_names ? node->destruct.field_names[i]
                                                          : node->destruct.names[i];
-                if (z_path_match_compiler(g_config.cc, "tcc"))
+                if (z_path_match_compiler(ctx->config->cc, "tcc"))
                 {
                     EMIT(ctx, "__typeof__(_tmp_%d.%s) %s = _tmp_%d.%s;\n", id, field,
                          node->destruct.names[i], id, field);
@@ -1271,7 +1271,7 @@ static void handle_node_destruct_var(ParserContext *ctx, ASTNode *node)
                     EMIT(ctx, "%s %s = _tmp_%d.v%d;\n", explicit_type, node->destruct.names[i], id,
                          i);
                 }
-                else if (z_path_match_compiler(g_config.cc, "tcc"))
+                else if (z_path_match_compiler(ctx->config->cc, "tcc"))
                 {
                     EMIT(ctx, "__typeof__(_tmp_%d.v%d) %s = _tmp_%d.v%d;\n", id, i,
                          node->destruct.names[i], id, i);
@@ -1381,7 +1381,7 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
             if (node->var_decl.init_expr)
             {
                 EMIT(ctx, " = ");
-                if (g_config.use_cpp && node->type_info &&
+                if (ctx->config->use_cpp && node->type_info &&
                     (node->type_info->kind == TYPE_POINTER || node->type_info->kind == TYPE_ENUM))
                 {
                     char *ct = type_to_c_string(node->type_info);
@@ -1400,7 +1400,7 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
                 TypeKind k = node->type_info->kind;
                 if (k == TYPE_ARRAY || k == TYPE_STRUCT)
                 {
-                    EMIT(ctx, " = %s", g_config.use_cpp ? "{}" : "{0}");
+                    EMIT(ctx, " = %s", ctx->config->use_cpp ? "{}" : "{0}");
                 }
                 else if (is_int_type(k))
                 {
@@ -1486,7 +1486,7 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
                 emit_var_decl_type(ctx, inferred, node->var_decl.name);
                 add_symbol(ctx, node->var_decl.name, inferred, NULL, 0);
                 EMIT(ctx, " = ");
-                if (g_config.use_cpp && inferred &&
+                if (ctx->config->use_cpp && inferred &&
                     (strchr(inferred, '*') || is_enum_type_name(ctx, inferred)))
                 {
                     EMIT(ctx, "(%s)(", inferred);
@@ -1565,13 +1565,13 @@ static void handle_node_if(ParserContext *ctx, ASTNode *node)
     EMIT(ctx, "if (");
     codegen_expression(ctx, node->if_stmt.condition);
     EMIT(ctx, ") ");
-    if (g_config.misra_mode && node->if_stmt.then_body->type != NODE_BLOCK)
+    if (ctx->config->misra_mode && node->if_stmt.then_body->type != NODE_BLOCK)
     {
         EMIT(ctx, "{\n");
         emitter_indent(&ctx->cg.emitter);
     }
     codegen_node_single(ctx, node->if_stmt.then_body);
-    if (g_config.misra_mode && node->if_stmt.then_body->type != NODE_BLOCK)
+    if (ctx->config->misra_mode && node->if_stmt.then_body->type != NODE_BLOCK)
     {
         emitter_dedent(&ctx->cg.emitter);
         EMIT(ctx, "\n}");
@@ -1580,19 +1580,19 @@ static void handle_node_if(ParserContext *ctx, ASTNode *node)
     {
         emit_source_mapping(ctx, node->if_stmt.else_body);
         EMIT(ctx, " else ");
-        if (g_config.misra_mode && node->if_stmt.else_body->type != NODE_BLOCK)
+        if (ctx->config->misra_mode && node->if_stmt.else_body->type != NODE_BLOCK)
         {
             EMIT(ctx, "{\n");
             emitter_indent(&ctx->cg.emitter);
         }
         codegen_node_single(ctx, node->if_stmt.else_body);
-        if (g_config.misra_mode && node->if_stmt.else_body->type != NODE_BLOCK)
+        if (ctx->config->misra_mode && node->if_stmt.else_body->type != NODE_BLOCK)
         {
             emitter_dedent(&ctx->cg.emitter);
             EMIT(ctx, "\n}");
         }
     }
-    else if (g_config.misra_mode)
+    else if (ctx->config->misra_mode)
     {
         EMIT(ctx, " else { } /* MISRA */ ");
     }
@@ -1603,13 +1603,13 @@ static void handle_node_unless(ParserContext *ctx, ASTNode *node)
     EMIT(ctx, "if (!(");
     codegen_expression(ctx, node->unless_stmt.condition);
     EMIT(ctx, ")) ");
-    if (g_config.misra_mode && node->unless_stmt.body->type != NODE_BLOCK)
+    if (ctx->config->misra_mode && node->unless_stmt.body->type != NODE_BLOCK)
     {
         EMIT(ctx, "{\n");
         emitter_indent(&ctx->cg.emitter);
     }
     codegen_node_single(ctx, node->unless_stmt.body);
-    if (g_config.misra_mode && node->unless_stmt.body->type != NODE_BLOCK)
+    if (ctx->config->misra_mode && node->unless_stmt.body->type != NODE_BLOCK)
     {
         emitter_dedent(&ctx->cg.emitter);
         EMIT(ctx, "\n}");
@@ -1621,13 +1621,13 @@ static void handle_node_guard(ParserContext *ctx, ASTNode *node)
     EMIT(ctx, "if (!(");
     codegen_expression(ctx, node->guard_stmt.condition);
     EMIT(ctx, ")) ");
-    if (g_config.misra_mode && node->guard_stmt.body->type != NODE_BLOCK)
+    if (ctx->config->misra_mode && node->guard_stmt.body->type != NODE_BLOCK)
     {
         EMIT(ctx, "{\n");
         emitter_indent(&ctx->cg.emitter);
     }
     codegen_node_single(ctx, node->guard_stmt.body);
-    if (g_config.misra_mode && node->guard_stmt.body->type != NODE_BLOCK)
+    if (ctx->config->misra_mode && node->guard_stmt.body->type != NODE_BLOCK)
     {
         emitter_dedent(&ctx->cg.emitter);
         EMIT(ctx, "\n}");
@@ -1655,13 +1655,13 @@ static void handle_node_while(ParserContext *ctx, ASTNode *node)
     }
     else
     {
-        if (g_config.misra_mode && node->while_stmt.body->type != NODE_BLOCK)
+        if (ctx->config->misra_mode && node->while_stmt.body->type != NODE_BLOCK)
         {
             EMIT(ctx, "{\n");
             emitter_indent(&ctx->cg.emitter);
         }
         codegen_node_single(ctx, node->while_stmt.body);
-        if (g_config.misra_mode && node->while_stmt.body->type != NODE_BLOCK)
+        if (ctx->config->misra_mode && node->while_stmt.body->type != NODE_BLOCK)
         {
             emitter_dedent(&ctx->cg.emitter);
             EMIT(ctx, "\n}");
@@ -1764,13 +1764,13 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         }
         else
         {
-            if (g_config.misra_mode && node->for_stmt.body->type != NODE_BLOCK)
+            if (ctx->config->misra_mode && node->for_stmt.body->type != NODE_BLOCK)
             {
                 EMIT(ctx, "{\n");
                 emitter_indent(&ctx->cg.emitter);
             }
             codegen_node_single(ctx, node->for_stmt.body);
-            if (g_config.misra_mode && node->for_stmt.body->type != NODE_BLOCK)
+            if (ctx->config->misra_mode && node->for_stmt.body->type != NODE_BLOCK)
             {
                 emitter_dedent(&ctx->cg.emitter);
                 EMIT(ctx, "\n}");
@@ -1938,7 +1938,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         ctx->cg.loop_defer_boundary[ctx->cg.loop_depth++] = ctx->cg.defer_count;
 
         EMIT(ctx, "for (");
-        if (z_path_match_compiler(g_config.cc, "tcc"))
+        if (z_path_match_compiler(ctx->config->cc, "tcc"))
         {
             EMIT(ctx, "__typeof__((");
             codegen_expression(ctx, node->for_range.start);
@@ -2250,7 +2250,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                 elem = elem->next;
             }
 
-            if (g_config.use_cpp)
+            if (ctx->config->use_cpp)
             {
                 // Traditional initializer: (Slice){data, len, cap}
                 EMIT(ctx, "return (%s){_tmp_arr, %d, %d};\n", ctx->cg.current_func_ret_type, count,
@@ -2280,7 +2280,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                 ASTNode *def = find_struct_def(ctx, clean);
                 if (def && def->type_info && def->type_info->traits.has_drop)
                 {
-                    if (g_config.misra_mode)
+                    if (ctx->config->misra_mode)
                     {
                         EMIT(ctx, "_misra_ret = ({ ");
                     }
@@ -2289,7 +2289,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                         EMIT(ctx, "return ({ ");
                     }
 
-                    if (z_path_match_compiler(g_config.cc, "tcc"))
+                    if (z_path_match_compiler(ctx->config->cc, "tcc"))
                     {
                         EMIT(ctx, "__typeof__(");
                         codegen_expression(ctx, node->ret.value);
@@ -2323,7 +2323,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     }
                     EMIT(ctx, "_z_ret_mv; });\n");
 
-                    if (g_config.misra_mode)
+                    if (ctx->config->misra_mode)
                     {
                         EMIT(ctx, "goto _misra_end_of_func;\n");
                     }
@@ -2368,7 +2368,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
                     codegen_node_single(ctx, ctx->cg.defer_stack[i]);
                 }
-                if (g_config.misra_mode)
+                if (ctx->config->misra_mode)
                 {
                     emitter_dedent(&ctx->cg.emitter);
                     EMIT(ctx, "_misra_ret = _z_ret; goto _misra_end_of_func; }\n");
@@ -2386,7 +2386,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     emit_source_mapping_duplicate(ctx, ctx->cg.defer_stack[i]);
                     codegen_node_single(ctx, ctx->cg.defer_stack[i]);
                 }
-                if (g_config.misra_mode)
+                if (ctx->config->misra_mode)
                 {
                     EMIT(ctx, "goto _misra_end_of_func;\n");
                 }
@@ -2397,7 +2397,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             }
             else
             {
-                if (g_config.misra_mode)
+                if (ctx->config->misra_mode)
                 {
                     if (ctx->cg.current_func_ret_type &&
                         strcmp(ctx->cg.current_func_ret_type, "void") != 0)
@@ -2427,7 +2427,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     // return &self; -> return self; (since self is already a pointer in C)
                     codegen_expression(ctx, node->ret.value->unary.operand);
                     EMIT(ctx, ";\n");
-                    if (g_config.misra_mode)
+                    if (ctx->config->misra_mode)
                     {
                         EMIT(ctx, "goto _misra_end_of_func;\n");
                     }
@@ -2438,7 +2438,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                     codegen_expression(ctx, node->ret.value);
                 }
                 EMIT(ctx, ";\n");
-                if (g_config.misra_mode)
+                if (ctx->config->misra_mode)
                 {
                     EMIT(ctx, "goto _misra_end_of_func;\n");
                 }

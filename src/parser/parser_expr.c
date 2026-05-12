@@ -299,7 +299,7 @@ ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
             // If target_trait had a *, we might need to wrap in &addr?
             if (strchr(target_trait, '*'))
             {
-                if (g_config.use_cpp)
+                if (g_parser_ctx->config->use_cpp)
                 {
                     // C++ does not allow taking the address of a compound literal.
                     // Use a statement expression with a local variable instead.
@@ -1574,7 +1574,7 @@ static ASTNode *parse_int_literal(Token t)
             zpanic_at(t, "%s", err);
         }
 
-        if (g_config.misra_mode && strchr(endptr, 'l'))
+        if (g_parser_ctx->config->misra_mode && strchr(endptr, 'l'))
         {
             zerror_at(t, "MISRA Rule 7.3");
         }
@@ -1643,7 +1643,7 @@ static ASTNode *parse_int_literal(Token t)
 
         // Rule 7.2: If it's hex/bin/octal and semantically unsigned (high bit set), it needs 'u'
         // This part is for when we ALREADY have a suffix (like 'L'), but it lacks 'U'.
-        if (g_config.misra_mode && !(strchr(endptr, 'u') || strchr(endptr, 'U')))
+        if (g_parser_ctx->config->misra_mode && !(strchr(endptr, 'u') || strchr(endptr, 'U')))
         {
             int is_non_decimal = (t.len > 2 && s[0] == '0' &&
                                   (s[1] == 'x' || s[1] == 'X' || s[1] == 'b' || s[1] == 'B' ||
@@ -1662,7 +1662,7 @@ static ASTNode *parse_int_literal(Token t)
             node->type_info->kind = TYPE_I64;
         }
 
-        if (g_config.misra_mode)
+        if (g_parser_ctx->config->misra_mode)
         {
             int is_non_decimal = (t.len > 2 && s[0] == '0' &&
                                   (s[1] == 'x' || s[1] == 'X' || s[1] == 'b' || s[1] == 'B' ||
@@ -1756,7 +1756,7 @@ static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
         node->resolved_type = xstrdup("string");
 
         // Rule 4.1 check also for interpolated strings (though rarer)
-        if (g_config.misra_mode)
+        if (g_parser_ctx->config->misra_mode)
         {
             for (int i = 0; i < str_len; i++)
             {
@@ -1782,7 +1782,7 @@ static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
         return node;
     }
 
-    if (g_config.misra_mode)
+    if (g_parser_ctx->config->misra_mode)
     {
         for (int i = 0; i < str_len; i++)
         {
@@ -7513,7 +7513,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                     char suggestion[MAX_SHORT_MSG_LEN];
                     sprintf(suggestion, "Both operands must have compatible types for comparison");
 
-                    if (g_config.mode_lsp)
+                    if (g_parser_ctx->config->mode_lsp)
                     {
                         zwarn_at(op, "LSP: %s", msg);
                         // Assume result is int (bool) to continue

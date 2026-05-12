@@ -632,7 +632,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             else if (!func_is_void && !node->ret.value)
             {
                 char msg[MAX_SHORT_MSG_LEN];
-                const char *rule = g_config.misra_mode ? "MISRA Rule 2.1: " : "";
+                const char *rule = tc->pctx->config->misra_mode ? "MISRA Rule 2.1: " : "";
                 snprintf(msg, sizeof(msg), "%sReturn without value in function returning '%s'",
                          rule, ret_type);
                 tc_error(tc, node->token, msg);
@@ -661,7 +661,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         if (node->if_stmt.condition && node->if_stmt.condition->type_info)
         {
             Type *cond_type = resolve_alias(node->if_stmt.condition->type_info);
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 misra_check_condition_boolean(tc, node->if_stmt.condition->type_info,
                                               node->if_stmt.condition->token);
@@ -800,8 +800,8 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
 
                     // MISRA Rule 16.3: An unconditional break or return shall terminate every
                     // switch-clause
-                    if (g_config.misra_mode && !tc->is_unreachable && mcase->match_case.body &&
-                        mcase->match_case.body->type == NODE_BLOCK &&
+                    if (tc->pctx->config->misra_mode && !tc->is_unreachable &&
+                        mcase->match_case.body && mcase->match_case.body->type == NODE_BLOCK &&
                         mcase->match_case.body->block.statements)
                     {
                         tc_error(tc, mcase->token,
@@ -833,7 +833,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
                     move_state_merge_into(&merged_state, match_initial_state);
                 }
 
-                if (!g_config.misra_mode)
+                if (!tc->pctx->config->misra_mode)
                 {
                     const char *hints[] = {"Add a default '_' case to handle all possibilities",
                                            NULL};
@@ -988,7 +988,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *target_type = get_inner_type(node->member.target->type_info);
             if (target_type->kind == TYPE_STRUCT && target_type->name)
             {
-                if (g_config.misra_mode)
+                if (tc->pctx->config->misra_mode)
                 {
                     ZenSymbol *struct_sym =
                         symbol_lookup_kind(tc->pctx->global_scope, target_type->name, SYM_STRUCT);
@@ -1075,7 +1075,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         if (node->guard_stmt.condition && node->guard_stmt.condition->type_info)
         {
             Type *cond_type = resolve_alias(node->guard_stmt.condition->type_info);
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 misra_check_condition_boolean(tc, node->guard_stmt.condition->type_info,
                                               node->guard_stmt.condition->token);
@@ -1102,7 +1102,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         if (node->unless_stmt.condition && node->unless_stmt.condition->type_info)
         {
             Type *cond_type = resolve_alias(node->unless_stmt.condition->type_info);
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 misra_check_condition_boolean(tc, node->unless_stmt.condition->type_info,
                                               node->unless_stmt.condition->token);
@@ -1130,7 +1130,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         if (node->assert_stmt.condition && node->assert_stmt.condition->type_info)
         {
             Type *cond_type = resolve_alias(node->assert_stmt.condition->type_info);
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 misra_check_condition_boolean(tc, node->assert_stmt.condition->type_info,
                                               node->assert_stmt.condition->token);
@@ -1166,7 +1166,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *source_type = resolve_alias(node->cast.expr->type_info);
             Type *target_type = type_from_string_helper(node->cast.target_type);
 
-            if (g_config.misra_mode && target_type)
+            if (tc->pctx->config->misra_mode && target_type)
             {
                 misra_check_cast(tc, target_type, source_type, node->token,
                                  is_composite_expression(node->cast.expr));
@@ -1247,7 +1247,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         if (node->ternary.cond && node->ternary.cond->type_info)
         {
             Type *t = node->ternary.cond->type_info;
-            if (g_config.misra_mode)
+            if (tc->pctx->config->misra_mode)
             {
                 misra_check_condition_boolean(tc, node->ternary.cond->type_info,
                                               node->ternary.cond->token);
@@ -1288,7 +1288,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             if (!sym)
             {
                 char msg[MAX_SHORT_MSG_LEN];
-                if (g_config.misra_mode)
+                if (tc->pctx->config->misra_mode)
                 {
                     snprintf(msg, sizeof(msg),
                              "Undefined output variable in inline assembly: '%s' (MISRA Rule 17.3)",
@@ -1316,7 +1316,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             if (!sym)
             {
                 char msg[MAX_SHORT_MSG_LEN];
-                if (g_config.misra_mode)
+                if (tc->pctx->config->misra_mode)
                 {
                     snprintf(msg, sizeof(msg),
                              "Undefined input variable in inline assembly: '%s' (MISRA Rule 17.3)",
@@ -1355,7 +1355,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         {
             check_node(tc, node->size_of.expr, depth + 1);
 
-            if (g_config.misra_mode && tc_expr_has_side_effects(node->size_of.expr))
+            if (tc->pctx->config->misra_mode && tc_expr_has_side_effects(node->size_of.expr))
             {
                 misra_check_side_effects_sizeof(tc, node->size_of.expr);
             }
@@ -1398,7 +1398,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         tc->is_unreachable = 1;
         break;
     case NODE_GOTO:
-        if (g_config.misra_mode)
+        if (tc->pctx->config->misra_mode)
         {
             ZenSymbol *lbl = tc_lookup(tc, node->goto_stmt.label_name);
             if (lbl && lbl->decl_token.line != 0)
@@ -1434,7 +1434,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         misra_check_plugin_block(tc, node->token);
         break;
     case NODE_LABEL:
-        if (g_config.misra_mode)
+        if (tc->pctx->config->misra_mode)
         {
             ZenSymbol *lbl =
                 symbol_add(tc->pctx->current_scope, node->label_stmt.label_name, SYM_LABEL);
@@ -1673,7 +1673,7 @@ int check_program(ParserContext *ctx, ASTNode *root)
         ctx->move_state = NULL;
     }
 
-    if (g_config.misra_mode)
+    if (tc.pctx->config->misra_mode)
     {
         misra_audit_unused_symbols(&tc);
         misra_audit_block_scope(&tc);

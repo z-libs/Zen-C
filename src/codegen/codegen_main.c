@@ -529,7 +529,7 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs)
 static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs)
 {
     (void)ctx;
-    if (g_config.use_cpp && !g_config.use_cuda)
+    if (ctx->config->use_cpp && !ctx->config->use_cuda)
     {
         EMIT(ctx, "// Global Generic Drop Dispatch (C++ Overloads)\n");
         EMIT(ctx, "#ifdef __cplusplus\n");
@@ -804,14 +804,14 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
             emit_preamble(ctx);
         }
 
-        for (size_t i = 0; i < g_config.cfg_defines.length; i++)
+        for (size_t i = 0; i < ctx->config->cfg_defines.length; i++)
         {
             EMIT(ctx, "#ifndef ZC_CFG_%s\n#define ZC_CFG_%s 1\n#endif\n",
-                 g_config.cfg_defines.data[i], g_config.cfg_defines.data[i]);
+                 ctx->config->cfg_defines.data[i], ctx->config->cfg_defines.data[i]);
         }
 
         emit_includes_and_aliases(ctx, kids, &visited);
-        if (g_config.use_cpp && !g_config.use_cuda && !g_config.use_objc)
+        if (ctx->config->use_cpp && !ctx->config->use_cuda && !ctx->config->use_objc)
         {
             EMIT(ctx, "\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n");
         }
@@ -942,7 +942,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
         ASTNode *sorted = topo_sort_structs(ctx, merged);
 
         print_type_defs(ctx, sorted);
-        if (!g_config.use_cpp)
+        if (!ctx->config->use_cpp)
         {
             emit_enum_protos(ctx, sorted);
         }
@@ -1225,7 +1225,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node)
             EMIT(ctx, "\nint main() { return _z_run_tests(); }\n");
         }
 
-        if (g_config.use_cpp && !g_config.use_cuda && !g_config.use_objc)
+        if (ctx->config->use_cpp && !ctx->config->use_cuda && !ctx->config->use_objc)
         {
             EMIT(ctx, "\n#ifdef __cplusplus\n}\n#endif\n");
         }

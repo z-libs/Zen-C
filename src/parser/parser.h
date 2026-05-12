@@ -293,6 +293,7 @@ typedef struct TypeAlias
 struct ParserContext
 {
     ZenCompiler *compiler;  ///< Reference to the unified compiler state.
+    CompilerConfig *config; ///< Shortcut to compiler->config.
     int recursion_depth;    ///< Guard against stack overflow.
     Scope *global_scope;    ///< Root of the unified symbol table.
     Scope *current_scope;   ///< Current lexical scope for variable lookup.

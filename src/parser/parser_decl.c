@@ -195,7 +195,7 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_exter
         {
             // Check if unused and not prefixed with '_' (conventional ignore)
             // also ignore 'self' as it is often mandated by traits
-            if (!sym->is_used && !g_config.misra_mode && sym->name[0] != '_' &&
+            if (!sym->is_used && !ctx->config->misra_mode && sym->name[0] != '_' &&
                 strcmp(sym->name, "self") != 0 && strcmp(name, "main") != 0)
             {
                 warn_unused_parameter(sym->decl_token, sym->name, name);

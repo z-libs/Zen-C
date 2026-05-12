@@ -116,7 +116,7 @@ static int get_type_width(Type *t)
 
 void misra_check_ess_type_categories(TypeChecker *tc, Type *left, Type *right, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -139,7 +139,7 @@ void misra_check_ess_type_categories(TypeChecker *tc, Type *left, Type *right, T
 
 void misra_check_ess_type_composite(TypeChecker *tc, Type *target, Type *source, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -154,7 +154,7 @@ void misra_check_ess_type_composite(TypeChecker *tc, Type *target, Type *source,
 void misra_check_implicit_conversion(struct TypeChecker *tc, struct Type *target,
                                      struct Type *source, struct ASTNode *source_node, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -220,7 +220,7 @@ void misra_check_implicit_conversion(struct TypeChecker *tc, struct Type *target
 void misra_check_char_arithmetic(TypeChecker *tc, Type *left, Type *right, const char *op,
                                  Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -244,7 +244,7 @@ void misra_check_char_arithmetic(TypeChecker *tc, Type *left, Type *right, const
 
 void misra_check_bitwise_operand(TypeChecker *tc, Type *t, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -256,7 +256,7 @@ void misra_check_bitwise_operand(TypeChecker *tc, Type *t, Token token)
 
 void misra_check_shift_amount(TypeChecker *tc, long long amount, int width, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -268,7 +268,7 @@ void misra_check_shift_amount(TypeChecker *tc, long long amount, int width, Toke
 
 void misra_check_pointer_conversion(TypeChecker *tc, Type *target, Type *source, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -329,7 +329,7 @@ void misra_check_pointer_conversion(TypeChecker *tc, Type *target, Type *source,
 
 void misra_check_void_ptr_cast(TypeChecker *tc, Type *target, Type *source, Token token)
 {
-    if (!g_config.misra_mode || !target || !source)
+    if (!tc->pctx->config->misra_mode || !target || !source)
     {
         return;
     }
@@ -356,7 +356,7 @@ void misra_check_void_ptr_cast(TypeChecker *tc, Type *target, Type *source, Toke
 
 void misra_check_cast(TypeChecker *tc, Type *target, Type *source, Token token, bool is_composite)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -377,7 +377,7 @@ void misra_check_cast(TypeChecker *tc, Type *target, Type *source, Token token, 
 
 void misra_check_null_pointer_constant(TypeChecker *tc, struct ASTNode *node, Token token)
 {
-    if (!g_config.misra_mode || !node)
+    if (!tc->pctx->config->misra_mode || !node)
     {
         return;
     }
@@ -407,7 +407,7 @@ void misra_check_null_pointer_constant(TypeChecker *tc, struct ASTNode *node, To
 void misra_check_binary_op_essential_types(TypeChecker *tc, struct ASTNode *left,
                                            struct ASTNode *right, Token token)
 {
-    if (!g_config.misra_mode || !left || !right || !left->type_info || !right->type_info)
+    if (!tc->pctx->config->misra_mode || !left || !right || !left->type_info || !right->type_info)
     {
         return;
     }
@@ -457,7 +457,7 @@ void misra_check_binary_op_essential_types(TypeChecker *tc, struct ASTNode *left
 
 void misra_check_side_effects_sizeof(TypeChecker *tc, ASTNode *expr)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         // Simple heuristic: if it contains a call or assignment/inc/dec it has potential side
         // effects. We assume typechecker already validated this for Rule 13.6 if applicable.
@@ -468,7 +468,7 @@ void misra_check_side_effects_sizeof(TypeChecker *tc, ASTNode *expr)
 
 void misra_check_assignment_result_used(TypeChecker *tc, Token token)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         tc_error(tc, token, "MISRA Rule 13.4");
     }
@@ -476,7 +476,7 @@ void misra_check_assignment_result_used(TypeChecker *tc, Token token)
 
 void misra_check_inc_dec_result_used(TypeChecker *tc, Token token)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         tc_error(tc, token, "MISRA Rule 13.3");
     }
@@ -484,7 +484,7 @@ void misra_check_inc_dec_result_used(TypeChecker *tc, Token token)
 
 void misra_check_condition_boolean(TypeChecker *tc, Type *t, Token token)
 {
-    if (g_config.misra_mode && t)
+    if (tc->pctx->config->misra_mode && t)
     {
         if (get_essential_category(t) != ESS_BOOL)
         {
@@ -495,7 +495,7 @@ void misra_check_condition_boolean(TypeChecker *tc, Type *t, Token token)
 
 void misra_check_invariant_condition(TypeChecker *tc, Token token)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         tc_error(tc, token, "MISRA Rule 14.3");
     }
@@ -503,7 +503,7 @@ void misra_check_invariant_condition(TypeChecker *tc, Token token)
 
 void misra_check_loop_counter_float(TypeChecker *tc, Type *t, Token token)
 {
-    if (g_config.misra_mode && is_float_type(t))
+    if (tc->pctx->config->misra_mode && is_float_type(t))
     {
         tc_error(tc, token, "MISRA Rule 14.1");
     }
@@ -511,7 +511,7 @@ void misra_check_loop_counter_float(TypeChecker *tc, Type *t, Token token)
 
 void misra_check_initializer_side_effects(TypeChecker *tc, ASTNode *node)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         if (tc_expr_has_side_effects(node))
         {
@@ -527,7 +527,7 @@ void misra_check_initializer_side_effects(TypeChecker *tc, ASTNode *node)
  */
 void misra_check_match_stmt(TypeChecker *tc, ASTNode *node)
 {
-    if (!g_config.misra_mode || !node || node->type != NODE_MATCH)
+    if (!tc->pctx->config->misra_mode || !node || node->type != NODE_MATCH)
     {
         return;
     }
@@ -584,7 +584,7 @@ void misra_check_match_stmt(TypeChecker *tc, ASTNode *node)
  */
 void misra_check_recursion(TypeChecker *tc, Token token)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         tc_error(tc, token, "MISRA Rule 17.2");
     }
@@ -596,7 +596,7 @@ void misra_check_recursion(TypeChecker *tc, Token token)
  */
 void misra_check_function_return_usage(TypeChecker *tc, ASTNode *node)
 {
-    if (g_config.misra_mode && node && node->type_info)
+    if (tc->pctx->config->misra_mode && node && node->type_info)
     {
         Type *rt = resolve_alias(node->type_info);
         if (rt->kind != TYPE_VOID)
@@ -620,7 +620,7 @@ void misra_check_function_return_usage(TypeChecker *tc, ASTNode *node)
  */
 void misra_check_array_param_size(TypeChecker *tc, int expected, int actual, Token token)
 {
-    if (g_config.misra_mode && expected > 0 && actual < expected)
+    if (tc->pctx->config->misra_mode && expected > 0 && actual < expected)
     {
         tc_error(tc, token, "MISRA Rule 17.5");
     }
@@ -643,7 +643,7 @@ void misra_check_const_ptr_param(TypeChecker *tc, const char *name, Token token)
  */
 void misra_check_param_modified(TypeChecker *tc, ASTNode *left, Token token)
 {
-    if (!g_config.misra_mode || !tc->current_func || !left || left->type != NODE_EXPR_VAR)
+    if (!tc->pctx->config->misra_mode || !tc->current_func || !left || left->type != NODE_EXPR_VAR)
     {
         return;
     }
@@ -668,7 +668,7 @@ void misra_check_param_modified(TypeChecker *tc, ASTNode *left, Token token)
  */
 void misra_check_pointer_arithmetic(TypeChecker *tc, Type *t, Token token)
 {
-    if (g_config.misra_mode && t)
+    if (tc->pctx->config->misra_mode && t)
     {
         Type *resolved = resolve_alias(t);
         if (resolved->kind == TYPE_POINTER)
@@ -698,7 +698,7 @@ static int get_pointer_nesting_depth(Type *t)
  */
 void misra_check_pointer_nesting(TypeChecker *tc, Type *t, Token token)
 {
-    if (!g_config.misra_mode || !t)
+    if (!tc->pctx->config->misra_mode || !t)
     {
         return;
     }
@@ -762,7 +762,7 @@ void misra_check_struct_decl(TypeChecker *tc, ASTNode *node)
  */
 void misra_check_compound_body(TypeChecker *tc, ASTNode *body, const char *stmt_name)
 {
-    if (!g_config.misra_mode || !body)
+    if (!tc->pctx->config->misra_mode || !body)
     {
         return;
     }
@@ -780,7 +780,7 @@ void misra_check_compound_body(TypeChecker *tc, ASTNode *body, const char *stmt_
  */
 void misra_check_terminal_else(TypeChecker *tc, ASTNode *if_node)
 {
-    if (!g_config.misra_mode || !if_node || if_node->type != NODE_IF)
+    if (!tc->pctx->config->misra_mode || !if_node || if_node->type != NODE_IF)
     {
         return;
     }
@@ -820,7 +820,7 @@ void misra_check_terminal_else(TypeChecker *tc, ASTNode *if_node)
  */
 void misra_check_param_nesting(TypeChecker *tc, ASTNode *func_node)
 {
-    if (!g_config.misra_mode || !func_node || func_node->type != NODE_FUNCTION)
+    if (!tc->pctx->config->misra_mode || !func_node || func_node->type != NODE_FUNCTION)
     {
         return;
     }
@@ -839,7 +839,7 @@ void misra_check_param_nesting(TypeChecker *tc, ASTNode *func_node)
  */
 void misra_check_goto(TypeChecker *tc, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -848,7 +848,7 @@ void misra_check_goto(TypeChecker *tc, Token token)
 
 void misra_check_goto_constraint(TypeChecker *tc, Token goto_tok, Token label_tok)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -871,7 +871,7 @@ void misra_check_goto_constraint(TypeChecker *tc, Token goto_tok, Token label_to
  */
 void misra_check_iteration_termination(TypeChecker *tc, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -883,7 +883,7 @@ void misra_check_iteration_termination(TypeChecker *tc, Token token)
  */
 void misra_check_union(TypeChecker *tc, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -895,7 +895,7 @@ void misra_check_union(TypeChecker *tc, Token token)
  */
 void misra_check_stdarg(TypeChecker *tc, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -904,7 +904,7 @@ void misra_check_stdarg(TypeChecker *tc, Token token)
 
 void misra_audit_unused_symbols(TypeChecker *tc)
 {
-    if (!g_config.misra_mode || !tc->pctx->global_scope)
+    if (!tc->pctx->config->misra_mode || !tc->pctx->global_scope)
     {
         return;
     }
@@ -949,7 +949,7 @@ void misra_audit_unused_symbols(TypeChecker *tc)
 
 void misra_check_vla(TypeChecker *tc, Type *t, Token token)
 {
-    if (g_config.misra_mode && t && t->kind == TYPE_ARRAY)
+    if (tc->pctx->config->misra_mode && t && t->kind == TYPE_ARRAY)
     {
         // In Zen C, all arrays are technically checked for constant sizes,
         // but if we are in this check, we enforce that any array declaration
@@ -960,7 +960,7 @@ void misra_check_vla(TypeChecker *tc, Type *t, Token token)
 
 void misra_check_flexible_array(struct ASTNode *strct, struct ASTNode *field)
 {
-    if (!g_config.misra_mode || !strct || !field)
+    if (!strct || !field)
     {
         return;
     }
@@ -986,7 +986,7 @@ void misra_check_flexible_array(struct ASTNode *strct, struct ASTNode *field)
 
 void misra_check_identifier_collision(Token tok, const char *name1, const char *name2, int limit)
 {
-    if (!g_config.misra_mode || !name1 || !name2)
+    if (!name1 || !name2)
     {
         return;
     }
@@ -1011,7 +1011,7 @@ void misra_check_identifier_collision(Token tok, const char *name1, const char *
  */
 void misra_audit_identifier_uniqueness(TypeChecker *tc)
 {
-    if (!g_config.misra_mode || !tc->pctx->all_symbols)
+    if (!tc->pctx->config->misra_mode || !tc->pctx->all_symbols)
     {
         return;
     }
@@ -1126,7 +1126,7 @@ void misra_audit_identifier_uniqueness(TypeChecker *tc)
 
 void misra_check_raw_block(struct TypeChecker *tc, Token token)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         tc_error(tc, token, "MISRA Rule Zen 1.1");
     }
@@ -1134,7 +1134,7 @@ void misra_check_raw_block(struct TypeChecker *tc, Token token)
 
 void misra_check_preprocessor_directive(struct TypeChecker *tc, Token token)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         tc_error(tc, token, "MISRA Rule Zen 1.4");
     }
@@ -1142,7 +1142,7 @@ void misra_check_preprocessor_directive(struct TypeChecker *tc, Token token)
 
 void misra_check_plugin_block(struct TypeChecker *tc, Token token)
 {
-    if (g_config.misra_mode)
+    if (tc->pctx->config->misra_mode)
     {
         tc_error(tc, token, "MISRA Rule Zen 1.2");
     }
@@ -1156,7 +1156,7 @@ void misra_check_preprocessor_expression(struct TypeChecker *tc, Token tok, cons
 void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token tok,
                                                 const char *expression)
 {
-    if (!g_config.misra_mode || !expression)
+    if (!ctx || !expression)
     {
         return;
     }
@@ -1206,9 +1206,9 @@ void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token
         // Rule 20.9 check
         int is_defined = 0;
         // 1. Check CLI defines
-        for (size_t i = 0; i < g_config.cfg_defines.length; i++)
+        for (size_t i = 0; i < ctx->config->cfg_defines.length; i++)
         {
-            if (strcmp(g_config.cfg_defines.data[i], name) == 0)
+            if (strcmp(ctx->config->cfg_defines.data[i], name) == 0)
             {
                 is_defined = 1;
                 break;
@@ -1257,7 +1257,8 @@ void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token
 
 void misra_check_strict_match(TypeChecker *tc, ASTNode *node)
 {
-    if (!g_config.misra_mode || !node || node->type != NODE_MATCH || !node->match_stmt.expr)
+    if (!tc->pctx->config->misra_mode || !node || node->type != NODE_MATCH ||
+        !node->match_stmt.expr)
     {
         return;
     }
@@ -1281,7 +1282,7 @@ void misra_check_strict_match(TypeChecker *tc, ASTNode *node)
 
 void misra_check_shadowing(TypeChecker *tc, const char *name, Token loc)
 {
-    if (!g_config.misra_mode || !name || !tc->pctx->current_scope ||
+    if (!tc->pctx->config->misra_mode || !name || !tc->pctx->current_scope ||
         !tc->pctx->current_scope->parent)
     {
         return;
@@ -1308,7 +1309,7 @@ void misra_check_shadowing(TypeChecker *tc, const char *name, Token loc)
 
 void misra_check_double_initialization(struct TypeChecker *tc, const char *field_name, Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -1320,7 +1321,7 @@ void misra_check_double_initialization(struct TypeChecker *tc, const char *field
 
 void misra_check_reserved_identifier(struct TypeChecker *tc, const char *name, Token token)
 {
-    if (!g_config.misra_mode || !name)
+    if (!tc->pctx->config->misra_mode || !name)
     {
         return;
     }
@@ -1337,7 +1338,7 @@ void misra_check_unsigned_wrap(struct TypeChecker *tc, const char *op, long long
                                long long right, long long res, struct Type *type, Token token)
 {
     (void)res;
-    if (!g_config.misra_mode || !type)
+    if (!tc->pctx->config->misra_mode || !type)
     {
         return;
     }
@@ -1407,7 +1408,7 @@ void misra_check_unsigned_wrap(struct TypeChecker *tc, const char *op, long long
 
 void misra_audit_block_scope(struct TypeChecker *tc)
 {
-    if (!g_config.misra_mode || !tc->pctx->global_scope)
+    if (!tc->pctx->config->misra_mode || !tc->pctx->global_scope)
     {
         return;
     }
@@ -1430,7 +1431,7 @@ void misra_audit_block_scope(struct TypeChecker *tc)
 
 void misra_check_standard_macro_name(Token tok, const char *name)
 {
-    if (!g_config.misra_mode || !name)
+    if (!name)
     {
         return;
     }
@@ -1452,7 +1453,7 @@ void misra_check_standard_macro_name(Token tok, const char *name)
 void misra_check_external_array_size(TypeChecker *tc, Type *t, Token token, int is_static,
                                      int is_local)
 {
-    if (!g_config.misra_mode || is_static || is_local || !t)
+    if (!tc->pctx->config->misra_mode || is_static || is_local || !t)
     {
         return;
     }
@@ -1494,7 +1495,7 @@ static struct
 
 void misra_check_banned_function(struct TypeChecker *tc, const char *name, Token tok)
 {
-    if (!g_config.misra_mode || !name)
+    if (!tc->pctx->config->misra_mode || !name)
     {
         return;
     }
@@ -1514,7 +1515,7 @@ void misra_check_banned_function(struct TypeChecker *tc, const char *name, Token
 
 void misra_check_file_dereference(struct TypeChecker *tc, struct Type *type, Token tok)
 {
-    if (!g_config.misra_mode || !type)
+    if (!tc->pctx->config->misra_mode || !type)
     {
         return;
     }
@@ -1573,7 +1574,7 @@ static void canonicalize_ambiguous_chars(const char *src, char *dst, size_t dest
 
 void misra_check_typographic_ambiguity(struct TypeChecker *tc, const char *new_name, Token loc)
 {
-    if (!g_config.misra_mode || !tc || !tc->pctx || !new_name)
+    if (!tc->pctx->config->misra_mode || !tc || !tc->pctx || !new_name)
     {
         return;
     }
@@ -1612,7 +1613,7 @@ void misra_check_typographic_ambiguity(struct TypeChecker *tc, const char *new_n
 
 void misra_check_tuple_size(struct TypeChecker *tc, struct Type *t, Token token)
 {
-    if (!g_config.misra_mode || !t || t->kind != TYPE_STRUCT || !t->name)
+    if (!tc->pctx->config->misra_mode || !t || t->kind != TYPE_STRUCT || !t->name)
     {
         return;
     }
@@ -1647,7 +1648,7 @@ void misra_check_tuple_size(struct TypeChecker *tc, struct Type *t, Token token)
 void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struct Type *right,
                                 Token token)
 {
-    if (!g_config.misra_mode)
+    if (!tc->pctx->config->misra_mode)
     {
         return;
     }
@@ -1675,7 +1676,7 @@ void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struc
 void misra_check_assignment_overlap(struct TypeChecker *tc, struct ASTNode *left,
                                     struct ASTNode *right, Token token)
 {
-    if (!g_config.misra_mode || !left || !right)
+    if (!tc->pctx->config->misra_mode || !left || !right)
     {
         return;
     }
@@ -1699,7 +1700,7 @@ void misra_check_assignment_overlap(struct TypeChecker *tc, struct ASTNode *left
  */
 void misra_check_evaluation_order(struct TypeChecker *tc, struct ASTNode *expr)
 {
-    if (!g_config.misra_mode || !expr || expr->type != NODE_EXPR_CALL)
+    if (!tc->pctx->config->misra_mode || !expr || expr->type != NODE_EXPR_CALL)
     {
         return;
     }
@@ -1758,7 +1759,7 @@ void misra_check_evaluation_order(struct TypeChecker *tc, struct ASTNode *expr)
  */
 void misra_check_error_tested(struct TypeChecker *tc, struct ASTNode *stmt)
 {
-    if (!g_config.misra_mode || !stmt)
+    if (!tc->pctx->config->misra_mode || !stmt)
     {
         return;
     }

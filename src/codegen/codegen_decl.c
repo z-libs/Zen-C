@@ -69,12 +69,12 @@ static void emit_freestanding_preamble(ParserContext *ctx)
 
 void emit_preamble(ParserContext *ctx)
 {
-    if (g_config.misra_mode)
+    if (ctx->config->misra_mode)
     {
         emit_misra_preamble(ctx->cg.emitter.file);
         return;
     }
-    if (g_config.is_freestanding)
+    if (ctx->config->is_freestanding)
     {
         emit_freestanding_preamble(ctx);
         return;
@@ -94,7 +94,7 @@ void emit_preamble(ParserContext *ctx)
         EMIT(ctx, "%s", "#define ZC_SIMD(T, N) T __attribute__((vector_size(N * sizeof(T))))\n");
 
         // C++ compatibility
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             // For C++: define ZC_AUTO as auto, include compat.h macros inline
             EMIT(ctx, "%s", "#define ZC_AUTO auto\n");
@@ -167,7 +167,7 @@ void emit_preamble(ParserContext *ctx)
         EMIT(ctx, "%s", "#define F32 float\n#define F64 double\n");
 
         // Memory Mapping.
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             // C++ needs explicit casts for void* conversions
             EMIT(ctx, "%s", "#define z_malloc(sz) static_cast<char*>(malloc(sz))\n");
@@ -203,7 +203,7 @@ void emit_preamble(ParserContext *ctx)
         EMIT(ctx, "static int _zc_test_failures = 0;\n");
 
         // C++ compatible readln helper
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             EMIT(ctx, "%s",
                  "static string _z_readln_raw() { size_t cap = 64; size_t len = 0; char *line = "
@@ -1003,7 +1003,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
                             }
                             EMIT(ctx, ") {\n");
                             emitter_indent(&ctx->cg.emitter);
-                            if (g_config.use_cpp)
+                            if (ctx->config->use_cpp)
                             {
                                 EMIT(ctx, "%s _res = {}; _res.tag = %s__%s_Tag; ", final_name,
                                      final_name, v->variant.name);
@@ -1028,7 +1028,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
                         }
                         else
                         {
-                            if (g_config.use_cpp)
+                            if (ctx->config->use_cpp)
                             {
                                 EMIT(ctx,
                                      "%s %s__%s(%s v) { %s _res = {}; _res.tag=%s__%s_Tag; "
@@ -1049,7 +1049,7 @@ static void emit_struct_defs_internal(ParserContext *ctx, ASTNode *node, Visited
                     }
                     else
                     {
-                        if (g_config.use_cpp)
+                        if (ctx->config->use_cpp)
                         {
                             EMIT(
                                 ctx,
@@ -1405,7 +1405,7 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, VisitedModu
                         ? xstrdup(node->var_decl.type_str)
                         : (node->var_decl.init_expr ? infer_type(ctx, node->var_decl.init_expr)
                                                     : NULL);
-                if (g_config.use_cpp && tname &&
+                if (ctx->config->use_cpp && tname &&
                     (strchr(tname, '*') || is_enum_type_name(ctx, tname)))
                 {
                     EMIT(ctx, "(%s)(", tname);
@@ -1422,7 +1422,7 @@ static void emit_globals_internal(ParserContext *ctx, ASTNode *node, VisitedModu
                 }
             }
             EMIT(ctx, ";\n");
-            if (g_config.use_cpp && node->type == NODE_VAR_DECL)
+            if (ctx->config->use_cpp && node->type == NODE_VAR_DECL)
             {
                 char *tname =
                     node->var_decl.type_str
@@ -1494,7 +1494,7 @@ static void emit_protos_internal(ParserContext *ctx, ASTNode *node, VisitedModul
 
         if (f->type == NODE_FUNCTION)
         {
-            if (g_config.use_cpp && f->func.name && !f->func.body)
+            if (ctx->config->use_cpp && f->func.name && !f->func.body)
             {
                 if (strncmp(f->func.name, "_z_", 3) == 0 || strncmp(f->func.name, "_time_", 6) == 0)
                 {
@@ -2073,14 +2073,14 @@ void print_type_defs(ParserContext *ctx, ASTNode *nodes)
 {
     emit_mangled_pointer_typedefs(ctx);
 
-    if (!g_config.is_freestanding && !g_config.misra_mode)
+    if (!ctx->config->is_freestanding && !ctx->config->misra_mode)
     {
         EMIT(ctx, "typedef char* string;\n");
 
         EMIT(ctx, "typedef struct { void **data; int len; int cap; } Vec;\n");
         EMIT(ctx, "#define Vec_new() (Vec){.data=0, .len=0, .cap=0}\n");
 
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             EMIT(ctx, "static void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { v->cap "
                       "= v->cap?v->cap*2:8; v->data = static_cast<void**>(realloc(v->data, v->cap "
@@ -2235,7 +2235,7 @@ void emit_source_mapping_duplicate(ParserContext *ctx, ASTNode *node)
 
 void emit_source_mapping(ParserContext *ctx, ASTNode *node)
 {
-    if (!g_config.mode_debug)
+    if (!ctx->config->mode_debug)
     {
         return;
     }
@@ -2264,7 +2264,7 @@ void emit_source_mapping(ParserContext *ctx, ASTNode *node)
     last_source_mapping_line = node->token.line;
     last_source_mapping_type = node->type;
 
-    if (!g_config.misra_mode)
+    if (!ctx->config->misra_mode)
     {
         char *safe_file = sanitize_path_for_c_string(node->token.file);
         EMIT(ctx, "\n#line %i \"%s\"\n", node->token.line, safe_file);

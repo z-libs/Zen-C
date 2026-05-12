@@ -1110,7 +1110,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
     }
 
     // Generic templates are registered separately and may share the base name.
-    if (gp_count == 0 && !g_config.mode_lsp)
+    if (gp_count == 0 && !ctx->config->mode_lsp)
     {
         ASTNode *existing = find_concrete_struct_def(ctx, name);
         if (existing)

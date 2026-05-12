@@ -796,7 +796,7 @@ void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t)
     }
     else
     {
-        if (z_path_match_compiler(g_config.cc, "tcc") && init_expr)
+        if (z_path_match_compiler(ctx->config->cc, "tcc") && init_expr)
         {
             EMIT(ctx, "__typeof__((");
             codegen_expression(ctx, init_expr);
@@ -818,13 +818,13 @@ void emit_func_signature(ParserContext *ctx, ASTNode *func, const char *name_ove
     }
 
     // Emit MISRA static linkage
-    if (g_config.misra_mode && !func->func.is_export && strcmp(func->func.name, "main") != 0)
+    if (ctx->config->misra_mode && !func->func.is_export && strcmp(func->func.name, "main") != 0)
     {
         EMIT(ctx, "static ");
     }
 
     // Emit CUDA qualifiers (for both forward declarations and definitions)
-    if (g_config.use_cuda)
+    if (ctx->config->use_cuda)
     {
         if (func->func.cuda_global)
         {

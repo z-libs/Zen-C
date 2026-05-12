@@ -1322,7 +1322,7 @@ ASTNode *parse_if(ParserContext *ctx, Lexer *l)
     }
     else
     {
-        if (g_config.misra_mode)
+        if (ctx->config->misra_mode)
         {
             zerror_at(lexer_peek(l), "MISRA Rule 15.6");
         }
@@ -1349,7 +1349,7 @@ ASTNode *parse_if(ParserContext *ctx, Lexer *l)
         }
         else
         {
-            if (g_config.misra_mode)
+            if (ctx->config->misra_mode)
             {
                 zerror_at(lexer_peek(l), "MISRA Rule 15.6");
             }
@@ -1389,7 +1389,7 @@ ASTNode *parse_while(ParserContext *ctx, Lexer *l)
     }
     else
     {
-        if (g_config.misra_mode)
+        if (ctx->config->misra_mode)
         {
             zerror_at(lexer_peek(l), "MISRA Rule 15.6: compound-statement body");
         }
@@ -1498,7 +1498,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                     }
                     else
                     {
-                        if (g_config.misra_mode)
+                        if (ctx->config->misra_mode)
                         {
                             zerror_at(lexer_peek(l), "MISRA Rule 15.6: compound-statement body");
                         }
@@ -2072,7 +2072,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
     }
     else
     {
-        if (g_config.misra_mode)
+        if (ctx->config->misra_mode)
         {
             zerror_at(lexer_peek(l), "MISRA Rule 15.6compound-statement body");
         }
@@ -2976,7 +2976,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
         zpanic_at(start_tok, "%s", err);
 
         // Fallback for ZLS: Return a dummy plugin node to stay alive
-        if (g_config.mode_lsp)
+        if (ctx->config->mode_lsp)
         {
             zfree(body);
             ASTNode *n = ast_create(NODE_PLUGIN);
@@ -3001,7 +3001,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
         zpanic_at(start_tok, "%s", err);
 
         // Fallback for ZLS: Return a dummy plugin node to stay alive
-        if (g_config.mode_lsp)
+        if (ctx->config->mode_lsp)
         {
             zfree(body);
             ASTNode *n = ast_create(NODE_PLUGIN);
@@ -3038,7 +3038,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     expanded_code[len] = 0;
     fclose(capture);
     // For LSP: We want to keep the plugin node so we can show hovers
-    if (g_config.mode_lsp)
+    if (ctx->config->mode_lsp)
     {
         ASTNode *n = ast_create(NODE_PLUGIN);
         n->plugin_stmt.plugin_name = xstrdup(plugin_name);
@@ -3066,7 +3066,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
 ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
 {
     int prev_emit = l->emit_comments;
-    if (g_config.keep_comments)
+    if (ctx->config->keep_comments)
     {
         l->emit_comments = 1;
     }
@@ -4613,7 +4613,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     {
         if (!src)
         {
-            if (g_config.mode_lsp)
+            if (ctx->config->mode_lsp)
             {
                 // In LSP mode, just warn and return error node or similar
                 // For now, let's return a dummy ERROR node or NULL to avoid crashing

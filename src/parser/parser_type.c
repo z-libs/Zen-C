@@ -700,7 +700,7 @@ Type *parse_type_formal(ParserContext *ctx, Lexer *l)
         }
         else
         {
-            if (g_config.misra_mode)
+            if (ctx->config->misra_mode)
             {
                 zpanic_at(size_expr->token, "MISRA Rule 18.8");
             }
@@ -829,12 +829,12 @@ char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st)
     char *o = xmalloc(o_sz);
     if (st)
     {
-        if (g_config.use_cpp && in_func)
+        if (ctx->config->use_cpp && in_func)
         {
             snprintf(o, o_sz, "({ static const %s __tmp[] = {%s}; (%s){( %s *)__tmp, %d, %d}; })",
                      rt, c, st, rt, n, n);
         }
-        else if (g_config.use_cpp)
+        else if (ctx->config->use_cpp)
         {
             snprintf(o, o_sz, "(%s){(%s[]){%s}, %d, %d}", st, rt, c, n, n);
         }
@@ -845,13 +845,13 @@ char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st)
     }
     else
     {
-        if (g_config.use_cpp && in_func)
+        if (ctx->config->use_cpp && in_func)
         {
             snprintf(o, o_sz,
                      "({ static const int __tmp[] = {%s}; (Slice__int){(int*)__tmp, %d, %d}; })", c,
                      n, n);
         }
-        else if (g_config.use_cpp)
+        else if (ctx->config->use_cpp)
         {
             snprintf(o, o_sz, "(Slice__int){(int[]){%s}, %d, %d}", c, n, n);
         }
@@ -969,7 +969,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
     char *o = xmalloc(oc);
 
     int in_func = (ctx->current_scope != ctx->global_scope);
-    int use_cpp_stmt = (g_config.use_cpp && in_func);
+    int use_cpp_stmt = (ctx->config->use_cpp && in_func);
 
     // Default Type if none
     if (!target_type)
@@ -985,7 +985,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
         {
             snprintf(o, oc, "({ static const char __tmp[] = {");
         }
-        else if (g_config.use_cpp)
+        else if (ctx->config->use_cpp)
         {
             snprintf(o, oc, "(Slice__char){(char[]){");
         }
@@ -1029,7 +1029,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
                 {
                     snprintf(o, oc, "({ static const %s __tmp[] = {", inner_ts);
                 }
-                else if (g_config.use_cpp)
+                else if (ctx->config->use_cpp)
                 {
                     snprintf(o, oc, "(%s){(%s[]){", slice_name, inner_ts);
                 }
@@ -1099,7 +1099,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
                 if (use_cpp_stmt)
                 {
                     char *ts = type_to_string(target_type);
-                    if (g_config.use_cpp)
+                    if (ctx->config->use_cpp)
                     {
                         snprintf(p, oc - cur_len, "}; (%s){(%s*)__tmp, %ld, %ld}; })", ts,
                                  (strncmp(ts, "Slice__", 7) == 0 ? ts + 7 : "char"), (long)len,
@@ -1114,7 +1114,7 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
                 }
                 else
                 {
-                    if (g_config.use_cpp)
+                    if (ctx->config->use_cpp)
                     {
                         snprintf(p, oc - cur_len, "}, %ld, %ld}", (long)len, (long)len);
                     }

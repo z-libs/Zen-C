@@ -314,7 +314,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node)
     if (node->lambda.num_captures > 0)
     {
         int lid = node->lambda.lambda_id;
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             EMIT(ctx,
                  "({ struct Lambda_%d_Ctx *_z_ctx_%d = (struct Lambda_%d_Ctx*)malloc(sizeof(struct "
@@ -414,7 +414,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node)
                 }
             }
         }
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             EMIT(ctx, "z_closure_T _cl = {(void*)_lambda_%d, _z_ctx_%d, _lambda_%d_drop}; _cl; })",
                  lid, lid, lid);
@@ -428,7 +428,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node)
     }
     else
     {
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             EMIT(ctx, "(z_closure_T){ (void*)_lambda_%d, NULL, NULL }", node->lambda.lambda_id);
         }
@@ -566,7 +566,7 @@ static void handle_expr_unary(ParserContext *ctx, ASTNode *node)
 {
     if (node->unary.op && strcmp(node->unary.op, "&_rval") == 0)
     {
-        if (g_config.use_cpp)
+        if (ctx->config->use_cpp)
         {
             EMIT(ctx, "({ __typeof__((");
             codegen_expression(ctx, node->unary.operand);
@@ -1251,11 +1251,11 @@ static void handle_expr_struct_init(ParserContext *ctx, ASTNode *node)
         }
     }
 
-    if (g_config.use_cpp)
+    if (ctx->config->use_cpp)
     {
         if (in_func && !is_vector)
         {
-            EMIT(ctx, "({ %s _s = %s; ", struct_name, g_config.use_cpp ? "{}" : "{0}");
+            EMIT(ctx, "({ %s _s = %s; ", struct_name, ctx->config->use_cpp ? "{}" : "{0}");
             ASTNode *f = node->struct_init.fields;
             while (f)
             {
@@ -1283,7 +1283,7 @@ static void handle_expr_struct_init(ParserContext *ctx, ASTNode *node)
                     }
                     else
                     {
-                        if (g_config.use_cpp)
+                        if (ctx->config->use_cpp)
                         {
                             EMIT(ctx, "_s.%s = (__typeof__(_s.%s))(", f->var_decl.name,
                                  f->var_decl.name);
@@ -1427,7 +1427,7 @@ static void handle_expr_struct_init(ParserContext *ctx, ASTNode *node)
 
 static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
 {
-    if (g_config.misra_mode)
+    if (ctx->config->misra_mode)
     {
         EMIT(ctx, "(");
     }
@@ -1560,7 +1560,7 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
                 EMIT(ctx, "&");
                 codegen_expression(ctx, node->binary.left);
             }
-            else if (g_config.use_cpp)
+            else if (ctx->config->use_cpp)
             {
                 EMIT(ctx, "({ __typeof__((");
                 codegen_expression(ctx, node->binary.left);
@@ -1592,7 +1592,7 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
                 EMIT(ctx, "&");
                 codegen_expression(ctx, node->binary.right);
             }
-            else if (needs_ptr && g_config.use_cpp)
+            else if (needs_ptr && ctx->config->use_cpp)
             {
                 EMIT(ctx, "({ __typeof__((");
                 codegen_expression(ctx, node->binary.right);
@@ -1688,7 +1688,7 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
 
         int is_drop_assignment = 0;
         char *clean_type = NULL;
-        if (is_assignment && strcmp(node->binary.op, "=") == 0 && g_config.use_cpp &&
+        if (is_assignment && strcmp(node->binary.op, "=") == 0 && ctx->config->use_cpp &&
             node->binary.left->type == NODE_EXPR_VAR)
         {
             char *type_name = infer_type(ctx, node->binary.left);
@@ -1758,10 +1758,10 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
             }
 
             EMIT(ctx, " %s ", node->binary.op);
-            if (g_config.misra_mode ||
-                (g_config.use_cpp && is_assignment && strcmp(node->binary.op, "=") == 0))
+            if (ctx->config->misra_mode ||
+                (ctx->config->use_cpp && is_assignment && strcmp(node->binary.op, "=") == 0))
             {
-                int should_cast = g_config.misra_mode;
+                int should_cast = ctx->config->misra_mode;
                 if (!should_cast && node->binary.left->type_info)
                 {
                     TypeKind k = node->binary.left->type_info->kind;
@@ -1812,7 +1812,7 @@ static void handle_expr_binary(ParserContext *ctx, ASTNode *node)
             zfree(clean_type);
         }
     }
-    if (g_config.misra_mode)
+    if (ctx->config->misra_mode)
     {
         EMIT(ctx, ")");
     }
@@ -2030,7 +2030,7 @@ static void handle_expr_call(ParserContext *ctx, ASTNode *node)
 
                 emit_mangled_name(ctx, mangled_base, method);
                 EMIT(ctx, "(");
-                if (g_config.use_cpp)
+                if (ctx->config->use_cpp)
                 {
                     EMIT(ctx, "({ __typeof__((");
                     codegen_expression(ctx, target);
@@ -2353,9 +2353,9 @@ skip_callee_gen:
                 int is_internal = strncmp(name, "_z_", 3) == 0 || strncmp(name, "_Z", 2) == 0;
                 int is_extern = is_extern_symbol(ctx, name);
                 int is_whitelisted = 0;
-                if (g_config.c_function_whitelist)
+                if (ctx->config->c_function_whitelist)
                 {
-                    char **w = g_config.c_function_whitelist;
+                    char **w = ctx->config->c_function_whitelist;
                     while (*w)
                     {
                         if (strcmp(*w, name) == 0)
@@ -2432,7 +2432,7 @@ skip_callee_gen:
             }
             else
             {
-                if (g_config.use_cpp && sig && arg_idx < sig->total_args)
+                if (ctx->config->use_cpp && sig && arg_idx < sig->total_args)
                 {
                     Type *param_t = sig->arg_types[arg_idx];
                     if (param_t && (param_t->kind == TYPE_POINTER || param_t->kind == TYPE_ENUM))
