@@ -13,7 +13,7 @@ set CFLAGS=-std=gnu11 -Wall -Wextra -Wshadow -g ^
  -I./src -I./src/ast -I./src/parser -I./src/codegen -I./plugins -I./src/zen ^
  -I./src/utils -I./src/lexer -I./src/analysis -I./src/lsp -I./src/diagnostics ^
  -I./std/third-party/tre/include
-set CFLAGS=%CFLAGS% -DZEN_VERSION=\"%ZEN_VERSION%\" -DZEN_SHARE_DIR=\".\"
+set CFLAGS=%CFLAGS% -DZEN_VERSION=\"%ZEN_VERSION%\" -DZEN_SHARE_DIR=\".\" -DZC_ALLOW_INTERNAL
 
 if "%ZC_HAS_JIT%"=="" set ZC_HAS_JIT=1
 if "%ZC_HAS_JIT%"=="1" (
