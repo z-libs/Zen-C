@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * @file arena.h
+ * @brief Arena allocator -- xmalloc, xstrdup, zfree macros.
+ */
+
 #ifndef ARENA_H
 #define ARENA_H
 

@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * @file token.h
+ * @brief Token types, lexer state, and lexer API.
+ */
+
 #ifndef TOKEN_H
 #define TOKEN_H
 

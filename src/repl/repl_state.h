@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
 #ifndef ZC_ALLOW_INTERNAL
 #error "repl/repl_state.h is internal to Zen C. Include the appropriate public header instead."

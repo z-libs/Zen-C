@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "zprep.h"
 #include "constants.h"
 #include "cJSON.h"

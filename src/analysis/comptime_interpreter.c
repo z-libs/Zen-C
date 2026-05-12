@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "comptime_interpreter.h"
 #include "../diagnostics/diagnostics.h"
 #include <string.h>

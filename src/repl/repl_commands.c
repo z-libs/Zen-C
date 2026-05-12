@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "repl_state.h"
 
 static int cmd_help(ReplState *state, const char *args)

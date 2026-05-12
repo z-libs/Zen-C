@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "../constants.h"
 #include "analysis/const_fold.h"
 #include "../parser/parser.h"

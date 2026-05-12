@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file repl_jit.c
  * @brief JIT execution implementation using LibTCC.

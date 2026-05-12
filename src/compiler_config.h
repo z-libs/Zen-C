@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef COMPILER_CONFIG_H
 #define COMPILER_CONFIG_H
 

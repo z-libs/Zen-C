@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "../utils/colors.h"
 #include "typecheck_internal.h"
 #include "../constants.h"

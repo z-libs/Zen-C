@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef ZC_CORE_H
 #define ZC_CORE_H
 

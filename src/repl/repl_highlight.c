@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file repl_highlight.c
  * @brief Syntax highlighting, keyword tables, and brace matching for the REPL.

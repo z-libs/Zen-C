@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "typecheck_internal.h"
 #include "../utils/utils.h"
 

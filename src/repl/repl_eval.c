@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file repl_eval.c
  * @brief Evaluation helpers: code synthesis, header detection, documentation,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "zen_facts.h"
 #include <stdio.h>

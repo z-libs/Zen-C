@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "os.h"
 #include "../zprep.h"

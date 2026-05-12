@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #define ZEN_DISABLE_COLORS_WRAPPER
 #include "colors.h"
 #include "../zprep.h"

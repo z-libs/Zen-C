@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "cJSON.h"
 #include "../constants.h"
 #include "lsp_project.h" // Includes lsp_index.h, parser.h

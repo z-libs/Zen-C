@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "plugin_manager.h"
 #include <string.h>
 #ifdef ZC_STATIC_PLUGINS

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "emitter.h"
 #include <stdlib.h>

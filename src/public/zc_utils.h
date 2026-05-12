@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef ZC_UTILS_H
 #define ZC_UTILS_H
 

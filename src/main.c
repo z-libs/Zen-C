@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "codegen/codegen.h"
 #include "parser/parser.h"
 #include "constants.h"
@@ -278,6 +279,10 @@ int main(int argc, char **argv)
             g_config.use_typecheck = 1;
             zvec_push_Str(&g_config.cfg_defines, xstrdup("misra"));
             zvec_push_Str(&g_config.cfg_defines, xstrdup("ZC_MISRA"));
+        }
+        else if (strcmp(arg, "--backend") == 0 && i + 1 < argc)
+        {
+            g_config.backend_name = argv[++i];
         }
         else if (strcmp(arg, "--freestanding") == 0)
         {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "../arena.h"
 #include "symbols.h"
 #include <stdio.h>

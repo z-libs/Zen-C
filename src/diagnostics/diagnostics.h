@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * @file diagnostics.h
+ * @brief Error and warning reporting -- zerror_at, zwarn_at, zpanic_at.
+ */
 
 #ifndef ZC_ALLOW_INTERNAL
 #error                                                                                             \

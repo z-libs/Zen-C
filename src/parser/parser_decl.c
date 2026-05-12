@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "parser.h"
 #include "../constants.h"
@@ -435,7 +436,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export)
     // Check for Struct Destructuring: var Point { x, y }
     if (lexer_peek(l).type == TOK_LBRACE)
     {
-        lexer_next(l); // eat {
+        lexer_next(l);
         char **names = xmalloc(16 * sizeof(char *));
         char **fields = xmalloc(16 * sizeof(char *));
         int count = 0;
@@ -502,7 +503,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export)
     // Check for Guard Pattern: var Some(val) = opt else { ... }
     if (lexer_peek(l).type == TOK_LPAREN)
     {
-        lexer_next(l); // eat (
+        lexer_next(l);
         Token val_tok = lexer_next(l);
         check_identifier(ctx, val_tok);
         char *val_name = token_strdup(val_tok);

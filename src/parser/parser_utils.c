@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "../plugins/plugin_manager.h"
 #include "parser.h"
 #include "../utils/format_expr.h"

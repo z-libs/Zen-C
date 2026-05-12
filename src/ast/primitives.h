@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * @file primitives.h
+ * @brief Primitive type definitions and lookup tables.
+ */
 
 #ifndef ZC_ALLOW_INTERNAL
 #error "ast/primitives.h is internal to Zen C. Include the appropriate public header instead."

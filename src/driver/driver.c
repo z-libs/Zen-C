@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "driver.h"
 #include "../parser/parser.h"
 #include "../codegen/codegen.h"
@@ -347,6 +348,22 @@ int driver_compile(ZenCompiler *compiler)
         {
             perror("rename output");
             return 1;
+        }
+        return 0;
+    }
+
+    // Skip C compilation for non-C-family backends (e.g. AST dump)
+    if (strcmp(ext_p, ".c") != 0 && strcmp(ext_p, ".cpp") != 0 && strcmp(ext_p, ".cu") != 0 &&
+        strcmp(ext_p, ".m") != 0)
+    {
+        if (compiler->config.output_file &&
+            strcmp(temp_source_buf, compiler->config.output_file) != 0)
+        {
+            rename(temp_source_buf, compiler->config.output_file);
+        }
+        else if (!compiler->config.emit_c)
+        {
+            remove(temp_source_buf);
         }
         return 0;
     }

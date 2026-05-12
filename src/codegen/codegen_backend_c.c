@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: MIT
 #include "codegen_backend.h"
 #include "codegen.h"
 #include "../parser/parser.h"
 #include <string.h>
+
+extern void codegen_register_astdump_backend(void);
 
 #define MAX_BACKENDS 8
 
@@ -47,6 +50,7 @@ void codegen_init_backends(void)
         return;
     }
     codegen_register_backend(&c_backend);
+    codegen_register_astdump_backend();
 }
 
 void codegen_node(ParserContext *ctx, ASTNode *root)

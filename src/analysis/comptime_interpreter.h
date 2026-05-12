@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef COMPTIME_INTERPRETER_H
 #ifndef ZC_ALLOW_INTERNAL
 #error                                                                                             \

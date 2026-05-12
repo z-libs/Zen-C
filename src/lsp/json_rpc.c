@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "json_rpc.h"
 #include "cJSON.h"
 #include "lsp_project.h"

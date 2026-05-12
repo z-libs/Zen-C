@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "parser.h"
 
 // Returns 1 if the token can serve as a field/method name in member access.
@@ -1200,7 +1201,7 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l)
 
     if (lexer_peek(l).type == TOK_LBRACKET)
     {
-        lexer_next(l); // eat [
+        lexer_next(l);
 
         while (lexer_peek(l).type != TOK_RBRACKET && lexer_peek(l).type != TOK_EOF)
         {
@@ -2358,7 +2359,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                 (lexer_peek(l).type == TOK_LPAREN || lexer_peek(l).type == TOK_LBRACE))
             {
                 int is_brace = (lexer_peek(l).type == TOK_LBRACE);
-                lexer_next(l);                          // eat ( or {
+                lexer_next(l);
                 bindings = xcalloc(8, sizeof(char *));  // Initial capacity
                 binding_refs = xcalloc(8, sizeof(int)); // unused but consistent
 
@@ -3733,7 +3734,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
         }
         else if (!sig && !find_symbol_entry(ctx, acc) && lexer_peek(l).type == TOK_LPAREN)
         {
-            (void)lexer_next(l); // eat (
+            (void)lexer_next(l);
             CallArgs args_call = parse_call_args(ctx, l, NULL);
             ASTNode *head = args_call.head;
             char **arg_names = args_call.arg_names;
@@ -4902,7 +4903,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
             // Checks for (args...) suffix for SCAN mode
             if (lexer_peek(l).type == TOK_LPAREN)
             {
-                lexer_next(l); // consume (
+                lexer_next(l);
 
                 // Parse args
                 ASTNode *args[16];
@@ -6532,7 +6533,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 // Special case: .val() on pointer = dereference
                 if (strcmp(node->member.field, "val") == 0 && lexer_peek(l).type == TOK_LPAREN)
                 {
-                    lexer_next(l); // consume (
+                    lexer_next(l);
                     if (lexer_peek(l).type == TOK_RPAREN)
                     {
                         lexer_next(l); // consume )
@@ -6559,7 +6560,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                     // Special case: .val() on pointer = dereference
                     if (strcmp(node->member.field, "val") == 0 && lexer_peek(l).type == TOK_LPAREN)
                     {
-                        lexer_next(l); // consume (
+                        lexer_next(l);
                         if (lexer_peek(l).type == TOK_RPAREN)
                         {
                             lexer_next(l); // consume )
@@ -7938,7 +7939,7 @@ ASTNode *parse_tuple_expression(ParserContext *ctx, Lexer *l, const char *type_n
     Token tk;
     if (!first_elem)
     {
-        tk = lexer_next(l); // eat (
+        tk = lexer_next(l);
     }
     else
     {

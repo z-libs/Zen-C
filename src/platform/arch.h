@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef ZC_PLATFORM_ARCH_H
 #define ZC_PLATFORM_ARCH_H
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef TYPECHECK_INTERNAL_H
 #ifndef ZC_ALLOW_INTERNAL
 #error                                                                                             \

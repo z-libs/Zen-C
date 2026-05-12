@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file repl.c
  * @brief Main entry point and orchestration for the Zen C REPL.

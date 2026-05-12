@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "codegen_shared.h"
 #include "../parser/parser.h"
 #include "../ast/primitives.h"

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "primitives.h"
 #include <string.h>

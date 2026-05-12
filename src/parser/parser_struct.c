@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "parser.h"
 #include "../constants.h"
@@ -146,7 +147,7 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
         }
     }
 
-    lexer_next(l); // eat {
+    lexer_next(l);
 
     ASTNode *methods = NULL, *tail = NULL;
     while (1)
@@ -388,7 +389,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
 
         ctx->current_impl_struct = name2;
 
-        lexer_next(l); // eat {
+        lexer_next(l);
         ASTNode *h = 0, *tl = 0;
 
         char *full_target_name = name2;
@@ -730,7 +731,7 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
         else
         {
             // REGULAR IMPL
-            lexer_next(l); // eat {
+            lexer_next(l);
             ASTNode *h = 0, *tl = 0;
             while (1)
             {
@@ -919,7 +920,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
         return node;
     }
 
-    lexer_next(l); // eat {
+    lexer_next(l);
     ASTNode *h = 0, *tl = 0;
 
     // Temp storage for used structs
@@ -1205,7 +1206,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
         register_generic(ctx, gp);
     }
 
-    lexer_next(l); // eat {
+    lexer_next(l);
 
     ASTNode *h = 0, *tl = 0;
     int v = 0;
@@ -1237,7 +1238,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
             int tuple_count = 0;
             if (lexer_peek(l).type == TOK_LPAREN)
             {
-                lexer_next(l); // eat (
+                lexer_next(l);
                 Type *first_t = parse_type_obj(ctx, l);
 
                 if (lexer_peek(l).type == TOK_COMMA)

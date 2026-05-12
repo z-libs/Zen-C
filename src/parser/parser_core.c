@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "parser.h"
 #include "../constants.h"
@@ -505,7 +506,7 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
 
                 if (lexer_peek(l).type == TOK_LPAREN)
                 {
-                    lexer_next(l); // eat (
+                    lexer_next(l);
                     while (1)
                     {
                         Token inner_t = lexer_next(l);

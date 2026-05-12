@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef ZC_PLATFORM_COMPILER_H
 #define ZC_PLATFORM_COMPILER_H
 

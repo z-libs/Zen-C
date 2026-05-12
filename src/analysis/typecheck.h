@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef TYPECHECK_H
 #ifndef ZC_ALLOW_INTERNAL
 #error "analysis/typecheck.h is internal to Zen C. Include the appropriate public header instead."

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef TYPECHECK_STMT_H
 #define TYPECHECK_STMT_H
 

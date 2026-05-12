@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * @file symbols.h
+ * @brief Symbol table -- scopes, symbol lookup, registration.
+ */
+
 #ifndef SYMBOLS_H
 #ifndef ZC_ALLOW_INTERNAL
 #error "ast/symbols.h is internal to Zen C. Include the appropriate public header instead."

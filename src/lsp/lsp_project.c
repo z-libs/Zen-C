@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "lsp_project.h"
 #include "../utils/utils.h"
 #include "../constants.h"

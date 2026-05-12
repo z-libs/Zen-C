@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 #include "parser.h"
 #include "../constants.h"
@@ -325,7 +326,7 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
             (lexer_peek(l).type == TOK_LPAREN || lexer_peek(l).type == TOK_LBRACE))
         {
             int is_brace = (lexer_peek(l).type == TOK_LBRACE);
-            lexer_next(l); // eat ( or {
+            lexer_next(l);
 
             bindings = xcalloc(8, sizeof(char *)); // hardcap at 8 for now or realloc
             binding_refs = xcalloc(8, sizeof(int));
@@ -1053,7 +1054,7 @@ ASTNode *parse_asm(ParserContext *ctx, Lexer *l)
                 {
                     zpanic_at(lexer_peek(l), "Expected ( after clobber");
                 }
-                lexer_next(l); // eat (
+                lexer_next(l);
 
                 Token clob = lexer_next(l);
                 if (clob.type != TOK_STRING)
@@ -2937,7 +2938,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     {
         zpanic_at(lexer_peek(l), "Expected { after macro invocation");
     }
-    lexer_next(l); // consume {
+    lexer_next(l);
     int start_line = l->line;
     int start_col = l->col;
     const char *body_start = l->src + l->pos;
@@ -3283,7 +3284,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             {
                 zpanic_at(lexer_peek(l), "Expected { after raw");
             }
-            lexer_next(l); // eat {
+            lexer_next(l);
 
             const char *start = l->src + l->pos;
             int depth = 1;
@@ -4457,7 +4458,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     if (lexer_peek(l).type == TOK_LBRACE)
     {
         is_selective = 1;
-        lexer_next(l); // eat {
+        lexer_next(l);
 
         // Parse symbol list
         while (lexer_peek(l).type != TOK_RBRACE)

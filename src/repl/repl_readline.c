@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file repl_readline.c
  * @brief Line editing, history navigation, reverse search, and tab completion.

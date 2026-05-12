@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #ifndef PLUGIN_MANAGER_H
 #ifndef ZC_ALLOW_INTERNAL
 #error                                                                                             \

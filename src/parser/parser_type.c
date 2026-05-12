@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "../ast/ast.h"
 #include "../constants.h"
 #include "analysis/const_fold.h"
@@ -401,7 +402,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
 
     if (t.type == TOK_LBRACKET)
     {
-        lexer_next(l); // eat [
+        lexer_next(l);
         Type *inner = parse_type_formal(ctx, l);
 
         // Check for fixed-size array [T; N]
@@ -453,7 +454,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
 
     if (t.type == TOK_LPAREN)
     {
-        lexer_next(l); // eat (
+        lexer_next(l);
         char sig[MAX_SHORT_MSG_LEN];
         sig[0] = 0;
         const char *type_names[256];

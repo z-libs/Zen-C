@@ -65,3 +65,4 @@ std/third-party/tre/lib/tre-stack.c
 std/third-party/tre/lib/xmalloc.c
 src/codegen/codegen_backend_c.c
 src/codegen/codegen_shared.c
+src/codegen/codegen_backend_astdump.c

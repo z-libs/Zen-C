@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "typecheck_internal.h"
 
 void check_block(TypeChecker *tc, ASTNode *block, int depth)

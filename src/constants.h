@@ -1,9 +1,15 @@
+// SPDX-License-Identifier: MIT
 #ifndef ZEN_CONSTANTS_H
 #ifndef ZC_ALLOW_INTERNAL
 #error "constants.h is internal to Zen C. Include the appropriate public header instead."
 #endif
 
 #define ZEN_CONSTANTS_H
+
+/**
+ * @file constants.h
+ * @brief Type checking macros, buffer size constants.
+ */
 
 // Buffer sizes
 #define MAX_TYPE_NAME_LEN 1024    ///< Max length for type name strings.

@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * @file ast.h
+ * @brief AST node types, Type system, type introspection helpers.
+ */
 
 #ifndef ZC_ALLOW_INTERNAL
 #error "ast/ast.h is internal to Zen C. Include the appropriate public header instead."
