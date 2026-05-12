@@ -115,7 +115,7 @@ void check_expr_unary(TypeChecker *tc, ASTNode *node, int depth)
             CompilerConfig *cfg = &tc->pctx->compiler->config;
             if (cfg->misra_mode)
             {
-                misra_check_file_dereference(tc, operand_type, node->token);
+                misra_check_file_dereference(tc->pctx, operand_type, node->token);
             }
         }
         return;
@@ -131,7 +131,7 @@ void check_expr_unary(TypeChecker *tc, ASTNode *node, int depth)
         }
         else
         {
-            misra_check_bitwise_operand(tc, node->unary.operand->type_info, node->token);
+            misra_check_bitwise_operand(tc->pctx, node->unary.operand->type_info, node->token);
             node->type_info = operand_type;
         }
         return;
@@ -140,7 +140,7 @@ void check_expr_unary(TypeChecker *tc, ASTNode *node, int depth)
     if (strcmp(op, "++") == 0 || strcmp(op, "--") == 0 || strcmp(op, "_post++") == 0 ||
         strcmp(op, "_post--") == 0)
     {
-        misra_check_inc_dec_result_used(tc, node->token);
+        misra_check_inc_dec_result_used(tc->pctx, node->token);
         // Track as a write
         if (node->unary.operand->type == NODE_EXPR_VAR)
         {
@@ -220,7 +220,7 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
     {
         if (!tc->is_stmt_context)
         {
-            misra_check_assignment_result_used(tc, node->token);
+            misra_check_assignment_result_used(tc->pctx, node->token);
         }
 
         int old_is_assign_lhs = tc->is_assign_lhs;
@@ -323,7 +323,8 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
     // Rule 19.1: Check for self-assignment (x = x)
     if (tc->pctx->config->misra_mode && strcmp(op, "=") == 0)
     {
-        misra_check_assignment_overlap(tc, node->binary.left, node->binary.right, node->token);
+        misra_check_assignment_overlap(tc->pctx, node->binary.left, node->binary.right,
+                                       node->token);
     }
 
     Type *left_type = node->binary.left->type_info;
@@ -407,7 +408,8 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
                 if (tc->pctx->config->misra_mode && node->binary.left &&
                     node->binary.left->type == NODE_EXPR_VAR)
                 {
-                    misra_check_param_modified(tc, node->binary.left, node->binary.left->token);
+                    misra_check_param_modified(tc->current_func, node->binary.left,
+                                               node->binary.left->token);
                 }
                 if (lhs_sym->is_immutable)
                 {
@@ -416,7 +418,7 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
 
                 if (tc->pctx->config->misra_mode)
                 {
-                    misra_check_pointer_conversion(tc, left_type, right_type, node->token);
+                    misra_check_pointer_conversion(tc->pctx, left_type, right_type, node->token);
                 }
                 mark_symbol_valid(tc->pctx, lhs_sym, node->binary.left);
             }
@@ -458,7 +460,7 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
             // Pointer Arithmetic
             if (lhs_resolved->kind == TYPE_POINTER || lhs_resolved->kind == TYPE_STRING)
             {
-                misra_check_pointer_arithmetic(tc, lhs_resolved, node->token);
+                misra_check_pointer_arithmetic(tc->pctx, lhs_resolved, node->token);
 
                 // Ptr - Ptr -> isize
                 if (strcmp(op, "-") == 0 &&
@@ -479,7 +481,7 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
             if (strcmp(op, "+") == 0 && is_integer_type(lhs_resolved) &&
                 (rhs_resolved->kind == TYPE_POINTER || rhs_resolved->kind == TYPE_STRING))
             {
-                misra_check_pointer_arithmetic(tc, rhs_resolved, node->token);
+                misra_check_pointer_arithmetic(tc->pctx, rhs_resolved, node->token);
                 node->type_info = right_type;
                 return;
             }
@@ -517,8 +519,8 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
             else
             {
                 // Rule 10.4: Balancing
-                misra_check_binary_op_essential_types(tc, node->binary.left, node->binary.right,
-                                                      node->token);
+                misra_check_binary_op_essential_types(tc->pctx, node->binary.left,
+                                                      node->binary.right, node->token);
 
                 // MISRA Rule 12.4: Evaluation of constant expressions shall not lead to unsigned
                 // wrap Use the contextually pushed down type (stored in node->type_info before this
@@ -547,14 +549,14 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
 
                         if (strcmp(op, "+") == 0 || strcmp(op, "-") == 0 || strcmp(op, "*") == 0)
                         {
-                            misra_check_unsigned_wrap(tc, op, lval, rval, res, target_type,
+                            misra_check_unsigned_wrap(tc->pctx, op, lval, rval, res, target_type,
                                                       node->token);
                         }
                     }
                 }
 
                 // Rule 10.2: Character arithmetic
-                misra_check_char_arithmetic(tc, left_type, right_type, op, node->token);
+                misra_check_char_arithmetic(tc->pctx, left_type, right_type, op, node->token);
 
                 // Result type: Only infer if not already set by context
                 if (!node->type_info)
@@ -584,7 +586,7 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
         if (left_type && right_type)
         {
             // Rule 10.4: Balancing
-            misra_check_binary_op_essential_types(tc, node->binary.left, node->binary.right,
+            misra_check_binary_op_essential_types(tc->pctx, node->binary.left, node->binary.right,
                                                   node->token);
 
             // Rule 18.3: Relational operators on pointers (>, <, >=, <=)
@@ -601,7 +603,7 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
                 }
             }
 
-            misra_check_string_compare(tc, left_type, right_type, node->token);
+            misra_check_string_compare(tc->pctx, left_type, right_type, node->token);
 
             if (!type_eq(left_type, right_type))
             {
@@ -647,7 +649,7 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
             if (eval_const_int_expr(node->binary.right, tc->pctx, &shift_amt))
             {
                 int width = integer_type_width(left_type);
-                misra_check_shift_amount(tc, shift_amt, width, node->token);
+                misra_check_shift_amount(tc->pctx, shift_amt, width, node->token);
             }
         }
         else if ((strcmp(op, "<<") == 0 || strcmp(op, ">>") == 0) && node->binary.right &&
@@ -697,12 +699,12 @@ void check_expr_binary(TypeChecker *tc, ASTNode *node, int depth)
             {
                 if (tc->pctx->config->misra_mode)
                 {
-                    misra_check_bitwise_operand(tc, left_type, node->token);
-                    misra_check_bitwise_operand(tc, right_type, node->token);
+                    misra_check_bitwise_operand(tc->pctx, left_type, node->token);
+                    misra_check_bitwise_operand(tc->pctx, right_type, node->token);
                     // Rule 10.4: Balancing for &, |, ^
                     if (strcmp(op, "&") == 0 || strcmp(op, "|") == 0 || strcmp(op, "^") == 0)
                     {
-                        misra_check_binary_op_essential_types(tc, node->binary.left,
+                        misra_check_binary_op_essential_types(tc->pctx, node->binary.left,
                                                               node->binary.right, node->token);
                     }
                 }
@@ -735,7 +737,7 @@ void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
             {
                 t = node->token;
             }
-            misra_check_banned_function(tc, func_name, t);
+            misra_check_banned_function(tc->pctx, func_name, t);
         }
 
         if (tc->pctx->config->misra_mode && tc->current_func)
@@ -747,7 +749,7 @@ void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
                 {
                     t = node->token;
                 }
-                misra_check_recursion(tc, t);
+                misra_check_recursion(tc->pctx, t);
             }
         }
 
@@ -978,8 +980,8 @@ void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
             {
                 if (e_resolved->array_size != a_resolved->array_size)
                 {
-                    misra_check_array_param_size(tc, e_resolved->array_size, a_resolved->array_size,
-                                                 arg->token);
+                    misra_check_array_param_size(tc->pctx, e_resolved->array_size,
+                                                 a_resolved->array_size, arg->token);
                 }
             }
 
@@ -1053,7 +1055,7 @@ void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
     // Rule 17.7: Unused return values
     if (tc->pctx->config->misra_mode && tc->is_stmt_context && node->type_info)
     {
-        misra_check_function_return_usage(tc, node);
+        misra_check_function_return_usage(tc->pctx, node);
     }
 
     // Rule 13.2: Side effect collision detection in arguments
@@ -1065,7 +1067,7 @@ void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
     // Evaluation order check: function call arguments should not have conflicting side effects
     if (tc->pctx->config->misra_mode)
     {
-        misra_check_evaluation_order(tc, node);
+        misra_check_evaluation_order(tc->pctx, node);
     }
 }
 
@@ -1180,9 +1182,9 @@ int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, Token t
     // MISRA Pointer & Constant Checks (Rules 11.5, 11.9, etc.)
     if (tc->pctx->config->misra_mode && resolved_target->kind == TYPE_POINTER)
     {
-        misra_check_null_pointer_constant(tc, value_node, t);
-        misra_check_void_ptr_cast(tc, target, value, t);
-        misra_check_pointer_conversion(tc, target, value, t);
+        misra_check_null_pointer_constant(tc->pctx, value_node, t);
+        misra_check_void_ptr_cast(tc->pctx, target, value, t);
+        misra_check_pointer_conversion(tc->pctx, target, value, t);
     }
 
     // Resolution of Integer compatibility (Rule 10.3)
@@ -1194,7 +1196,7 @@ int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, Token t
 
         if (tc->pctx->config->misra_mode)
         {
-            misra_check_implicit_conversion(tc, target, value, value_node, t);
+            misra_check_implicit_conversion(tc->pctx, target, value, value_node, t);
         }
         else
         {
@@ -1244,7 +1246,7 @@ int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, Token t
         if (tc->pctx->config->misra_mode && resolved_target->kind == TYPE_POINTER &&
             resolved_value->kind == TYPE_POINTER)
         {
-            misra_check_pointer_conversion(tc, target, value, t);
+            misra_check_pointer_conversion(tc->pctx, target, value, t);
         }
         return 1;
     }
@@ -1503,7 +1505,7 @@ void check_struct_init(TypeChecker *tc, ASTNode *node, int depth)
             {
                 if (strcmp(prev->var_decl.name, field_init->var_decl.name) == 0)
                 {
-                    misra_check_double_initialization(tc, field_init->var_decl.name,
+                    misra_check_double_initialization(tc->pctx, field_init->var_decl.name,
                                                       field_init->token);
                     break;
                 }

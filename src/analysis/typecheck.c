@@ -406,8 +406,8 @@ void tc_add_symbol(TypeChecker *tc, const char *name, Type *type, Token t, int i
     CompilerConfig *cfg = &tc->pctx->compiler->config;
     if (cfg->misra_mode)
     {
-        misra_check_shadowing(tc, name, t);
-        misra_check_typographic_ambiguity(tc, name, t);
+        misra_check_shadowing(tc->pctx, name, t);
+        misra_check_typographic_ambiguity(tc->pctx, name, t);
     }
     add_symbol_with_token(tc->pctx, name, NULL, type, t, 0);
     ZenSymbol *sym = symbol_lookup(tc->pctx->current_scope, name);
@@ -663,12 +663,12 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *cond_type = resolve_alias(node->if_stmt.condition->type_info);
             if (tc->pctx->config->misra_mode)
             {
-                misra_check_condition_boolean(tc, node->if_stmt.condition->type_info,
+                misra_check_condition_boolean(tc->pctx, node->if_stmt.condition->type_info,
                                               node->if_stmt.condition->token);
                 int inv;
                 if (is_expression_invariant(tc, node->if_stmt.condition, &inv))
                 {
-                    misra_check_invariant_condition(tc, node->if_stmt.condition->token);
+                    misra_check_invariant_condition(tc->pctx, node->if_stmt.condition->token);
                 }
             }
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
@@ -683,16 +683,16 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         MoveState *initial_state = tc->pctx->move_state;
         int initial_unreachable = tc->is_unreachable;
 
-        misra_check_compound_body(tc, node->if_stmt.then_body, "if");
+        misra_check_compound_body(tc->pctx, node->if_stmt.then_body, "if");
         if (node->if_stmt.else_body)
         {
             if (node->if_stmt.else_body->type == NODE_IF)
             {
-                misra_check_terminal_else(tc, node);
+                misra_check_terminal_else(tc->pctx, node);
             }
             else
             {
-                misra_check_compound_body(tc, node->if_stmt.else_body, "else");
+                misra_check_compound_body(tc->pctx, node->if_stmt.else_body, "else");
             }
         }
 
@@ -745,7 +745,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
     }
     case NODE_MATCH:
         check_node(tc, node->match_stmt.expr, depth + 1);
-        misra_check_match_stmt(tc, node);
+        misra_check_match_stmt(tc->pctx, node);
         // Visit each match case
         {
             MoveState *match_initial_state = tc->pctx->move_state;
@@ -841,7 +841,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
                                         "Match may not be exhaustive (no default case)", hints);
                 }
 
-                misra_check_match_stmt(tc, node);
+                misra_check_match_stmt(tc->pctx, node);
             }
 
             if (match_initial_state && merged_state)
@@ -861,20 +861,20 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
     case NODE_TYPE_ALIAS:
         if (node->type == NODE_STRUCT)
         {
-            misra_check_reserved_identifier(tc, node->strct.name, node->token);
-            misra_check_struct_decl(tc, node);
+            misra_check_reserved_identifier(tc->pctx, node->strct.name, node->token);
+            misra_check_struct_decl(tc->pctx, node);
             if (node->strct.is_union)
             {
-                misra_check_union(tc, node->token);
+                misra_check_union(tc->pctx, node->token);
             }
         }
         else if (node->type == NODE_ENUM)
         {
-            misra_check_reserved_identifier(tc, node->enm.name, node->token);
+            misra_check_reserved_identifier(tc->pctx, node->enm.name, node->token);
         }
         else if (node->type == NODE_TYPE_ALIAS)
         {
-            misra_check_reserved_identifier(tc, node->type_alias.alias, node->token);
+            misra_check_reserved_identifier(tc->pctx, node->type_alias.alias, node->token);
         }
         break;
     case NODE_WHILE:
@@ -1077,7 +1077,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *cond_type = resolve_alias(node->guard_stmt.condition->type_info);
             if (tc->pctx->config->misra_mode)
             {
-                misra_check_condition_boolean(tc, node->guard_stmt.condition->type_info,
+                misra_check_condition_boolean(tc->pctx, node->guard_stmt.condition->type_info,
                                               node->guard_stmt.condition->token);
             }
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
@@ -1104,7 +1104,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *cond_type = resolve_alias(node->unless_stmt.condition->type_info);
             if (tc->pctx->config->misra_mode)
             {
-                misra_check_condition_boolean(tc, node->unless_stmt.condition->type_info,
+                misra_check_condition_boolean(tc->pctx, node->unless_stmt.condition->type_info,
                                               node->unless_stmt.condition->token);
             }
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
@@ -1132,7 +1132,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *cond_type = resolve_alias(node->assert_stmt.condition->type_info);
             if (tc->pctx->config->misra_mode)
             {
-                misra_check_condition_boolean(tc, node->assert_stmt.condition->type_info,
+                misra_check_condition_boolean(tc->pctx, node->assert_stmt.condition->type_info,
                                               node->assert_stmt.condition->token);
             }
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
@@ -1168,13 +1168,13 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
 
             if (tc->pctx->config->misra_mode && target_type)
             {
-                misra_check_cast(tc, target_type, source_type, node->token,
+                misra_check_cast(tc->pctx, target_type, source_type, node->token,
                                  is_composite_expression(node->cast.expr));
-                misra_check_pointer_conversion(tc, target_type, source_type, node->token);
-                misra_check_void_ptr_cast(tc, target_type, source_type, node->token);
+                misra_check_pointer_conversion(tc->pctx, target_type, source_type, node->token);
+                misra_check_void_ptr_cast(tc->pctx, target_type, source_type, node->token);
                 if (target_type->kind == TYPE_POINTER)
                 {
-                    misra_check_null_pointer_constant(tc, node, node->token);
+                    misra_check_null_pointer_constant(tc->pctx, node, node->token);
                 }
             }
 
@@ -1196,7 +1196,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         break;
     case NODE_EXPR_ARRAY_LITERAL:
     {
-        misra_check_initializer_side_effects(tc, node);
+        misra_check_initializer_side_effects(tc->pctx, node);
         ASTNode *elem = node->array_literal.elements;
         Type *elem_type = NULL;
         int count = 0;
@@ -1222,7 +1222,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
     break;
     case NODE_EXPR_TUPLE_LITERAL:
     {
-        misra_check_initializer_side_effects(tc, node);
+        misra_check_initializer_side_effects(tc->pctx, node);
         ASTNode *elem = node->tuple_literal.elements;
         while (elem)
         {
@@ -1232,7 +1232,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
     }
     break;
     case NODE_EXPR_STRUCT_INIT:
-        misra_check_initializer_side_effects(tc, node);
+        misra_check_initializer_side_effects(tc->pctx, node);
         check_struct_init(tc, node, depth + 1);
         break;
     case NODE_LOOP:
@@ -1249,12 +1249,12 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *t = node->ternary.cond->type_info;
             if (tc->pctx->config->misra_mode)
             {
-                misra_check_condition_boolean(tc, node->ternary.cond->type_info,
+                misra_check_condition_boolean(tc->pctx, node->ternary.cond->type_info,
                                               node->ternary.cond->token);
                 int inv;
                 if (is_expression_invariant(tc, node->ternary.cond, &inv))
                 {
-                    misra_check_invariant_condition(tc, node->ternary.cond->token);
+                    misra_check_invariant_condition(tc->pctx, node->ternary.cond->token);
                 }
             }
             else if (t->kind != TYPE_BOOL && !is_integer_type(t) && t->kind != TYPE_POINTER)
@@ -1357,7 +1357,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
 
             if (tc->pctx->config->misra_mode && tc_expr_has_side_effects(node->size_of.expr))
             {
-                misra_check_side_effects_sizeof(tc, node->size_of.expr);
+                misra_check_side_effects_sizeof(tc->pctx, node->size_of.expr);
             }
         }
         node->type_info = type_new(TYPE_I32);
@@ -1383,7 +1383,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
     case NODE_BREAK:
         if (tc->loop_break_count > 0)
         {
-            misra_check_iteration_termination(tc, node->token);
+            misra_check_iteration_termination(tc->pctx, node->token);
         }
         tc->loop_break_count++;
 
@@ -1403,10 +1403,10 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
             ZenSymbol *lbl = tc_lookup(tc, node->goto_stmt.label_name);
             if (lbl && lbl->decl_token.line != 0)
             {
-                misra_check_goto_constraint(tc, node->token, lbl->decl_token);
+                misra_check_goto_constraint(tc->pctx, node->token, lbl->decl_token);
             }
         }
-        misra_check_goto(tc, node->token);
+        misra_check_goto(tc->pctx, node->token);
         tc->is_unreachable = 1;
         break;
 
@@ -1421,17 +1421,17 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
     case NODE_VA_END:
     case NODE_VA_COPY:
     case NODE_VA_ARG:
-        misra_check_stdarg(tc, node->token);
+        misra_check_stdarg(tc->pctx, node->token);
         break;
 
     case NODE_RAW_STMT:
-        misra_check_raw_block(tc, node->token);
+        misra_check_raw_block(tc->pctx, node->token);
         break;
     case NODE_PREPROC_DIRECTIVE:
         // Rule Zen 1.4 is already handled by parser_audit_preprocessor
         break;
     case NODE_PLUGIN:
-        misra_check_plugin_block(tc, node->token);
+        misra_check_plugin_block(tc->pctx, node->token);
         break;
     case NODE_LABEL:
         if (tc->pctx->config->misra_mode)
@@ -1675,9 +1675,9 @@ int check_program(ParserContext *ctx, ASTNode *root)
 
     if (tc.pctx->config->misra_mode)
     {
-        misra_audit_unused_symbols(&tc);
-        misra_audit_block_scope(&tc);
-        misra_audit_identifier_uniqueness(&tc);
+        misra_audit_unused_symbols(tc.pctx);
+        misra_audit_block_scope(tc.pctx);
+        misra_audit_identifier_uniqueness(tc.pctx);
     }
 
     if (g_error_count > 0)

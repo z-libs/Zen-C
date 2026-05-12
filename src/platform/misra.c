@@ -1,6 +1,3 @@
-#include "analysis/typecheck.h"
-#include "analysis/typecheck_internal.h"
-#include "analysis/const_fold.h"
 #include "ast/ast.h"
 #include "constants.h"
 #include "platform/misra.h"
@@ -9,6 +6,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+
+// Forward declarations from analysis headers (standalone functions only, no TypeChecker dependency)
+Type *resolve_alias(Type *t);
+int tc_expr_has_side_effects(ASTNode *node);
+int eval_const_int_expr(struct ASTNode *node, struct ParserContext *ctx, long long *out);
 
 // Standard C macro/type names from headers used in the MISRA preamble
 // (<stddef.h>, <stdint.h>, <stdbool.h>) plus common names from other
@@ -114,9 +116,9 @@ static int get_type_width(Type *t)
     return 0;
 }
 
-void misra_check_ess_type_categories(TypeChecker *tc, Type *left, Type *right, Token token)
+void misra_check_ess_type_categories(ParserContext *ctx, Type *left, Type *right, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -127,19 +129,19 @@ void misra_check_ess_type_categories(TypeChecker *tc, Type *left, Type *right, T
     {
         if ((cl == ESS_BOOL || cr == ESS_BOOL))
         {
-            tc_error(tc, token, "MISRA Rule 10.4");
+            zerror_at(token, "MISRA Rule 10.4");
         }
         else if ((cl == ESS_SIGNED && cr == ESS_UNSIGNED) ||
                  (cl == ESS_UNSIGNED && cr == ESS_SIGNED))
         {
-            tc_error(tc, token, "MISRA Rule 10.4");
+            zerror_at(token, "MISRA Rule 10.4");
         }
     }
 }
 
-void misra_check_ess_type_composite(TypeChecker *tc, Type *target, Type *source, Token token)
+void misra_check_ess_type_composite(ParserContext *ctx, Type *target, Type *source, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -147,14 +149,14 @@ void misra_check_ess_type_composite(TypeChecker *tc, Type *target, Type *source,
     int sw = get_type_width(source);
     if (sw < tw)
     {
-        tc_error(tc, token, "MISRA Rule 10.7");
+        zerror_at(token, "MISRA Rule 10.7");
     }
 }
 
-void misra_check_implicit_conversion(struct TypeChecker *tc, struct Type *target,
+void misra_check_implicit_conversion(struct ParserContext *ctx, struct Type *target,
                                      struct Type *source, struct ASTNode *source_node, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -165,12 +167,12 @@ void misra_check_implicit_conversion(struct TypeChecker *tc, struct Type *target
     {
         if (ct == ESS_BOOL || cs == ESS_BOOL)
         {
-            tc_error(tc, token, "MISRA Rule 10.4");
+            zerror_at(token, "MISRA Rule 10.4");
         }
         else if ((ct == ESS_SIGNED && cs == ESS_UNSIGNED) ||
                  (ct == ESS_UNSIGNED && cs == ESS_SIGNED))
         {
-            tc_error(tc, token, "MISRA Rule 10.4");
+            zerror_at(token, "MISRA Rule 10.4");
         }
     }
 
@@ -178,12 +180,12 @@ void misra_check_implicit_conversion(struct TypeChecker *tc, struct Type *target
     int sw = get_type_width(source);
     if (sw > tw)
     {
-        tc_error(tc, token, "MISRA Rule 10.3");
+        zerror_at(token, "MISRA Rule 10.3");
     }
     else if (tw > sw && source_node && is_composite_expression(source_node))
     {
         // Rule 10.6: Composite expression assigned to wider type
-        tc_error(tc, token, "MISRA Rule 10.6");
+        zerror_at(token, "MISRA Rule 10.6");
     }
 
     // Rule 11.1 & 11.4: Pointer <-> Integer conversions
@@ -207,20 +209,20 @@ void misra_check_implicit_conversion(struct TypeChecker *tc, struct Type *target
                 (rt->kind == TYPE_POINTER && rt->inner &&
                  resolve_alias(rt->inner)->kind == TYPE_FUNCTION))
             {
-                tc_error(tc, token, "MISRA Rule 11.1");
+                zerror_at(token, "MISRA Rule 11.1");
             }
             else
             {
-                tc_error(tc, token, "MISRA Rule 11.4");
+                zerror_at(token, "MISRA Rule 11.4");
             }
         }
     }
 }
 
-void misra_check_char_arithmetic(TypeChecker *tc, Type *left, Type *right, const char *op,
+void misra_check_char_arithmetic(ParserContext *ctx, Type *left, Type *right, const char *op,
                                  Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -238,37 +240,37 @@ void misra_check_char_arithmetic(TypeChecker *tc, Type *left, Type *right, const
             }
         }
 
-        tc_error(tc, token, "MISRA Rule 10.2");
+        zerror_at(token, "MISRA Rule 10.2");
     }
 }
 
-void misra_check_bitwise_operand(TypeChecker *tc, Type *t, Token token)
+void misra_check_bitwise_operand(ParserContext *ctx, Type *t, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
     if (get_essential_category(t) != ESS_UNSIGNED)
     {
-        tc_error(tc, token, "MISRA Rule 10.1");
+        zerror_at(token, "MISRA Rule 10.1");
     }
 }
 
-void misra_check_shift_amount(TypeChecker *tc, long long amount, int width, Token token)
+void misra_check_shift_amount(ParserContext *ctx, long long amount, int width, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
     if (amount < 0 || (width > 0 && amount >= width))
     {
-        tc_error(tc, token, "MISRA Rule 12.2");
+        zerror_at(token, "MISRA Rule 12.2");
     }
 }
 
-void misra_check_pointer_conversion(TypeChecker *tc, Type *target, Type *source, Token token)
+void misra_check_pointer_conversion(ParserContext *ctx, Type *target, Type *source, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -284,7 +286,7 @@ void misra_check_pointer_conversion(TypeChecker *tc, Type *target, Type *source,
         // Rule 11.8: Cast shall not remove const qualification from the type pointed to
         if (rsi && (rsi->is_const || (rs->is_const && rsi == rs->inner)) && rti && !rti->is_const)
         {
-            tc_error(tc, token, "MISRA Rule 11.8");
+            zerror_at(token, "MISRA Rule 11.8");
         }
 
         // Rule 11.3: pointer to different object type
@@ -293,9 +295,9 @@ void misra_check_pointer_conversion(TypeChecker *tc, Type *target, Type *source,
         if (rti && rsi)
         {
             // Rule 11.2: Pointer to incomplete type
-            if (is_incomplete_type(tc->pctx, rti) || is_incomplete_type(tc->pctx, rsi))
+            if (is_incomplete_type(ctx, rti) || is_incomplete_type(ctx, rsi))
             {
-                tc_error(tc, token, "MISRA Rule 11.2");
+                zerror_at(token, "MISRA Rule 11.2");
             }
 
             TypeKind tk = rti->kind;
@@ -311,11 +313,11 @@ void misra_check_pointer_conversion(TypeChecker *tc, Type *target, Type *source,
                 // Rule 11.1: func pointer vs other
                 if (tk == TYPE_FUNCTION || sk == TYPE_FUNCTION)
                 {
-                    tc_error(tc, token, "MISRA Rule 11.1");
+                    zerror_at(token, "MISRA Rule 11.1");
                 }
                 else
                 {
-                    tc_error(tc, token, "MISRA Rule 11.3");
+                    zerror_at(token, "MISRA Rule 11.3");
                 }
             }
         }
@@ -327,9 +329,9 @@ void misra_check_pointer_conversion(TypeChecker *tc, Type *target, Type *source,
     }
 }
 
-void misra_check_void_ptr_cast(TypeChecker *tc, Type *target, Type *source, Token token)
+void misra_check_void_ptr_cast(ParserContext *ctx, Type *target, Type *source, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !target || !source)
+    if (!ctx->config->misra_mode || !target || !source)
     {
         return;
     }
@@ -347,16 +349,17 @@ void misra_check_void_ptr_cast(TypeChecker *tc, Type *target, Type *source, Toke
                 Type *rt_inner = resolve_alias(rt->inner);
                 if (rt_inner->kind != TYPE_VOID)
                 {
-                    tc_error(tc, token, "MISRA Rule 11.5");
+                    zerror_at(token, "MISRA Rule 11.5");
                 }
             }
         }
     }
 }
 
-void misra_check_cast(TypeChecker *tc, Type *target, Type *source, Token token, bool is_composite)
+void misra_check_cast(ParserContext *ctx, Type *target, Type *source, Token token,
+                      bool is_composite)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -366,18 +369,18 @@ void misra_check_cast(TypeChecker *tc, Type *target, Type *source, Token token, 
         int sw = get_type_width(source);
         if (tw > sw)
         {
-            tc_error(tc, token, "MISRA Rule 10.8");
+            zerror_at(token, "MISRA Rule 10.8");
         }
         if (get_essential_category(target) != get_essential_category(source))
         {
-            tc_error(tc, token, "MISRA Rule 10.8");
+            zerror_at(token, "MISRA Rule 10.8");
         }
     }
 }
 
-void misra_check_null_pointer_constant(TypeChecker *tc, struct ASTNode *node, Token token)
+void misra_check_null_pointer_constant(ParserContext *ctx, struct ASTNode *node, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !node)
+    if (!ctx->config->misra_mode || !node)
     {
         return;
     }
@@ -395,19 +398,19 @@ void misra_check_null_pointer_constant(TypeChecker *tc, struct ASTNode *node, To
         // If we found a literal 0, it means the user used '0' or '(type)0' instead of 'null'.
         if (expr->literal.int_val == 0)
         {
-            tc_error(tc, token, "MISRA Rule 11.9");
+            zerror_at(token, "MISRA Rule 11.9");
         }
         else
         {
-            tc_error(tc, token, "MISRA Rule 11.4");
+            zerror_at(token, "MISRA Rule 11.4");
         }
     }
 }
 
-void misra_check_binary_op_essential_types(TypeChecker *tc, struct ASTNode *left,
+void misra_check_binary_op_essential_types(ParserContext *ctx, struct ASTNode *left,
                                            struct ASTNode *right, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !left || !right || !left->type_info || !right->type_info)
+    if (!ctx->config->misra_mode || !left || !right || !left->type_info || !right->type_info)
     {
         return;
     }
@@ -428,12 +431,12 @@ void misra_check_binary_op_essential_types(TypeChecker *tc, struct ASTNode *left
     {
         if (cl == ESS_BOOL || cr == ESS_BOOL)
         {
-            tc_error(tc, token, "MISRA Rule 10.4");
+            zerror_at(token, "MISRA Rule 10.4");
         }
         else if ((cl == ESS_SIGNED && cr == ESS_UNSIGNED) ||
                  (cl == ESS_UNSIGNED && cr == ESS_SIGNED))
         {
-            tc_error(tc, token, "MISRA Rule 10.4");
+            zerror_at(token, "MISRA Rule 10.4");
         }
     }
 
@@ -444,78 +447,78 @@ void misra_check_binary_op_essential_types(TypeChecker *tc, struct ASTNode *left
         int rw = get_type_width(rr);
         if (is_composite_expression(left) && rw > lw)
         {
-            tc_error(tc, token, "MISRA Rule 10.7");
+            zerror_at(token, "MISRA Rule 10.7");
         }
         if (is_composite_expression(right) && lw > rw)
         {
-            tc_error(tc, token, "MISRA Rule 10.7");
+            zerror_at(token, "MISRA Rule 10.7");
         }
     }
 }
 
 // SECTION 13/14/15: Expressions & Control Flow
 
-void misra_check_side_effects_sizeof(TypeChecker *tc, ASTNode *expr)
+void misra_check_side_effects_sizeof(ParserContext *ctx, ASTNode *expr)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
         // Simple heuristic: if it contains a call or assignment/inc/dec it has potential side
         // effects. We assume typechecker already validated this for Rule 13.6 if applicable.
-        tc_error(tc, expr->token, "MISRA Rule 12.5");
-        tc_error(tc, expr->token, "MISRA Rule 13.6");
+        zerror_at(expr->token, "MISRA Rule 12.5");
+        zerror_at(expr->token, "MISRA Rule 13.6");
     }
 }
 
-void misra_check_assignment_result_used(TypeChecker *tc, Token token)
+void misra_check_assignment_result_used(ParserContext *ctx, Token token)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
-        tc_error(tc, token, "MISRA Rule 13.4");
+        zerror_at(token, "MISRA Rule 13.4");
     }
 }
 
-void misra_check_inc_dec_result_used(TypeChecker *tc, Token token)
+void misra_check_inc_dec_result_used(ParserContext *ctx, Token token)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
-        tc_error(tc, token, "MISRA Rule 13.3");
+        zerror_at(token, "MISRA Rule 13.3");
     }
 }
 
-void misra_check_condition_boolean(TypeChecker *tc, Type *t, Token token)
+void misra_check_condition_boolean(ParserContext *ctx, Type *t, Token token)
 {
-    if (tc->pctx->config->misra_mode && t)
+    if (ctx->config->misra_mode && t)
     {
         if (get_essential_category(t) != ESS_BOOL)
         {
-            tc_error(tc, token, "MISRA Rule 14.4");
+            zerror_at(token, "MISRA Rule 14.4");
         }
     }
 }
 
-void misra_check_invariant_condition(TypeChecker *tc, Token token)
+void misra_check_invariant_condition(ParserContext *ctx, Token token)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
-        tc_error(tc, token, "MISRA Rule 14.3");
+        zerror_at(token, "MISRA Rule 14.3");
     }
 }
 
-void misra_check_loop_counter_float(TypeChecker *tc, Type *t, Token token)
+void misra_check_loop_counter_float(ParserContext *ctx, Type *t, Token token)
 {
-    if (tc->pctx->config->misra_mode && is_float_type(t))
+    if (ctx->config->misra_mode && is_float_type(t))
     {
-        tc_error(tc, token, "MISRA Rule 14.1");
+        zerror_at(token, "MISRA Rule 14.1");
     }
 }
 
-void misra_check_initializer_side_effects(TypeChecker *tc, ASTNode *node)
+void misra_check_initializer_side_effects(ParserContext *ctx, ASTNode *node)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
         if (tc_expr_has_side_effects(node))
         {
-            tc_error(tc, node->token, "MISRA Rule 13.1");
+            zerror_at(node->token, "MISRA Rule 13.1");
         }
     }
 }
@@ -525,14 +528,14 @@ void misra_check_initializer_side_effects(TypeChecker *tc, ASTNode *node)
 /**
  * @brief Enforces Rules 16.4, 16.5, 16.6, and 16.7 for match statements.
  */
-void misra_check_match_stmt(TypeChecker *tc, ASTNode *node)
+void misra_check_match_stmt(ParserContext *ctx, ASTNode *node)
 {
-    if (!tc->pctx->config->misra_mode || !node || node->type != NODE_MATCH)
+    if (!ctx->config->misra_mode || !node || node->type != NODE_MATCH)
     {
         return;
     }
 
-    misra_check_strict_match(tc, node);
+    misra_check_strict_match(ctx, node);
 
     int has_default = 0;
     int case_count = 0;
@@ -555,16 +558,16 @@ void misra_check_match_stmt(TypeChecker *tc, ASTNode *node)
 
     if (!has_default)
     {
-        tc_error(tc, node->token, "MISRA Rule 16.4");
+        zerror_at(node->token, "MISRA Rule 16.4");
     }
     else if (!is_first_or_last)
     {
-        tc_error(tc, node->token, "MISRA Rule 16.5");
+        zerror_at(node->token, "MISRA Rule 16.5");
     }
 
     if (case_count < 2)
     {
-        tc_error(tc, node->token, "MISRA Rule 16.6");
+        zerror_at(node->token, "MISRA Rule 16.6");
     }
 
     if (node->match_stmt.expr && node->match_stmt.expr->type_info)
@@ -572,7 +575,7 @@ void misra_check_match_stmt(TypeChecker *tc, ASTNode *node)
         Type *expr_type = resolve_alias(node->match_stmt.expr->type_info);
         if (expr_type->kind == TYPE_BOOL)
         {
-            tc_error(tc, node->match_stmt.expr->token, "MISRA Rule 16.7");
+            zerror_at(node->match_stmt.expr->token, "MISRA Rule 16.7");
         }
     }
 }
@@ -582,11 +585,11 @@ void misra_check_match_stmt(TypeChecker *tc, ASTNode *node)
 /**
  * @brief Rule 17.2 (Required): Functions shall not call themselves, either directly or indirectly.
  */
-void misra_check_recursion(TypeChecker *tc, Token token)
+void misra_check_recursion(ParserContext *ctx, Token token)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
-        tc_error(tc, token, "MISRA Rule 17.2");
+        zerror_at(token, "MISRA Rule 17.2");
     }
 }
 
@@ -594,9 +597,9 @@ void misra_check_recursion(TypeChecker *tc, Token token)
  * @brief Rule 17.7 (Required): The value returned by a function having non-void return type shall
  * be used.
  */
-void misra_check_function_return_usage(TypeChecker *tc, ASTNode *node)
+void misra_check_function_return_usage(ParserContext *ctx, ASTNode *node)
 {
-    if (tc->pctx->config->misra_mode && node && node->type_info)
+    if (ctx->config->misra_mode && node && node->type_info)
     {
         Type *rt = resolve_alias(node->type_info);
         if (rt->kind != TYPE_VOID)
@@ -605,11 +608,11 @@ void misra_check_function_return_usage(TypeChecker *tc, ASTNode *node)
                 (strstr(rt->name, "Result") || strstr(rt->name, "Option") ||
                  strstr(rt->name, "Error")))
             {
-                tc_error(tc, node->token, "MISRA Dir 4.7: error information is not tested");
+                zerror_at(node->token, "MISRA Dir 4.7: error information is not tested");
             }
             else
             {
-                tc_error(tc, node->token, "MISRA Rule 17.7");
+                zerror_at(node->token, "MISRA Rule 17.7");
             }
         }
     }
@@ -618,43 +621,44 @@ void misra_check_function_return_usage(TypeChecker *tc, ASTNode *node)
 /**
  * @brief Rule 17.5 (Advisory): Array size mismatch in function parameters.
  */
-void misra_check_array_param_size(TypeChecker *tc, int expected, int actual, Token token)
+void misra_check_array_param_size(ParserContext *ctx, int expected, int actual, Token token)
 {
-    if (tc->pctx->config->misra_mode && expected > 0 && actual < expected)
+    if (ctx->config->misra_mode && expected > 0 && actual < expected)
     {
-        tc_error(tc, token, "MISRA Rule 17.5");
+        zerror_at(token, "MISRA Rule 17.5");
     }
 }
 
-void misra_check_unused_param(TypeChecker *tc, const char *name, Token token)
+void misra_check_unused_param(ParserContext *ctx, const char *name, Token token)
 {
+    (void)ctx;
     (void)name;
-    tc_error(tc, token, "MISRA Rule 2.7");
+    zerror_at(token, "MISRA Rule 2.7");
 }
 
-void misra_check_const_ptr_param(TypeChecker *tc, const char *name, Token token)
+void misra_check_const_ptr_param(ParserContext *ctx, const char *name, Token token)
 {
+    (void)ctx;
     (void)name;
-    tc_error(tc, token, "MISRA Rule 8.13");
+    zerror_at(token, "MISRA Rule 8.13");
 }
 
 /**
  * @brief Rule 17.8 (Advisory): A function parameter should not be modified.
  */
-void misra_check_param_modified(TypeChecker *tc, ASTNode *left, Token token)
+void misra_check_param_modified(ASTNode *current_func, ASTNode *left, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !tc->current_func || !left || left->type != NODE_EXPR_VAR)
+    if (!current_func || !left || left->type != NODE_EXPR_VAR)
     {
         return;
     }
 
     const char *name = left->var_ref.name;
-    // Check if name matches any of the current function's parameters
-    for (int i = 0; i < tc->current_func->func.arg_count; i++)
+    for (int i = 0; i < current_func->func.arg_count; i++)
     {
-        if (strcmp(tc->current_func->func.param_names[i], name) == 0)
+        if (strcmp(current_func->func.param_names[i], name) == 0)
         {
-            tc_error(tc, token, "MISRA Rule 17.8");
+            zerror_at(token, "MISRA Rule 17.8");
             return;
         }
     }
@@ -666,14 +670,14 @@ void misra_check_param_modified(TypeChecker *tc, ASTNode *left, Token token)
  * @brief Rule 18.4 (Advisory): The +, -, += and -= operators should not be applied to an
  * expression of pointer type.
  */
-void misra_check_pointer_arithmetic(TypeChecker *tc, Type *t, Token token)
+void misra_check_pointer_arithmetic(ParserContext *ctx, Type *t, Token token)
 {
-    if (tc->pctx->config->misra_mode && t)
+    if (ctx->config->misra_mode && t)
     {
         Type *resolved = resolve_alias(t);
         if (resolved->kind == TYPE_POINTER)
         {
-            tc_error(tc, token, "MISRA Rule 18.4");
+            zerror_at(token, "MISRA Rule 18.4");
         }
     }
 }
@@ -696,9 +700,9 @@ static int get_pointer_nesting_depth(Type *t)
  * @brief Rule 18.5 (Advisory): Declarations should contain no more than two levels of pointer
  * nesting.
  */
-void misra_check_pointer_nesting(TypeChecker *tc, Type *t, Token token)
+void misra_check_pointer_nesting(ParserContext *ctx, Type *t, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !t)
+    if (!ctx->config->misra_mode || !t)
     {
         return;
     }
@@ -706,15 +710,19 @@ void misra_check_pointer_nesting(TypeChecker *tc, Type *t, Token token)
     int depth = get_pointer_nesting_depth(t);
     if (depth > 2)
     {
-        tc_error(tc, token, "MISRA Rule 18.5");
+        zerror_at(token, "MISRA Rule 18.5");
     }
 }
 
 /**
  * @brief Ensures struct fields comply with Rule 18.5.
  */
-void misra_check_struct_decl(TypeChecker *tc, ASTNode *node)
+void misra_check_struct_decl(ParserContext *ctx, ASTNode *node)
 {
+    if (!ctx->config->misra_mode)
+    {
+        return;
+    }
     if (!node || node->type != NODE_STRUCT)
     {
         return;
@@ -725,7 +733,7 @@ void misra_check_struct_decl(TypeChecker *tc, ASTNode *node)
     {
         if (field->type == NODE_FIELD)
         {
-            misra_check_pointer_nesting(tc, field->type_info, field->token);
+            misra_check_pointer_nesting(ctx, field->type_info, field->token);
 
             // Rule 6.1 & 6.2: Bit-fields
             if (field->field.bit_width > 0)
@@ -736,12 +744,12 @@ void misra_check_struct_decl(TypeChecker *tc, ASTNode *node)
                     t->kind != TYPE_I16 && t->kind != TYPE_I32 && t->kind != TYPE_I64 &&
                     t->kind != TYPE_UINT && t->kind != TYPE_INT && t->kind != TYPE_BYTE)
                 {
-                    tc_error(tc, field->token, "MISRA Rule 6.1");
+                    zerror_at(field->token, "MISRA Rule 6.1");
                 }
 
                 if (field->field.bit_width == 1 && is_signed_type(t))
                 {
-                    tc_error(tc, field->token, "MISRA Rule 6.2");
+                    zerror_at(field->token, "MISRA Rule 6.2");
                 }
             }
 
@@ -749,7 +757,7 @@ void misra_check_struct_decl(TypeChecker *tc, ASTNode *node)
             if (field->type_info && field->type_info->kind == TYPE_ARRAY &&
                 field->type_info->array_size == 0 && field->next == NULL)
             {
-                tc_error(tc, field->token, "MISRA Rule 18.7");
+                zerror_at(field->token, "MISRA Rule 18.7");
             }
         }
         field = field->next;
@@ -760,9 +768,9 @@ void misra_check_struct_decl(TypeChecker *tc, ASTNode *node)
  * @brief Rule 15.6 (Required): The body of an if, while, for, or do-while shall be a compound
  * statement.
  */
-void misra_check_compound_body(TypeChecker *tc, ASTNode *body, const char *stmt_name)
+void misra_check_compound_body(ParserContext *ctx, ASTNode *body, const char *stmt_name)
 {
-    if (!tc->pctx->config->misra_mode || !body)
+    if (!ctx->config->misra_mode || !body)
     {
         return;
     }
@@ -770,7 +778,7 @@ void misra_check_compound_body(TypeChecker *tc, ASTNode *body, const char *stmt_
     if (body->type != NODE_BLOCK)
     {
         (void)stmt_name;
-        tc_error(tc, body->token, "MISRA Rule 15.6");
+        zerror_at(body->token, "MISRA Rule 15.6");
     }
 }
 
@@ -778,9 +786,9 @@ void misra_check_compound_body(TypeChecker *tc, ASTNode *body, const char *stmt_
  * @brief Rule 15.7 (Required): All if ... else if constructs shall be terminated with an else
  * statement.
  */
-void misra_check_terminal_else(TypeChecker *tc, ASTNode *if_node)
+void misra_check_terminal_else(ParserContext *ctx, ASTNode *if_node)
 {
-    if (!tc->pctx->config->misra_mode || !if_node || if_node->type != NODE_IF)
+    if (!ctx->config->misra_mode || !if_node || if_node->type != NODE_IF)
     {
         return;
     }
@@ -808,7 +816,7 @@ void misra_check_terminal_else(TypeChecker *tc, ASTNode *if_node)
             // Check if this was a chain.
             if (curr != if_node)
             {
-                tc_error(tc, if_node->token, "MISRA Rule 15.7");
+                zerror_at(if_node->token, "MISRA Rule 15.7");
             }
             return;
         }
@@ -818,9 +826,9 @@ void misra_check_terminal_else(TypeChecker *tc, ASTNode *if_node)
 /**
  * @brief Ensures Rule 18.5 compliance for function parameters.
  */
-void misra_check_param_nesting(TypeChecker *tc, ASTNode *func_node)
+void misra_check_param_nesting(ParserContext *ctx, ASTNode *func_node)
 {
-    if (!tc->pctx->config->misra_mode || !func_node || func_node->type != NODE_FUNCTION)
+    if (!ctx->config->misra_mode || !func_node || func_node->type != NODE_FUNCTION)
     {
         return;
     }
@@ -829,7 +837,7 @@ void misra_check_param_nesting(TypeChecker *tc, ASTNode *func_node)
     {
         if (func_node->func.arg_types[i])
         {
-            misra_check_pointer_nesting(tc, func_node->func.arg_types[i], func_node->token);
+            misra_check_pointer_nesting(ctx, func_node->func.arg_types[i], func_node->token);
         }
     }
 }
@@ -837,18 +845,18 @@ void misra_check_param_nesting(TypeChecker *tc, ASTNode *func_node)
 /**
  * @brief Rule 15.1 (Advisory): The goto statement should not be used.
  */
-void misra_check_goto(TypeChecker *tc, Token token)
+void misra_check_goto(ParserContext *ctx, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
-    tc_error(tc, token, "MISRA Rule 15.1");
+    zerror_at(token, "MISRA Rule 15.1");
 }
 
-void misra_check_goto_constraint(TypeChecker *tc, Token goto_tok, Token label_tok)
+void misra_check_goto_constraint(ParserContext *ctx, Token goto_tok, Token label_tok)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -856,8 +864,8 @@ void misra_check_goto_constraint(TypeChecker *tc, Token goto_tok, Token label_to
     // Rule 15.2/15.3: Jumping backwards/generic goto constraints
     if (label_tok.line < goto_tok.line)
     {
-        tc_error(tc, goto_tok, "MISRA Rule 15.2");
-        tc_error(tc, goto_tok, "MISRA Rule 15.3");
+        zerror_at(goto_tok, "MISRA Rule 15.2");
+        zerror_at(goto_tok, "MISRA Rule 15.3");
     }
 
     // Note: Rule 15.2 (jumping into nested blocks) is partially handled
@@ -869,47 +877,47 @@ void misra_check_goto_constraint(TypeChecker *tc, Token goto_tok, Token label_to
  * @brief Rule 15.4 (Advisory): There shall be no more than one break or goto statement used
  * to terminate any iteration statement.
  */
-void misra_check_iteration_termination(TypeChecker *tc, Token token)
+void misra_check_iteration_termination(ParserContext *ctx, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
-    tc_error(tc, token, "MISRA Rule 15.4");
+    zerror_at(token, "MISRA Rule 15.4");
 }
 
 /**
  * @brief Rule 19.2 (Advisory): The union keyword should not be used.
  */
-void misra_check_union(TypeChecker *tc, Token token)
+void misra_check_union(ParserContext *ctx, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
-    tc_error(tc, token, "MISRA Rule 19.2");
+    zerror_at(token, "MISRA Rule 19.2");
 }
 
 /**
  * @brief Rule 17.1 (Required): Features of <stdarg.h> shall not be used.
  */
-void misra_check_stdarg(TypeChecker *tc, Token token)
+void misra_check_stdarg(ParserContext *ctx, Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
-    tc_error(tc, token, "MISRA Rule 17.1");
+    zerror_at(token, "MISRA Rule 17.1");
 }
 
-void misra_audit_unused_symbols(TypeChecker *tc)
+void misra_audit_unused_symbols(ParserContext *ctx)
 {
-    if (!tc->pctx->config->misra_mode || !tc->pctx->global_scope)
+    if (!ctx->config->misra_mode || !ctx->global_scope)
     {
         return;
     }
 
-    ZenSymbol *sym = tc->pctx->global_scope->symbols;
+    ZenSymbol *sym = ctx->global_scope->symbols;
     while (sym)
     {
         // Skip exported symbols, underscored symbols, and special names like 'main'
@@ -920,14 +928,14 @@ void misra_audit_unused_symbols(TypeChecker *tc)
             switch (sym->kind)
             {
             case SYM_ALIAS:
-                tc_error(tc, sym->decl_token, "MISRA Rule 2.3");
+                zerror_at(sym->decl_token, "MISRA Rule 2.3");
                 break;
             case SYM_STRUCT:
             case SYM_ENUM:
-                tc_error(tc, sym->decl_token, "MISRA Rule 2.4");
+                zerror_at(sym->decl_token, "MISRA Rule 2.4");
                 break;
             case SYM_CONSTANT:
-                tc_error(tc, sym->decl_token, "MISRA Rule 2.5");
+                zerror_at(sym->decl_token, "MISRA Rule 2.5");
                 break;
             default:
                 break;
@@ -939,22 +947,23 @@ void misra_audit_unused_symbols(TypeChecker *tc)
             if (sym->data.node && sym->data.node->type == NODE_STRUCT &&
                 !sym->data.node->strct.is_opaque)
             {
-                tc_error(tc, sym->decl_token,
-                         "MISRA Dir 4.8: pointer to struct is never dereferenced (make it opaque)");
+                zerror_at(
+                    sym->decl_token,
+                    "MISRA Dir 4.8: pointer to struct is never dereferenced (make it opaque)");
             }
         }
         sym = sym->next;
     }
 }
 
-void misra_check_vla(TypeChecker *tc, Type *t, Token token)
+void misra_check_vla(ParserContext *ctx, Type *t, Token token)
 {
-    if (tc->pctx->config->misra_mode && t && t->kind == TYPE_ARRAY)
+    if (ctx->config->misra_mode && t && t->kind == TYPE_ARRAY)
     {
         // In Zen C, all arrays are technically checked for constant sizes,
         // but if we are in this check, we enforce that any array declaration
         // must not be a VLA.
-        tc_error(tc, token, "MISRA Rule 18.8");
+        zerror_at(token, "MISRA Rule 18.8");
     }
 }
 
@@ -1009,14 +1018,14 @@ void misra_check_identifier_collision(Token tok, const char *name1, const char *
 /**
  * @brief Checks for identifier uniqueness across the entire project (Rules 5.8 and 5.9).
  */
-void misra_audit_identifier_uniqueness(TypeChecker *tc)
+void misra_audit_identifier_uniqueness(ParserContext *ctx)
 {
-    if (!tc->pctx->config->misra_mode || !tc->pctx->all_symbols)
+    if (!ctx->config->misra_mode || !ctx->all_symbols)
     {
         return;
     }
 
-    ZenSymbol *s1 = tc->pctx->all_symbols;
+    ZenSymbol *s1 = ctx->all_symbols;
     while (s1)
     {
         // Skip built-ins and special names
@@ -1099,13 +1108,13 @@ void misra_audit_identifier_uniqueness(TypeChecker *tc)
                 // Check exact name collision
                 if (strcmp(s1->name, s2->name) == 0)
                 {
-                    tc_error(tc, s2->decl_token, "MISRA Rule 5.8");
+                    zerror_at(s2->decl_token, "MISRA Rule 5.8");
                 }
                 // Check @link_name collision specifically
                 else if (s1->link_name && s2->link_name &&
                          strcmp(s1->link_name, s2->link_name) == 0)
                 {
-                    tc_error(tc, s2->decl_token, "MISRA Rule 5.8");
+                    zerror_at(s2->decl_token, "MISRA Rule 5.8");
                 }
             }
             // Rule 5.9: Internal identifiers should be unique (Advisory)
@@ -1113,7 +1122,7 @@ void misra_audit_identifier_uniqueness(TypeChecker *tc)
             {
                 if (strcmp(s1->name, s2->name) == 0)
                 {
-                    tc_error(tc, s2->decl_token, "MISRA Rule 5.9");
+                    zerror_at(s2->decl_token, "MISRA Rule 5.9");
                 }
             }
 
@@ -1124,33 +1133,34 @@ void misra_audit_identifier_uniqueness(TypeChecker *tc)
     }
 }
 
-void misra_check_raw_block(struct TypeChecker *tc, Token token)
+void misra_check_raw_block(struct ParserContext *ctx, Token token)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
-        tc_error(tc, token, "MISRA Rule Zen 1.1");
+        zerror_at(token, "MISRA Rule Zen 1.1");
     }
 }
 
-void misra_check_preprocessor_directive(struct TypeChecker *tc, Token token)
+void misra_check_preprocessor_directive(struct ParserContext *ctx, Token token)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
-        tc_error(tc, token, "MISRA Rule Zen 1.4");
+        zerror_at(token, "MISRA Rule Zen 1.4");
     }
 }
 
-void misra_check_plugin_block(struct TypeChecker *tc, Token token)
+void misra_check_plugin_block(struct ParserContext *ctx, Token token)
 {
-    if (tc->pctx->config->misra_mode)
+    if (ctx->config->misra_mode)
     {
-        tc_error(tc, token, "MISRA Rule Zen 1.2");
+        zerror_at(token, "MISRA Rule Zen 1.2");
     }
 }
 
-void misra_check_preprocessor_expression(struct TypeChecker *tc, Token tok, const char *expression)
+void misra_check_preprocessor_expression(struct ParserContext *ctx, Token tok,
+                                         const char *expression)
 {
-    misra_check_preprocessor_expression_parser(tc ? tc->pctx : NULL, tok, expression);
+    misra_check_preprocessor_expression_parser(ctx, tok, expression);
 }
 
 void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token tok,
@@ -1255,10 +1265,9 @@ void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token
     }
 }
 
-void misra_check_strict_match(TypeChecker *tc, ASTNode *node)
+void misra_check_strict_match(ParserContext *ctx, ASTNode *node)
 {
-    if (!tc->pctx->config->misra_mode || !node || node->type != NODE_MATCH ||
-        !node->match_stmt.expr)
+    if (!ctx->config->misra_mode || !node || node->type != NODE_MATCH || !node->match_stmt.expr)
     {
         return;
     }
@@ -1274,16 +1283,15 @@ void misra_check_strict_match(TypeChecker *tc, ASTNode *node)
     {
         if (case_node->match_case.is_default)
         {
-            tc_error(tc, case_node->token, "MISRA Rule Zen 1.3");
+            zerror_at(case_node->token, "MISRA Rule Zen 1.3");
         }
         case_node = case_node->next;
     }
 }
 
-void misra_check_shadowing(TypeChecker *tc, const char *name, Token loc)
+void misra_check_shadowing(ParserContext *ctx, const char *name, Token loc)
 {
-    if (!tc->pctx->config->misra_mode || !name || !tc->pctx->current_scope ||
-        !tc->pctx->current_scope->parent)
+    if (!ctx->config->misra_mode || !name || !ctx->current_scope || !ctx->current_scope->parent)
     {
         return;
     }
@@ -1296,32 +1304,33 @@ void misra_check_shadowing(TypeChecker *tc, const char *name, Token loc)
         return;
     }
 
-    ZenSymbol *shadowed = symbol_lookup(tc->pctx->current_scope->parent, name);
+    ZenSymbol *shadowed = symbol_lookup(ctx->current_scope->parent, name);
     if (shadowed)
     {
         char msg[256];
         snprintf(msg, sizeof(msg),
                  "MISRA Rule Zen 1.8: Identifier '%s' shadows an existing symbol in an outer scope",
                  name);
-        tc_error(tc, loc, msg);
+        zerror_at(loc, msg);
     }
 }
 
-void misra_check_double_initialization(struct TypeChecker *tc, const char *field_name, Token token)
+void misra_check_double_initialization(struct ParserContext *ctx, const char *field_name,
+                                       Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
     char msg[256];
     snprintf(msg, sizeof(msg), "MISRA Rule 9.4: Re-initialization of struct field '%s'",
              field_name);
-    tc_error(tc, token, msg);
+    zerror_at(token, msg);
 }
 
-void misra_check_reserved_identifier(struct TypeChecker *tc, const char *name, Token token)
+void misra_check_reserved_identifier(struct ParserContext *ctx, const char *name, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !name)
+    if (!ctx->config->misra_mode || !name)
     {
         return;
     }
@@ -1330,15 +1339,15 @@ void misra_check_reserved_identifier(struct TypeChecker *tc, const char *name, T
     if ((name[0] == '_' && (name[1] == '_' || (name[1] >= 'A' && name[1] <= 'Z'))) ||
         (strncmp(name, "_z_", 3) == 0))
     {
-        tc_error(tc, token, "MISRA Rule Zen 2.1");
+        zerror_at(token, "MISRA Rule Zen 2.1");
     }
 }
 
-void misra_check_unsigned_wrap(struct TypeChecker *tc, const char *op, long long left,
+void misra_check_unsigned_wrap(struct ParserContext *ctx, const char *op, long long left,
                                long long right, long long res, struct Type *type, Token token)
 {
     (void)res;
-    if (!tc->pctx->config->misra_mode || !type)
+    if (!ctx->config->misra_mode || !type)
     {
         return;
     }
@@ -1400,20 +1409,20 @@ void misra_check_unsigned_wrap(struct TypeChecker *tc, const char *op, long long
 
     if (wrap)
     {
-        tc_error(tc, token,
-                 "MISRA Rule 12.4: Evaluation of constant expression leads to unsigned integer "
-                 "wrap-around");
+        zerror_at(token,
+                  "MISRA Rule 12.4: Evaluation of constant expression leads to unsigned integer "
+                  "wrap-around");
     }
 }
 
-void misra_audit_block_scope(struct TypeChecker *tc)
+void misra_audit_block_scope(struct ParserContext *ctx)
 {
-    if (!tc->pctx->config->misra_mode || !tc->pctx->global_scope)
+    if (!ctx->config->misra_mode || !ctx->global_scope)
     {
         return;
     }
 
-    ZenSymbol *sym = tc->pctx->global_scope->symbols;
+    ZenSymbol *sym = ctx->global_scope->symbols;
     while (sym)
     {
         // Rule 8.9: An object should be defined at block scope if its identifier only appears
@@ -1423,7 +1432,7 @@ void misra_audit_block_scope(struct TypeChecker *tc)
         if (sym->kind == SYM_VARIABLE && !sym->is_export && !sym->is_static &&
             sym->decl_token.line != 0 && sym->first_using_func != NULL && !sym->multi_func_use)
         {
-            tc_error(tc, sym->decl_token, "MISRA Rule 8.9");
+            zerror_at(sym->decl_token, "MISRA Rule 8.9");
         }
         sym = sym->next;
     }
@@ -1450,10 +1459,10 @@ void misra_check_standard_macro_name(Token tok, const char *name)
     }
 }
 
-void misra_check_external_array_size(TypeChecker *tc, Type *t, Token token, int is_static,
+void misra_check_external_array_size(ParserContext *ctx, Type *t, Token token, int is_static,
                                      int is_local)
 {
-    if (!tc->pctx->config->misra_mode || is_static || is_local || !t)
+    if (!ctx->config->misra_mode || is_static || is_local || !t)
     {
         return;
     }
@@ -1461,7 +1470,7 @@ void misra_check_external_array_size(TypeChecker *tc, Type *t, Token token, int 
     Type *resolved = resolve_alias(t);
     if (resolved->kind == TYPE_ARRAY && resolved->array_size == 0)
     {
-        tc_error(tc, token, "MISRA Rule 8.11: External array shall have explicit size");
+        zerror_at(token, "MISRA Rule 8.11: External array shall have explicit size");
     }
 }
 
@@ -1493,9 +1502,9 @@ static struct
                     {"fmod", "Rule 21.11"},          {"feclearexcept", "Rule 21.12"},
                     {"feraiseexcept", "Rule 21.12"}, {NULL, NULL}};
 
-void misra_check_banned_function(struct TypeChecker *tc, const char *name, Token tok)
+void misra_check_banned_function(struct ParserContext *ctx, const char *name, Token tok)
 {
-    if (!tc->pctx->config->misra_mode || !name)
+    if (!ctx->config->misra_mode || !name)
     {
         return;
     }
@@ -1507,15 +1516,15 @@ void misra_check_banned_function(struct TypeChecker *tc, const char *name, Token
             char msg[128];
             snprintf(msg, sizeof(msg), "MISRA %s: Use of banned standard library function '%s'",
                      banned_funcs[i].rule, name);
-            tc_error(tc, tok, msg);
+            zerror_at(tok, msg);
             return;
         }
     }
 }
 
-void misra_check_file_dereference(struct TypeChecker *tc, struct Type *type, Token tok)
+void misra_check_file_dereference(struct ParserContext *ctx, struct Type *type, Token tok)
 {
-    if (!tc->pctx->config->misra_mode || !type)
+    if (!ctx->config->misra_mode || !type)
     {
         return;
     }
@@ -1529,7 +1538,7 @@ void misra_check_file_dereference(struct TypeChecker *tc, struct Type *type, Tok
         // as it's typically an opaque struct imported from C
         if (inner->kind == TYPE_STRUCT && inner->name && strcmp(inner->name, "FILE") == 0)
         {
-            tc_error(tc, tok, "MISRA Rule 22.5: FILE object should not be dereferenced");
+            zerror_at(tok, "MISRA Rule 22.5: FILE object should not be dereferenced");
         }
     }
 }
@@ -1572,9 +1581,9 @@ static void canonicalize_ambiguous_chars(const char *src, char *dst, size_t dest
     dst[i] = '\0';
 }
 
-void misra_check_typographic_ambiguity(struct TypeChecker *tc, const char *new_name, Token loc)
+void misra_check_typographic_ambiguity(struct ParserContext *ctx, const char *new_name, Token loc)
 {
-    if (!tc->pctx->config->misra_mode || !tc || !tc->pctx || !new_name)
+    if (!ctx->config->misra_mode || !ctx || !new_name)
     {
         return;
     }
@@ -1582,7 +1591,7 @@ void misra_check_typographic_ambiguity(struct TypeChecker *tc, const char *new_n
     char new_canon[256];
     canonicalize_ambiguous_chars(new_name, new_canon, sizeof(new_canon));
 
-    Scope *s = tc->pctx->current_scope;
+    Scope *s = ctx->current_scope;
     while (s)
     {
         ZenSymbol *sym = s->symbols;
@@ -1601,7 +1610,7 @@ void misra_check_typographic_ambiguity(struct TypeChecker *tc, const char *new_n
                         msg, sizeof(msg),
                         "MISRA Dir 4.5: identifier '%s' is typographically ambiguous with '%s'",
                         new_name, sym->name);
-                    tc_error(tc, loc, msg);
+                    zerror_at(loc, msg);
                     return; // Warn once
                 }
             }
@@ -1611,9 +1620,9 @@ void misra_check_typographic_ambiguity(struct TypeChecker *tc, const char *new_n
     }
 }
 
-void misra_check_tuple_size(struct TypeChecker *tc, struct Type *t, Token token)
+void misra_check_tuple_size(struct ParserContext *ctx, struct Type *t, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !t || t->kind != TYPE_STRUCT || !t->name)
+    if (!ctx->config->misra_mode || !t || t->kind != TYPE_STRUCT || !t->name)
     {
         return;
     }
@@ -1623,7 +1632,7 @@ void misra_check_tuple_size(struct TypeChecker *tc, struct Type *t, Token token)
         return;
     }
     // Look up the tuple in the registry to get field count
-    TupleType *tup = tc->pctx->used_tuples;
+    TupleType *tup = ctx->used_tuples;
     while (tup)
     {
         char *clean_sig = sanitize_mangled_name(tup->sig);
@@ -1634,10 +1643,9 @@ void misra_check_tuple_size(struct TypeChecker *tc, struct Type *t, Token token)
         {
             if (tup->count >= 3)
             {
-                tc_error(tc, token,
-                         "MISRA Rule Zen 2.2: tuple with 3 or more fields shall be "
-                         "replaced with a named struct (use 'struct' instead of "
-                         "positional tuple)");
+                zerror_at(token, "MISRA Rule Zen 2.2: tuple with 3 or more fields shall be "
+                                 "replaced with a named struct (use 'struct' instead of "
+                                 "positional tuple)");
             }
             break;
         }
@@ -1645,10 +1653,10 @@ void misra_check_tuple_size(struct TypeChecker *tc, struct Type *t, Token token)
     }
 }
 
-void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struct Type *right,
+void misra_check_string_compare(struct ParserContext *ctx, struct Type *left, struct Type *right,
                                 Token token)
 {
-    if (!tc->pctx->config->misra_mode)
+    if (!ctx->config->misra_mode)
     {
         return;
     }
@@ -1663,9 +1671,8 @@ void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struc
         (right->kind == TYPE_STRING || (right->name && strcmp(right->name, "string") == 0));
     if (left_is_str && right_is_str)
     {
-        tc_error(tc, token,
-                 "MISRA Rule Zen 2.3: 'string == string' shall not be used; "
-                 "use strcmp() instead for string comparison");
+        zerror_at(token, "MISRA Rule Zen 2.3: 'string == string' shall not be used; "
+                         "use strcmp() instead for string comparison");
     }
 }
 
@@ -1673,10 +1680,10 @@ void misra_check_string_compare(struct TypeChecker *tc, struct Type *left, struc
  * @brief Rule 19.1 (Required): An object shall not be assigned to an overlapping object.
  * Detects self-assignment (x = x) which is undefined behavior in C.
  */
-void misra_check_assignment_overlap(struct TypeChecker *tc, struct ASTNode *left,
+void misra_check_assignment_overlap(struct ParserContext *ctx, struct ASTNode *left,
                                     struct ASTNode *right, Token token)
 {
-    if (!tc->pctx->config->misra_mode || !left || !right)
+    if (!ctx->config->misra_mode || !left || !right)
     {
         return;
     }
@@ -1687,8 +1694,8 @@ void misra_check_assignment_overlap(struct TypeChecker *tc, struct ASTNode *left
         if (left->var_ref.symbol && right->var_ref.symbol &&
             left->var_ref.symbol == right->var_ref.symbol)
         {
-            tc_error(tc, token,
-                     "MISRA Rule 19.1: object shall not be assigned to itself (self-assignment)");
+            zerror_at(token,
+                      "MISRA Rule 19.1: object shall not be assigned to itself (self-assignment)");
         }
     }
 }
@@ -1698,57 +1705,30 @@ void misra_check_assignment_overlap(struct TypeChecker *tc, struct ASTNode *left
  * This is a conservative check that flags function call arguments where multiple arguments
  * have side effects on the same variables (unspecified behaviour in C).
  */
-void misra_check_evaluation_order(struct TypeChecker *tc, struct ASTNode *expr)
+void misra_check_evaluation_order(struct ParserContext *ctx, struct ASTNode *expr)
 {
-    if (!tc->pctx->config->misra_mode || !expr || expr->type != NODE_EXPR_CALL)
+    if (!ctx->config->misra_mode || !expr || expr->type != NODE_EXPR_CALL)
     {
         return;
     }
 
-    // Check each pair of arguments for side-effect collisions
-    ASTNode *arg_a = expr->call.args;
-    while (arg_a)
+    // Simple heuristic: flag if multiple arguments have side effects.
+    // Detailed analysis is handled by Rule 13.2 in the typechecker.
+    int count = 0;
+    ASTNode *arg = expr->call.args;
+    while (arg)
     {
-        ASTNode *arg_b = arg_a->next;
-        while (arg_b)
+        if (tc_expr_has_side_effects(arg))
         {
-            SymbolSet a_reads = {0}, a_writes = {0};
-            SymbolSet b_reads = {0}, b_writes = {0};
-            collect_symbols(arg_a, &a_reads, &a_writes);
-            collect_symbols(arg_b, &b_reads, &b_writes);
-
-            // Check for write-write or write-read collisions between arguments
-            for (int i = 0; i < a_writes.count; i++)
+            count++;
+            if (count >= 2)
             {
-                ZenSymbol *s = a_writes.syms[i];
-                if (!s)
-                {
-                    continue;
-                }
-                for (int j = 0; j < b_writes.count; j++)
-                {
-                    if (s == b_writes.syms[j])
-                    {
-                        tc_error(tc, expr->token,
-                                 "MISRA Rule 13.2: function call arguments have conflicting side "
-                                 "effects on a variable (evaluation order unspecified)");
-                        return;
-                    }
-                }
-                for (int j = 0; j < b_reads.count; j++)
-                {
-                    if (s == b_reads.syms[j])
-                    {
-                        tc_error(tc, expr->token,
-                                 "MISRA Rule 13.2: function call argument writes a variable while "
-                                 "another argument reads it (evaluation order unspecified)");
-                        return;
-                    }
-                }
+                zerror_at(expr->token, "MISRA Rule 13.2: function call arguments have conflicting "
+                                       "side effects (evaluation order unspecified)");
+                return;
             }
-            arg_b = arg_b->next;
         }
-        arg_a = arg_a->next;
+        arg = arg->next;
     }
 }
 
@@ -1757,13 +1737,13 @@ void misra_check_evaluation_order(struct TypeChecker *tc, struct ASTNode *expr)
  * shall be tested. Forwards to the existing misra_check_function_return_usage logic.
  * This function exists as a dedicated hook point for Dir 4.7-specific integration.
  */
-void misra_check_error_tested(struct TypeChecker *tc, struct ASTNode *stmt)
+void misra_check_error_tested(struct ParserContext *ctx, struct ASTNode *stmt)
 {
-    if (!tc->pctx->config->misra_mode || !stmt)
+    if (!ctx->config->misra_mode || !stmt)
     {
         return;
     }
 
     // Delegate to the existing return value check which already handles Dir 4.7
-    misra_check_function_return_usage(tc, stmt);
+    misra_check_function_return_usage(ctx, stmt);
 }

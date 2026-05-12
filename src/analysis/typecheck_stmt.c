@@ -57,7 +57,7 @@ void check_var_decl(TypeChecker *tc, ASTNode *node, int depth)
 {
     if (node->var_decl.type_info)
     {
-        misra_check_pointer_nesting(tc, node->var_decl.type_info, node->token);
+        misra_check_pointer_nesting(tc->pctx, node->var_decl.type_info, node->token);
     }
 
     // MISRA: Mark type as used
@@ -99,7 +99,7 @@ void check_var_decl(TypeChecker *tc, ASTNode *node, int depth)
 
             if (tc->pctx->config->misra_mode)
             {
-                misra_check_pointer_conversion(tc, decl_type, init_type, node->token);
+                misra_check_pointer_conversion(tc->pctx, decl_type, init_type, node->token);
 
                 // Rule 9.3: Arrays shall not be partially initialized.
                 if (decl_type->kind == TYPE_ARRAY && init_type->kind == TYPE_ARRAY)
@@ -121,7 +121,7 @@ void check_var_decl(TypeChecker *tc, ASTNode *node, int depth)
 
     if (node->type_info)
     {
-        misra_check_pointer_nesting(tc, node->var_decl.type_info, node->token);
+        misra_check_pointer_nesting(tc->pctx, node->var_decl.type_info, node->token);
     }
 
     // If type is not explicit, we should ideally infer it from init_expr.
@@ -138,7 +138,7 @@ void check_var_decl(TypeChecker *tc, ASTNode *node, int depth)
         node->var_decl.type_info = t;
     }
 
-    misra_check_reserved_identifier(tc, node->var_decl.name, node->token);
+    misra_check_reserved_identifier(tc->pctx, node->var_decl.name, node->token);
     tc_add_symbol(tc, node->var_decl.name, t, node->token, 0);
     ZenSymbol *new_sym = tc_lookup(tc, node->var_decl.name);
     if (new_sym)
@@ -154,7 +154,7 @@ void check_var_decl(TypeChecker *tc, ASTNode *node, int depth)
         int is_static = (existing && existing->is_static) || (node->var_decl.is_static);
         int is_local = (existing && existing->is_local) || (tc->current_func != NULL);
 
-        misra_check_external_array_size(tc, t, node->token, is_static, is_local);
+        misra_check_external_array_size(tc->pctx, t, node->token, is_static, is_local);
 
         // Rule 18.8: No variable length arrays
         // In Zen C, all [T; N] arrays have constant size N, so Rule 18.8 is satisfied.
@@ -279,7 +279,7 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
     {
         return;
     }
-    misra_check_param_nesting(tc, node);
+    misra_check_param_nesting(tc->pctx, node);
     // Mark arg types as used
     for (int i = 0; i < node->func.arg_count; i++)
     {
@@ -290,7 +290,7 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
     mark_type_as_used(tc, node->func.ret_type_info);
 
     // Rule Zen 1.4: Reserved identifiers
-    misra_check_reserved_identifier(tc, node->func.name, node->token);
+    misra_check_reserved_identifier(tc->pctx, node->func.name, node->token);
 
     tc->current_func = node;
     tc_enter_scope(tc);
@@ -309,9 +309,9 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
             Type *param_type =
                 (node->func.arg_types && node->func.arg_types[i]) ? node->func.arg_types[i] : NULL;
 
-            misra_check_tuple_size(tc, param_type, node->token);
-            misra_check_pointer_nesting(tc, param_type, node->token);
-            misra_check_reserved_identifier(tc, node->func.param_names[i], node->token);
+            misra_check_tuple_size(tc->pctx, param_type, node->token);
+            misra_check_pointer_nesting(tc->pctx, param_type, node->token);
+            misra_check_reserved_identifier(tc->pctx, node->func.param_names[i], node->token);
             tc_add_symbol(tc, node->func.param_names[i], param_type, node->token,
                           tc->pctx->config->misra_mode);
         }
@@ -319,8 +319,8 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
 
     if (node->func.ret_type_info)
     {
-        misra_check_tuple_size(tc, node->func.ret_type_info, node->token);
-        misra_check_pointer_nesting(tc, node->func.ret_type_info, node->token);
+        misra_check_tuple_size(tc->pctx, node->func.ret_type_info, node->token);
+        misra_check_pointer_nesting(tc->pctx, node->func.ret_type_info, node->token);
 
         // Lifetime Elision result was already computed in pre-pass for named functions.
         // For lambdas or if it somehow missed the pre-pass, ensure it's set.
@@ -376,7 +376,7 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
                     // Rule 2.7: Unused parameter
                     if (!psym->is_used)
                     {
-                        misra_check_unused_param(tc, psym->name, psym->decl_token);
+                        misra_check_unused_param(tc->pctx, psym->name, psym->decl_token);
                     }
                     // Rule 8.13: Pointer to const
                     if (psym->type_info && psym->type_info->kind == TYPE_POINTER)
@@ -385,7 +385,7 @@ void check_function(TypeChecker *tc, ASTNode *node, int depth)
                         if (inner && !inner->is_const && !psym->type_info->is_const &&
                             !psym->is_written_to)
                         {
-                            misra_check_const_ptr_param(tc, psym->name, psym->decl_token);
+                            misra_check_const_ptr_param(tc->pctx, psym->name, psym->decl_token);
                         }
                     }
                 }
@@ -489,7 +489,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
     {
     case NODE_WHILE:
     {
-        misra_check_compound_body(tc, node->while_stmt.body, "while");
+        misra_check_compound_body(tc->pctx, node->while_stmt.body, "while");
         int old_stmt_ctx = tc->is_stmt_context;
         tc->is_stmt_context = 0;
         check_node(tc, node->while_stmt.condition, depth + 1);
@@ -502,13 +502,13 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
             {
                 if (cond_type->kind != TYPE_BOOL)
                 {
-                    misra_check_condition_boolean(tc, node->while_stmt.condition->type_info,
+                    misra_check_condition_boolean(tc->pctx, node->while_stmt.condition->type_info,
                                                   node->while_stmt.condition->token);
                 }
                 int inv;
                 if (is_expression_invariant(tc, node->while_stmt.condition, &inv))
                 {
-                    misra_check_invariant_condition(tc, node->while_stmt.condition->token);
+                    misra_check_invariant_condition(tc->pctx, node->while_stmt.condition->token);
                 }
             }
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
@@ -525,7 +525,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
     }
 
     case NODE_FOR:
-        misra_check_compound_body(tc, node->for_stmt.body, "for");
+        misra_check_compound_body(tc->pctx, node->for_stmt.body, "for");
         tc_enter_scope(tc); // For loop init variable is scoped
         check_node(tc, node->for_stmt.init, depth + 1);
 
@@ -545,13 +545,13 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
             {
                 if (cond_type->kind != TYPE_BOOL)
                 {
-                    misra_check_condition_boolean(tc, node->for_stmt.condition->type_info,
+                    misra_check_condition_boolean(tc->pctx, node->for_stmt.condition->type_info,
                                                   node->for_stmt.condition->token);
                 }
                 int inv;
                 if (is_expression_invariant(tc, node->for_stmt.condition, &inv))
                 {
-                    misra_check_invariant_condition(tc, node->for_stmt.condition->token);
+                    misra_check_invariant_condition(tc->pctx, node->for_stmt.condition->token);
                 }
             }
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
@@ -572,7 +572,8 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
                 const char *step_op = node->for_stmt.step->binary.op;
                 if (strstr(step_op, "=") && node->for_stmt.step->binary.left->type_info)
                 {
-                    misra_check_loop_counter_float(tc, node->for_stmt.step->binary.left->type_info,
+                    misra_check_loop_counter_float(tc->pctx,
+                                                   node->for_stmt.step->binary.left->type_info,
                                                    node->for_stmt.step->token);
                 }
             }
@@ -604,7 +605,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
 
     case NODE_DO_WHILE:
     {
-        misra_check_compound_body(tc, node->do_while_stmt.body, "do-while");
+        misra_check_compound_body(tc->pctx, node->do_while_stmt.body, "do-while");
         int old_stmt_ctx = tc->is_stmt_context;
         tc->is_stmt_context = 0;
         check_node(tc, node->do_while_stmt.body, depth + 1);
@@ -618,13 +619,14 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
             {
                 if (cond_type->kind != TYPE_BOOL)
                 {
-                    misra_check_condition_boolean(tc, node->do_while_stmt.condition->type_info,
+                    misra_check_condition_boolean(tc->pctx,
+                                                  node->do_while_stmt.condition->type_info,
                                                   node->do_while_stmt.condition->token);
                 }
                 int inv;
                 if (is_expression_invariant(tc, node->do_while_stmt.condition, &inv))
                 {
-                    misra_check_invariant_condition(tc, node->do_while_stmt.condition->token);
+                    misra_check_invariant_condition(tc->pctx, node->do_while_stmt.condition->token);
                 }
             }
             else if (cond_type->kind != TYPE_BOOL && !is_integer_type(cond_type) &&
@@ -692,7 +694,7 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
             check_node(tc, node->repeat_stmt.body, depth + 1);
             break;
         case NODE_DO_WHILE:
-            misra_check_compound_body(tc, node->do_while_stmt.body, "do-while");
+            misra_check_compound_body(tc->pctx, node->do_while_stmt.body, "do-while");
             check_node(tc, node->do_while_stmt.body, depth + 1);
             check_node(tc, node->do_while_stmt.condition, depth + 1);
             break;
