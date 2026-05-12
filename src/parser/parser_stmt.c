@@ -2148,9 +2148,10 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
     if (is_expr)
     {
-        append_to_gen_fmt(&gen, &gen_cap,
-                          "static char _fs_buf_%d[8192]; _fs_buf_%d[0]=0; char _fs_t_%d[2048]; ",
-                          fs_id, fs_id, fs_id);
+        append_to_gen_fmt(
+            &gen, &gen_cap,
+            "static char _fs_buf_%d[8192]; _fs_buf_%d[0]=0; char _fs_t_%d[2048]; (void)_fs_t_%d; ",
+            fs_id, fs_id, fs_id, fs_id);
     }
 
     char *s = xstrdup(content);

@@ -209,7 +209,7 @@ void z_get_absolute_path(const char *path, char *buffer, size_t size)
                     // We heuristicly assume that if we are in APE and got a /zip path,
                     // we want the equivalent path in the directory where the APE resides.
                     // This is true for the Zen C repository structure.
-                    char physical[MAX_PATH_SIZE];
+                    char physical[2 * MAX_PATH_SIZE];
                     if (strlen(real) >= 5)
                     {
                         snprintf(physical, sizeof(physical), "%s/%s", exe_dir,
