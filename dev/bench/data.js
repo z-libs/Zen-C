@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778624323365,
+  "lastUpdate": 1778625349031,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -2351,6 +2351,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Runtime (test_sort_large)",
             "value": 72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "788c6645019bd030448fe75f3388765600614377",
+          "message": "zenc: fix APE bug",
+          "timestamp": "2026-05-12T23:34:57+01:00",
+          "tree_id": "439b60c50dad0ff7a5629c06af1077ee8a3a202f",
+          "url": "https://github.com/zenc-lang/zenc/commit/788c6645019bd030448fe75f3388765600614377"
+        },
+        "date": 1778625348395,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 13884,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 32,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sha256)",
+            "value": 52,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sort_large)",
+            "value": 64,
             "unit": "ms"
           }
         ]
