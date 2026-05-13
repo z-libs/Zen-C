@@ -411,11 +411,9 @@ struct ParserContext
     // Registry of traits (encapsulated)
     TraitReg *registered_traits;
 
-    // ============================================================
     // Extensibility hooks — function pointers for optional modules.
     // When NULL, the corresponding feature is disabled/no-op.
     // Set by driver.c at startup based on configuration.
-    // ============================================================
 
     /// Hook: identifier collision check (MISRA Rule 5.1/5.2)
     void (*hook_check_identifier_collision)(Token tok, const char *name1, const char *name2,
@@ -439,12 +437,10 @@ struct ParserContext
     int (*hook_zen_trigger)(int t, Token location, struct CompilerConfig *cfg);
 };
 
-// ============================================================================
 // Intrusive linked-list iteration utilities
 // zlist.h (src/utils/zlist.h) provides full node-based doubly-linked lists.
 // These macros are for the compiler's existing intrusive singly-linked lists
 // where the `next` pointer is embedded directly in the struct.
-// ============================================================================
 #define LIST_FOR_EACH(head, cursor, next_field)                                                    \
     for (cursor = (head); cursor; cursor = cursor->next_field)
 

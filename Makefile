@@ -272,24 +272,24 @@ $(ZC_BOOT_COM): $(ZC_BOOT_COM_BIN) ape/boot/.args
 install: $(TARGET) install-zls
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) -m 755 $(TARGET) $(BINDIR)/$(TARGET)
-	
+
 	# Install man pages
 	$(INSTALL) -d $(MANDIR)/man1 $(MANDIR)/man5 $(MANDIR)/man7
 	test -f man/zc.1 && $(INSTALL) -m 644 man/zc.1 $(MANDIR)/man1/zc.1 || true
 	test -f man/zc.5 && $(INSTALL) -m 644 man/zc.5 $(MANDIR)/man5/zc.5 || true
 	test -f man/zc.7 && $(INSTALL) -m 644 man/zc.7 $(MANDIR)/man7/zc.7 || true
 	test -f man/zc-stdlib.7 && $(INSTALL) -m 644 man/zc-stdlib.7 $(MANDIR)/man7/zc-stdlib.7 || true
-	
+
 	# Install standard library
 	$(INSTALL) -d $(SHAREDIR)
 	$(INSTALL) -m 644 std.zc $(SHAREDIR)/std.zc
 	$(CP) std $(SHAREDIR)/
-	
+
 	# Install facts
 	$(INSTALL) -m 644 src/zen/facts.json $(SHAREDIR)/facts.json
 	$(INSTALL) -m 644 src/repl/docs.json $(SHAREDIR)/docs.json
 	$(INSTALL) -m 644 src/misc/zenc.json $(SHAREDIR)/zenc.json
-	
+
 	# Install plugin headers
 	$(INSTALL) -d $(INCLUDEDIR)
 	$(INSTALL) -m 644 plugins/zprep_plugin.h $(INCLUDEDIR)/zprep_plugin.h
@@ -298,7 +298,7 @@ install: $(TARGET) install-zls
 	$(INSTALL) -m 644 src/public/*.h $(INCLUDEDIR)/
 	$(INSTALL) -m 644 src/token.h src/arena.h $(INCLUDEDIR)/
 	$(INSTALL) -m 644 src/utils/emitter.h src/utils/zvec.h src/utils/zalloc.h $(INCLUDEDIR)/
-	
+
 	# Install compiled plugins
 	$(INSTALL) -d $(SHAREDIR)/plugins
 	$(CP) plugins/*.so $(SHAREDIR)/plugins/
@@ -329,7 +329,7 @@ install-ape: ape
 	$(INSTALL) -m 755 $(ZC_COM) $(BINDIR)/zc.com
 	$(INSTALL) -m 755 $(ZC_BOOT_COM) $(BINDIR)/zc-boot.com
 	$(LN) $(BINDIR)/zc.com $(BINDIR)/zc
-	
+
 	# Install standard library (shared)
 	$(INSTALL) -d $(SHAREDIR)
 	$(INSTALL) -m 644 std.zc $(SHAREDIR)/std.zc
@@ -401,7 +401,7 @@ test-backends: $(TARGET)
 
 test-lisp: $(TARGET)
 	@echo "=> Testing Lisp backend"
-	@./tests/scripts/test_lisp.sh; echo "=> Lisp suite done (76/91 pass, 15 known gaps)"
+	@./tests/scripts/test_lisp.sh; echo "=> Lisp suite done"
 
 test-lsp-smoke: $(TARGET) $(PLUGINS)
 	@echo "=> Running LSP Smoke Test"

@@ -102,7 +102,7 @@ assert 'int main(' in s or 'void main(' in s or 'auto main(' in s, 'should have 
 assert 'fprintf' in s or 'printf' in s or 'std::cout' in s, 'should have print'
 " 2>/dev/null || result=1
             if [ $result -eq 0 ]; then
-                type g++ >/dev/null 2>&1 && { g++ -fsyntax-only -fpermissive -D_Thread_local=thread_local -x c++ "$out" 2>/dev/null || result=1; } || result=2
+                type g++ >/dev/null 2>&1 && { g++ -fsyntax-only -fpermissive -x c++ "$out" 2>/dev/null || result=1; } || result=2
             fi
             ;;
         cuda)

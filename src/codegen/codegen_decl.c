@@ -94,10 +94,16 @@ void emit_preamble(ParserContext *ctx)
         EMIT(ctx, "%s", "#include <unistd.h>\n#include <fcntl.h>\n"); // POSIX functions
         EMIT(ctx, "%s", "#define ZC_SIMD(T, N) T __attribute__((vector_size(N * sizeof(T))))\n");
 
+        // Map C11 _Thread_local to C++11 thread_local (used in _z_{u}128_str)
+        if (ctx->config->use_cpp ||
+            (ctx->config->backend_name && strcmp(ctx->config->backend_name, "cpp") == 0))
+        {
+            EMIT(ctx, "%s", "#define _Thread_local thread_local\n");
+        }
+
         // C++ compatibility
         if (ctx->config->use_cpp)
         {
-            // For C++: define ZC_AUTO as auto, include compat.h macros inline
             EMIT(ctx, "%s", "#define ZC_AUTO auto\n");
             EMIT(ctx, "%s", "#define ZC_AUTO_INIT(var, init) auto var = (init)\n");
             EMIT(ctx, "%s", "#define ZC_CAST(T, x) static_cast<T>(x)\n");

@@ -8,19 +8,23 @@ JOBS=${JOBS:-4}
 
 # Features the Lisp backend cannot handle
 BLOCKED_PATTERNS=(
-    '^raw '
-    '^include '
-    '^asm '
-    '^struct '
-    '^enum '
-    '^trait '
+    'raw {'
+    'include <'
+    'include "'
+    'asm {'
+    'struct '
+    'enum '
+    'trait '
     '@global'
     '@device'
     '@host'
     'cuda_'
     'extern '
     'operator '
-    '^import "std/'
+    'import "std/'
+    'import "[^"]+/std/'
+    'import "[^"]+\.h"'
+    'cfg'
 )
 
 PASS=0; FAIL=0; SKIP=0

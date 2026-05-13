@@ -626,7 +626,7 @@ static ASTNode *find_local_in_func(ASTNode *func, const char *name)
         {
             if (strcmp(func->func.param_names[i], name) == 0)
             {
-                return NULL; // TODO: Args handled elsewhere
+                return NULL; // Args handled by the caller's symbol resolution path
             }
         }
     }

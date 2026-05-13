@@ -789,6 +789,4 @@ void check_loop_passes(TypeChecker *tc, ASTNode *node, int depth)
     RECURSION_EXIT(tc->pctx);
 }
 
-// ============================================================================
 // MAIN DISPATCH: check_node
-// ============================================================================

@@ -1055,10 +1055,8 @@ Type *get_inner_type(Type *t)
     return t;
 }
 
-// ============================================================================
 // Type inference — resolve an expression node to its C type string.
 // (Moved from codegen_utils.c this is part of core, not codegen)
-// ============================================================================
 
 char *infer_type(ParserContext *ctx, ASTNode *node)
 {
@@ -1548,10 +1546,8 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
 
 // Helper to emit auto type or fallback.
 
-// ============================================================================
 // Field type lookup — get the type string of a struct field.
 // (Moved from codegen_utils.c)
-// ============================================================================
 
 char *get_field_type_str(ParserContext *ctx, const char *struct_name, const char *field_name)
 {

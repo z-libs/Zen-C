@@ -557,9 +557,7 @@ int integer_type_width(Type *t)
     }
 }
 
-// ============================================================================
 // EXPRESSION CHECKERS
-// ============================================================================
 
 void check_node(TypeChecker *tc, ASTNode *node, int depth);
 void check_node(TypeChecker *tc, ASTNode *node, int depth)

@@ -6,9 +6,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-// ============================================================================
 // String manipulation
-// ============================================================================
 
 char *strip_template_suffix(const char *name)
 {
@@ -130,9 +128,7 @@ char *replace_string_type(const char *args)
     return res;
 }
 
-// ============================================================================
 // Type introspection
-// ============================================================================
 
 int is_struct_return_type(const char *ret_type)
 {
@@ -171,9 +167,7 @@ int z_is_struct_type(Type *t)
     return (base->kind == TYPE_STRUCT || base->kind == TYPE_ENUM);
 }
 
-// ============================================================================
 // Type name mapping
-// ============================================================================
 
 const char *map_to_c_type(const char *t)
 {

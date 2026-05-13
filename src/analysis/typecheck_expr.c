@@ -1073,9 +1073,7 @@ void check_expr_call(TypeChecker *tc, ASTNode *node, int depth)
     }
 }
 
-// ============================================================================
 // STATEMENT / BLOCK CHECKERS
-// ============================================================================
 
 void extract_base_name(const char *full_name, char *base_buf, size_t max_len)
 {
@@ -1715,6 +1713,4 @@ void check_expr_lambda(TypeChecker *tc, ASTNode *node, int depth)
     tc_exit_scope(tc);
 }
 
-// ============================================================================
 // INFERENCE & ENTRY POINTS
-// ============================================================================
