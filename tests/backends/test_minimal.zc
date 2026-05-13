@@ -1,0 +1,4 @@
+// Minimal program used by test_backends.sh to validate every output backend.
+fn main() {
+    println "Hello, world!";
+}

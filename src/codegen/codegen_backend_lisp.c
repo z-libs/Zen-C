@@ -47,6 +47,7 @@ static void lisp_escape_str(ParserContext *ctx, const char *s)
 }
 
 static void lisp_emit_expr(ParserContext *ctx, ASTNode *node, int depth);
+static void lisp_emit_stmt(ParserContext *ctx, ASTNode *node, int depth, int *first);
 static void lisp_emit_stmts(ParserContext *ctx, ASTNode *stmts, int depth);
 
 static const char *lisp_op(const char *zen_op)
@@ -260,13 +261,36 @@ static void lisp_emit_expr(ParserContext *ctx, ASTNode *node, int depth)
         lisp_emit_call(ctx, node, depth);
         break;
     case NODE_EXPR_MEMBER:
-        if (node->member.target)
-        {
-            lisp_emit_expr(ctx, node->member.target, depth);
-        }
         if (node->member.field)
         {
-            emitter_printf(&ctx->cg.emitter, "-%s", node->member.field);
+            // Numeric field → tuple index (nth N obj)
+            if (node->member.field[0] >= '0' && node->member.field[0] <= '9')
+            {
+                emitter_printf(&ctx->cg.emitter, "(nth %s ", node->member.field);
+                if (node->member.target)
+                {
+                    lisp_emit_expr(ctx, node->member.target, depth);
+                }
+                else
+                {
+                    emitter_printf(&ctx->cg.emitter, "nil");
+                }
+                emitter_printf(&ctx->cg.emitter, ")");
+            }
+            else
+            {
+                // Symbolic field → slot access
+                emitter_printf(&ctx->cg.emitter, "(%s-", node->member.field);
+                if (node->member.target)
+                {
+                    lisp_emit_expr(ctx, node->member.target, depth);
+                }
+                else
+                {
+                    emitter_printf(&ctx->cg.emitter, "nil");
+                }
+                emitter_printf(&ctx->cg.emitter, ")");
+            }
         }
         break;
     case NODE_EXPR_INDEX:
@@ -301,6 +325,18 @@ static void lisp_emit_expr(ParserContext *ctx, ASTNode *node, int depth)
         break;
     case NODE_EXPR_SIZEOF:
         emitter_printf(&ctx->cg.emitter, "(error \"sizeof in lisp?\")");
+        break;
+    case NODE_TYPEOF:
+        emitter_printf(&ctx->cg.emitter, "(type-of ");
+        if (node->size_of.expr)
+        {
+            lisp_emit_expr(ctx, node->size_of.expr, depth);
+        }
+        else
+        {
+            emitter_printf(&ctx->cg.emitter, "nil");
+        }
+        emitter_printf(&ctx->cg.emitter, ")");
         break;
     case NODE_EXPR_STRUCT_INIT:
     {
@@ -351,8 +387,64 @@ static void lisp_emit_expr(ParserContext *ctx, ASTNode *node, int depth)
         emitter_printf(&ctx->cg.emitter, ")");
         break;
     }
+    case NODE_LAMBDA:
+    {
+        emitter_printf(&ctx->cg.emitter, "(lambda (");
+        for (int i = 0; i < node->lambda.num_params; i++)
+        {
+            if (i > 0)
+            {
+                emitter_printf(&ctx->cg.emitter, " ");
+            }
+            if (node->lambda.param_names && node->lambda.param_names[i])
+            {
+                emitter_printf(&ctx->cg.emitter, "%s", node->lambda.param_names[i]);
+            }
+            else
+            {
+                emitter_printf(&ctx->cg.emitter, "p%d", i);
+            }
+        }
+        emitter_printf(&ctx->cg.emitter, ")\n");
+        lisp_indent(ctx, depth + 1);
+        if (node->lambda.body)
+        {
+            // Unwrap block bodies to emit contents directly
+            ASTNode *body = node->lambda.body;
+            if (body->type == NODE_BLOCK && body->block.statements)
+            {
+                int bf = 1;
+                for (ASTNode *s = body->block.statements; s; s = s->next)
+                {
+                    if (!bf)
+                    {
+                        emitter_printf(&ctx->cg.emitter, "\n");
+                        lisp_indent(ctx, depth + 2);
+                    }
+                    bf = 0;
+                    // Unwrap return statements in expression lambdas
+                    if (s->type == NODE_RETURN && s->ret.value)
+                    {
+                        lisp_emit_expr(ctx, s->ret.value, depth + 2);
+                    }
+                    else
+                    {
+                        int sbf = 0;
+                        lisp_emit_stmt(ctx, s, depth + 2, &sbf);
+                    }
+                }
+            }
+            else
+            {
+                int bf = 1;
+                lisp_emit_stmt(ctx, body, depth + 1, &bf);
+            }
+        }
+        emitter_printf(&ctx->cg.emitter, ")");
+        break;
+    }
     default:
-        emitter_printf(&ctx->cg.emitter, "(unhandled-%s)", "expr");
+        emitter_printf(&ctx->cg.emitter, "(unhandled-expr)");
         break;
     }
 }
@@ -800,6 +892,10 @@ static void lisp_emit_stmt(ParserContext *ctx, ASTNode *node, int depth, int *fi
     case NODE_EXPR_MEMBER:
     case NODE_EXPR_INDEX:
     case NODE_EXPR_CAST:
+    case NODE_TYPEOF:
+    case NODE_EXPR_TUPLE_LITERAL:
+    case NODE_EXPR_ARRAY_LITERAL:
+    case NODE_EXPR_SLICE:
         lisp_emit_expr(ctx, node, depth);
         break;
     case NODE_RETURN:
@@ -924,20 +1020,37 @@ static void lisp_emit_stmt(ParserContext *ctx, ASTNode *node, int depth, int *fi
         break;
     case NODE_MATCH:
     {
-        emitter_printf(&ctx->cg.emitter, "(etypecase ");
-        lisp_emit_expr(ctx, node->match_stmt.expr, depth);
+        emitter_printf(&ctx->cg.emitter, "(cond");
+        const char *expr_var = "__match_val";
+        int need_var = 1;
+        // For simple variable references, no need for a temp variable
+        if (node->match_stmt.expr && node->match_stmt.expr->type == NODE_EXPR_VAR)
+        {
+            expr_var = node->match_stmt.expr->var_ref.name ? node->match_stmt.expr->var_ref.name
+                                                           : "__match_val";
+            need_var = 0;
+        }
+        if (need_var)
+        {
+            emitter_printf(&ctx->cg.emitter, "\n");
+            lisp_indent(ctx, depth + 1);
+            emitter_printf(&ctx->cg.emitter, "((let ((%s ", expr_var);
+            lisp_emit_expr(ctx, node->match_stmt.expr, depth);
+            emitter_printf(&ctx->cg.emitter, "))");
+        }
         for (ASTNode *c = node->match_stmt.cases; c; c = c->next)
         {
             emitter_printf(&ctx->cg.emitter, "\n");
             lisp_indent(ctx, depth + 1);
             emitter_printf(&ctx->cg.emitter, "(");
-            if (c->match_case.pattern)
-            {
-                emitter_printf(&ctx->cg.emitter, "%s", c->match_case.pattern);
-            }
-            else if (c->match_case.is_default)
+            if (c->match_case.is_default ||
+                (c->match_case.pattern && strcmp(c->match_case.pattern, "_") == 0))
             {
                 emitter_printf(&ctx->cg.emitter, "t");
+            }
+            else if (c->match_case.pattern)
+            {
+                emitter_printf(&ctx->cg.emitter, "(= %s %s)", expr_var, c->match_case.pattern);
             }
             else
             {
@@ -948,6 +1061,10 @@ static void lisp_emit_stmt(ParserContext *ctx, ASTNode *node, int depth, int *fi
             int bf = 1;
             lisp_emit_stmt(ctx, c->match_case.body, depth + 2, &bf);
             emitter_printf(&ctx->cg.emitter, ")");
+        }
+        if (need_var)
+        {
+            emitter_printf(&ctx->cg.emitter, "))");
         }
         emitter_printf(&ctx->cg.emitter, ")");
         break;
@@ -990,6 +1107,33 @@ static void lisp_emit_stmt(ParserContext *ctx, ASTNode *node, int depth, int *fi
         }
         break;
     }
+    case NODE_ASSERT:
+    {
+        const char *fn = current_function ? current_function : "nil";
+        emitter_printf(&ctx->cg.emitter, "(if (not ");
+        if (node->assert_stmt.condition)
+        {
+            lisp_emit_expr(ctx, node->assert_stmt.condition, depth);
+        }
+        else
+        {
+            emitter_printf(&ctx->cg.emitter, "nil");
+        }
+        emitter_printf(&ctx->cg.emitter, ") (return-from %s 1))", fn);
+        break;
+    }
+    case NODE_EXPECT:
+        // Non-fatal assert — just a warning
+        break;
+    case NODE_REPL_PRINT:
+        // Implicit REPL print of expression value
+        emitter_printf(&ctx->cg.emitter, "(print ");
+        if (node->ret.value)
+        {
+            lisp_emit_expr(ctx, node->ret.value, depth);
+        }
+        emitter_printf(&ctx->cg.emitter, ")");
+        break;
     case NODE_INCLUDE:
     case NODE_IMPORT:
         break;

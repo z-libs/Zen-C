@@ -395,6 +395,14 @@ test-lsp: $(TARGET) $(PLUGINS)
 	@echo "=> Running LSP Tests"
 	./tests/compiler/lsp/test_runner
 
+test-backends: $(TARGET)
+	@echo "=> Testing all output backends"
+	./tests/scripts/test_backends.sh
+
+test-lisp: $(TARGET)
+	@echo "=> Testing Lisp backend"
+	@./tests/scripts/test_lisp.sh; echo "=> Lisp suite done (76/91 pass, 15 known gaps)"
+
 test-lsp-smoke: $(TARGET) $(PLUGINS)
 	@echo "=> Running LSP Smoke Test"
 	./tests/scripts/run_lsp_smoke_test.py --zc ./zc

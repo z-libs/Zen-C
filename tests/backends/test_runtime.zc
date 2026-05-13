@@ -1,0 +1,5 @@
+// Runtime test for all executable backends.
+// Expected stdout: exactly "PASS" followed by newline.
+fn main() {
+    println "PASS";
+}

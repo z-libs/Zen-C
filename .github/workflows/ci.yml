@@ -330,6 +330,46 @@ jobs:
       run: |
         make test-lsp ZC_HAS_JIT=1
 
+  test-backends:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libtcc-dev sbcl
+    - name: Build
+      run: make ZC_HAS_JIT=1
+    - name: Test All Backends
+      run: make test-backends
+    - name: Upload Failed Artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-backend-artifacts
+        path: test_out_*
+        if-no-files-found: warn
+
+  test-lisp:
+    name: Lisp Transpiler Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install sbcl
+      run: sudo apt-get update && sudo apt-get install -y sbcl
+    - name: Build
+      run: make ZC_HAS_JIT=1
+    - name: Run Lisp Tests
+      run: make test-lisp
+    - name: Upload Failed Artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-lisp-artifacts
+        path: |
+          test_out_*
+          *.lisp
+        if-no-files-found: warn
+
   ape:
     name: Build APE
     runs-on: ubuntu-latest
