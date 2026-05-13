@@ -702,7 +702,6 @@ static void lisp_emit_print(ParserContext *ctx, const char *raw, int depth)
                     }
                     // find matching close paren and emit inner contents
                     char *inner = scan + 1;
-                    int depth_p = 1;
                     // Trim trailing close paren
                     char *end_mark = start + strlen(start) - 1;
                     while (end_mark > inner && *end_mark == ')')
