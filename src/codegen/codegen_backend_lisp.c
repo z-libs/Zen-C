@@ -10,7 +10,7 @@
 // Buffer and stack size constants
 #define LISP_NAME_BUF 256
 #define LISP_FNAME_BUF 256
-#define LISP_ZBUF_SIZE 128
+#define LISP_ZBUF_SIZE 1024
 #define LISP_VARNAME_BUF 64
 #define MAX_VAR_NAMES 128
 #define MAX_VAR_NAME_LEN 64
@@ -460,8 +460,12 @@ static void lemit_expr(ParserContext *ctx, ASTNode *node, int depth)
                 {
                     if (strcmp(fname, cl_clash[ci]) == 0)
                     {
-                        static char zbuf[LISP_ZBUF_SIZE];
-                        snprintf(zbuf, sizeof(zbuf), "_z_%s", fname);
+                        static char zbuf[64];
+                        zbuf[0] = '_';
+                        zbuf[1] = 'z';
+                        zbuf[2] = '_';
+                        strncpy(zbuf + 3, fname, sizeof(zbuf) - 4);
+                        zbuf[sizeof(zbuf) - 1] = '\0';
                         fname = zbuf;
                         break;
                     }
@@ -1187,8 +1191,12 @@ static void lemit_func(ParserContext *ctx, ASTNode *node, int depth, int *first)
         {
             if (strcmp(fname, cl_clash[ci]) == 0)
             {
-                static char zbuf[LISP_ZBUF_SIZE];
-                snprintf(zbuf, sizeof(zbuf), "_z_%s", fname);
+                static char zbuf[64];
+                zbuf[0] = '_';
+                zbuf[1] = 'z';
+                zbuf[2] = '_';
+                strncpy(zbuf + 3, fname, sizeof(zbuf) - 4);
+                zbuf[sizeof(zbuf) - 1] = '\0';
                 fname = zbuf;
                 break;
             }
@@ -1364,6 +1372,7 @@ static void lemit_func(ParserContext *ctx, ASTNode *node, int depth, int *first)
 
 static void lemit_struct(ParserContext *ctx, ASTNode *node, int depth)
 {
+    (void)depth;
     if (!node || node->type != NODE_STRUCT)
     {
         return;
@@ -1384,6 +1393,7 @@ static void lemit_struct(ParserContext *ctx, ASTNode *node, int depth)
 
 static int lisp_func_emitted(ParserContext *ctx, const char *name, const char **emitted, int ecount)
 {
+    (void)ctx;
     for (int i = 0; i < ecount; i++)
     {
         if (strcmp(emitted[i], name) == 0)
