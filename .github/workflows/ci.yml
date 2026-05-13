@@ -354,8 +354,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install sbcl
-      run: sudo apt-get update && sudo apt-get install -y sbcl
+    - name: Install sbcl and libtcc
+      run: sudo apt-get update && sudo apt-get install -y sbcl libtcc-dev
     - name: Build
       run: make ZC_HAS_JIT=1
     - name: Run Lisp Tests

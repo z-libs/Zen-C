@@ -309,7 +309,6 @@ static int dot_emit_node(ParserContext *ctx, ASTNode *node)
     {
         ASTNode *kids[3] = {node->if_stmt.condition, node->if_stmt.then_body,
                             node->if_stmt.else_body};
-        int labels[3] = {0, 1, 2};
         for (int j = 0; j < 3; j++)
         {
             if (kids[j])
