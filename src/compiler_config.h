@@ -71,6 +71,7 @@ typedef struct CompilerConfig
     char *root_path;
     char *input_dir;
     const char *backend_name;
+    zvec_Str backend_opts;
 } CompilerConfig;
 
 typedef struct ZenCompiler

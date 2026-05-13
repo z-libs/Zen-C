@@ -193,13 +193,19 @@ static void emit_label(ParserContext *ctx, ASTNode *node)
     {
         if (node->raw_stmt.content)
         {
-            // Show a short preview
-            char preview[44];
-            int len = strlen(node->raw_stmt.content);
-            int slen = len < 40 ? len : 40;
-            snprintf(preview, sizeof(preview), "%.*s%s", slen, node->raw_stmt.content,
-                     slen < len ? "..." : "");
-            emitter_printf(&ctx->cg.emitter, " '%s'", preview);
+            if (backend_opt(&ctx->config->backend_opts, "full-content"))
+            {
+                emitter_printf(&ctx->cg.emitter, " '%s'", node->raw_stmt.content);
+            }
+            else
+            {
+                char preview[44];
+                int len = strlen(node->raw_stmt.content);
+                int slen = len < 40 ? len : 40;
+                snprintf(preview, sizeof(preview), "%.*s%s", slen, node->raw_stmt.content,
+                         slen < len ? "..." : "");
+                emitter_printf(&ctx->cg.emitter, " '%s'", preview);
+            }
         }
         break;
     }
@@ -480,11 +486,18 @@ static void astdump_emit_preamble(ParserContext *ctx)
     (void)ctx;
 }
 
+static const BackendOptAlias astdump_aliases[] = {
+    {"--backend-full-content", "full-content", NULL},
+    {NULL, NULL, NULL},
+};
+
 static const CodegenBackend astdump_backend = {
     .name = "ast-dump",
     .extension = ".ast",
     .emit_program = astdump_emit_program,
     .emit_preamble = astdump_emit_preamble,
+    .needs_cc = 0,
+    .aliases = astdump_aliases,
 };
 
 void codegen_register_astdump_backend(void)

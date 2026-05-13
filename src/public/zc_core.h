@@ -10,8 +10,8 @@
  * Internal headers (parser.h, ast.h internals) are not part of this API.
  */
 
-#include "../token.h"
-#include "../arena.h"
+#include "token.h"
+#include "arena.h"
 
 // ============================================================================
 // Compiler Configuration

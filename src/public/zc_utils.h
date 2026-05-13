@@ -7,6 +7,7 @@
  * @brief Public API for libzc-utils: memory, vectors, file I/O.
  */
 
+#include <stdio.h>
 #include <stddef.h>
 
 // ============================================================================
@@ -32,22 +33,10 @@ char *xstrdup(const char *s);
 #define calloc(n, s) xcalloc(n, s)
 
 // ============================================================================
-// Dynamic string vector
-// ============================================================================
-
-#include "../utils/zvec.h"
-
-ZVEC_GENERATE_IMPL(char *, Str)
-
-// ============================================================================
 // Emitter (output buffer)
 // ============================================================================
 
-typedef struct Emitter Emitter;
-void emitter_init_file(Emitter *e, FILE *f);
-void emitter_init_buffer(Emitter *e);
-void emitter_printf(Emitter *e, const char *fmt, ...);
-char *emitter_take_string(Emitter *e);
+#include "emitter.h"
 
 // ============================================================================
 // File I/O

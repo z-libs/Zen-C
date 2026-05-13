@@ -7,7 +7,7 @@
  * @brief Public API for diagnostics: error/warning/panic reporting.
  */
 
-#include "../token.h"
+#include "token.h"
 
 /**
  * @brief Report a fatal error and exit (or abort if fault-tolerant).

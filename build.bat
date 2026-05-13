@@ -48,6 +48,12 @@ set SRCS=src\main.c ^
  src\codegen\codegen_utils.c ^
  src\codegen\codegen_shared.c ^
  src\codegen\codegen_backend_c.c ^
+ src\codegen\codegen_backend_cpp.c ^
+ src\codegen\codegen_backend_cuda.c ^
+ src\codegen\codegen_backend_objc.c ^
+ src\codegen\codegen_backend_json.c ^
+ src\codegen\codegen_backend_lisp.c ^
+ src\codegen\codegen_backend_dot.c ^
  src\codegen\codegen_backend_astdump.c ^
  src\utils\emitter.c ^
  src\utils\format_expr.c ^

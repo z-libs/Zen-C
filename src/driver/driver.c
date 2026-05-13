@@ -23,7 +23,6 @@
 extern char *load_file(const char *fn);
 extern void init_builtins(void);
 extern void load_all_configs(CompilerConfig *cfg);
-extern void codegen_init_backends(void);
 extern void scan_build_directives(ParserContext *ctx, const char *src);
 extern void propagate_vector_inner_types(ParserContext *ctx);
 extern void propagate_drop_traits(ParserContext *ctx);
@@ -52,7 +51,6 @@ int driver_run(ZenCompiler *compiler)
     zptr_plugin_mgr_init();
 #endif
 
-    codegen_init_backends();
     load_all_configs(&compiler->config);
 
     int result = driver_compile(compiler);
@@ -277,21 +275,9 @@ int driver_compile(ZenCompiler *compiler)
         return 0;
     }
 
-    // Determine output file extension
+    // Determine output file extension from backend
     const CodegenBackend *backend = codegen_get_backend(compiler->config.backend_name);
     const char *ext_p = backend ? backend->extension : ".c";
-    if (compiler->config.use_cuda)
-    {
-        ext_p = ".cu";
-    }
-    else if (compiler->config.use_cpp)
-    {
-        ext_p = ".cpp";
-    }
-    else if (compiler->config.use_objc)
-    {
-        ext_p = ".m";
-    }
     char temp_source_buf[1024];
 
     if (!compiler->config.output_file)
@@ -352,9 +338,8 @@ int driver_compile(ZenCompiler *compiler)
         return 0;
     }
 
-    // Skip C compilation for non-C-family backends (e.g. AST dump)
-    if (strcmp(ext_p, ".c") != 0 && strcmp(ext_p, ".cpp") != 0 && strcmp(ext_p, ".cu") != 0 &&
-        strcmp(ext_p, ".m") != 0)
+    // Skip C compilation for backends that don't need it (e.g. AST dump)
+    if (backend && !backend->needs_cc)
     {
         if (compiler->config.output_file &&
             strcmp(temp_source_buf, compiler->config.output_file) != 0)

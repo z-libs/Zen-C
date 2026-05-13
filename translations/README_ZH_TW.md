@@ -411,17 +411,48 @@ zc run app.zc --cc zig
 make zig
 ```
 
+### 輸出後端
+
+Zen C 通過 `--backend` 標誌支援多種輸出後端。每個後端生成不同的目標格式：
+
+| 後端 | 標誌 | 副檔名 | 描述 |
+|:---|:---|:---:|:---|
+| **C** | `--backend c` | `.c` | 預設 — GNU C11 |
+| **C++** | `--backend cpp` | `.cpp` | 相容 C++11（也可使用 `--cpp`） |
+| **CUDA** | `--backend cuda` | `.cu` | NVIDIA CUDA C++（也可使用 `--cuda`） |
+| **Objective-C** | `--backend objc` | `.m` | Objective-C（也可使用 `--objc`） |
+| **JSON** | `--backend json` | `.json` | 機器可讀的 AST，用於工具 |
+| **AST 轉儲** | `--backend ast-dump` | `.ast` | 人類可讀的 AST 樹（除錯） |
+| **Lisp** | `--backend lisp` | `.lisp` | 轉譯為 Common Lisp（`sbcl --script`） |
+| **Graphviz** | `--backend dot` | `.dot` | 視覺化 AST 圖（`dot -Tpng ast.dot -o ast.png`） |
+
+後端特定選項可以通過 `--backend-opt` 設定：
+
+```bash
+# 美化輸出 JSON
+zc transpile file.zc --backend json --backend-opt pretty
+
+# 顯示完整原始內容（不截斷）
+zc transpile file.zc --backend lisp --backend-opt full-content
+
+# 或使用便捷別名：
+zc transpile file.zc --backend json --json-pretty
+zc transpile file.zc --backend lisp --backend-full-content
+```
+
+所有後端選項都是自說明的 — 未知的 `--` 標誌會自動對照已註冊的後端別名進行檢查。
+
 ### C++ 互操作
 
-Zen C 可以通過 `--cpp` 標誌生成 C++ 兼容的代碼，從而實現與 C++ 庫的無縫集成。
+Zen C 可以通過 `--backend cpp` 標誌（簡稱 `--cpp`）生成 C++ 兼容的代碼，從而實現與 C++ 庫的無縫集成。
 
 ```bash
 # 直接使用 g++ 編譯
-zc app.zc --cpp
+zc app.zc --backend cpp
 
 # 或者轉譯用於手動構建
-zc transpile app.zc --cpp
-g++ out.c my_cpp_lib.o -o app
+zc transpile app.zc --backend cpp
+g++ out.cpp my_cpp_lib.o -o app
 ```
 
 #### 在 Zen C 中使用 C++
@@ -449,14 +480,14 @@ fn main() {
 
 #### CUDA 互操作
 
-Zen C 通過轉譯為 **CUDA C++** 來支持 GPU 編程。這使你在維持 Zen C 人體工程學語法的同時，能夠利用內核中的強大 C++ 特性（模板、constexpr）。
+Zen C 通過轉譯為 **CUDA C++** 來支持 GPU 編程，使用 `--backend cuda` 標誌（簡稱 `--cuda`）。這使你在維持 Zen C 人體工程學語法的同時，能夠利用內核中的強大 C++ 特性（模板、constexpr）。
 
 ```bash
 # 直接使用 nvcc 編譯
-zc run app.zc --cuda
+zc run app.zc --backend cuda
 
 # 或者轉譯用於手動構建
-zc transpile app.zc --cuda -o app.cu
+zc transpile app.zc --backend cuda -o app.cu
 nvcc app.cu -o app
 ```
 
@@ -551,11 +582,11 @@ let tid = local_id();
 
 ### Objective-C 互操作
 
-Zen C 可以通過 `--objc` 標誌編譯為 Objective-C (`.m`)，允許你使用 Objective-C 框架（如 Cocoa/Foundation）和語法。
+Zen C 可以通過 `--backend objc` 標誌（簡稱 `--objc`）編譯為 Objective-C (`.m`)，允許你使用 Objective-C 框架（如 Cocoa/Foundation）和語法。
 
 ```bash
-# 使用 clang (或 gcc/gnustep) 編譯
-zc app.zc --objc --cc clang
+# 使用 clang 編譯（或 gcc/gnustep）
+zc app.zc --backend objc --cc clang
 ```
 
 #### 在 Zen C 中使用 Objective-C
@@ -609,6 +640,46 @@ zc run my_file.zc
 
 #### 斷言
 使用內置的 `assert(condition, message)` 函數來驗證預期。如果條件為假，測試將失敗並打印提供的消息。
+
+---
+
+### 公共 API（嵌入）
+
+Zen C 可以通過 `src/public/*.h` 中的公共標頭檔作為 C 函式庫使用。這些標頭檔無需 `-DZC_ALLOW_INTERNAL` 即可編譯，並提供了將編譯器嵌入到您自己的工具中的穩定 API：
+
+```c
+#include <zc_core.h>
+#include <zc_driver.h>
+#include <zc_diag.h>
+
+int main(void) {
+    ZenCompiler compiler = {0};
+    compiler.config.input_file = "source.zc";
+    return driver_run(&compiler);
+}
+```
+
+**編譯方式：**
+
+```bash
+cc -I src/public -I src -I src/utils my_tool.c -o my_tool
+```
+
+**安裝後（`make install`）：**
+
+```bash
+cc -I /usr/local/include/zenc my_tool.c -o my_tool
+```
+
+公共 API 涵蓋：
+- **`zc_core.h`** — `CompilerConfig`、`ZenCompiler`、`ASTNode`、`Type` 類型，解析器入口點，類型內省輔助函數
+- **`zc_driver.h`** — `driver_run()`、`driver_compile()`（完整管線編排）
+- **`zc_codegen.h`** — `codegen_node()`、`emit_preamble()`、`format_expression_as_c()`
+- **`zc_analysis.h`** — `check_program()`、`check_moves_only()`、`resolve_alias()`
+- **`zc_diag.h`** — `zerror_at()`、`zwarn_at()`、`zpanic_at()`，診斷報告
+- **`zc_utils.h`** — `Emitter`（輸出緩衝區）、`load_file()`、`z_resolve_path()`
+
+使用 `sudo make install` 安裝以部署標頭檔、二進位檔、手冊頁和標準函式庫。
 
 ---
 

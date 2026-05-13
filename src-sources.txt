@@ -1,3 +1,4 @@
+src/main.c
 src/driver/driver.c
 src/parser/parser_core.c
 src/parser/parser_expr.c
@@ -64,5 +65,11 @@ std/third-party/tre/lib/tre-parse.c
 std/third-party/tre/lib/tre-stack.c
 std/third-party/tre/lib/xmalloc.c
 src/codegen/codegen_backend_c.c
+src/codegen/codegen_backend_cpp.c
+src/codegen/codegen_backend_cuda.c
+src/codegen/codegen_backend_objc.c
+src/codegen/codegen_backend_json.c
+src/codegen/codegen_backend_lisp.c
+src/codegen/codegen_backend_dot.c
 src/codegen/codegen_shared.c
 src/codegen/codegen_backend_astdump.c

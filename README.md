@@ -448,17 +448,48 @@ zc run app.zc --cc zig
 make zig
 ```
 
+### Output Backends
+
+Zen C supports multiple output backends via the `--backend` flag. Each backend produces a different target format:
+
+| Backend | Flag | Extension | Description |
+|:---|:---|:---:|:---|
+| **C** | `--backend c` | `.c` | Default — GNU C11 |
+| **C++** | `--backend cpp` | `.cpp` | C++11 compatible (also available as `--cpp`) |
+| **CUDA** | `--backend cuda` | `.cu` | NVIDIA CUDA C++ (also available as `--cuda`) |
+| **Objective-C** | `--backend objc` | `.m` | Objective-C (also available as `--objc`) |
+| **JSON** | `--backend json` | `.json` | Machine-readable AST for tooling |
+| **AST dump** | `--backend ast-dump` | `.ast` | Human-readable AST tree (debugging) |
+| **Lisp** | `--backend lisp` | `.lisp` | Transpile to Common Lisp (`sbcl --script`) |
+| **Graphviz** | `--backend dot` | `.dot` | Visual AST graph (`dot -Tpng ast.dot -o ast.png`) |
+
+Backend-specific options can be set with `--backend-opt`:
+
+```bash
+# Pretty-print JSON output
+zc transpile file.zc --backend json --backend-opt pretty
+
+# Show full raw content (no truncation)
+zc transpile file.zc --backend lisp --backend-opt full-content
+
+# OR use convenience aliases:
+zc transpile file.zc --backend json --json-pretty
+zc transpile file.zc --backend lisp --backend-full-content
+```
+
+All backend options are self-documented — unknown `--` flags are checked against registered backend aliases automatically.
+
 ### C++ Interop
 
-Zen C can generate C++-compatible code with the `--cpp` flag, allowing seamless integration with C++ libraries.
+Zen C can generate C++-compatible code with the `--backend cpp` flag (`--cpp` for short), allowing seamless integration with C++ libraries.
 
 ```bash
 # Direct compilation with g++
-zc app.zc --cpp
+zc app.zc --backend cpp
 
 # Or transpile for manual build
-zc transpile app.zc --cpp
-g++ out.c my_cpp_lib.o -o app
+zc transpile app.zc --backend cpp
+g++ out.cpp my_cpp_lib.o -o app
 ```
 
 #### Using C++ in Zen C
@@ -486,14 +517,14 @@ fn main() {
 
 #### CUDA Interop
 
-Zen C supports GPU programming by transpiling to **CUDA C++**. This allows you to leverage powerful C++ features (templates, constexpr) within your kernels while maintaining Zen C's ergonomic syntax.
+Zen C supports GPU programming by transpiling to **CUDA C++** via the `--backend cuda` flag (`--cuda` for short). This allows you to leverage powerful C++ features (templates, constexpr) within your kernels while maintaining Zen C's ergonomic syntax.
 
 ```bash
 # Direct compilation with nvcc
-zc run app.zc --cuda
+zc run app.zc --backend cuda
 
 # Or transpile for manual build
-zc transpile app.zc --cuda -o app.cu
+zc transpile app.zc --backend cuda -o app.cu
 nvcc app.cu -o app
 ```
 
@@ -588,11 +619,11 @@ Zen C supports modern C23 features when using a compatible backend compiler (GCC
 
 ### Objective-C Interop
 
-Zen C can compile to Objective-C (`.m`) using the `--objc` flag, allowing you to use Objective-C frameworks (like Cocoa/Foundation) and syntax.
+Zen C can compile to Objective-C (`.m`) using the `--backend objc` flag (`--objc` for short), allowing you to use Objective-C frameworks (like Cocoa/Foundation) and syntax.
 
 ```bash
 # Compile with clang (or gcc/gnustep)
-zc app.zc --objc --cc clang
+zc app.zc --backend objc --cc clang
 ```
 
 #### Using Objective-C in Zen C
@@ -618,6 +649,46 @@ fn main() {
 
 > [!NOTE]
 > **Note:** Zen C string interpolation works with Objective-C objects (`id`) by calling `debugDescription` or `description`.
+
+---
+
+### Public API (Embedding)
+
+Zen C can be used as a C library via the public headers in `src/public/*.h`. These headers compile without `-DZC_ALLOW_INTERNAL` and provide a stable API for embedding the compiler in your own tools:
+
+```c
+#include <zc_core.h>
+#include <zc_driver.h>
+#include <zc_diag.h>
+
+int main(void) {
+    ZenCompiler compiler = {0};
+    compiler.config.input_file = "source.zc";
+    return driver_run(&compiler);
+}
+```
+
+**Compile with:**
+
+```bash
+cc -I src/public -I src -I src/utils my_tool.c -o my_tool
+```
+
+**After install (`make install`):**
+
+```bash
+cc -I /usr/local/include/zenc my_tool.c -o my_tool
+```
+
+The public API covers:
+- **`zc_core.h`** — `CompilerConfig`, `ZenCompiler`, `ASTNode`, `Type` types, parser entry points, type introspection helpers
+- **`zc_driver.h`** — `driver_run()`, `driver_compile()` (full pipeline orchestration)
+- **`zc_codegen.h`** — `codegen_node()`, `emit_preamble()`, `format_expression_as_c()`
+- **`zc_analysis.h`** — `check_program()`, `check_moves_only()`, `resolve_alias()`
+- **`zc_diag.h`** — `zerror_at()`, `zwarn_at()`, `zpanic_at()`, diagnostic reporting
+- **`zc_utils.h`** — `Emitter` (output buffer), `load_file()`, `z_resolve_path()`
+
+Install with `sudo make install` to deploy headers, the binary, man pages, and standard library.
 
 ---
 

@@ -112,6 +112,19 @@ Enable freestanding mode (no standard library).
 .BR \-\-cc " " \fIcompiler\fR
 Select C compiler backend (gcc, clang, tcc, zig). Default: gcc
 .TP
+.BR \-\-backend " " \fIname\fR
+Select output backend: \fBc\fR (default), \fBcpp\fR, \fBcuda\fR,
+\fBobjc\fR, \fBjson\fR, \fBast\-dump\fR, \fBlisp\fR, \fBdot\fR.
+.TP
+.BR \-\-backend\-opt " " \fIkey[=value]\fR
+Pass an option to the output backend. For example,
+\fB\-\-backend\-opt pretty\fR enables pretty-printed JSON output.
+May be specified multiple times.
+.TP
+.B \-\-backend\-full\-content
+Alias for \fB\-\-backend\-opt full\-content\fR. Disable raw content truncation
+in ast-dump, lisp, and JSON backends.
+.TP
 .BR \-O \fIlevel\fR
 Set optimization level (0-3, s, fast).
 .TP
@@ -134,13 +147,13 @@ Emit diagnostics as JSON objects for tool integration.
 Disable the introductory Zen Facts message.
 .TP
 .B \-\-cpp
-Use C++ mode for compilation.
+Alias for \fB\-\-backend cpp\fR. Use C++ mode for compilation.
 .TP
-.B \-\-objective-c
-Use Objective-C mode for compilation.
+.B \-\-objc ", " \-\-objective\-c
+Alias for \fB\-\-backend objc\fR. Use Objective-C mode for compilation.
 .TP
 .B \-\-cuda
-Use CUDA mode (requires nvcc).
+Alias for \fB\-\-backend cuda\fR. Use CUDA mode (requires nvcc).
 .SH ENVIRONMENT
 .TP
 .B ZC_ROOT

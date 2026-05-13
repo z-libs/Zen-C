@@ -100,6 +100,7 @@ PLUGIN_APE_OBJS = $(patsubst plugins/%.zc,obj-ape/plugins/%.o,$(PLUGIN_FILES))
 sanitize_name = $(shell echo $(1) | sed 's/[^a-zA-Z0-9]/_/g')
 
 # Default target
+.DEFAULT_GOAL := all
 all: $(TARGET) $(PLUGINS)
 
 # APE target
@@ -169,12 +170,15 @@ libzc-driver.a: $(DRIVER_OBJS)
 libzc-tre.a: $(TRE_OBJS)
 	ar rcs $@ $^
 
-# Default: library-based build (fast incremental)
-# Link — order matters for static libraries: consumers first, providers last.
-# This avoids needing --whole-archive.
-$(TARGET): $(ALL_LIBS) $(OBJ_DIR)/src/main.o
+# Default: direct .o linking (reliable incremental builds)
+$(TARGET): $(OBJS)
 	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) -o $@ $(OBJ_DIR)/src/main.o \
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
+	@echo "=> Build complete: $(TARGET)"
+
+# Library-based build (for systems without .o linking or for packaging)
+libs: $(ALL_LIBS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ_DIR)/src/main.o \
 		libzc-driver.a libzc-repl.a libzc-lsp.a \
 		libzc-codegen.a libzc-analysis.a \
 		libzc-core.a libzc-misra.a libzc-zen.a libzc-plugin.a \
@@ -182,11 +186,9 @@ $(TARGET): $(ALL_LIBS) $(OBJ_DIR)/src/main.o
 		$(LIBS)
 	@echo "=> Build complete: $(TARGET) (libraries)"
 
-# Monolithic build (single link, portable fallback for systems without .a support)
-monolith: $(OBJS)
-	@$(MKDIR) $(dir $@)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	@echo "=> Build complete: $(TARGET) (monolith)"
+# Alias for backward compatibility
+monolith: $(TARGET)
+	@true
 
 # Compile
 $(OBJ_DIR)/%.o: %.c
@@ -209,7 +211,7 @@ $(ZC_COM_BIN): $(ZC_ENTRY_O) $(SRCS) src/plugins/static_plugins.c $(PLUGIN_APE_O
 		LIBS="$(abspath $(ZC_ENTRY_O)) $(PLUGIN_APE_OBJS) -Wl,--wrap=main" \
 		SRCS="$(SRCS)" \
 		TARGET="$(abspath $@)" \
-		monolith;
+		monolith
 
 src/plugins/static_plugins.c: $(PLUGIN_FILES)
 	@echo "=> Generating static plugin registry: $@"
@@ -291,6 +293,11 @@ install: $(TARGET) install-zls
 	# Install plugin headers
 	$(INSTALL) -d $(INCLUDEDIR)
 	$(INSTALL) -m 644 plugins/zprep_plugin.h $(INCLUDEDIR)/zprep_plugin.h
+
+	# Install public API headers and their dependencies
+	$(INSTALL) -m 644 src/public/*.h $(INCLUDEDIR)/
+	$(INSTALL) -m 644 src/token.h src/arena.h $(INCLUDEDIR)/
+	$(INSTALL) -m 644 src/utils/emitter.h src/utils/zvec.h src/utils/zalloc.h $(INCLUDEDIR)/
 	
 	# Install compiled plugins
 	$(INSTALL) -d $(SHAREDIR)/plugins

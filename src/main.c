@@ -67,6 +67,8 @@ int main(int argc, char **argv)
     set_diag_by_name("conversion", 1);
     set_diag_by_name("style", 1);
 
+    codegen_init_backends();
+
     z_get_executable_path(self_path, sizeof(self_path));
     if (self_path[0])
     {
@@ -284,6 +286,10 @@ int main(int argc, char **argv)
         {
             g_config.backend_name = argv[++i];
         }
+        else if (strcmp(arg, "--backend-opt") == 0 && i + 1 < argc)
+        {
+            zvec_push_Str(&g_config.backend_opts, xstrdup(argv[++i]));
+        }
         else if (strcmp(arg, "--freestanding") == 0)
         {
             g_config.is_freestanding = 1;
@@ -311,6 +317,7 @@ int main(int argc, char **argv)
                 g_config.cc[sizeof(g_config.cc) - 1] = '\0';
             }
             g_config.use_cpp = 1;
+            g_config.backend_name = "cpp";
         }
         else if (strcmp(arg, "--cuda") == 0)
         {
@@ -326,10 +333,12 @@ int main(int argc, char **argv)
             }
             g_config.use_cuda = 1;
             g_config.use_cpp = 1; // CUDA implies C++ mode.
+            g_config.backend_name = "cuda";
         }
         else if (strcmp(arg, "--objc") == 0 || strcmp(arg, "--objective-c") == 0)
         {
             g_config.use_objc = 1;
+            g_config.backend_name = "objc";
             if (!g_config.cc[0] || strcmp(g_config.cc, "gcc") == 0)
             {
                 if (z_is_windows())
@@ -500,8 +509,17 @@ int main(int argc, char **argv)
         }
         else if (arg[0] == '-')
         {
-            // Unknown flag, pass to C compiler just in case
-            append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
+            // Check if this is a backend alias
+            const char *alias_opt = codegen_alias_lookup(arg);
+            if (alias_opt)
+            {
+                zvec_push_Str(&g_config.backend_opts, xstrdup(alias_opt));
+            }
+            else
+            {
+                // Unknown flag, pass to C compiler just in case
+                append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
+            }
         }
         else if (arg[0] != '\0')
         {

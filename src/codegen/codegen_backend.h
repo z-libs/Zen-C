@@ -3,8 +3,19 @@
 #define CODEGEN_BACKEND_H
 
 #include "../ast/ast.h"
+#include "../compiler_config.h"
 
 struct ParserContext;
+
+/**
+ * @brief A CLI alias that maps a --flag to a backend option.
+ */
+typedef struct BackendOptAlias
+{
+    const char *flag;    ///< "--flag-name" including the -- prefix.
+    const char *opt_key; ///< Option key pushed to backend_opts.
+    const char *opt_val; ///< Option value (NULL defaults to "1").
+} BackendOptAlias;
 
 /**
  * @brief A code generation backend.
@@ -26,6 +37,12 @@ typedef struct CodegenBackend
 
     /// Emit the language preamble (type aliases, runtime, includes).
     void (*emit_preamble)(struct ParserContext *ctx);
+
+    /// Whether this backend needs a C/C++/CUDA/ObjC compiler step after emission.
+    int needs_cc;
+
+    /// NULL-terminated array of CLI aliases, or NULL if none.
+    const BackendOptAlias *aliases;
 } CodegenBackend;
 
 /// Register a backend implementation.
@@ -36,5 +53,12 @@ const CodegenBackend *codegen_get_backend(const char *name);
 
 /// Initialize the default backends (called once at startup).
 void codegen_init_backends(void);
+
+/// Look up a backend option by key. Returns the value ("1" for flag-style opts) or NULL.
+const char *backend_opt(zvec_Str *opts, const char *key);
+
+/// Look up a --flag across all registered backends' aliases.
+/// Returns "key=value" string if found, or NULL.
+const char *codegen_alias_lookup(const char *flag);
 
 #endif // CODEGEN_BACKEND_H
