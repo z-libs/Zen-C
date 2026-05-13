@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778675727852,
+  "lastUpdate": 1778676272973,
   "repoUrl": "https://github.com/zenc-lang/zenc",
   "entries": {
     "Zen Compiler Benchmarks": [
@@ -2630,6 +2630,55 @@ window.BENCHMARK_DATA = {
           {
             "name": "Compiler (Avg per file)",
             "value": 32,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_hello)",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sha256)",
+            "value": 52,
+            "unit": "ms"
+          },
+          {
+            "name": "Runtime (test_sort_large)",
+            "value": 65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "committer": {
+            "email": "zuhaitz.zechhub@gmail.com",
+            "name": "Zuhaitz-dev",
+            "username": "Zuhaitz-dev"
+          },
+          "distinct": true,
+          "id": "6dfbfa82cd13319f7568057286fe475a557d955e",
+          "message": "zenc: fix actions + warning",
+          "timestamp": "2026-05-13T13:43:11+01:00",
+          "tree_id": "7c14c39d3681c3ee867e7c3a3ad18e96189d01e8",
+          "url": "https://github.com/zenc-lang/zenc/commit/6dfbfa82cd13319f7568057286fe475a557d955e"
+        },
+        "date": 1778676272516,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Compiler (Full Suite Transpilation)",
+            "value": 13625,
+            "unit": "ms"
+          },
+          {
+            "name": "Compiler (Avg per file)",
+            "value": 31,
             "unit": "ms"
           },
           {
