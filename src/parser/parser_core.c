@@ -106,6 +106,10 @@ DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l)
         {
             res.is_export = 1;
         }
+        else if (0 == strncmp(attr.start, "thread_local", 12) && 12 == attr.len)
+        {
+            res.is_thread_local = 1;
+        }
         else if (0 == strncmp(attr.start, "comptime", 8) && 8 == attr.len)
         {
             res.is_comptime = 1;
@@ -701,6 +705,10 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 {
                     s = parse_var_decl(ctx, l, attrs.is_export);
                     s->var_decl.is_static = 1;
+                    if (attrs.is_thread_local)
+                    {
+                        s->var_decl.is_thread_local = 1;
+                    }
                 }
                 else
                 {
@@ -708,14 +716,6 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 }
             }
             else if (t.len == 3 && strncmp(t.start, "let", 3) == 0)
-            {
-                s = parse_var_decl(ctx, l, attrs.is_export);
-            }
-            else if (t.len == 3 && strncmp(t.start, "var", 3) == 0)
-            {
-                s = parse_var_decl(ctx, l, attrs.is_export);
-            }
-            else if (t.len == 5 && strncmp(t.start, "const", 5) == 0)
             {
                 s = parse_var_decl(ctx, l, attrs.is_export);
             }
@@ -751,15 +751,8 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
                 }
                 else
                 {
-                    Token peek_v = lexer_peek(l);
-                    if (peek_v.type == TOK_IDENT && peek_v.len == 3 &&
-                        strncmp(peek_v.start, "var", 3) == 0)
-                    {
-                        zpanic_at(peek_v, "'extern var' is not allowed. Use 'extern let' instead.");
-                    }
-
-                    if (peek_v.type == TOK_IDENT && peek_v.len == 3 &&
-                        strncmp(peek_v.start, "let", 3) == 0)
+                    if (lexer_peek(l).type == TOK_IDENT && lexer_peek(l).len == 3 &&
+                        strncmp(lexer_peek(l).start, "let", 3) == 0)
                     {
                         lexer_next(l); // eat let
                     }

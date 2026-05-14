@@ -66,6 +66,7 @@ typedef struct DeclarationAttributes
     int is_unused;
     int is_weak;
     int is_export;
+    int is_thread_local;
     int is_comptime;
     char *section;
     Attribute *custom_attributes;

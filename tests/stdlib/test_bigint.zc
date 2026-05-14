@@ -1,0 +1,62 @@
+// test_bigint
+import "std/bigint.zc"
+
+test "BigInt New and FromInt" {
+    let zero = BigInt::new();
+    let zs = zero.to_string();
+    assert(zs[0] == '0' && zs[1] == 0, "zero string");
+    free(zs);
+
+    let b = BigInt::from_int(0);
+    let bs = b.to_string();
+    assert(bs[0] == '0' && bs[1] == 0, "from_int(0) string");
+    free(bs);
+}
+
+test "BigInt FromInt Values" {
+    let b = BigInt::from_int(12345);
+    let s = b.to_string();
+    assert(s[0] == '1', "digit 1");
+    assert(s[1] == '2', "digit 2");
+    assert(s[2] == '3', "digit 3");
+    assert(s[3] == '4', "digit 4");
+    assert(s[4] == '5', "digit 5");
+    free(s);
+}
+
+test "BigInt Add" {
+    let a = BigInt::from_int(123);
+    let b = BigInt::from_int(456);
+    let sum = a.add(&b);
+    let s = sum.to_string();
+    assert(s[0] == '5' && s[1] == '7' && s[2] == '9', "123+456=579");
+    free(s);
+}
+
+test "BigInt Add With Carry" {
+    let a = BigInt::from_int(999);
+    let b = BigInt::from_int(1);
+    let sum = a.add(&b);
+    let s = sum.to_string();
+    assert(s[0] == '1' && s[1] == '0' && s[2] == '0' && s[3] == '0', "999+1=1000");
+    free(s);
+}
+
+test "BigInt Add Large" {
+    let a = BigInt::from_int(999999);
+    let b = BigInt::from_int(1);
+    let sum = a.add(&b);
+    let s = sum.to_string();
+    assert(s[0] == '1' && s[1] == '0' && s[2] == '0' && s[3] == '0' && s[4] == '0' && s[5] == '0' && s[6] == '0', "999999+1=1000000");
+    free(s);
+}
+
+test "BigInt Clone" {
+    let a = BigInt::from_int(42);
+    let b = a.clone();
+    let sa = a.to_string();
+    let sb = b.to_string();
+    assert(sa[0] == '4' && sb[0] == '4', "clone equal");
+    free(sa);
+    free(sb);
+}

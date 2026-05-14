@@ -1,0 +1,46 @@
+// test_math
+import "std/math.zc"
+
+test "Math Constants" {
+    let pi = Math::PI();
+    let e = Math::E();
+    assert(pi > 3.14 && pi < 3.15, "PI is approx 3.14159");
+    assert(e > 2.71 && e < 2.72, "E is approx 2.71828");
+}
+
+test "Math Abs" {
+    assert(Math::abs(5.0) == 5.0, "abs positive");
+    assert(Math::abs(-5.0) == 5.0, "abs negative");
+    assert(Math::abs(0.0) == 0.0, "abs zero");
+}
+
+test "Math Trig" {
+    assert(Math::sin(0.0) == 0.0, "sin(0)");
+    assert(Math::cos(0.0) == 1.0, "cos(0)");
+    let half_sqrt2 = 0.7071067811865475;
+    let s = Math::sin(Math::PI() / 4.0);
+    assert(s > half_sqrt2 - 0.0001 && s < half_sqrt2 + 0.0001, "sin(pi/4)");
+}
+
+test "Math Sqrt and Pow" {
+    assert(Math::sqrt(4.0) == 2.0, "sqrt(4)");
+    assert(Math::sqrt(0.0) == 0.0, "sqrt(0)");
+    assert(Math::pow(2.0, 3.0) == 8.0, "pow(2, 3)");
+    assert(Math::pow(5.0, 0.0) == 1.0, "pow(5, 0)");
+}
+
+test "Math Rounding" {
+    assert(Math::ceil(3.2) == 4.0, "ceil(3.2)");
+    assert(Math::ceil(-3.2) == -3.0, "ceil(-3.2)");
+    assert(Math::floor(3.8) == 3.0, "floor(3.8)");
+    assert(Math::floor(-3.8) == -4.0, "floor(-3.8)");
+    assert(Math::round(3.5) == 4.0, "round(3.5)");
+    assert(Math::round(3.4) == 3.0, "round(3.4)");
+}
+
+test "Math Min Max" {
+    assert(Math::max(1.0, 2.0) == 2.0, "max");
+    assert(Math::max(-1.0, -2.0) == -1.0, "max negative");
+    assert(Math::min(1.0, 2.0) == 1.0, "min");
+    assert(Math::min(-1.0, -2.0) == -2.0, "min negative");
+}

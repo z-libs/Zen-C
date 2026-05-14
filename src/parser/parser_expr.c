@@ -5337,7 +5337,7 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
             if (s && s->is_def)
             {
                 zpanic_at(t,
-                          "Cannot take address of manifest constant '%s' (use 'var' if you need an "
+                          "Cannot take address of manifest constant '%s' (use 'let' if you need an "
                           "address)",
                           operand->var_ref.name);
             }

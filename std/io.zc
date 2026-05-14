@@ -6,9 +6,8 @@ import "./string.zc"
 include <stdio.h>
 include <stdarg.h>
 
-// EOF is typically -1, but we define it for portability
 fn format(fmt: char*, ...) -> char* {
-    static let buffer: char[1024];
+    @thread_local static let buffer: char[1024];
     let ap: va_list;
     va_start(ap, fmt);
 
@@ -145,9 +144,8 @@ fn read_rune() -> rune {
 }
 
 // Integer to string conversion
-// Returns a static buffer - NOT thread-safe, use itos_new for heap allocation
 fn itos(n: int) -> char* {
-    static let buffer: char[32];
+    @thread_local static let buffer: char[32];
     sprintf((char*)buffer, "%d", n);
     return (char*)buffer;
 }
@@ -164,14 +162,14 @@ fn itos_new(n: int) -> char* {
 
 // Unsigned integer to string
 fn utos(n: uint) -> char* {
-    static let buffer: char[32];
+    @thread_local static let buffer: char[32];
     sprintf((char*)buffer, "%u", n);
     return (char*)buffer;
 }
 
 // Rune to string (UTF-8)
 fn _z_str_rune(r: rune) -> char* {
-    static let buffer: char[5];
+    @thread_local static let buffer: char[5];
     let val = (uint32_t)r;
     if (val < 0x80) {
         buffer[0] = (char)val;

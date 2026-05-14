@@ -70,6 +70,8 @@ typedef struct CompilerConfig
 
     char *root_path;
     char *input_dir;
+    int std_locked;
+    char std_root[MAX_PATH_SIZE];
     const char *backend_name;
     zvec_Str backend_opts;
 } CompilerConfig;

@@ -1,20 +1,8 @@
-// MISRA Rule Zen 1.5 Verification: var and const keywords for declarations
-// EXPECT: MISRA Rule Zen 1.5
-// EXPECT: MISRA Rule Zen 1.5
-
+// MISRA Rule Zen 1.5 Verification: var and const keywords removed
 fn main() {
-    // 1. var violation
-    // EXPECT: MISRA Rule Zen 1.5
-    var x = 10; 
-
-    // 2. const violation (declaration)
-    // EXPECT: MISRA Rule Zen 1.5
-    const MAX = 100;
-
-    // 3. let/def compliance
-    let y = 20; // OK
-    def MIN = 0; // OK
+    let y = 20;
+    def MIN = 0;
     
-    // 4. const qualifier compliance (C-interop)
-    let z: const int = 30; // OK
+    // const qualifier compliance (C-interop)
+    let z: const int = 30;
 }

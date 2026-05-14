@@ -345,27 +345,9 @@ static void replace_it_with_var(ASTNode *node, char *var_name)
 
 ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export)
 {
-    Token tk = lexer_next(l); // eat 'var', 'let' or 'const'
+    Token tk = lexer_next(l); // eat 'let'
 
-    int is_decl_let = (tk.len == 3 && strncmp(tk.start, "let", 3) == 0);
-
-    if (!is_decl_let)
-    {
-        if (tk.len == 3 && strncmp(tk.start, "var", 3) == 0)
-        {
-            zpanic_at(tk, "MISRA Rule Zen 1.5: The 'var' keyword is fully deprecated.\n"
-                          "| Hint: Use 'let' for variable declarations (e.g., 'let x = 10;').");
-        }
-        else if (tk.len == 5 && strncmp(tk.start, "const", 5) == 0)
-        {
-            zpanic_at(tk,
-                      "MISRA Rule Zen 1.5: The 'const' keyword is deprecated for declarations.\n"
-                      "| Hint: Use 'def' for manifest constants (e.g., 'def MAX = 100;')\n"
-                      "| Note: 'const' remains valid as a type qualifier for C-interop.");
-        }
-    }
-
-    // Destructuring: var {x, y} = ... OR var (a: type, b: type) = ...
+    // Destructuring: let {x, y} = ... OR let (a: type, b: type) = ...
     if (lexer_peek(l).type == TOK_LBRACE || lexer_peek(l).type == TOK_LPAREN)
     {
         int is_struct = (lexer_peek(l).type == TOK_LBRACE);
@@ -810,7 +792,6 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export)
     n->token = name_tok; // Save location
     n->var_decl.name = name;
     n->var_decl.type_str = type;
-    n->var_decl.is_let = is_decl_let;
     n->var_decl.type_info = type_obj;
     n->type_info = type_obj;
 

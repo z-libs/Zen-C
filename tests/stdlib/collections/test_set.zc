@@ -1,0 +1,67 @@
+// stdlib/collections: test_set
+import "std/set.zc"
+import "std/io.zc"
+
+test "Set New and IsEmpty" {
+    let s = Set<int>::new();
+    assert(s.is_empty(), "New set should be empty");
+    assert(s.length() == 0, "New set length should be 0");
+}
+
+test "Set Add and Contains" {
+    let s = Set<int>::new();
+    s.add(10);
+    s.add(20);
+    s.add(30);
+    assert(s.length() == 3, "Set length after adds");
+    assert(s.contains(10), "Set contains 10");
+    assert(s.contains(20), "Set contains 20");
+    assert(s.contains(30), "Set contains 30");
+    assert(!s.contains(99), "Set does not contain 99");
+    s.free();
+}
+
+test "Set Duplicates" {
+    let s = Set<int>::new();
+    let added = s.add(42);
+    assert(added, "First add returns true");
+    added = s.add(42);
+    assert(!added, "Duplicate add returns false");
+    assert(s.length() == 1, "Set length after duplicate");
+    s.free();
+}
+
+test "Set Remove" {
+    let s = Set<int>::new();
+    s.add(1);
+    s.add(2);
+    s.add(3);
+    assert(s.remove(2), "Remove existing returns true");
+    assert(!s.contains(2), "Removed element not found");
+    assert(s.length() == 2, "Set length after remove");
+    assert(!s.remove(99), "Remove non-existing returns false");
+    s.free();
+}
+
+test "Set Clear" {
+    let s = Set<int>::new();
+    s.add(1);
+    s.add(2);
+    s.add(3);
+    s.clear();
+    assert(s.is_empty(), "Set should be empty after clear");
+    assert(s.length() == 0, "Set length should be 0 after clear");
+    s.free();
+}
+
+test "Set Capacity Growth" {
+    let s = Set<int>::new();
+    for (let i = 0; i < 100; i = i + 1) {
+        s.add(i);
+    }
+    assert(s.length() == 100, "Set should hold 100 elements");
+    for (let i = 0; i < 100; i = i + 1) {
+        assert(s.contains(i), "Set contains element after growth");
+    }
+    s.free();
+}

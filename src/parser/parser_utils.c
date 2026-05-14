@@ -6657,9 +6657,9 @@ int is_reserved_keyword(Token t)
     if (t.type == TOK_IDENT)
     {
         static const char *pseudo_keywords[] = {
-            "let",   "var",      "static", "const",  "return", "if",    "else",   "while",
-            "break", "continue", "loop",   "repeat", "unless", "guard", "launch", "do",
-            "goto",  "plugin",   "fn",     "struct", "enum",   "self",  NULL};
+            "let",      "static", "const",  "return", "if",    "else",   "while", "break",
+            "continue", "loop",   "repeat", "unless", "guard", "launch", "do",    "goto",
+            "plugin",   "fn",     "struct", "enum",   "self",  NULL};
 
         for (int i = 0; pseudo_keywords[i] != NULL; i++)
         {

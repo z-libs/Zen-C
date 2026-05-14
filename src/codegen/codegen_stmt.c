@@ -1320,6 +1320,10 @@ static void handle_node_var_decl(ParserContext *ctx, ASTNode *node)
             return;
         }
     }
+    if (node->var_decl.is_thread_local)
+    {
+        EMIT(ctx, "_Thread_local ");
+    }
     if (node->var_decl.is_static)
     {
         EMIT(ctx, "static ");

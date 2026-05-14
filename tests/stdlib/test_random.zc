@@ -1,0 +1,48 @@
+// test_random
+import "std/random.zc"
+
+test "Random New" {
+    let r = Random::new();
+    let val = r.next_int();
+    // Just check it returns something (non-deterministic)
+    assert(val >= 0, "Random::next_int returns non-negative");
+}
+
+test "Random FromSeed" {
+    let r = Random::from_seed(42);
+    let val = r.next_int();
+    // With same seed, should get same deterministic sequence
+    let r2 = Random::from_seed(42);
+    let val2 = r2.next_int();
+    assert(val == val2, "Same seed produces same random value");
+}
+
+test "Random IntRange" {
+    let r = Random::from_seed(123);
+    let min = 5;
+    let max = 10;
+    for (let i = 0; i < 20; i = i + 1) {
+        let v = r.next_int_range(min, max);
+        assert(v >= min && v <= max, "Random value within range");
+    }
+}
+
+test "Random Bool" {
+    let r = Random::from_seed(456);
+    let true_count = 0;
+    for (let i = 0; i < 100; i = i + 1) {
+        if r.next_bool() {
+            true_count = true_count + 1;
+        }
+    }
+    // Should have a mix of true and false
+    assert(true_count > 0 && true_count < 100, "Random bool produces both values");
+}
+
+test "Random Double" {
+    let r = Random::from_seed(789);
+    for (let i = 0; i < 20; i = i + 1) {
+        let v = r.next_double();
+        assert(v >= 0.0 && v < 1.0, "Random double in [0, 1)");
+    }
+}

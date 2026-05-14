@@ -37,6 +37,7 @@ impl BigInt {
         if (usize)self.digits != 0 {
             self.digits.free();
             dealloc<Vec<u8>>(self.digits);
+            self.digits = 0;
         }
     }
     

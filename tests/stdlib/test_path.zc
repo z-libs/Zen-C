@@ -1,0 +1,92 @@
+// test_path
+import "std/path.zc"
+
+test "Path New and CStr" {
+    let p = Path::new("/foo/bar/file.txt");
+    let s = p.c_str();
+    assert(s[0] == '/', "path starts with slash");
+    p.free();
+}
+
+test "Path Join" {
+    let base = Path::new("/foo/bar");
+    let joined = base.join("baz");
+    let s = joined.c_str();
+    assert(s[0] == '/' && s[1] == 'f' && s[2] == 'o' && s[3] == 'o', "join base");
+    // Check it contains "/baz" at the end
+    let found = 0;
+    let i: usize = 0;
+    while s[i] != 0 {
+        if s[i] == '/' && s[i+1] == 'b' && s[i+2] == 'a' && s[i+3] == 'z' && s[i+4] == 0 {
+            found = 1;
+        }
+        i = i + 1;
+    }
+    assert(found == 1, "join appends /baz");
+    base.free();
+    joined.free();
+}
+
+test "Path Extension" {
+    let p = Path::new("data.txt");
+    let ext = p.extension();
+    assert(ext.is_some(), "extension exists");
+    if ext.is_some() {
+        let s = ext.unwrap();
+        assert(s.eq_str("txt"), "extension is txt");
+    }
+    p.free();
+}
+
+test "Path No Extension" {
+    let p = Path::new("Makefile");
+    let ext = p.extension();
+    assert(ext.is_none(), "no extension");
+    p.free();
+}
+
+test "Path FileName" {
+    let p = Path::new("/usr/local/bin/zc");
+    let name = p.file_name();
+    assert(name.is_some(), "file name exists");
+    if name.is_some() {
+        let s = name.unwrap();
+        assert(s.eq_str("zc"), "file name is zc");
+    }
+    p.free();
+}
+
+test "Path Parent" {
+    let p = Path::new("/usr/local/bin/zc");
+    let parent = p.parent();
+    assert(parent.is_some(), "parent exists");
+    if parent.is_some() {
+        let pp = parent.unwrap();
+        let s = pp.c_str();
+        assert(s[0] == '/' && s[1] == 'u' && s[2] == 's' && s[3] == 'r', "parent starts with /usr");
+    }
+    p.free();
+}
+
+test "Path Root Parent" {
+    let p = Path::new("/");
+    let parent = p.parent();
+    assert(parent.is_none(), "root has no parent");
+    p.free();
+}
+
+test "Path Clone" {
+    let p = Path::new("test.txt");
+    let c = p.clone();
+    let s1 = p.c_str();
+    let s2 = c.c_str();
+    let ok = 1;
+    let i: usize = 0;
+    while s1[i] != 0 && s2[i] != 0 {
+        if s1[i] != s2[i] { ok = 0; }
+        i = i + 1;
+    }
+    assert(ok == 1 && s1[i] == s2[i], "clone matches original");
+    p.free();
+    c.free();
+}

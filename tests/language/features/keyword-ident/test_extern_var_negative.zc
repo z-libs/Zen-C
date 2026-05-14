@@ -1,4 +1,0 @@
-// EXPECT: FAIL
-// language/features/keyword-ident: test_extern_var_negative  --  should fail compilation
-extern var x: int;
-fn main() {}

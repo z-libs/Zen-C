@@ -293,8 +293,8 @@ struct ASTNode
             Type *type_info;
             int is_autofree;
             int is_static;
+            int is_thread_local;
             int is_export;
-            int is_let; // Declared with 'let'
         } var_decl;
 
         struct

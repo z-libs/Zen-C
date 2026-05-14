@@ -2027,10 +2027,6 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
         {
             init = parse_var_decl(ctx, l, 0);
         }
-        else if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "var", 3) == 0)
-        {
-            zpanic_at(lexer_peek(l), "'var' is deprecated. Use 'let' instead.");
-        }
         else
         {
             init = parse_expression(ctx, l);
@@ -3256,6 +3252,32 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
         return parse_def(ctx, l, 0);
     }
 
+    // Thread-local variable: @thread_local static let x = 0;
+    if (tk.type == TOK_AT)
+    {
+        lexer_next(l);
+        Token id = lexer_peek(l);
+        if (id.type == TOK_IDENT && id.len == 12 && strncmp(id.start, "thread_local", 12) == 0)
+        {
+            lexer_next(l);
+            Token next = lexer_peek(l);
+            if (next.type == TOK_IDENT && next.len == 6 && strncmp(next.start, "static", 6) == 0)
+            {
+                lexer_next(l);
+                next = lexer_peek(l);
+                if (next.type == TOK_IDENT && next.len == 3 && strncmp(next.start, "let", 3) == 0)
+                {
+                    ASTNode *v = parse_var_decl(ctx, l, 0);
+                    v->var_decl.is_static = 1;
+                    v->var_decl.is_thread_local = 1;
+                    return v;
+                }
+                zpanic_at(next, "Expected 'let' after 'static'");
+            }
+            zpanic_at(next, "Expected 'static' after '@thread_local'");
+        }
+    }
+
     // Identifiers (Keywords or Expressions)
     if (tk.type == TOK_IDENT)
     {
@@ -3331,11 +3353,6 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             return parse_var_decl(ctx, l, 0);
         }
 
-        if (strncmp(tk.start, "var", 3) == 0 && tk.len == 3)
-        {
-            return parse_var_decl(ctx, l, 0);
-        }
-
         // Static local variable: static let x = 0;
         if (strncmp(tk.start, "static", 6) == 0 && tk.len == 6)
         {
@@ -3350,10 +3367,6 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             zpanic_at(next, "Expected 'let' after 'static'");
         }
 
-        if (strncmp(tk.start, "const", 5) == 0 && tk.len == 5)
-        {
-            return parse_var_decl(ctx, l, 0);
-        }
         if (strncmp(tk.start, "return", 6) == 0 && tk.len == 6)
         {
             return parse_return(ctx, l);

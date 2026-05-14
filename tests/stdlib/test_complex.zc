@@ -1,0 +1,62 @@
+// test_complex
+import "std/complex.zc"
+
+test "Complex New" {
+    let c = Complex::new(3.0, 4.0);
+    assert(c.real == 3.0, "real part");
+    assert(c.imag == 4.0, "imag part");
+}
+
+test "Complex Add" {
+    let a = Complex::new(1.0, 2.0);
+    let b = Complex::new(3.0, 4.0);
+    let sum = a.add(b);
+    assert(sum.real == 4.0, "add real");
+    assert(sum.imag == 6.0, "add imag");
+}
+
+test "Complex Sub" {
+    let a = Complex::new(5.0, 7.0);
+    let b = Complex::new(2.0, 3.0);
+    let diff = a.sub(b);
+    assert(diff.real == 3.0, "sub real");
+    assert(diff.imag == 4.0, "sub imag");
+}
+
+test "Complex Mul" {
+    let a = Complex::new(1.0, 2.0);
+    let b = Complex::new(3.0, 4.0);
+    let prod = a.mul(b);
+    // (1+2i)(3+4i) = 3 + 4i + 6i + 8i^2 = -5 + 10i
+    assert(prod.real == -5.0, "mul real");
+    assert(prod.imag == 10.0, "mul imag");
+}
+
+test "Complex Div" {
+    let a = Complex::new(1.0, 1.0);
+    let b = Complex::new(1.0, 1.0);
+    let quot = a.div(b);
+    assert(quot.real == 1.0, "div real");
+    assert(quot.imag == 0.0, "div imag");
+}
+
+test "Complex Magnitude" {
+    let c = Complex::new(3.0, 4.0);
+    let mag = c.magnitude();
+    assert(mag == 5.0, "magnitude of 3+4i");
+}
+
+test "Complex Phase" {
+    let c = Complex::new(1.0, 0.0);
+    let p = c.phase();
+    assert(p == 0.0, "phase of 1+0i");
+}
+
+test "Complex Equality" {
+    let a = Complex::new(1.0, 2.0);
+    let b = Complex::new(1.0, 2.0);
+    let c = Complex::new(1.0, 3.0);
+    assert(a.eq(b), "equal complexes");
+    assert(a.neq(c), "unequal complexes");
+    assert(c.neq(a), "unequal reverse");
+}

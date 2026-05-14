@@ -1,0 +1,24 @@
+// stdlib/collections: test_sha256
+import "std/crypto/sha256.zc"
+
+test "SHA256 Empty String" {
+    let h = Sha256::hash("");
+    // SHA256("") = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    assert(h.length() == 64, "SHA256 hex length");
+    assert(h.eq_str("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"), "SHA256(empty)");
+    h.free();
+}
+
+test "SHA256 Basic" {
+    let h = Sha256::hash("abc");
+    // SHA256("abc") = ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+    assert(h.eq_str("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"), "SHA256(abc)");
+    h.free();
+}
+
+test "SHA256 Longer" {
+    let h = Sha256::hash("The quick brown fox jumps over the lazy dog");
+    // SHA256 = d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+    assert(h.eq_str("d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"), "SHA256(fox)");
+    h.free();
+}

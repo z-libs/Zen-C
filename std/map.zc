@@ -80,8 +80,9 @@ impl MapIter<V> {
                 };
             }
         }
-        // Empty entry for None
-        let empty = MapEntry<V> { key: 0, val: self.vals[0] }; // Should be 0-init if possible
+        // Empty entry for None (zero-initialized to avoid reading uninitialized data)
+        let empty: MapEntry<V>;
+        memset(&empty, 0, sizeof(MapEntry<V>));
         return MapIterResult<V> { entry: empty, has_val: false };
     }
 }

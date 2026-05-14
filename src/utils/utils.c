@@ -163,6 +163,32 @@ char *z_realpath_arena(const char *path)
     return xstrdup(path);
 }
 
+static int is_std_import(const char *fn)
+{
+    return strncmp(fn, "std/", 4) == 0 || strncmp(fn, "./std/", 6) == 0;
+}
+
+static void maybe_lock_std_root(CompilerConfig *cfg, const char *resolved)
+{
+    if (cfg->std_locked || !resolved)
+    {
+        return;
+    }
+    char *std_pos = strstr(resolved, "/std/");
+    if (!std_pos)
+    {
+        return;
+    }
+    size_t root_len = std_pos - resolved;
+    if (root_len >= sizeof(cfg->std_root))
+    {
+        return;
+    }
+    memcpy(cfg->std_root, resolved, root_len);
+    cfg->std_root[root_len] = '\0';
+    cfg->std_locked = 1;
+}
+
 char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cfg)
 {
     if (!fn)
@@ -176,6 +202,21 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
         if (access(fn, R_OK) == 0)
         {
             return z_realpath_arena(fn);
+        }
+        return NULL;
+    }
+
+    // If std library location is locked and this is a std import,
+    // only search the locked location — skip other paths entirely.
+    // This prevents loading the same logical module from different
+    // physical locations (e.g., source tree vs. system install).
+    if (cfg->std_locked && is_std_import(fn))
+    {
+        char path[MAX_PATH_LEN];
+        snprintf(path, sizeof(path), "%s/%s", cfg->std_root, fn);
+        if (access(path, R_OK) == 0)
+        {
+            return z_realpath_arena(path);
         }
         return NULL;
     }
@@ -194,7 +235,9 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
             if (access(path, R_OK) == 0)
             {
                 zfree(dir);
-                return z_realpath_arena(path);
+                char *resolved = z_realpath_arena(path);
+                maybe_lock_std_root(cfg, resolved);
+                return resolved;
             }
         }
         zfree(dir);
@@ -203,7 +246,9 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
     // 3. Current directory
     if (access(fn, R_OK) == 0)
     {
-        return z_realpath_arena(fn);
+        char *resolved = z_realpath_arena(fn);
+        maybe_lock_std_root(cfg, resolved);
+        return resolved;
     }
 
     // 4. Include paths (-I)
@@ -212,7 +257,9 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
         snprintf(path, sizeof(path), "%s/%s", cfg->include_paths.data[i], fn);
         if (access(path, R_OK) == 0)
         {
-            return z_realpath_arena(path);
+            char *resolved = z_realpath_arena(path);
+            maybe_lock_std_root(cfg, resolved);
+            return resolved;
         }
     }
 
@@ -223,39 +270,51 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
         snprintf(path, sizeof(path), "%s/std/%s", cfg->root_path, fn);
         if (access(path, R_OK) == 0)
         {
-            return z_realpath_arena(path);
+            char *resolved = z_realpath_arena(path);
+            maybe_lock_std_root(cfg, resolved);
+            return resolved;
         }
 
         // Try as-is relative to root_path
         snprintf(path, sizeof(path), "%s/%s", cfg->root_path, fn);
         if (access(path, R_OK) == 0)
         {
-            return z_realpath_arena(path);
+            char *resolved = z_realpath_arena(path);
+            maybe_lock_std_root(cfg, resolved);
+            return resolved;
         }
     }
 
-    // 6. System paths
+    // 6. System paths — only search if std library isn't locked yet.
+    // Once a std import resolves from root_path or relative paths,
+    // we lock it to prevent loading the same module from conflicting
+    // system-installed copies.
+    if (!cfg->std_locked)
+    {
 #ifdef ZEN_SHARE_DIR
-    const char *system_paths[] = {ZEN_SHARE_DIR, "/usr/local/share/zenc", "/usr/share/zenc"};
-    int sys_count = 3;
+        const char *system_paths[] = {ZEN_SHARE_DIR, "/usr/local/share/zenc", "/usr/share/zenc"};
+        int sys_count = 3;
 #else
-    const char *system_paths[] = {"/usr/local/share/zenc", "/usr/share/zenc"};
-    int sys_count = 2;
+        const char *system_paths[] = {"/usr/local/share/zenc", "/usr/share/zenc"};
+        int sys_count = 2;
 #endif
 
-    for (int i = 0; i < sys_count; i++)
-    {
-        snprintf(path, sizeof(path), "%s/%s", system_paths[i], fn);
-        if (access(path, R_OK) == 0)
+        for (int i = 0; i < sys_count; i++)
         {
-            return z_realpath_arena(path);
-        }
+            snprintf(path, sizeof(path), "%s/%s", system_paths[i], fn);
+            if (access(path, R_OK) == 0)
+            {
+                char *resolved = z_realpath_arena(path);
+                maybe_lock_std_root(cfg, resolved);
+                return resolved;
+            }
 
-        // Also try with std/ prefix in system paths
-        snprintf(path, sizeof(path), "%s/std/%s", system_paths[i], fn);
-        if (access(path, R_OK) == 0)
-        {
-            return z_realpath_arena(path);
+            // Also try with std/ prefix in system paths
+            snprintf(path, sizeof(path), "%s/std/%s", system_paths[i], fn);
+            if (access(path, R_OK) == 0)
+            {
+                return z_realpath_arena(path);
+            }
         }
     }
 
