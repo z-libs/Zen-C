@@ -355,6 +355,42 @@ int main(int argc, char **argv)
                 }
             }
         }
+        else if (strcmp(arg, "--filcc") == 0)
+        {
+            // Auto-discover bundled Fil-C compiler relative to known paths
+            const char *search_paths[] = {g_config.root_path, self_path, NULL};
+            int found = 0;
+            for (int pi = 0; search_paths[pi]; pi++)
+            {
+                if (!search_paths[pi] || !search_paths[pi][0])
+                {
+                    continue;
+                }
+                char path[MAX_PATH_SIZE];
+                snprintf(path, sizeof(path), "%s/filc-0.678-linux-x86_64/build/bin/filcc",
+                         search_paths[pi]);
+                if (access(path, X_OK) == 0)
+                {
+                    size_t plen = strlen(path);
+                    if (plen >= sizeof(g_config.cc))
+                    {
+                        plen = sizeof(g_config.cc) - 1;
+                    }
+                    memcpy(g_config.cc, path, plen);
+                    g_config.cc[plen] = '\0';
+                    char libpath[MAX_PATH_SIZE + 32];
+                    snprintf(libpath, sizeof(libpath), "%s/filc-0.678-linux-x86_64/pizfix/lib",
+                             search_paths[pi]);
+                    setenv("FILC_LIBRARY_PATH", libpath, 1);
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                snprintf(g_config.cc, sizeof(g_config.cc), "filcc");
+            }
+        }
         else if (strcmp(arg, "--cc") == 0)
         {
             if (i + 1 < argc)

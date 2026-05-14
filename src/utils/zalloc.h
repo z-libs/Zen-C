@@ -219,7 +219,7 @@ ZALLOC_API void *zarena_alloc_align(zarena *a, size_t size, size_t align)
         {
             a->head->used += needed;
             a->total_alloc += size;
-            return (void *)next;
+            return (char *)a->head->data + (next - base);
         }
     }
 
@@ -235,7 +235,7 @@ ZALLOC_API void *zarena_alloc_align(zarena *a, size_t size, size_t align)
             a->head = next_blk;
             a->head->used = size + padding;
             a->total_alloc += size;
-            return (void *)start;
+            return (char *)next_blk->data + (start - base);
         }
     }
 
@@ -268,7 +268,7 @@ ZALLOC_API void *zarena_alloc_align(zarena *a, size_t size, size_t align)
 
     b->used = size + padding;
     a->total_alloc += size;
-    return (void *)start;
+    return (char *)b->data + (start - base);
 }
 
 ZALLOC_API void *zarena_alloc(zarena *a, size_t size)

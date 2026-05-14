@@ -319,6 +319,26 @@ jobs:
           *.out.cpp
         if-no-files-found: warn
 
+  filcc:
+    name: Fil-C Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y patchelf
+    - name: Setup bundled Fil-C
+      run: |
+        cd filc-*/pizfix
+        mkdir -p os-include
+        ln -sf /usr/include/linux os-include/
+        ln -sf /usr/include/x86_64-linux-gnu/asm os-include/ 2>/dev/null || \
+          ln -sf /usr/include/asm os-include/
+        ln -sf /usr/include/asm-generic os-include/
+        patchelf --set-rpath $PWD/lib:$PWD/lib64 lib/libc.so
+        patchelf --set-rpath $PWD/lib:$PWD/lib64 lib/libpizlo.so
+    - name: Build zc with Fil-C
+      run: make filcc
+
   test-lsp:
     name: LSP Tests
     runs-on: ubuntu-latest

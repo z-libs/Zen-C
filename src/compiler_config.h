@@ -60,7 +60,7 @@ typedef struct CompilerConfig
     int recursive_doc;
 
     char gcc_flags[4096];
-    char cc[64];
+    char cc[256];
 
     char **c_function_whitelist;
     char **c_type_whitelist;

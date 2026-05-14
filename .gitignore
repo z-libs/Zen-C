@@ -56,3 +56,7 @@ zc-*
 _tmp_comptime_*.c
 .github/workflows/fuzzing.yml
 tests/compiler/lsp/test_runner
+# cscope code browsing artifacts
+cscope.out
+cscope.in.out
+cscope.po.out

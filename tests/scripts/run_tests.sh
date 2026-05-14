@@ -167,6 +167,12 @@ run_test() {
         echo "SKIP" > "$result_file.status"
         return
     fi
+    if [[ "$CC_NAME" == *"filcc"* ]]; then
+        if [[ "$test_file" == *"test_asm"* ]] || [[ "$test_file" == *"test_intel"* ]] || [[ "$test_file" == *"test_volatile"* ]] || [[ "$test_file" == *"test_plugins_suite"* ]] || [[ "$test_file" == *"test_dynamic_plugin"* ]] || [[ "$test_file" == *"test_concurrency"* ]] || [[ "$test_file" == *"test_thread"* ]] || [[ "$test_file" == *"test_sync"* ]]; then
+            echo "SKIP" > "$result_file.status"
+            return
+        fi
+    fi
     if [ $USE_CPP -eq 1 ]; then
         if [[ "$test_file" == *"test_asm"* ]] || [[ "$test_file" == *"test_intel.zc"* ]] || [[ "$test_file" == *"test_simd_native.zc"* ]]; then
             echo "SKIP" > "$result_file.status"

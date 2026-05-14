@@ -348,7 +348,8 @@ void build_compile_arg_list(ArgList *list, const char *outfile, const char *temp
 
         // Only use -iquote for GCC, Clang, and Emscripten (TCC does not support it)
         if (z_path_match_compiler(cfg->cc, "gcc") || z_path_match_compiler(cfg->cc, "g++") ||
-            z_path_match_compiler(cfg->cc, "clang") || z_path_match_compiler(cfg->cc, "emcc"))
+            z_path_match_compiler(cfg->cc, "clang") || z_path_match_compiler(cfg->cc, "emcc") ||
+            z_path_match_compiler(cfg->cc, "filcc"))
         {
             arg_list_add(list, "-iquote");
             arg_list_add(list, abs_input_dir);

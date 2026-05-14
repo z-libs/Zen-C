@@ -43,6 +43,10 @@ int driver_run(ZenCompiler *compiler)
     {
         zvec_push_Str(&compiler->config.cfg_defines, xstrdup("__ZIG__"));
     }
+    else if (z_path_match_compiler(compiler->config.cc, "filcc"))
+    {
+        zvec_push_Str(&compiler->config.cfg_defines, xstrdup("__FILCC__"));
+    }
 
     init_builtins();
     zen_init();

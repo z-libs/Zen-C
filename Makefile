@@ -79,6 +79,11 @@ INCLUDEDIR = $(PREFIX)/include/zenc
 
 PLUGINS = plugins/befunge.so plugins/brainfuck.so plugins/forth.so plugins/lisp.so plugins/sql.so
 
+# Fil-C configuration
+FILCC_DIR := $(firstword $(wildcard filc-*/build/bin))
+FILCC     ?= $(FILCC_DIR)/filcc
+FILC_LIB  ?= $(firstword $(wildcard filc-*/pizfix/lib))
+
 # APE (Actually Portable Executable) configuration
 COSMOCC = cosmocc
 OUT_STAGE = out/stage
@@ -389,6 +394,13 @@ test-misra: $(TARGET)
 test-tcc: $(TARGET) $(PLUGINS)
 	./tests/scripts/run_tests.sh --cc tcc
 
+test-filcc: $(TARGET) $(PLUGINS)
+	@if [ -z "$(FILCC_DIR)" ]; then \
+		echo "ERROR: Fil-C distribution not found. Expected 'filc-*/build/bin/' directory."; \
+		exit 1; \
+	fi
+	FILC_LIBRARY_PATH="$(FILC_LIB)" ./tests/scripts/run_tests.sh --cc "$(FILCC)"
+
 test-lsp: $(TARGET) $(PLUGINS)
 	@echo "=> Building LSP Test Runner"
 	$(CC) $(CFLAGS) -DZC_NO_ARENA tests/compiler/lsp/lsp_test_runner.c src/lsp/cJSON.c -o tests/compiler/lsp/test_runner
@@ -413,6 +425,9 @@ zig:
 
 clang:
 	$(MAKE) CC=clang
+
+filcc:
+	$(MAKE) CC="$(FILCC)" ZC_HAS_JIT=0
 
 windows:
 	$(MAKE) CC="x86_64-w64-mingw32-gcc" TARGET="zc.exe" UI_OS="Windows" LIBS="-static -lm -lpthread"
@@ -476,4 +491,4 @@ fuzz-clean:
 	rm -f $(FUZZ_TARGET) $(FUZZ_CMPLOG_TARGET)
 	rm -rf obj-fuzz obj-fuzz-cmplog
 
-.PHONY: all clean install uninstall install-ape uninstall-ape format format-check lint bench test test-misra test-tcc test-lsp test-asan test-plugins zig clang ape windows asan fuzz-build fuzz-run fuzz-clean
+.PHONY: all clean install uninstall install-ape uninstall-ape format format-check lint bench test test-misra test-tcc test-filcc test-lsp test-asan test-plugins zig clang filcc ape windows asan fuzz-build fuzz-run fuzz-clean
