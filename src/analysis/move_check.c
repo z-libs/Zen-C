@@ -307,10 +307,34 @@ void check_path_validity(TypeChecker *tc, const char *path, Token t)
     // Check Flow-Sensitive State
     ParserContext *ctx = tc ? tc->pctx : (g_parser_ctx);
     MoveStatus status = MOVE_STATE_VALID;
+    const char *moved_path = path;
 
     if (ctx && ctx->move_state)
     {
         status = get_move_status(ctx->move_state, path);
+
+        // Also check parent paths (e.g., if "zc.features" is moved, then "zc.features.len" is
+        // invalid)
+        if (status == MOVE_STATE_VALID)
+        {
+            char *parent = xstrdup(path);
+            while (status == MOVE_STATE_VALID)
+            {
+                char *dot = strrchr(parent, '.');
+                if (!dot)
+                {
+                    break;
+                }
+                *dot = 0;
+                status = get_move_status(ctx->move_state, parent);
+                if (status == MOVE_STATE_MOVED || status == MOVE_STATE_MAYBE_MOVED)
+                {
+                    moved_path = parent;
+                    break;
+                }
+            }
+            zfree(parent);
+        }
     }
 
     if (status == MOVE_STATE_MOVED || status == MOVE_STATE_MAYBE_MOVED)
@@ -332,7 +356,7 @@ void check_path_validity(TypeChecker *tc, const char *path, Token t)
         }
 
         char msg[MAX_ERROR_MSG_LEN];
-        snprintf(msg, 255, "Use of moved value '%s'", path);
+        snprintf(msg, 255, "Use of moved value '%s'", moved_path);
 
         const char *hints[] = {"This type owns resources and cannot be implicitly copied",
                                "Consider using a reference ('&') to borrow the value instead",
@@ -446,5 +470,80 @@ void mark_symbol_valid(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node
                                              : (sym ? sym->decl_token : (Token){0}));
             zfree(path);
         }
+    }
+}
+
+void collect_paths_from_node(ASTNode *node, char ***paths, int *count)
+{
+    if (!node)
+    {
+        return;
+    }
+
+    char *path = get_node_path(node, 0);
+    if (path)
+    {
+        *paths = xrealloc(*paths, sizeof(char *) * (*count + 1));
+        (*paths)[*count] = path;
+        (*count)++;
+    }
+
+    switch (node->type)
+    {
+    case NODE_EXPR_MEMBER:
+        collect_paths_from_node(node->member.target, paths, count);
+        break;
+    case NODE_EXPR_INDEX:
+        collect_paths_from_node(node->index.array, paths, count);
+        collect_paths_from_node(node->index.index, paths, count);
+        break;
+    case NODE_EXPR_CALL:
+        collect_paths_from_node(node->call.callee, paths, count);
+        {
+            ASTNode *arg = node->call.args;
+            while (arg)
+            {
+                collect_paths_from_node(arg, paths, count);
+                arg = arg->next;
+            }
+        }
+        break;
+    case NODE_EXPR_BINARY:
+        collect_paths_from_node(node->binary.left, paths, count);
+        collect_paths_from_node(node->binary.right, paths, count);
+        break;
+    case NODE_EXPR_UNARY:
+        collect_paths_from_node(node->unary.operand, paths, count);
+        break;
+    case NODE_EXPR_CAST:
+        collect_paths_from_node(node->cast.expr, paths, count);
+        break;
+    case NODE_EXPR_ARRAY_LITERAL:
+    {
+        ASTNode *elem = node->array_literal.elements;
+        while (elem)
+        {
+            collect_paths_from_node(elem, paths, count);
+            elem = elem->next;
+        }
+        break;
+    }
+    case NODE_EXPR_STRUCT_INIT:
+    {
+        ASTNode *field = node->struct_init.fields;
+        while (field)
+        {
+            collect_paths_from_node(field->var_decl.init_expr, paths, count);
+            field = field->next;
+        }
+        break;
+    }
+    case NODE_TERNARY:
+        collect_paths_from_node(node->ternary.cond, paths, count);
+        collect_paths_from_node(node->ternary.true_expr, paths, count);
+        collect_paths_from_node(node->ternary.false_expr, paths, count);
+        break;
+    default:
+        break;
     }
 }

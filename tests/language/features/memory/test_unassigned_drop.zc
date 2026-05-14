@@ -1,0 +1,39 @@
+// Issue #406: Unassigned Drop objects should be auto-freed
+// When a function returns a Drop type and the result is not assigned,
+// it should still be dropped to prevent memory leaks.
+
+let DROP_COUNT = 0;
+
+struct TrackDrop {
+    id: int;
+}
+
+impl Drop for TrackDrop {
+    fn drop(self) {
+        DROP_COUNT = DROP_COUNT + 1;
+    }
+}
+
+fn make_track_drop(id: int) -> TrackDrop {
+    return TrackDrop { id: id };
+}
+
+test "unassigned_drop_auto_freed" {
+    DROP_COUNT = 0;
+    
+    // Call function returning Drop type without assigning
+    make_track_drop(1);
+    
+    // The returned TrackDrop should have been dropped
+    assert(DROP_COUNT == 1, "Unassigned Drop should be auto-freed");
+}
+
+test "unassigned_ctor_auto_freed" {
+    DROP_COUNT = 0;
+    
+    // Construct Drop type without assigning
+    TrackDrop { id: 2 };
+    
+    // Should be dropped
+    assert(DROP_COUNT == 1, "Unassigned constructor should be auto-freed");
+}

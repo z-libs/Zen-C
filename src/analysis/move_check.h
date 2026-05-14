@@ -129,4 +129,16 @@ void mark_symbol_moved(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node
  */
 void mark_symbol_valid(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node);
 
+/**
+ * @brief Collects all variable/member/index paths used in an AST expression.
+ *
+ * Traverses the AST node and its children, extracting paths via get_node_path.
+ * Results are appended to the paths array (which may be reallocated).
+ *
+ * @param node The AST node to traverse.
+ * @param paths Pointer to array of path strings (may be reallocated).
+ * @param count Pointer to current count of paths.
+ */
+void collect_paths_from_node(ASTNode *node, char ***paths, int *count);
+
 #endif // MOVE_CHECK_H

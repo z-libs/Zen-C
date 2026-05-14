@@ -7,6 +7,12 @@ struct Mover {
     val: int;
 }
 
+impl Drop for Mover {
+    fn drop(self) {
+        // NOOP
+    }
+}
+
 test "basic_move" {
     let p1 = Mover { val: 10 };
     let p2 = p1; // p1 moved to p2
@@ -44,6 +50,14 @@ test "func_arg" {
     
     // 2. Use after move (Call - Negative Test)
     // consume(m); // Should fail: Use of moved value 'm'
+}
+
+test "move_enforced" {
+    let p1 = Mover { val: 10 };
+    let p2 = p1; // p1 moved to p2
+    assert(p2.val == 10, "p2 should be valid");
+    // p1 was moved, cannot use again (uncomment to test compiler error)
+    // let p3 = p1;
 }
 
 /*

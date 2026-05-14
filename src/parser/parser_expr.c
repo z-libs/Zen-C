@@ -919,8 +919,19 @@ static void find_var_refs(ASTNode *node, char ***refs, int *ref_count)
     case NODE_RAW_STMT:
         for (int i = 0; i < node->raw_stmt.used_symbol_count; i++)
         {
+            const char *sym = node->raw_stmt.used_symbols[i];
+            if (!sym)
+            {
+                continue;
+            }
+            // Extract base variable name from dotted paths (e.g., "ptr.name" -> "ptr")
+            char *dot = strchr(sym, '.');
+            size_t len = dot ? (size_t)(dot - sym) : strlen(sym);
+            char *base_name = xmalloc(len + 1);
+            memcpy(base_name, sym, len);
+            base_name[len] = 0;
             *refs = xrealloc(*refs, sizeof(char *) * (*ref_count + 1));
-            (*refs)[*ref_count] = xstrdup(node->raw_stmt.used_symbols[i]);
+            (*refs)[*ref_count] = base_name;
             (*ref_count)++;
         }
         break;

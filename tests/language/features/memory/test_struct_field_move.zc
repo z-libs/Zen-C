@@ -1,0 +1,23 @@
+// EXPECT: FAIL
+// Issue #383: Using moved struct field after move should fail compilation
+import "std/string.zc"
+import "std/vec.zc"
+
+struct Lang {
+    name: String
+    features: Vec<String>
+}
+
+fn main() {
+    let name = String::new("zenc")
+    let zc = Lang { name: name, features: Vec<String>::new() }
+    zc.features.push(String::new("feature1"))
+    
+    {
+        let fs = zc.features  // Move zc.features into fs
+        println "features len in block: {fs.len}"
+    }
+    
+    // Using moved value zc.features - should fail compilation
+    println "features len after move: {zc.features.len}"
+}
