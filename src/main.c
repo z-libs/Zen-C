@@ -381,7 +381,11 @@ int main(int argc, char **argv)
                     char libpath[MAX_PATH_SIZE + 32];
                     snprintf(libpath, sizeof(libpath), "%s/filc-0.678-linux-x86_64/pizfix/lib",
                              search_paths[pi]);
+#if ZC_OS_WINDOWS
+                    SetEnvironmentVariableA("FILC_LIBRARY_PATH", libpath);
+#else
                     setenv("FILC_LIBRARY_PATH", libpath, 1);
+#endif
                     found = 1;
                     break;
                 }

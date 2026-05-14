@@ -325,8 +325,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y patchelf
-    - name: Setup bundled Fil-C
+      run: sudo apt-get update && sudo apt-get install -y patchelf wget xz-utils
+    - name: Download and extract Fil-C
+      run: |
+        if [ -z "$(ls -d filc-*/build/bin/filcc 2>/dev/null)" ]; then
+          wget -q https://github.com/pizlonator/fil-c/releases/download/v0.678/filc-0.678-linux-x86_64.tar.xz
+          tar xf filc-0.678-linux-x86_64.tar.xz
+          rm filc-0.678-linux-x86_64.tar.xz
+        fi
+    - name: Setup Fil-C
       run: |
         cd filc-*/pizfix
         mkdir -p os-include
