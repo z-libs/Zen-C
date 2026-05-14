@@ -4415,7 +4415,7 @@ ASTNode *parse_include(ParserContext *ctx, Lexer *l)
 
     return n;
 }
-ASTNode *parse_import(ParserContext *ctx, Lexer *l)
+ASTNode *parse_import(ParserContext *ctx, Lexer *l, int is_re_export)
 {
     lexer_next(l); // eat 'import'
 
@@ -4609,8 +4609,9 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         }
     }
 
-    // Check for 'as alias' syntax (for namespaced imports)
+    // Check for 'as alias' or 'as *' syntax (for namespaced / wildcard imports)
     char *alias = NULL;
+    int is_wildcard = 0;
     if (!is_selective)
     {
         Token next_tok = lexer_peek(l);
@@ -4619,33 +4620,46 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         {
             lexer_next(l); // eat 'as'
             Token alias_tok = lexer_next(l);
-            if (alias_tok.type != TOK_IDENT)
+            if (alias_tok.type != TOK_IDENT && alias_tok.type != TOK_OP)
             {
                 zpanic_at(alias_tok, "Expected identifier after 'as'");
             }
 
-            alias = xmalloc(alias_tok.len + 1);
-            strncpy(alias, alias_tok.start, alias_tok.len);
-            alias[alias_tok.len] = 0;
-
-            // Register the module
-
-            // Check if C header
-            int is_header = 0;
-            if (strlen(fn) > 2 && strcmp(fn + strlen(fn) - 2, ".h") == 0)
+            // Check for wildcard import: 'as *'
+            if (alias_tok.len == 1 && *alias_tok.start == '*')
             {
-                is_header = 1;
+                is_wildcard = 1;
+            }
+            else
+            {
+                alias = xmalloc(alias_tok.len + 1);
+                strncpy(alias, alias_tok.start, alias_tok.len);
+                alias[alias_tok.len] = 0;
             }
 
-            // Register the module
-            if (!zmap_get(&ctx->imports.modules, alias))
+            if (!is_wildcard)
             {
-                Module *m = xmalloc(sizeof(Module));
-                m->alias = xstrdup(alias);
-                m->path = xstrdup(fn);
-                m->base_name = extract_module_name(fn);
-                m->is_c_header = is_header;
-                zmap_put(&ctx->imports.modules, alias, m);
+                // Register the module
+
+                // Check if C header
+                int is_header = 0;
+                if (strlen(fn) > 2 && strcmp(fn + strlen(fn) - 2, ".h") == 0)
+                {
+                    is_header = 1;
+                }
+
+                // Register the module
+                if (!zmap_get(&ctx->imports.modules, alias))
+                {
+                    char *mod_base = extract_module_name(fn);
+                    Module *m = xmalloc(sizeof(Module));
+                    m->alias = xstrdup(alias);
+                    m->path = xstrdup(fn);
+                    m->base_name = mod_base;
+                    m->is_c_header = is_header;
+                    m->is_re_export = is_re_export;
+                    zmap_put(&ctx->imports.modules, alias, m);
+                }
             }
         }
     }
@@ -4690,10 +4704,25 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         temp_module_prefix = extract_module_name(fn);
         ctx->imports.current_module_prefix = temp_module_prefix;
     }
-    else if (is_selective)
-    { // For 'import {sym} from "file"'
+    else if (is_selective || is_wildcard)
+    { // For 'import {sym} from "file"' or 'import "file" as *'
         temp_module_prefix = extract_module_name(fn);
         ctx->imports.current_module_prefix = temp_module_prefix;
+    }
+    else
+    { // Bare import (no alias): clear prefix to prevent leaking into transitive deps.
+        temp_module_prefix = NULL;
+        ctx->imports.current_module_prefix = NULL;
+    }
+
+    // Register combined module key for re-exported sub-modules.
+    // Uses prev_module_prefix (the parent module's scope) rather than
+    // current_module_prefix (which has already been updated to this import's own prefix).
+    if (is_re_export && alias && prev_module_prefix)
+    {
+        char *prop_base = extract_module_name(fn);
+        re_export_propagated(ctx, alias, prev_module_prefix, prop_base);
+        zfree(prop_base);
     }
 
     // Update global filename context for relative imports inside the new file
@@ -4711,14 +4740,25 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     zmap_remove(&ctx->imports.currently_parsing, fn);
     mark_file_imported(ctx, fn);
 
+    // For wildcard imports, re-export the module's symbols under bare names.
+    if (is_wildcard && temp_module_prefix)
+    {
+        re_export_wildcard_symbols(ctx, temp_module_prefix);
+        zmap_put(&ctx->imports.wildcard_imports, temp_module_prefix, temp_module_prefix);
+    }
+
+    // For namespaced imports that are NOT themselves re-exports,
+    // propagate re-exported sub-modules so they are resolvable
+    // via parent::sub_module::symbol in the importing context.
+
     // Restore filename context
     ctx->current_filename = (char *)saved_fn;
 
     // Restore previous module context
+    ctx->imports.current_module_prefix = prev_module_prefix;
     if (temp_module_prefix)
     {
         zfree(temp_module_prefix);
-        ctx->imports.current_module_prefix = prev_module_prefix;
     }
 
     // Free selective import symbols and aliases

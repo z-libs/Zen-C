@@ -693,9 +693,18 @@ ASTNode *parse_program_nodes(ParserContext *ctx, Lexer *l)
             {
                 s = parse_include(ctx, l);
             }
+            else if (t.len == 6 && strncmp(t.start, "export", 6) == 0)
+            {
+                lexer_next(l); // eat 'export'
+                Token next = lexer_peek(l);
+                if (next.len == 6 && strncmp(next.start, "import", 6) == 0)
+                {
+                    s = parse_import(ctx, l, 1);
+                }
+            }
             else if (t.len == 6 && strncmp(t.start, "import", 6) == 0)
             {
-                s = parse_import(ctx, l);
+                s = parse_import(ctx, l, 0);
             }
             else if (t.len == 6 && strncmp(t.start, "static", 6) == 0)
             {

@@ -256,10 +256,11 @@ typedef struct DeprecatedFunc
  */
 typedef struct Module
 {
-    char *alias;     ///< Import alias (or default name).
-    char *path;      ///< File path.
-    char *base_name; ///< Base name of the module.
-    int is_c_header; ///< 1 if this is a C header import.
+    char *alias;      ///< Import alias (or default name).
+    char *path;       ///< File path.
+    char *base_name;  ///< Base name of the module.
+    int is_c_header;  ///< 1 if this is a C header import.
+    int is_re_export; ///< 1 if this module was re-exported.
 } Module;
 
 /**
@@ -325,6 +326,7 @@ typedef struct ModuleState
     zmap_FileSet
         currently_parsing; ///< Set: files whose import is in progress (for cycle detection).
     zmap_PluginMap imported_plugins; ///< Map: alias → ImportedPlugin*.
+    zmap_FileSet wildcard_imports;   ///< Set: module base names imported via `as *`.
 } ModuleState;
 
 /* * Initialize all maps in a ModuleState. Call once after zeroing the struct. */
@@ -335,6 +337,7 @@ static inline void module_state_init(ModuleState *ms)
     ms->imported_files = zmap_init(FileSet, zmap_hash_cstr, zmap_cmp_cstr);
     ms->imported_plugins = zmap_init(PluginMap, zmap_hash_cstr, zmap_cmp_cstr);
     ms->currently_parsing = zmap_init(FileSet, zmap_hash_cstr, zmap_cmp_cstr);
+    ms->wildcard_imports = zmap_init(FileSet, zmap_hash_cstr, zmap_cmp_cstr);
 }
 
 /**
@@ -791,7 +794,7 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
 ASTNode *parse_impl(ParserContext *ctx, Lexer *l);
 ASTNode *parse_trait(ParserContext *ctx, Lexer *l);
 ASTNode *parse_include(ParserContext *ctx, Lexer *l);
-ASTNode *parse_import(ParserContext *ctx, Lexer *l);
+ASTNode *parse_import(ParserContext *ctx, Lexer *l, int is_re_export);
 ASTNode *parse_def(ParserContext *ctx, Lexer *l, int is_export);
 ASTNode *parse_test(ParserContext *ctx, Lexer *l);
 ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l, int is_export);
@@ -809,6 +812,9 @@ int check_impl(ParserContext *ctx, const char *trait_name, const char *type_name
 int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b);
 Module *find_module(ParserContext *ctx, const char *alias);
 SelectiveImport *find_selective_import(ParserContext *ctx, const char *name);
+void re_export_wildcard_symbols(ParserContext *ctx, const char *module_base);
+void re_export_propagated(ParserContext *ctx, const char *alias, const char *parent_prefix,
+                          const char *base_name);
 ASTNode *find_concrete_struct_def(ParserContext *ctx, const char *name);
 const char *find_type_alias(ParserContext *ctx, const char *alias);
 Type *parse_type_base(ParserContext *ctx, Lexer *l);

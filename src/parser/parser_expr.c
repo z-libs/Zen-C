@@ -2701,6 +2701,25 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                         ASTNode *def = find_struct_def(ctx, acc);
 
                         int is_opaque_alias = 0;
+                        if (!def && ctx->imports.current_module_prefix)
+                        {
+                            // Module prefix is set — try the prefixed name
+                            // (the struct was defined WITHIN this module, so it's
+                            //  registered as prefix__name, not bare name).
+                            char *prefixed = xmalloc(strlen(ctx->imports.current_module_prefix) +
+                                                     strlen(acc) + 3);
+                            sprintf(prefixed, "%s__%s", ctx->imports.current_module_prefix, acc);
+                            def = find_struct_def(ctx, prefixed);
+                            if (def)
+                            {
+                                zfree(acc);
+                                acc = prefixed;
+                            }
+                            else
+                            {
+                                zfree(prefixed);
+                            }
+                        }
                         if (!def)
                         {
                             TypeAlias *ta = find_type_alias_node(ctx, acc);
@@ -3257,9 +3276,15 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                 if (struct_name == acc && ctx->imports.current_module_prefix &&
                     !is_known_generic(ctx, acc))
                 {
-                    char prefixed_raw[MAX_MANGLED_NAME_LEN];
-                    sprintf(prefixed_raw, "%s__%s", ctx->imports.current_module_prefix, acc);
-                    struct_name = merge_underscores(prefixed_raw);
+                    // Only prefix module-defined types, not imported types.
+                    // Imports are registered with bare names, so if find_struct_def
+                    // succeeds on the bare name, this is an imported type — skip.
+                    if (!find_struct_def(ctx, acc) && !find_type_alias(ctx, acc))
+                    {
+                        char prefixed_raw[MAX_MANGLED_NAME_LEN];
+                        sprintf(prefixed_raw, "%s__%s", ctx->imports.current_module_prefix, acc);
+                        struct_name = merge_underscores(prefixed_raw);
+                    }
                 }
 
                 // Opaque Struct Check

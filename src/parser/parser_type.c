@@ -96,17 +96,17 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
                 else
                 {
                     // Zen module: Use module base name as prefix
-                    merged = xmalloc(strlen(mod->base_name) + strlen(resolved_suffix) + 2);
-                    snprintf(merged, strlen(mod->base_name) + strlen(resolved_suffix) + 2, "%s__%s",
-                             mod->base_name, resolved_suffix);
+                    size_t mer_sz = strlen(mod->base_name) + strlen(resolved_suffix) + 3;
+                    merged = xmalloc(mer_sz);
+                    snprintf(merged, mer_sz, "%s__%s", mod->base_name, resolved_suffix);
                 }
             }
             else
             {
                 // Regular namespace or enum variant
-                merged = xmalloc(strlen(name) + strlen(resolved_suffix) + 2);
-                snprintf(merged, strlen(name) + strlen(resolved_suffix) + 2, "%s__%s", name,
-                         resolved_suffix);
+                size_t mer_sz = strlen(name) + strlen(resolved_suffix) + 3;
+                merged = xmalloc(mer_sz);
+                snprintf(merged, mer_sz, "%s__%s", name, resolved_suffix);
             }
 
             zfree(name);
@@ -247,18 +247,29 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         }
 
         // If we're IN a module and no selective import matched, apply module prefix
+        // to types defined WITHIN this module. Types imported from other modules
+        // (identifiable by existing as bare-named structs/aliases) are not prefixed.
         if (ctx->imports.current_module_prefix && !is_known_generic(ctx, name) &&
             !is_primitive_type_name(name) && strcasecmp(name, "Self") != 0 &&
             !is_extern_symbol(ctx, name))
         {
-            // Auto-prefix struct name if in module context (unless it's a known
-            // primitive/generic)
-            char *prefixed_name =
-                xmalloc(strlen(ctx->imports.current_module_prefix) + strlen(name) + 3);
-            snprintf(prefixed_name, strlen(ctx->imports.current_module_prefix) + strlen(name) + 3,
-                     "%s__%s", ctx->imports.current_module_prefix, name);
-            zfree(name);
-            name = prefixed_name;
+            // Check if this is a type imported from another module (registered
+            // without prefix). If so, don't prefix — the bare name already resolves.
+            int is_imported_type =
+                (find_struct_def(ctx, name) != NULL) || (find_type_alias(ctx, name) != NULL);
+
+            if (!is_imported_type)
+            {
+                // Auto-prefix struct name if in module context (unless it's a known
+                // primitive/generic or an imported type)
+                char *prefixed_name =
+                    xmalloc(strlen(ctx->imports.current_module_prefix) + strlen(name) + 3);
+                snprintf(prefixed_name,
+                         strlen(ctx->imports.current_module_prefix) + strlen(name) + 3, "%s__%s",
+                         ctx->imports.current_module_prefix, name);
+                zfree(name);
+                name = prefixed_name;
+            }
         }
 
         if (!is_known_generic(ctx, name) && strcmp(name, "Self") != 0)

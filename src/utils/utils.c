@@ -5,6 +5,7 @@
 #include "zprep.h"
 #include "cmd.h"
 #include "platform/os.h"
+#include <sys/stat.h>
 
 ParserContext *g_parser_ctx = NULL;
 
@@ -188,6 +189,48 @@ static void maybe_lock_std_root(CompilerConfig *cfg, const char *resolved)
     cfg->std_locked = 1;
 }
 
+/* * Helper: try to resolve fn at a given search directory, also trying
+ * fn/mod.zc and fn/mod.zenc for directory-as-module resolution.
+ * Uses stat() to ensure we only match regular files, not directories. */
+static char *try_resolve_at(const char *search_dir, const char *fn, CompilerConfig *cfg)
+{
+    char path[MAX_PATH_LEN];
+    struct stat st;
+
+    // Try the exact path first
+    snprintf(path, sizeof(path), "%s/%s", search_dir, fn);
+    if (stat(path, &st) == 0 && S_ISREG(st.st_mode))
+    {
+        char *resolved = z_realpath_arena(path);
+        maybe_lock_std_root(cfg, resolved);
+        return resolved;
+    }
+
+    // Not found — try as a directory with mod.zc / mod.zenc
+    if (strlen(fn) < MAX_PATH_LEN - 20)
+    {
+        char modpath[MAX_PATH_LEN];
+
+        snprintf(modpath, sizeof(modpath), "%s/%s/mod.zc", search_dir, fn);
+        if (stat(modpath, &st) == 0 && S_ISREG(st.st_mode))
+        {
+            char *resolved = z_realpath_arena(modpath);
+            maybe_lock_std_root(cfg, resolved);
+            return resolved;
+        }
+
+        snprintf(modpath, sizeof(modpath), "%s/%s/mod.zenc", search_dir, fn);
+        if (stat(modpath, &st) == 0 && S_ISREG(st.st_mode))
+        {
+            char *resolved = z_realpath_arena(modpath);
+            maybe_lock_std_root(cfg, resolved);
+            return resolved;
+        }
+    }
+
+    return NULL;
+}
+
 char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cfg)
 {
     if (!fn)
@@ -195,32 +238,37 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
         return NULL;
     }
 
+    char path[MAX_PATH_LEN];
+
     // 1. Absolute path
     if (z_is_abs_path(fn))
     {
-        if (access(fn, R_OK) == 0)
+        struct stat st;
+        if (stat(fn, &st) == 0 && S_ISREG(st.st_mode))
         {
             return z_realpath_arena(fn);
         }
-        return NULL;
-    }
-
-    // If std library location is locked and this is a std import,
-    // only search the locked location — skip other paths entirely.
-    // This prevents loading the same logical module from different
-    // physical locations (e.g., source tree vs. system install).
-    if (cfg->std_locked && is_std_import(fn))
-    {
-        char path[MAX_PATH_LEN];
-        snprintf(path, sizeof(path), "%s/%s", cfg->std_root, fn);
-        if (access(path, R_OK) == 0)
+        // Try as a directory with mod.zc / mod.zenc
+        snprintf(path, sizeof(path), "%s/mod.zc", fn);
+        if (stat(path, &st) == 0 && S_ISREG(st.st_mode))
+        {
+            return z_realpath_arena(path);
+        }
+        snprintf(path, sizeof(path), "%s/mod.zenc", fn);
+        if (stat(path, &st) == 0 && S_ISREG(st.st_mode))
         {
             return z_realpath_arena(path);
         }
         return NULL;
     }
 
-    char path[MAX_PATH_LEN];
+    // If std library location is locked and this is a std import,
+    // only search the locked location — skip other paths entirely.
+    if (cfg->std_locked && is_std_import(fn))
+    {
+        char *resolved = try_resolve_at(cfg->std_root, fn, cfg);
+        return resolved; // try_resolve_at already calls maybe_lock_std_root
+    }
 
     // 2. Relative to current file
     if (relative_to)
@@ -230,34 +278,33 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
         if (last_slash)
         {
             *last_slash = 0;
-            snprintf(path, sizeof(path), "%s/%s", dir, fn);
-            if (access(path, R_OK) == 0)
+            char *resolved = try_resolve_at(dir, fn, cfg);
+            zfree(dir);
+            if (resolved)
             {
-                zfree(dir);
-                char *resolved = z_realpath_arena(path);
-                maybe_lock_std_root(cfg, resolved);
                 return resolved;
             }
         }
-        zfree(dir);
+        else
+        {
+            zfree(dir);
+        }
     }
 
     // 3. Current directory
-    if (access(fn, R_OK) == 0)
+    snprintf(path, sizeof(path), ".");
+    char *resolved = try_resolve_at(path, fn, cfg);
+    if (resolved)
     {
-        char *resolved = z_realpath_arena(fn);
-        maybe_lock_std_root(cfg, resolved);
         return resolved;
     }
 
     // 4. Include paths (-I)
     for (size_t i = 0; i < cfg->include_paths.length; i++)
     {
-        snprintf(path, sizeof(path), "%s/%s", cfg->include_paths.data[i], fn);
-        if (access(path, R_OK) == 0)
+        resolved = try_resolve_at(cfg->include_paths.data[i], fn, cfg);
+        if (resolved)
         {
-            char *resolved = z_realpath_arena(path);
-            maybe_lock_std_root(cfg, resolved);
             return resolved;
         }
     }
@@ -266,28 +313,23 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
     if (cfg->root_path)
     {
         // Try with std/ prefix (for stdlib modules like "slice.zc")
-        snprintf(path, sizeof(path), "%s/std/%s", cfg->root_path, fn);
-        if (access(path, R_OK) == 0)
+        char std_path[MAX_PATH_LEN];
+        snprintf(std_path, sizeof(std_path), "%s/std", cfg->root_path);
+        resolved = try_resolve_at(std_path, fn, cfg);
+        if (resolved)
         {
-            char *resolved = z_realpath_arena(path);
-            maybe_lock_std_root(cfg, resolved);
             return resolved;
         }
 
         // Try as-is relative to root_path
-        snprintf(path, sizeof(path), "%s/%s", cfg->root_path, fn);
-        if (access(path, R_OK) == 0)
+        resolved = try_resolve_at(cfg->root_path, fn, cfg);
+        if (resolved)
         {
-            char *resolved = z_realpath_arena(path);
-            maybe_lock_std_root(cfg, resolved);
             return resolved;
         }
     }
 
     // 6. System paths — only search if std library isn't locked yet.
-    // Once a std import resolves from root_path or relative paths,
-    // we lock it to prevent loading the same module from conflicting
-    // system-installed copies.
     if (!cfg->std_locked)
     {
 #ifdef ZEN_SHARE_DIR
@@ -300,19 +342,19 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
 
         for (int i = 0; i < sys_count; i++)
         {
-            snprintf(path, sizeof(path), "%s/%s", system_paths[i], fn);
-            if (access(path, R_OK) == 0)
+            resolved = try_resolve_at(system_paths[i], fn, cfg);
+            if (resolved)
             {
-                char *resolved = z_realpath_arena(path);
-                maybe_lock_std_root(cfg, resolved);
                 return resolved;
             }
 
             // Also try with std/ prefix in system paths
-            snprintf(path, sizeof(path), "%s/std/%s", system_paths[i], fn);
-            if (access(path, R_OK) == 0)
+            char sstd[MAX_PATH_LEN];
+            snprintf(sstd, sizeof(sstd), "%s/std", system_paths[i]);
+            resolved = try_resolve_at(sstd, fn, cfg);
+            if (resolved)
             {
-                return z_realpath_arena(path);
+                return resolved;
             }
         }
     }

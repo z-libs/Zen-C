@@ -2132,7 +2132,7 @@ Module *find_module(ParserContext *ctx, const char *alias)
     return mod_ptr ? *mod_ptr : NULL;
 }
 
-void register_module(ParserContext *ctx, const char *alias, const char *path)
+void register_module(ParserContext *ctx, const char *alias, const char *path, int is_re_export)
 {
     if (zmap_get(&ctx->imports.modules, alias))
     {
@@ -2142,6 +2142,7 @@ void register_module(ParserContext *ctx, const char *alias, const char *path)
     m->alias = alias ? xstrdup(alias) : NULL;
     m->path = xstrdup(path);
     m->base_name = extract_module_name(path);
+    m->is_re_export = is_re_export;
     zmap_put(&ctx->imports.modules, alias, m);
 }
 
@@ -2162,6 +2163,71 @@ SelectiveImport *find_selective_import(ParserContext *ctx, const char *name)
 {
     SelectiveImport **si_ptr = zmap_get(&ctx->imports.selective_imports, name);
     return si_ptr ? *si_ptr : NULL;
+}
+
+/* * Register a combined module entry for a re-exported sub-module.
+ * Called at registration time when the parent prefix is known
+ * (via ctx->imports.current_module_prefix). */
+void re_export_propagated(ParserContext *ctx, const char *alias, const char *parent_prefix,
+                          const char *base_name)
+{
+    if (!parent_prefix || !alias)
+    {
+        return;
+    }
+    char combined[MAX_PATH_LEN];
+    snprintf(combined, sizeof(combined), "%s__%s", parent_prefix, alias);
+
+    if (!zmap_get(&ctx->imports.modules, combined))
+    {
+        Module *new_mod = xmalloc(sizeof(Module));
+        new_mod->alias = xstrdup(combined);
+        new_mod->path = NULL;
+        new_mod->base_name = xstrdup(base_name ? base_name : alias);
+        new_mod->is_c_header = 0;
+        new_mod->is_re_export = 1;
+        zmap_put(&ctx->imports.modules, xstrdup(combined), new_mod);
+    }
+}
+
+void re_export_wildcard_symbols(ParserContext *ctx, const char *module_base)
+{
+    if (!ctx->global_scope || !module_base)
+    {
+        return;
+    }
+    size_t prefix_len = strlen(module_base) + 2; // "module_base__"
+    char *prefix = xmalloc(prefix_len + 1);
+    snprintf(prefix, prefix_len + 1, "%s__", module_base);
+
+    // Walk global scope and register each exported symbol as a SelectiveImport
+    // so the existing find_selective_import → name-rewriting pipeline handles resolution.
+    ZenSymbol *sym = ctx->global_scope->symbols;
+    while (sym)
+    {
+        if (sym->name && strncmp(sym->name, prefix, prefix_len) == 0)
+        {
+            const char *bare_name = sym->name + prefix_len;
+            if (!*bare_name)
+            {
+                sym = sym->next;
+                continue;
+            }
+
+            // Skip if already registered as selective import (local shadows wildcard)
+            if (zmap_get(&ctx->imports.selective_imports, bare_name))
+            {
+                sym = sym->next;
+                continue;
+            }
+
+            // Register as a selective import so DCOLON resolution and struct-init
+            // name rewriting work automatically.
+            register_selective_import(ctx, bare_name, NULL, module_base);
+        }
+        sym = sym->next;
+    }
+    zfree(prefix);
 }
 
 char *extract_module_name(const char *path)
