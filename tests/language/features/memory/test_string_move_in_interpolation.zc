@@ -1,0 +1,15 @@
+// EXPECT: FAIL
+// Issue #378: String should not allow use after move inside string interpolation
+import "std/string.zc"
+
+fn main() {
+  let s1 = String::new("abc")
+  println "1. {s1.c_str()}"
+  {
+    let s2 = s1
+    println "2. {s2.c_str()}"
+  }
+  // Using moved value s1 inside string interpolation should fail compilation
+  println "3. {s1.c_str()}"
+  println "ok."
+}

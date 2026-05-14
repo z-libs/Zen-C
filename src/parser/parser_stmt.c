@@ -2352,6 +2352,21 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         if (expr_node)
         {
             infer_type(ctx, expr_node);
+
+            // Collect all paths from the expression for move checking (Issue #383)
+            if (used_syms && count && check_symbols)
+            {
+                char **expr_paths = NULL;
+                int expr_path_count = 0;
+                collect_paths_from_node(expr_node, &expr_paths, &expr_path_count);
+                for (int pi = 0; pi < expr_path_count; pi++)
+                {
+                    *used_syms = xrealloc(*used_syms, sizeof(char *) * (*count + 1));
+                    (*used_syms)[*count] = expr_paths[pi];
+                    (*count)++;
+                }
+                zfree(expr_paths);
+            }
         }
         else
         {

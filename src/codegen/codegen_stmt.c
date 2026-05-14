@@ -2299,7 +2299,9 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             handled = 1;
         }
 
-        if (node->ret.value && node->ret.value->type == NODE_EXPR_VAR)
+        if (node->ret.value &&
+            (node->ret.value->type == NODE_EXPR_VAR || node->ret.value->type == NODE_EXPR_INDEX ||
+             node->ret.value->type == NODE_EXPR_MEMBER))
         {
             char *tname = infer_type(ctx, node->ret.value);
             if (tname)
@@ -2333,19 +2335,22 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
                         EMIT(ctx, "ZC_AUTO");
                     }
                     EMIT(ctx, " _z_ret_mv = ");
-                    if (ctx->self_is_pointer && strcmp(node->ret.value->var_ref.name, "self") == 0)
+                    if (node->ret.value->type == NODE_EXPR_VAR && ctx->self_is_pointer &&
+                        strcmp(node->ret.value->var_ref.name, "self") == 0)
                     {
                         EMIT(ctx, "*");
                     }
                     codegen_expression(ctx, node->ret.value);
                     EMIT(ctx, "; memset(&");
-                    if (ctx->self_is_pointer && strcmp(node->ret.value->var_ref.name, "self") == 0)
+                    if (node->ret.value->type == NODE_EXPR_VAR && ctx->self_is_pointer &&
+                        strcmp(node->ret.value->var_ref.name, "self") == 0)
                     {
                         EMIT(ctx, "*");
                     }
                     codegen_expression(ctx, node->ret.value);
                     EMIT(ctx, ", 0, sizeof(_z_ret_mv)); ");
-                    if (strcmp(node->ret.value->var_ref.name, "self") != 0)
+                    if (node->ret.value->type == NODE_EXPR_VAR &&
+                        strcmp(node->ret.value->var_ref.name, "self") != 0)
                     {
                         EMIT(ctx, "__z_drop_flag_%s = 0; ", node->ret.value->var_ref.name);
                     }
@@ -2661,8 +2666,32 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
         break;
     }
     default:
-        codegen_expression(ctx, node);
-        EMIT(ctx, ";\n");
+    {
+        // Check if expression returns a Drop type and needs auto-drop (Issue #406)
+        int needs_auto_drop = 0;
+        char *drop_type_name = NULL;
+        if ((node->type == NODE_EXPR_CALL || node->type == NODE_EXPR_STRUCT_INIT) &&
+            node->type_info && node->type_info->traits.has_drop)
+        {
+            needs_auto_drop = 1;
+            drop_type_name = type_to_string(node->type_info);
+        }
+
+        if (needs_auto_drop && drop_type_name)
+        {
+            static int unassigned_drop_id = 0;
+            int uid = unassigned_drop_id++;
+            EMIT(ctx, "{ ZC_AUTO_INIT(_z_ua_%d, ", uid);
+            codegen_expression(ctx, node);
+            EMIT(ctx, "); _z_drop(_z_ua_%d); }\n", uid);
+            zfree(drop_type_name);
+        }
+        else
+        {
+            codegen_expression(ctx, node);
+            EMIT(ctx, ";\n");
+        }
+
         if (node->type == NODE_EXPR_CALL && node->call.callee &&
             ctx->cg.pending_closure_free_count > 0)
         {
@@ -2686,6 +2715,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node)
             }
         }
         emit_pending_closure_frees(ctx);
+        break;
+    }
     }
 }
 

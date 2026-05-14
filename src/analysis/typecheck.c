@@ -1426,6 +1426,55 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
 
     case NODE_RAW_STMT:
         misra_check_raw_block(tc->pctx, node->token);
+        // Check for moved values in interpolated expressions (Issue #378, #383)
+        if (node->raw_stmt.used_symbols && node->raw_stmt.used_symbol_count > 0)
+        {
+            // Deduplicate: sort by length descending, skip paths that are prefixes of longer ones
+            char **paths = node->raw_stmt.used_symbols;
+            int path_count = node->raw_stmt.used_symbol_count;
+            for (int i = 0; i < path_count - 1; i++)
+            {
+                for (int j = 0; j < path_count - i - 1; j++)
+                {
+                    int len_j = paths[j] ? strlen(paths[j]) : 0;
+                    int len_j1 = paths[j + 1] ? strlen(paths[j + 1]) : 0;
+                    if (len_j < len_j1)
+                    {
+                        char *tmp = paths[j];
+                        paths[j] = paths[j + 1];
+                        paths[j + 1] = tmp;
+                    }
+                }
+            }
+            for (int i = 0; i < path_count; i++)
+            {
+                char *sym_name = paths[i];
+                if (!sym_name)
+                {
+                    continue;
+                }
+                int is_prefix = 0;
+                for (int j = 0; j < i; j++)
+                {
+                    if (!paths[j])
+                    {
+                        continue;
+                    }
+                    int len_j = strlen(paths[j]);
+                    int len_i = strlen(sym_name);
+                    if (len_j > len_i && strncmp(paths[j], sym_name, len_i) == 0 &&
+                        paths[j][len_i] == '.')
+                    {
+                        is_prefix = 1;
+                        break;
+                    }
+                }
+                if (!is_prefix)
+                {
+                    check_path_validity(tc, sym_name, node->token);
+                }
+            }
+        }
         break;
     case NODE_PREPROC_DIRECTIVE:
         // Rule Zen 1.4 is already handled by parser_audit_preprocessor

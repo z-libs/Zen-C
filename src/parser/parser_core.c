@@ -1262,7 +1262,7 @@ static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char *
                             "      let _str_%s = (*_item_%s.unwrap()).as_string();\n"
                             "      if _str_%s.is_some() {\n"
                             "        let _s_%s = String::new(_str_%s.unwrap());\n"
-                            "        _f_%s.push(_s_%s); _s_%s.forget();\n"
+                            "        _f_%s.push(_s_%s);\n"
                             "      }\n"
                             "    }\n"
                             "  }\n"
