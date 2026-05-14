@@ -1,72 +1,99 @@
 import "std/core.zc"
 
-struct Sort {}
-
-raw {
-    #define ZC_IMPL_SORT(T) \
-    static void _z_insertion_sort_##T(T* arr, int low, int high) { \
-        for (int i = low + 1; i <= high; i++) { \
-            T key = arr[i]; \
-            int j = i - 1; \
-            while (j >= low && arr[j] > key) { \
-                arr[j + 1] = arr[j]; \
-                j = j - 1; \
-            } \
-            arr[j + 1] = key; \
-        } \
-    } \
-    static int _z_partition_##T(T* arr, int low, int high) { \
-        int mid = low + (high - low) / 2; \
-        if (arr[mid] < arr[low]) { T t = arr[mid]; arr[mid] = arr[low]; arr[low] = t; } \
-        if (arr[high] < arr[low]) { T t = arr[high]; arr[high] = arr[low]; arr[low] = t; } \
-        if (arr[high] < arr[mid]) { T t = arr[high]; arr[high] = arr[mid]; arr[mid] = t; } \
-        T t_pivot = arr[mid]; arr[mid] = arr[high]; arr[high] = t_pivot; \
-        T pivot = arr[high]; \
-        int i = low - 1; \
-        for (int j = low; j < high; j++) { \
-            if (arr[j] < pivot) { \
-                i++; \
-                T temp = arr[i]; \
-                arr[i] = arr[j]; \
-                arr[j] = temp; \
-            } \
-        } \
-        T temp2 = arr[i + 1]; \
-        arr[i + 1] = arr[high]; \
-        arr[high] = temp2; \
-        return i + 1; \
-    } \
-    static void _z_quick_sort_##T(T* arr, int low, int high) { \
-        while (low < high) { \
-            if (high - low < 16) { \
-                _z_insertion_sort_##T(arr, low, high); \
-                break; \
-            } else { \
-                int pivot_idx = _z_partition_##T(arr, low, high); \
-                if (pivot_idx - low < high - pivot_idx) { \
-                    _z_quick_sort_##T(arr, low, pivot_idx - 1); \
-                    low = pivot_idx + 1; \
-                } else { \
-                    _z_quick_sort_##T(arr, pivot_idx + 1, high); \
-                    high = pivot_idx - 1; \
-                } \
-            } \
-        } \
-    } \
-    void sort_##T(T* arr, size_t len) { \
-        if (len > 1) { \
-            _z_quick_sort_##T(arr, 0, (int)len - 1); \
-        } \
+fn _z_insertion_sort<T>(arr: T*, low: int, high: int) {
+    let i = low + 1;
+    while (i <= high) {
+        let key = arr[i];
+        let j = i - 1;
+        while (j >= low && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j = j - 1;
+        }
+        arr[j + 1] = key;
+        i = i + 1;
     }
-
-    // Pre-declare standard library types
-    ZC_IMPL_SORT(int)
-    ZC_IMPL_SORT(long)
-    ZC_IMPL_SORT(float)
-    ZC_IMPL_SORT(double)
 }
 
-extern fn sort_int(arr: int*, len: usize);
-extern fn sort_long(arr: c_long*, len: usize);
-extern fn sort_float(arr: float*, len: usize);
-extern fn sort_double(arr: double*, len: usize);
+fn _z_partition<T>(arr: T*, low: int, high: int) -> int {
+    let mid = low + (high - low) / 2;
+
+    if (arr[mid] < arr[low]) { let t = arr[mid]; arr[mid] = arr[low]; arr[low] = t; }
+    if (arr[high] < arr[low]) { let t = arr[high]; arr[high] = arr[low]; arr[low] = t; }
+    if (arr[high] < arr[mid]) { let t = arr[high]; arr[high] = arr[mid]; arr[mid] = t; }
+
+    let pivot_tmp = arr[mid];
+    arr[mid] = arr[high];
+    arr[high] = pivot_tmp;
+    let pivot = arr[high];
+
+    let i = low - 1;
+    let j = low;
+    while (j < high) {
+        if (arr[j] < pivot) {
+            i = i + 1;
+            let temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+        j = j + 1;
+    }
+
+    let final_tmp = arr[i + 1];
+    arr[i + 1] = arr[high];
+    arr[high] = final_tmp;
+    return i + 1;
+}
+
+fn _z_qsort_range<T>(arr: T*, lo: int, hi: int) {
+    let low: int[64];
+    let high: int[64];
+    let sp = 0;
+    low[sp] = lo;
+    high[sp] = hi;
+    sp = sp + 1;
+    while (sp > 0) {
+        sp = sp - 1;
+        let l = low[sp];
+        let h = high[sp];
+        while (l < h) {
+            if (h - l < 16) {
+                _z_insertion_sort(arr, l, h);
+                break;
+            }
+            let p = _z_partition(arr, l, h);
+            // Push larger partition, iterate smaller
+            if (p - l < h - p) {
+                low[sp] = p + 1;
+                high[sp] = h;
+                sp = sp + 1;
+                h = p - 1;
+            } else {
+                low[sp] = l;
+                high[sp] = p - 1;
+                sp = sp + 1;
+                l = p + 1;
+            }
+        }
+    }
+}
+
+fn sort<T>(arr: T*, len: usize) {
+    if (len <= 1) { return; }
+    _z_qsort_range(arr, 0, (int)len - 1);
+}
+
+fn sort_int(arr: int*, len: usize) {
+    sort(arr, len);
+}
+
+fn sort_long(arr: long*, len: usize) {
+    sort(arr, len);
+}
+
+fn sort_float(arr: float*, len: usize) {
+    sort(arr, len);
+}
+
+fn sort_double(arr: double*, len: usize) {
+    sort(arr, len);
+}

@@ -3,14 +3,12 @@ import "./vec.zc"
 import "./mem.zc"
 
 struct BigInt {
-    digits: Vec<u8>*
+    digits: Vec<u8>;
 }
 
 impl BigInt {
     fn new() -> Self {
-        let v_ptr: Vec<u8>* = alloc<Vec<u8>>();
-        *v_ptr = Vec<u8>::new();
-        return BigInt { digits: v_ptr };
+        return BigInt { digits: Vec<u8>::new() };
     }
     
     fn from_int(val_in: u64) -> Self {
@@ -28,17 +26,11 @@ impl BigInt {
     }
     
     fn clone(self) -> Self {
-        let v_ptr: Vec<u8>* = alloc<Vec<u8>>();
-        *v_ptr = self.digits.clone();
-        return BigInt { digits: v_ptr };
+        return BigInt { digits: self.digits.clone() };
     }
     
     fn free_mem(self) {
-        if (usize)self.digits != 0 {
-            self.digits.free();
-            dealloc<Vec<u8>>(self.digits);
-            self.digits = 0;
-        }
+        self.digits.free();
     }
     
     fn add_in_place(self, other: BigInt*) {

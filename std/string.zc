@@ -71,19 +71,16 @@ impl StringCharsIter {
 impl String {
     fn new(s: char*) -> String {
         let len = strlen(s);
-        let v = Vec<char>::new();
-        // Manual copy for now
-        for (let i = 0; i < len; i = i + 1) {
-            v.push(s[i]);
+        let v = Vec<char>::with_capacity(len + 1);
+        if (len > 0) {
+            memcpy(v.data, s, len * sizeof(char));
         }
-        v.push(0);
+        v.len = len + 1;
+        v.data[len] = 0;
         
-        // Extract fields to transfer ownership
         let d = v.data;
         let l = v.len;
         let c = v.cap;
-        
-        // Forget the local vector so it doesn't free the memory
         v.forget();
         
         return String { vec: Vec<char> { data: d, len: l, cap: c } };
@@ -124,26 +121,26 @@ impl String {
     }
     
     fn append(self, other: String*) {
-        // Remove null terminator before appending
         if (self.vec.len > 0) {
             self.vec.len = self.vec.len - 1;
         }
-        
         let other_len = (*other).vec.len;
-        for (let i = 0; i < other_len; i = i + 1) {
-            self.vec.push((*other).vec.get(i));
-        }
+        let new_len = self.vec.len + other_len;
+        self.vec.grow_to_fit(new_len);
+        memcpy(self.vec.data + self.vec.len, (*other).vec.data, other_len * sizeof(char));
+        self.vec.len = new_len;
     }
 
     fn append_c(self, s: char*) {
         if (self.vec.len > 0) {
             self.vec.len = self.vec.len - 1;
         }
-        let len = strlen(s);
-        for (let i = 0; i < len; i = i + 1) {
-            self.vec.push(s[i]);
-        }
-        self.vec.push(0);
+        let slen = strlen(s);
+        let new_len = self.vec.len + slen + 1;
+        self.vec.grow_to_fit(new_len);
+        memcpy(self.vec.data + self.vec.len, s, slen * sizeof(char));
+        self.vec.len = new_len;
+        self.vec.data[new_len - 1] = 0;
     }
 
     fn push_rune(self, r: rune) {
@@ -174,11 +171,12 @@ impl String {
         if (ptr.vec.len > 0) {
             ptr.vec.len = ptr.vec.len - 1;
         }
-        let len = strlen(s);
-        for (let i = 0; i < len; i = i + 1) {
-            ptr.vec.push(s[i]);
-        }
-        ptr.vec.push(0);
+        let slen = strlen(s);
+        let new_len = ptr.vec.len + slen + 1;
+        ptr.vec.grow_to_fit(new_len);
+        memcpy(ptr.vec.data + ptr.vec.len, s, slen * sizeof(char));
+        ptr.vec.len = new_len;
+        ptr.vec.data[new_len - 1] = 0;
     }
 
     fn add(self, other: String*) -> String {
@@ -249,11 +247,12 @@ impl String {
         if (start + len > self.length()) {
             panic("substring out of bounds");
         }
-        let v = Vec<char>::new();
-        for (let i: usize = 0; i < len; i = i + 1) {
-             v.push(self.vec.get(start + i));
+        let v = Vec<char>::with_capacity(len + 1);
+        if (len > 0) {
+            memcpy(v.data, self.vec.data + start, len * sizeof(char));
         }
-        v.push(0);
+        v.len = len + 1;
+        v.data[len] = 0;
         
         let d = v.data;
         let l = v.len;
@@ -310,7 +309,7 @@ impl String {
 
     fn to_lowercase(self) -> String {
         let len = self.length();
-        let v = Vec<char>::new();
+        let v = Vec<char>::with_capacity(len + 1);
         for (let i: usize = 0; i < len; i = i + 1) {
             let c = self.vec.get(i);
             if (c >= 'A' && c <= 'Z') {
@@ -333,10 +332,11 @@ impl String {
             return String::from(self.c_str());
         }
         
-        let v = Vec<char>::new();
-        for (let i: usize = 0; i < current_len; i = i + 1) {
-            v.push(self.vec.get(i));
+        let v = Vec<char>::with_capacity(target_len + 1);
+        if (current_len > 0) {
+            memcpy(v.data, self.vec.data, current_len * sizeof(char));
         }
+        v.len = current_len;
         for (let i: usize = current_len; i < target_len; i = i + 1) {
             v.push(pad_char);
         }
@@ -355,14 +355,15 @@ impl String {
             return String::from(self.c_str());
         }
         
-        let v = Vec<char>::new();
+        let v = Vec<char>::with_capacity(target_len + 1);
         let diff = target_len - current_len;
         for (let i: usize = 0; i < diff; i = i + 1) {
             v.push(pad_char);
         }
-        for (let i: usize = 0; i < current_len; i = i + 1) {
-            v.push(self.vec.get(i));
+        if (current_len > 0) {
+            memcpy(v.data + diff, self.vec.data, current_len * sizeof(char));
         }
+        v.len = v.len + current_len;
         v.push(0);
         
         let d = v.data;
@@ -374,7 +375,7 @@ impl String {
 
     fn to_uppercase(self) -> String {
         let len = self.length();
-        let v = Vec<char>::new();
+        let v = Vec<char>::with_capacity(len + 1);
         for (let i: usize = 0; i < len; i = i + 1) {
             let c = self.vec.get(i);
             if (c >= 'a' && c <= 'z') {
