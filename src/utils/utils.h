@@ -23,7 +23,7 @@ int is_trait(const char *name);
 int is_trait_ptr(const char *name);
 void arena_reset(struct zarena *a);
 char *z_resolve_path(const char *fn, const char *relative_to, struct CompilerConfig *cfg);
-char *load_file(const char *fn);
+char *load_file(const char *fn, const char *relative_to);
 char *sanitize_path_for_c_string(const char *path);
 char *z_basename(const char *path);
 char *z_strip_ext(const char *filename);

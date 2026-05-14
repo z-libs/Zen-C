@@ -13,7 +13,6 @@
 // Global config and state
 extern int g_error_count;
 extern int g_warning_count;
-extern char *g_current_filename;
 extern ParserContext *g_parser_ctx;
 
 // Initialization
@@ -50,7 +49,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     // Reset diagnostics
     g_error_count = 0;
     g_warning_count = 0;
-    g_current_filename = "fuzz_input.zc";
 
     // Create null-terminated string from fuzzer data
     char *src = malloc(size + 1);
@@ -63,6 +61,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
     ParserContext ctx;
     memset(&ctx, 0, sizeof(ctx));
+    ctx.current_filename = "fuzz_input.zc";
+    module_state_init(&ctx.imports);
 
     // Use /dev/null for hoisting output
     ctx.hoist_out = fopen("/dev/null", "w");
@@ -73,7 +73,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     }
 
     Lexer l;
-    lexer_init(&l, src);
+    lexer_init(&l, src, ctx.config, ctx.current_filename);
 
     // Fuzz Parser
     ASTNode *root = parse_program(&ctx, &l);

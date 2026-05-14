@@ -11,12 +11,14 @@
 char *repl_transpile(const char *zen_c_code)
 {
     ParserContext ctx = {0};
+    module_state_init(&ctx.imports);
     ctx.cg.is_repl = 1;
     ctx.cg.skip_preamble = 0;
     ctx.on_error = repl_error_callback;
+    ctx.current_filename = "<repl>";
 
     Lexer lex;
-    lexer_init(&lex, zen_c_code, &g_compiler.config);
+    lexer_init(&lex, zen_c_code, &g_compiler.config, ctx.current_filename);
 
     ASTNode *root = parse_program(&ctx, &lex);
     if (!root)
@@ -92,7 +94,7 @@ void repl_error_callback(void *data, Token t, const char *msg)
 int is_definition_of(const char *code, const char *name)
 {
     Lexer l;
-    lexer_init(&l, code, &g_compiler.config);
+    lexer_init(&l, code, &g_compiler.config, "<repl>");
     Token t = lexer_next(&l);
     int is_header = 0;
     if (t.type == TOK_UNION)
@@ -306,12 +308,14 @@ void repl_update_symbols(ReplState *state)
     zfree(global_code);
     zfree(main_code);
     ParserContext ctx = {0};
+    module_state_init(&ctx.imports);
     ctx.cg.is_repl = 1;
     ctx.cg.skip_preamble = 1;
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
+    ctx.current_filename = "<repl>";
     Lexer lex;
-    lexer_init(&lex, code, &g_compiler.config);
+    lexer_init(&lex, code, &g_compiler.config, ctx.current_filename);
     ASTNode *nodes = parse_program(&ctx, &lex);
     ASTNode *search = (nodes && nodes->type == NODE_ROOT) ? nodes->root.children : nodes;
     for (ASTNode *n = search; n; n = n->next)

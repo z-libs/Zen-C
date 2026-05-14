@@ -152,14 +152,30 @@ typedef struct GenericImplTemplate
     struct GenericImplTemplate *next;
 } GenericImplTemplate;
 
-/**
- * @brief Represents an imported source file (to prevent cycles/duplication).
- */
-typedef struct ImportedFile
+// ---------------------------------------------------------------------------
+// zmap.h allocator overrides & type registration (must precede zmap.h include)
+// ---------------------------------------------------------------------------
+#define ZMAP_MALLOC(sz) xmalloc(sz)
+#define ZMAP_CALLOC(n, sz) xcalloc(n, sz)
+#define ZMAP_FREE(p) ((void)(p))
+
+static inline uint32_t zmap_hash_cstr(const char *k, uint32_t seed)
 {
-    char *path; ///< Absolute file path.
-    struct ImportedFile *next;
-} ImportedFile;
+    // FNV-1a inline (avoids dependency on ZMAP_HASH_STR being defined yet)
+    uint32_t hash = 2166136261u ^ seed;
+    const uint8_t *data = (const uint8_t *)k;
+    while (*data)
+    {
+        hash ^= *data++;
+        hash *= 16777619;
+    }
+    return hash;
+}
+static inline int zmap_cmp_cstr(const char *a, const char *b)
+{
+    return strcmp(a, b);
+}
+// ---------------------------------------------------------------------------
 
 /**
  * @brief Tracks a concrete instantiation of a generic template.
@@ -244,7 +260,6 @@ typedef struct Module
     char *path;      ///< File path.
     char *base_name; ///< Base name of the module.
     int is_c_header; ///< 1 if this is a C header import.
-    struct Module *next;
 } Module;
 
 /**
@@ -255,7 +270,6 @@ typedef struct SelectiveImport
     char *symbol;        ///< Symbol name.
     char *alias;         ///< Local alias.
     char *source_module; ///< Origin module.
-    struct SelectiveImport *next;
 } SelectiveImport;
 
 /**
@@ -275,7 +289,6 @@ typedef struct ImportedPlugin
 {
     char *name;  ///< Plugin name (e.g., "brainfuck").
     char *alias; ///< Optional usage alias.
-    struct ImportedPlugin *next;
 } ImportedPlugin;
 
 /**
@@ -290,6 +303,39 @@ typedef struct TypeAlias
     int is_opaque;
     char *defined_in_file;
 } TypeAlias;
+
+// zmap type registration (generates type-safe hash maps)
+#define REGISTER_ZMAP_TYPES(X)                                                                     \
+    X(const char *, Module *, ModMap)                                                              \
+    X(const char *, SelectiveImport *, SelMap)                                                     \
+    X(const char *, const char *, FileSet)                                                         \
+    X(const char *, ImportedPlugin *, PluginMap)
+
+#include "../utils/zmap.h"
+
+/**
+ * @brief Module/import state container (extracted from ParserContext god struct).
+ */
+typedef struct ModuleState
+{
+    zmap_ModMap modules;           ///< Map: alias → Module*.
+    zmap_SelMap selective_imports; ///< Map: symbol → SelectiveImport*.
+    char *current_module_prefix;   ///< Prefix for current module (namespacing).
+    zmap_FileSet imported_files;   ///< Set: imported file paths (key=value).
+    zmap_FileSet
+        currently_parsing; ///< Set: files whose import is in progress (for cycle detection).
+    zmap_PluginMap imported_plugins; ///< Map: alias → ImportedPlugin*.
+} ModuleState;
+
+/* * Initialize all maps in a ModuleState. Call once after zeroing the struct. */
+static inline void module_state_init(ModuleState *ms)
+{
+    ms->modules = zmap_init(ModMap, zmap_hash_cstr, zmap_cmp_cstr);
+    ms->selective_imports = zmap_init(SelMap, zmap_hash_cstr, zmap_cmp_cstr);
+    ms->imported_files = zmap_init(FileSet, zmap_hash_cstr, zmap_cmp_cstr);
+    ms->imported_plugins = zmap_init(PluginMap, zmap_hash_cstr, zmap_cmp_cstr);
+    ms->currently_parsing = zmap_init(FileSet, zmap_hash_cstr, zmap_cmp_cstr);
+}
 
 /**
  * @brief Global compilation state and symbol table.
@@ -342,11 +388,8 @@ struct ParserContext
     TypeAlias *type_aliases; ///< Defined type aliases.
 
     // Modules/Imports
-    Module *modules;                    ///< List of registered modules.
-    SelectiveImport *selective_imports; ///< Symbols imported via `import { ... }`.
-    char *current_module_prefix;        ///< Prefix for current module (namespacing).
-    ImportedFile *imported_files;       ///< List of files already included/imported.
-    ImportedPlugin *imported_plugins;   ///< List of active plugins.
+    ModuleState imports;
+    const char *current_filename; ///< Current file being parsed (for token/file attribution).
 
     // Config/State
     char *current_impl_struct;     ///< Name of struct currently being implemented (in impl block).

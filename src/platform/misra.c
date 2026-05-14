@@ -1249,7 +1249,7 @@ void misra_check_preprocessor_expression_parser(struct ParserContext *ctx, Token
     if (ctx)
     {
         Lexer l;
-        lexer_init(&l, expression, ctx->config);
+        lexer_init(&l, expression, ctx->config, ctx->current_filename);
         ASTNode *expr_node = parse_expression(ctx, &l);
         if (expr_node)
         {

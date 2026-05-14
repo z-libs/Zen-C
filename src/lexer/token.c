@@ -2,9 +2,7 @@
 
 #include "zprep.h"
 
-extern char *g_current_filename;
-
-void lexer_init(Lexer *l, const char *src, CompilerConfig *cfg)
+void lexer_init(Lexer *l, const char *src, CompilerConfig *cfg, const char *filename)
 {
     l->src = src;
     l->pos = 0;
@@ -12,6 +10,7 @@ void lexer_init(Lexer *l, const char *src, CompilerConfig *cfg)
     l->col = 1;
     l->emit_comments = 0;
     l->config = cfg;
+    l->filename = filename;
 }
 
 static int is_ident_start(char c)
@@ -106,7 +105,7 @@ Token lexer_next(Lexer *l)
     // Check for EOF.
     if (!*s)
     {
-        return (Token){TOK_EOF, s, 0, start_line, start_col, g_current_filename};
+        return (Token){TOK_EOF, s, 0, start_line, start_col, l->filename};
     }
 
     // C preprocessor directives.
@@ -132,7 +131,7 @@ Token lexer_next(Lexer *l)
         }
         l->pos += len;
 
-        return (Token){TOK_PREPROC, s, len, start_line, start_col, g_current_filename};
+        return (Token){TOK_PREPROC, s, len, start_line, start_col, l->filename};
     }
 
     // Comments.
@@ -145,9 +144,8 @@ Token lexer_next(Lexer *l)
             {
                 if ((s[len] == '/' && s[len + 1] == '/') || (s[len] == '/' && s[len + 1] == '*'))
                 {
-                    zerror_at(
-                        (Token){TOK_COMMENT, s, len + 2, start_line, start_col, g_current_filename},
-                        "MISRA Rule 3.1: '//' or '/*' within a comment");
+                    zerror_at((Token){TOK_COMMENT, s, len + 2, start_line, start_col, l->filename},
+                              "MISRA Rule 3.1: '//' or '/*' within a comment");
                 }
             }
             len++;
@@ -157,7 +155,7 @@ Token lexer_next(Lexer *l)
         {
             l->pos += len;
             l->col += len;
-            return (Token){TOK_COMMENT, s, len, start_line, start_col, g_current_filename};
+            return (Token){TOK_COMMENT, s, len, start_line, start_col, l->filename};
         }
 
         l->pos += len;
@@ -181,7 +179,7 @@ Token lexer_next(Lexer *l)
                 if ((s[0] == '/' && s[1] == '*') || (s[0] == '/' && s[1] == '/'))
                 {
                     zerror_at((Token){TOK_COMMENT, comment_start, (size_t)(s - comment_start) + 2,
-                                      start_line, start_col, g_current_filename},
+                                      start_line, start_col, l->filename},
                               "MISRA Rule 3.1: '/*' or '//' within a comment");
                 }
             }
@@ -212,8 +210,7 @@ Token lexer_next(Lexer *l)
         if (l->emit_comments)
         {
             size_t len = s - comment_start;
-            return (Token){TOK_COMMENT, comment_start, len,
-                           start_line,  start_col,     g_current_filename};
+            return (Token){TOK_COMMENT, comment_start, len, start_line, start_col, l->filename};
         }
 
         return lexer_next(l);
@@ -233,91 +230,91 @@ Token lexer_next(Lexer *l)
 
         if (len == 4 && strncmp(s, "test", 4) == 0)
         {
-            return (Token){TOK_TEST, s, 4, start_line, start_col, g_current_filename};
+            return (Token){TOK_TEST, s, 4, start_line, start_col, l->filename};
         }
         if (len == 6 && strncmp(s, "assert", 6) == 0)
         {
-            return (Token){TOK_ASSERT, s, 6, start_line, start_col, g_current_filename};
+            return (Token){TOK_ASSERT, s, 6, start_line, start_col, l->filename};
         }
         if (len == 6 && strncmp(s, "expect", 6) == 0)
         {
-            return (Token){TOK_EXPECT, s, 6, start_line, start_col, g_current_filename};
+            return (Token){TOK_EXPECT, s, 6, start_line, start_col, l->filename};
         }
         if (len == 6 && strncmp(s, "sizeof", 6) == 0)
         {
-            return (Token){TOK_SIZEOF, s, 6, start_line, start_col, g_current_filename};
+            return (Token){TOK_SIZEOF, s, 6, start_line, start_col, l->filename};
         }
         if (len == 5 && strncmp(s, "defer", 5) == 0)
         {
-            return (Token){TOK_DEFER, s, 5, start_line, start_col, g_current_filename};
+            return (Token){TOK_DEFER, s, 5, start_line, start_col, l->filename};
         }
         if (len == 3 && strncmp(s, "def", 3) == 0)
         {
-            return (Token){TOK_DEF, s, 3, start_line, start_col, g_current_filename};
+            return (Token){TOK_DEF, s, 3, start_line, start_col, l->filename};
         }
         if (len == 5 && strncmp(s, "trait", 5) == 0)
         {
-            return (Token){TOK_TRAIT, s, 5, start_line, start_col, g_current_filename};
+            return (Token){TOK_TRAIT, s, 5, start_line, start_col, l->filename};
         }
         if (len == 4 && strncmp(s, "impl", 4) == 0)
         {
-            return (Token){TOK_IMPL, s, 4, start_line, start_col, g_current_filename};
+            return (Token){TOK_IMPL, s, 4, start_line, start_col, l->filename};
         }
         if (len == 8 && strncmp(s, "autofree", 8) == 0)
         {
-            return (Token){TOK_AUTOFREE, s, 8, start_line, start_col, g_current_filename};
+            return (Token){TOK_AUTOFREE, s, 8, start_line, start_col, l->filename};
         }
         if (len == 5 && strncmp(s, "alias", 5) == 0)
         {
-            return (Token){TOK_ALIAS, s, 5, start_line, start_col, g_current_filename};
+            return (Token){TOK_ALIAS, s, 5, start_line, start_col, l->filename};
         }
         if (len == 3 && strncmp(s, "use", 3) == 0)
         {
-            return (Token){TOK_USE, s, 3, start_line, start_col, g_current_filename};
+            return (Token){TOK_USE, s, 3, start_line, start_col, l->filename};
         }
         if (len == 8 && strncmp(s, "comptime", 8) == 0)
         {
-            return (Token){TOK_COMPTIME, s, 8, start_line, start_col, g_current_filename};
+            return (Token){TOK_COMPTIME, s, 8, start_line, start_col, l->filename};
         }
         if (len == 5 && strncmp(s, "union", 5) == 0)
         {
-            return (Token){TOK_UNION, s, 5, start_line, start_col, g_current_filename};
+            return (Token){TOK_UNION, s, 5, start_line, start_col, l->filename};
         }
         if (len == 3 && strncmp(s, "asm", 3) == 0)
         {
-            return (Token){TOK_ASM, s, 3, start_line, start_col, g_current_filename};
+            return (Token){TOK_ASM, s, 3, start_line, start_col, l->filename};
         }
         if (len == 8 && strncmp(s, "volatile", 8) == 0)
         {
-            return (Token){TOK_VOLATILE, s, 8, start_line, start_col, g_current_filename};
+            return (Token){TOK_VOLATILE, s, 8, start_line, start_col, l->filename};
         }
         if (len == 5 && strncmp(s, "async", 5) == 0)
         {
-            return (Token){TOK_ASYNC, s, 5, start_line, start_col, g_current_filename};
+            return (Token){TOK_ASYNC, s, 5, start_line, start_col, l->filename};
         }
         if (len == 5 && strncmp(s, "await", 5) == 0)
         {
-            return (Token){TOK_AWAIT, s, 5, start_line, start_col, g_current_filename};
+            return (Token){TOK_AWAIT, s, 5, start_line, start_col, l->filename};
         }
         if (len == 3 && strncmp(s, "and", 3) == 0)
         {
-            return (Token){TOK_AND, s, 3, start_line, start_col, g_current_filename};
+            return (Token){TOK_AND, s, 3, start_line, start_col, l->filename};
         }
         if (len == 2 && strncmp(s, "or", 2) == 0)
         {
-            return (Token){TOK_OR, s, 2, start_line, start_col, g_current_filename};
+            return (Token){TOK_OR, s, 2, start_line, start_col, l->filename};
         }
         if (len == 3 && strncmp(s, "not", 3) == 0)
         {
-            return (Token){TOK_NOT, s, 3, start_line, start_col, g_current_filename};
+            return (Token){TOK_NOT, s, 3, start_line, start_col, l->filename};
         }
         if (len == 6 && strncmp(s, "opaque", 6) == 0)
         {
-            return (Token){TOK_OPAQUE, s, 6, start_line, start_col, g_current_filename};
+            return (Token){TOK_OPAQUE, s, 6, start_line, start_col, l->filename};
         }
         if (len == 2 && strncmp(s, "do", 2) == 0)
         {
-            return (Token){TOK_DO, s, 2, start_line, start_col, g_current_filename};
+            return (Token){TOK_DO, s, 2, start_line, start_col, l->filename};
         }
 
         // F-Strings
@@ -336,7 +333,7 @@ Token lexer_next(Lexer *l)
         }
         else
         {
-            return (Token){TOK_IDENT, s, len, start_line, start_col, g_current_filename};
+            return (Token){TOK_IDENT, s, len, start_line, start_col, l->filename};
         }
     }
 
@@ -344,7 +341,7 @@ Token lexer_next(Lexer *l)
     {
         int len = lexer_scan_string_internal(l, s, '"', 0, 1);
         l->pos += len;
-        return (Token){TOK_FSTRING, s, len, start_line, start_col, g_current_filename};
+        return (Token){TOK_FSTRING, s, len, start_line, start_col, l->filename};
     }
 
     // Raw Strings (r"..." or r'...' or r"""...""")
@@ -353,7 +350,7 @@ Token lexer_next(Lexer *l)
         char quote = s[1];
         int len = lexer_scan_string_internal(l, s, quote, 1, 1);
         l->pos += len;
-        return (Token){TOK_RAW_STRING, s, len, start_line, start_col, g_current_filename};
+        return (Token){TOK_RAW_STRING, s, len, start_line, start_col, l->filename};
     }
 
     // Numbers
@@ -396,7 +393,7 @@ Token lexer_next(Lexer *l)
             if (s[0] == '0' && isdigit(s[1]) && l->config->misra_mode)
             {
                 // Rule 7.1: Octal constants shall not be used (and leading zeros are disallowed).
-                zerror_at((Token){TOK_INT, s, 2, start_line, start_col, g_current_filename},
+                zerror_at((Token){TOK_INT, s, 2, start_line, start_col, l->filename},
                           "MISRA Rule 7.1");
             }
             while (isdigit(s[len]) || s[len] == '_')
@@ -446,7 +443,7 @@ Token lexer_next(Lexer *l)
                 }
                 l->pos += len;
                 l->col += len;
-                return (Token){TOK_FLOAT, s, len, start_line, start_col, g_current_filename};
+                return (Token){TOK_FLOAT, s, len, start_line, start_col, l->filename};
             }
         }
 
@@ -460,7 +457,7 @@ Token lexer_next(Lexer *l)
 
         l->pos += len;
         l->col += len;
-        return (Token){TOK_INT, s, len, start_line, start_col, g_current_filename};
+        return (Token){TOK_INT, s, len, start_line, start_col, l->filename};
     }
 
     // Strings
@@ -468,7 +465,7 @@ Token lexer_next(Lexer *l)
     {
         int len = lexer_scan_string_internal(l, s, '"', 0, 0);
         l->pos += len;
-        return (Token){TOK_STRING, s, len, start_line, start_col, g_current_filename};
+        return (Token){TOK_STRING, s, len, start_line, start_col, l->filename};
     }
 
     if (*s == '\'')
@@ -526,7 +523,7 @@ Token lexer_next(Lexer *l)
 
         l->pos += len;
         l->col += len;
-        return (Token){TOK_CHAR, s, len, start_line, start_col, g_current_filename};
+        return (Token){TOK_CHAR, s, len, start_line, start_col, l->filename};
     }
 
     // Operators.
@@ -666,7 +663,7 @@ Token lexer_next(Lexer *l)
 
     l->pos += len;
     l->col += len;
-    return (Token){type, s, len, start_line, start_col, g_current_filename};
+    return (Token){type, s, len, start_line, start_col, l->filename};
 }
 
 Token lexer_peek(Lexer *l)

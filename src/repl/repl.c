@@ -334,11 +334,13 @@ static int repl_process_line(ReplState *state, char *line_buf, int *brace_depth,
 
         ParserContext pctx = {0};
         pctx.cg.is_repl = 1;
+        module_state_init(&pctx.imports);
         pctx.cg.skip_preamble = 1;
         pctx.is_fault_tolerant = 1;
         pctx.on_error = repl_error_callback;
+        pctx.current_filename = "<repl>";
         Lexer l;
-        lexer_init(&l, check_buf, &g_compiler.config);
+        lexer_init(&l, check_buf, &g_compiler.config, pctx.current_filename);
         ASTNode *node = parse_statement(&pctx, &l);
         zfree(check_buf);
 

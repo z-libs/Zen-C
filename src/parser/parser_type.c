@@ -38,7 +38,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         {
             zfree(name);
             Lexer tmp;
-            lexer_init(&tmp, alias_node->original_type, ctx->config);
+            lexer_init(&tmp, alias_node->original_type, ctx->config, ctx->current_filename);
 
             if (alias_node->is_opaque)
             {
@@ -231,7 +231,7 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         }
 
         // Selective imports ONLY apply when we're NOT in a module context
-        if (!ctx->current_module_prefix)
+        if (!ctx->imports.current_module_prefix)
         {
             SelectiveImport *si = find_selective_import(ctx, name);
             if (si)
@@ -247,15 +247,16 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         }
 
         // If we're IN a module and no selective import matched, apply module prefix
-        if (ctx->current_module_prefix && !is_known_generic(ctx, name) &&
+        if (ctx->imports.current_module_prefix && !is_known_generic(ctx, name) &&
             !is_primitive_type_name(name) && strcasecmp(name, "Self") != 0 &&
             !is_extern_symbol(ctx, name))
         {
             // Auto-prefix struct name if in module context (unless it's a known
             // primitive/generic)
-            char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name) + 3);
-            snprintf(prefixed_name, strlen(ctx->current_module_prefix) + strlen(name) + 3, "%s__%s",
-                     ctx->current_module_prefix, name);
+            char *prefixed_name =
+                xmalloc(strlen(ctx->imports.current_module_prefix) + strlen(name) + 3);
+            snprintf(prefixed_name, strlen(ctx->imports.current_module_prefix) + strlen(name) + 3,
+                     "%s__%s", ctx->imports.current_module_prefix, name);
             zfree(name);
             name = prefixed_name;
         }

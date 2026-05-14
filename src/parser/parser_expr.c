@@ -38,8 +38,8 @@ int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 
     if (a_is_opaque)
     {
-        if (a->alias.alias_defined_in_file && g_current_filename &&
-            strcmp(a->alias.alias_defined_in_file, g_current_filename) == 0)
+        if (a->alias.alias_defined_in_file && ctx->current_filename &&
+            strcmp(a->alias.alias_defined_in_file, ctx->current_filename) == 0)
         {
             int res = check_opaque_alias_compat(ctx, a->inner, b);
             RECURSION_EXIT(ctx);
@@ -51,8 +51,8 @@ int check_opaque_alias_compat(ParserContext *ctx, Type *a, Type *b)
 
     if (b_is_opaque)
     {
-        if (b->alias.alias_defined_in_file && g_current_filename &&
-            strcmp(b->alias.alias_defined_in_file, g_current_filename) == 0)
+        if (b->alias.alias_defined_in_file && ctx->current_filename &&
+            strcmp(b->alias.alias_defined_in_file, ctx->current_filename) == 0)
         {
             int res = check_opaque_alias_compat(ctx, a, b->inner);
             RECURSION_EXIT(ctx);
@@ -2604,7 +2604,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                 }
 
                 SelectiveImport *si =
-                    (!ctx->current_module_prefix) ? find_selective_import(ctx, acc) : NULL;
+                    (!ctx->imports.current_module_prefix) ? find_selective_import(ctx, acc) : NULL;
                 if (si)
                 {
                     char *tmp =
@@ -3244,7 +3244,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                 }
 
                 char *struct_name = acc;
-                if (!ctx->current_module_prefix)
+                if (!ctx->imports.current_module_prefix)
                 {
                     SelectiveImport *si = find_selective_import(ctx, acc);
                     if (si)
@@ -3254,10 +3254,11 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                         struct_name = merge_underscores(struct_name_raw);
                     }
                 }
-                if (struct_name == acc && ctx->current_module_prefix && !is_known_generic(ctx, acc))
+                if (struct_name == acc && ctx->imports.current_module_prefix &&
+                    !is_known_generic(ctx, acc))
                 {
                     char prefixed_raw[MAX_MANGLED_NAME_LEN];
-                    sprintf(prefixed_raw, "%s__%s", ctx->current_module_prefix, acc);
+                    sprintf(prefixed_raw, "%s__%s", ctx->imports.current_module_prefix, acc);
                     struct_name = merge_underscores(prefixed_raw);
                 }
 
@@ -3266,8 +3267,8 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                 if (def && def->type == NODE_STRUCT && def->strct.is_opaque)
                 {
                     if (!def->strct.defined_in_file ||
-                        (g_current_filename &&
-                         strcmp(def->strct.defined_in_file, g_current_filename) != 0))
+                        (ctx->current_filename &&
+                         strcmp(def->strct.defined_in_file, ctx->current_filename) != 0))
                     {
                         zpanic_at(lexer_peek(l),
                                   "Cannot initialize opaque struct '%s' outside its module",
@@ -3579,7 +3580,7 @@ static ASTNode *parse_primary_impl(ParserContext *ctx, Lexer *l)
                 if (sig->defaults[i])
                 {
                     Lexer def_l;
-                    lexer_init(&def_l, sig->defaults[i], ctx->config);
+                    lexer_init(&def_l, sig->defaults[i], ctx->config, ctx->current_filename);
                     ASTNode *def = parse_expression(ctx, &def_l);
                     Type *expected = sig->arg_types[i];
                     if (expected && expected->name && is_trait(expected->name))
@@ -5619,8 +5620,8 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 if (def && def->type == NODE_STRUCT && def->strct.is_opaque)
                 {
                     if (!def->strct.defined_in_file ||
-                        (g_current_filename &&
-                         strcmp(def->strct.defined_in_file, g_current_filename) != 0))
+                        (ctx->current_filename &&
+                         strcmp(def->strct.defined_in_file, ctx->current_filename) != 0))
                     {
                         zpanic_at(field, "Cannot access private field '%s' of opaque struct '%s'",
                                   node->member.field, sname);
@@ -5680,8 +5681,8 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 if (def && def->type == NODE_STRUCT && def->strct.is_opaque)
                 {
                     if (!def->strct.defined_in_file ||
-                        (g_current_filename &&
-                         strcmp(def->strct.defined_in_file, g_current_filename) != 0))
+                        (ctx->current_filename &&
+                         strcmp(def->strct.defined_in_file, ctx->current_filename) != 0))
                     {
                         zpanic_at(field, "Cannot access private field '%s' of opaque struct '%s'",
                                   node->member.field, sname);
@@ -6510,8 +6511,8 @@ static ASTNode *parse_expr_prec_impl(ParserContext *ctx, Lexer *l, Precedence mi
                 if (def && def->type == NODE_STRUCT && def->strct.is_opaque)
                 {
                     if (!def->strct.defined_in_file ||
-                        (g_current_filename &&
-                         strcmp(def->strct.defined_in_file, g_current_filename) != 0))
+                        (ctx->current_filename &&
+                         strcmp(def->strct.defined_in_file, ctx->current_filename) != 0))
                     {
                         zpanic_at(field, "Cannot access private field '%s' of opaque struct '%s'",
                                   node->member.field, sname);

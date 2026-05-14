@@ -1458,7 +1458,8 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         }
 
         // Interpret the comptime body
-        char *output = interpret_comptime(tc->pctx, node->comptime.body, g_current_filename);
+        char *output =
+            interpret_comptime(tc->pctx, node->comptime.body, tc->pctx->current_filename);
         if (!output)
         {
             break;
@@ -1468,7 +1469,7 @@ void check_node(TypeChecker *tc, ASTNode *node, int depth)
         if (output[0])
         {
             Lexer out_l;
-            lexer_init(&out_l, output, tc->pctx->config);
+            lexer_init(&out_l, output, tc->pctx->config, tc->pctx->current_filename);
             node->comptime.generated = parse_program_nodes(tc->pctx, &out_l);
 
             // Type-check generated nodes

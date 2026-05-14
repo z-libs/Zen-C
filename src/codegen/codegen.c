@@ -1109,7 +1109,7 @@ static void handle_plugin(ParserContext *ctx, ASTNode *node)
         ZApi api;
         if (ctx->hook_plugin_init_api)
         {
-            ctx->hook_plugin_init_api(&api, g_current_filename, node->line, ctx->config);
+            ctx->hook_plugin_init_api(&api, ctx->current_filename, node->line, ctx->config);
         }
         api.out = ctx->cg.emitter.file;
         api.hoist_out = ctx->cg.hoist_out;
@@ -2337,24 +2337,34 @@ skip_callee_gen:
 
                 int has_c_interop = ctx->has_external_includes;
 
-                Module *mod = ctx->modules;
-                while (mod && !has_c_interop)
+                if (!has_c_interop)
                 {
-                    if (mod->is_c_header)
+                    zmap_iter_ModMap it = zmap_iter_init(ModMap, &ctx->imports.modules);
+                    const char *alias;
+                    Module *mod;
+                    while (zmap_iter_next(&it, &alias, &mod))
                     {
-                        has_c_interop = 1;
+                        if (mod->is_c_header)
+                        {
+                            has_c_interop = 1;
+                            break;
+                        }
                     }
-                    mod = mod->next;
                 }
 
-                ImportedFile *file = ctx->imported_files;
-                while (file && !has_c_interop)
+                if (!has_c_interop)
                 {
-                    if (file->path && strstr(file->path, "/std/"))
+                    zmap_iter_FileSet it = zmap_iter_init(FileSet, &ctx->imports.imported_files);
+                    const char *key;
+                    const char *val;
+                    while (zmap_iter_next(&it, &key, &val))
                     {
-                        has_c_interop = 1;
+                        if (key && strstr(key, "/std/"))
+                        {
+                            has_c_interop = 1;
+                            break;
+                        }
                     }
-                    file = file->next;
                 }
 
                 int is_internal = strncmp(name, "_z_", 3) == 0 || strncmp(name, "_Z", 2) == 0;

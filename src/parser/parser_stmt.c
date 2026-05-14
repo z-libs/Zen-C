@@ -17,7 +17,6 @@
 
 char *curr_func_ret = NULL;
 ASTNode *parse_expect(ParserContext *ctx, Lexer *l);
-extern char *g_current_filename;
 
 // Forward declaration from codegen module
 
@@ -35,7 +34,7 @@ static void auto_import_std_test(ParserContext *ctx)
         return;
     }
 
-    char *resolved = z_resolve_path("std/test.zc", g_current_filename, ctx->config);
+    char *resolved = z_resolve_path("std/test.zc", ctx->current_filename, ctx->config);
     if (!resolved)
     {
         return;
@@ -46,23 +45,30 @@ static void auto_import_std_test(ParserContext *ctx)
         zfree(resolved);
         return;
     }
-    mark_file_imported(ctx, resolved);
-
-    char *src = load_file(resolved);
-    if (!src)
+    if (zmap_get(&ctx->imports.currently_parsing, resolved))
     {
         zfree(resolved);
         return;
     }
+    zmap_put(&ctx->imports.currently_parsing, resolved, resolved);
+
+    char *src = load_file(resolved, ctx->current_filename);
 
     Lexer i;
-    lexer_init(&i, src, ctx->config);
-    char *saved_fn = g_current_filename;
-    g_current_filename = resolved;
+    lexer_init(&i, src, ctx->config, ctx->current_filename);
+    const char *saved_fn = ctx->current_filename;
+    ctx->current_filename = resolved;
+
+    // Parse the slice module contents
     parse_program_nodes(ctx, &i);
-    g_current_filename = saved_fn;
+
+    ctx->current_filename = saved_fn;
+    zmap_remove(&ctx->imports.currently_parsing, resolved);
+    mark_file_imported(ctx, resolved);
     zfree(resolved);
 }
+
+// Struct field resolution helpers
 
 static void auto_import_std_slice(ParserContext *ctx)
 {
@@ -78,39 +84,47 @@ static void auto_import_std_slice(ParserContext *ctx)
     }
 
     // Resolve path to std/slice.zc
-    char *resolved = z_resolve_path("std/slice.zc", g_current_filename, ctx->config);
+    char *resolved = z_resolve_path("std/slice.zc", ctx->current_filename, ctx->config);
     if (!resolved)
     {
         return; // Could not find slice.zc
     }
 
-    // Check if already imported by path
+    // Check if already imported or currently being parsed
     if (is_file_imported(ctx, resolved))
     {
         zfree(resolved);
         return;
     }
-    mark_file_imported(ctx, resolved);
+    if (zmap_get(&ctx->imports.currently_parsing, resolved))
+    {
+        zfree(resolved);
+        return;
+    }
+    zmap_put(&ctx->imports.currently_parsing, resolved, resolved);
 
     // Load and parse the file
-    char *src = load_file(resolved);
+    char *src = load_file(resolved, ctx->current_filename);
     if (!src)
     {
+        zmap_remove(&ctx->imports.currently_parsing, resolved);
         zfree(resolved);
         return;
     }
 
     Lexer i;
-    lexer_init(&i, src, ctx->config);
+    lexer_init(&i, src, ctx->config, ctx->current_filename);
 
     // Save and restore filename context
-    char *saved_fn = g_current_filename;
-    g_current_filename = resolved;
+    const char *saved_fn = ctx->current_filename;
+    ctx->current_filename = resolved;
 
     // Parse the slice module contents
     parse_program_nodes(ctx, &i);
 
-    g_current_filename = saved_fn;
+    ctx->current_filename = saved_fn;
+    zmap_remove(&ctx->imports.currently_parsing, resolved);
+    mark_file_imported(ctx, resolved);
     zfree(resolved);
 }
 
@@ -501,7 +515,8 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                         if (payload_node_field)
                         {
                             Lexer tmp;
-                            lexer_init(&tmp, payload_node_field->field.type, ctx->config);
+                            lexer_init(&tmp, payload_node_field->field.type, ctx->config,
+                                       ctx->current_filename);
                             binding_type_info = parse_type_formal(ctx, &tmp);
                             binding_type = type_to_string(binding_type_info);
                             payload_node_field = payload_node_field->next;
@@ -2300,7 +2315,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         if (check_symbols)
         {
             Lexer lex;
-            lexer_init(&lex, clean_expr, ctx->config); // Scan original for symbols
+            lexer_init(&lex, clean_expr, ctx->config,
+                       ctx->current_filename); // Scan original for symbols
             lex.line = srctoken.line;
             lex.col = srctoken.col;
 
@@ -2344,7 +2360,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
         // Parse expression fully
         Lexer lex;
-        lexer_init(&lex, clean_expr, ctx->config);
+        lexer_init(&lex, clean_expr, ctx->config, ctx->current_filename);
         lex.line = srctoken.line;
         lex.col = srctoken.col;
 
@@ -3028,7 +3044,7 @@ ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *macro_name)
     ZApi api;
     if (ctx->hook_plugin_init_api)
     {
-        ctx->hook_plugin_init_api(&api, g_current_filename, start_tok.line, ctx->config);
+        ctx->hook_plugin_init_api(&api, ctx->current_filename, start_tok.line, ctx->config);
     }
     api.out = capture;
     api.hoist_out = ctx->cg.hoist_out;
@@ -4235,7 +4251,7 @@ void scan_c_header_contents(ParserContext *ctx, const char *path, int depth)
     }
     mark_file_imported(ctx, path);
 
-    char *src = load_file(path);
+    char *src = load_file(path, ctx->current_filename);
     if (!src)
     {
         return;
@@ -4422,7 +4438,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         if (plugin_name[0] == '.' &&
             (plugin_name[1] == '/' || (plugin_name[1] == '.' && plugin_name[2] == '/')))
         {
-            char *current_dir = xstrdup(g_current_filename);
+            char *current_dir = xstrdup(ctx->current_filename);
             char *last_slash = z_path_last_sep(current_dir);
             if (last_slash)
             {
@@ -4465,9 +4481,8 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     // Regular module import handling follows...
     // Check if this is selective import: import { ... } from "file"
     int is_selective = 0;
-    char *symbols[32]; // Max 32 selective imports
-    char *aliases[32];
-    int symbol_count = 0;
+    zvec_Str symbols = {0};
+    zvec_Str aliases = {0};
 
     if (lexer_peek(l).type == TOK_LBRACE)
     {
@@ -4477,7 +4492,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         // Parse symbol list
         while (lexer_peek(l).type != TOK_RBRACE)
         {
-            if (symbol_count > 0 && lexer_peek(l).type == TOK_COMMA)
+            if (symbols.length > 0 && lexer_peek(l).type == TOK_COMMA)
             {
                 lexer_next(l); // eat comma
             }
@@ -4488,9 +4503,10 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
                 zpanic_at(sym_tok, "Expected identifier in selective import");
             }
 
-            symbols[symbol_count] = xmalloc(sym_tok.len + 1);
-            strncpy(symbols[symbol_count], sym_tok.start, sym_tok.len);
-            symbols[symbol_count][sym_tok.len] = 0;
+            char *sym = xmalloc(sym_tok.len + 1);
+            strncpy(sym, sym_tok.start, sym_tok.len);
+            sym[sym_tok.len] = 0;
+            zvec_push_Str(&symbols, sym);
 
             // Check for 'as alias'
             Token inner_next = lexer_peek(l);
@@ -4504,16 +4520,15 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
                     zpanic_at(alias_tok, "Expected identifier after 'as'");
                 }
 
-                aliases[symbol_count] = xmalloc(alias_tok.len + 1);
-                strncpy(aliases[symbol_count], alias_tok.start, alias_tok.len);
-                aliases[symbol_count][alias_tok.len] = 0;
+                char *als = xmalloc(alias_tok.len + 1);
+                strncpy(als, alias_tok.start, alias_tok.len);
+                als[alias_tok.len] = 0;
+                zvec_push_Str(&aliases, als);
             }
             else
             {
-                aliases[symbol_count] = NULL; // No alias
+                zvec_push_Str(&aliases, NULL); // No alias
             }
-
-            symbol_count++;
         }
 
         lexer_next(l); // eat }
@@ -4538,7 +4553,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     char *fn = token_get_string_content(t);
 
     // Resolve paths
-    char *resolved = z_resolve_path(fn, g_current_filename, ctx->config);
+    char *resolved = z_resolve_path(fn, ctx->current_filename, ctx->config);
     if (!resolved)
     {
         // Fallback for C headers: allow them to be "not found" locally (they might be system
@@ -4566,21 +4581,31 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         return dummy;
     }
 
+    // Check if fully parsed already (deduplication).
     if (is_file_imported(ctx, fn))
     {
         zfree(fn);
         return NULL;
     }
-    mark_file_imported(ctx, fn);
+
+    // Cycle detection: check if this file is currently being parsed by an ancestor.
+    if (zmap_get(&ctx->imports.currently_parsing, fn))
+    {
+        zpanic_at(t, "Circular import detected: '%s'", fn);
+        zfree(fn);
+        return NULL;
+    }
+    // Mark as currently-in-progress before recursing into the file.
+    zmap_put(&ctx->imports.currently_parsing, fn, fn);
 
     // For selective imports, register them BEFORE parsing the file
     char *module_base_name = NULL;
     if (is_selective)
     {
         module_base_name = extract_module_name(fn);
-        for (int i = 0; i < symbol_count; i++)
+        for (size_t i = 0; i < symbols.length; i++)
         {
-            register_selective_import(ctx, symbols[i], aliases[i], module_base_name);
+            register_selective_import(ctx, symbols.data[i], aliases.data[i], module_base_name);
         }
     }
 
@@ -4613,13 +4638,15 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
             }
 
             // Register the module
-            Module *m = xmalloc(sizeof(Module));
-            m->alias = xstrdup(alias);
-            m->path = xstrdup(fn);
-            m->base_name = extract_module_name(fn);
-            m->is_c_header = is_header;
-            m->next = ctx->modules;
-            ctx->modules = m;
+            if (!zmap_get(&ctx->imports.modules, alias))
+            {
+                Module *m = xmalloc(sizeof(Module));
+                m->alias = xstrdup(alias);
+                m->path = xstrdup(fn);
+                m->base_name = extract_module_name(fn);
+                m->is_c_header = is_header;
+                zmap_put(&ctx->imports.modules, alias, m);
+            }
         }
     }
 
@@ -4633,7 +4660,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     }
 
     // Load and parse the file
-    char *src = load_file(fn);
+    char *src = load_file(fn, ctx->current_filename);
     if (!src)
     {
         if (!src)
@@ -4652,26 +4679,26 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     }
 
     Lexer i;
-    lexer_init(&i, src, ctx->config);
+    lexer_init(&i, src, ctx->config, ctx->current_filename);
 
     // If this is a namespaced import or selective import, set the module prefix
-    char *prev_module_prefix = ctx->current_module_prefix;
+    char *prev_module_prefix = ctx->imports.current_module_prefix;
     char *temp_module_prefix = NULL;
 
     if (alias)
     { // For 'import "file" as alias'
         temp_module_prefix = extract_module_name(fn);
-        ctx->current_module_prefix = temp_module_prefix;
+        ctx->imports.current_module_prefix = temp_module_prefix;
     }
     else if (is_selective)
     { // For 'import {sym} from "file"'
         temp_module_prefix = extract_module_name(fn);
-        ctx->current_module_prefix = temp_module_prefix;
+        ctx->imports.current_module_prefix = temp_module_prefix;
     }
 
     // Update global filename context for relative imports inside the new file
-    const char *saved_fn = g_current_filename;
-    g_current_filename = fn;
+    const char *saved_fn = ctx->current_filename;
+    ctx->current_filename = fn;
 
     // Create import node and capture module-level comments immediately
     ASTNode *import_node = ast_create(NODE_IMPORT);
@@ -4680,27 +4707,33 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
 
     ASTNode *r = parse_program_nodes(ctx, &i);
 
+    // Parsing complete: move from "currently parsing" to "fully imported".
+    zmap_remove(&ctx->imports.currently_parsing, fn);
+    mark_file_imported(ctx, fn);
+
     // Restore filename context
-    g_current_filename = (char *)saved_fn;
+    ctx->current_filename = (char *)saved_fn;
 
     // Restore previous module context
     if (temp_module_prefix)
     {
         zfree(temp_module_prefix);
-        ctx->current_module_prefix = prev_module_prefix;
+        ctx->imports.current_module_prefix = prev_module_prefix;
     }
 
     // Free selective import symbols and aliases
     if (is_selective)
     {
-        for (int k = 0; k < symbol_count; k++)
+        for (size_t k = 0; k < symbols.length; k++)
         {
-            zfree(symbols[k]);
-            if (aliases[k])
+            zfree(symbols.data[k]);
+            if (aliases.data[k])
             {
-                zfree(aliases[k]);
+                zfree(aliases.data[k]);
             }
         }
+        zvec_free_Str(&symbols);
+        zvec_free_Str(&aliases);
     }
 
     if (alias)
@@ -4710,7 +4743,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
 
     if (module_base_name)
     { // This was only used for selective import
-      // registration, not for ctx->current_module_prefix
+      // registration, not for ctx->imports.current_module_prefix
         zfree(module_base_name);
     }
 
@@ -4766,7 +4799,7 @@ ASTNode *parse_comptime_body(ParserContext *ctx, Lexer *l)
     zfree(code);
 
     Lexer cl;
-    lexer_init(&cl, wrapped, ctx->config);
+    lexer_init(&cl, wrapped, ctx->config, ctx->current_filename);
     ASTNode *block = parse_block(ctx, &cl);
     zfree(wrapped);
     if (!block)

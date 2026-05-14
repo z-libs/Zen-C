@@ -6,6 +6,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "../parser/parser.h"
+
 typedef struct
 {
     ZenTrigger trigger;
@@ -187,11 +189,10 @@ void zzen_at(Token t, const char *msg, const char *url)
 {
     fprintf(stderr, COLOR_GREEN "zen: " COLOR_RESET COLOR_BOLD "%s" COLOR_RESET "\n", msg);
 
-    // g_current_filename is available via zprep.h
     if (t.line > 0)
     {
-        fprintf(stderr, COLOR_BLUE "  --> " COLOR_RESET "%s:%d:%d\n",
-                g_current_filename ? g_current_filename : "unknown", t.line, t.col);
+        const char *zf = g_parser_ctx ? g_parser_ctx->current_filename : "unknown";
+        fprintf(stderr, COLOR_BLUE "  --> " COLOR_RESET "%s:%d:%d\n", zf, t.line, t.col);
     }
 
     if (t.start && t.col > 0)

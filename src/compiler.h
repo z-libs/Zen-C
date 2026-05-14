@@ -16,7 +16,6 @@
 #include "arena.h"
 #include "platform/os.h"
 
-extern char *g_current_filename;
 extern ZenCompiler g_compiler;
 
 #define g_config g_compiler.config

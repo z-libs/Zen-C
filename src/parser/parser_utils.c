@@ -216,7 +216,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
 {
     CompilerConfig *cfg = &ctx->compiler->config;
     Lexer l;
-    lexer_init(&l, content, ctx->config);
+    lexer_init(&l, content, ctx->config, ctx->current_filename);
     l.emit_comments = 0;
 
     lexer_next(&l); // Skip start
@@ -233,7 +233,7 @@ void try_parse_macro_const(ParserContext *ctx, const char *content)
     }
 
     // Now lex the rest
-    lexer_init(&l, p, ctx->config);
+    lexer_init(&l, p, ctx->config, ctx->current_filename);
 
     // Expect 'define'
     Token def = lexer_next(&l);
@@ -2128,26 +2128,21 @@ ASTNode *find_concrete_struct_def(ParserContext *ctx, const char *name)
 
 Module *find_module(ParserContext *ctx, const char *alias)
 {
-    Module *m = ctx->modules;
-    while (m)
-    {
-        if (m->alias && strcmp(m->alias, alias) == 0)
-        {
-            return m;
-        }
-        m = m->next;
-    }
-    return NULL;
+    Module **mod_ptr = zmap_get(&ctx->imports.modules, alias);
+    return mod_ptr ? *mod_ptr : NULL;
 }
 
 void register_module(ParserContext *ctx, const char *alias, const char *path)
 {
+    if (zmap_get(&ctx->imports.modules, alias))
+    {
+        return; // already registered
+    }
     Module *m = xmalloc(sizeof(Module));
     m->alias = alias ? xstrdup(alias) : NULL;
     m->path = xstrdup(path);
     m->base_name = extract_module_name(path);
-    m->next = ctx->modules;
-    ctx->modules = m;
+    zmap_put(&ctx->imports.modules, alias, m);
 }
 
 void register_selective_import(ParserContext *ctx, const char *symbol, const char *alias,
@@ -2157,26 +2152,16 @@ void register_selective_import(ParserContext *ctx, const char *symbol, const cha
     si->symbol = xstrdup(symbol);
     si->alias = alias ? xstrdup(alias) : NULL;
     si->source_module = xstrdup(source_module);
-    si->next = ctx->selective_imports;
-    ctx->selective_imports = si;
+    // Key by alias when present, otherwise by symbol.
+    // This ensures distinct keys for same-symbol/different-alias imports.
+    const char *key = alias ? alias : symbol;
+    zmap_put(&ctx->imports.selective_imports, key, si);
 }
 
 SelectiveImport *find_selective_import(ParserContext *ctx, const char *name)
 {
-    SelectiveImport *si = ctx->selective_imports;
-    while (si)
-    {
-        if (si->alias && strcmp(si->alias, name) == 0)
-        {
-            return si;
-        }
-        if (!si->alias && strcmp(si->symbol, name) == 0)
-        {
-            return si;
-        }
-        si = si->next;
-    }
-    return NULL;
+    SelectiveImport **si_ptr = zmap_get(&ctx->imports.selective_imports, name);
+    return si_ptr ? *si_ptr : NULL;
 }
 
 char *extract_module_name(const char *path)
@@ -4482,7 +4467,7 @@ char *process_fstring(ParserContext *ctx, const char *content, char ***used_syms
 
         // Parse expression fully to handle default arguments etc.
         Lexer expr_lex;
-        lexer_init(&expr_lex, expr_str, ctx->config);
+        lexer_init(&expr_lex, expr_str, ctx->config, ctx->current_filename);
         ASTNode *expr_node = parse_expression(ctx, &expr_lex);
 
         // Codegen expression to temporary buffer
@@ -5318,24 +5303,15 @@ int is_file_imported(ParserContext *ctx, const char *p)
     {
         return 0;
     }
-    ImportedFile *c = ctx->imported_files;
-    while (c)
-    {
-        if (strcmp(c->path, p) == 0)
-        {
-            return 1;
-        }
-        c = c->next;
-    }
-    return 0;
+    return zmap_get(&ctx->imports.imported_files, p) != NULL;
 }
 
 void mark_file_imported(ParserContext *ctx, const char *p)
 {
-    ImportedFile *f = xmalloc(sizeof(ImportedFile));
-    f->path = xstrdup(p);
-    f->next = ctx->imported_files;
-    ctx->imported_files = f;
+    if (!is_file_imported(ctx, p))
+    {
+        zmap_put(&ctx->imports.imported_files, xstrdup(p), xstrdup(p));
+    }
 }
 
 char *parse_condition_raw(ParserContext *ctx, Lexer *l)
@@ -6304,8 +6280,7 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
             ImportedPlugin *p = xmalloc(sizeof(ImportedPlugin));
             p->name = xstrdup(name);
             p->alias = alias ? xstrdup(alias) : NULL;
-            p->next = ctx->imported_plugins;
-            ctx->imported_plugins = p;
+            zmap_put(&ctx->imports.imported_plugins, alias ? alias : name, p);
             return;
         }
         exit(1);
@@ -6314,20 +6289,24 @@ void register_plugin(ParserContext *ctx, const char *name, const char *alias)
     ImportedPlugin *p = xmalloc(sizeof(ImportedPlugin));
     p->name = xstrdup(plugin->name); // Use the plugin's internal name
     p->alias = alias ? xstrdup(alias) : NULL;
-    p->next = ctx->imported_plugins;
-    ctx->imported_plugins = p;
+    zmap_put(&ctx->imports.imported_plugins, alias ? alias : p->name, p);
 }
 
 const char *resolve_plugin(ParserContext *ctx, const char *name_or_alias)
 {
-    for (ImportedPlugin *p = ctx->imported_plugins; p; p = p->next)
+    // Try direct lookup by alias (primary key)
+    ImportedPlugin **p_ptr = zmap_get(&ctx->imports.imported_plugins, name_or_alias);
+    if (p_ptr)
     {
-        // Check if it matches the alias
-        if (p->alias && strcmp(p->alias, name_or_alias) == 0)
-        {
-            return p->name;
-        }
-        // Check if it matches the name
+        return (*p_ptr)->name;
+    }
+
+    // Fallback: iterate to match by internal name (name_or_alias may be the plugin name)
+    zmap_iter_PluginMap it = zmap_iter_init(PluginMap, &ctx->imports.imported_plugins);
+    const char *key;
+    ImportedPlugin *p;
+    while (zmap_iter_next(&it, &key, &p))
+    {
         if (strcmp(p->name, name_or_alias) == 0)
         {
             return p->name;

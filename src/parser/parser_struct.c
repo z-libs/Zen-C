@@ -13,8 +13,6 @@
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
 
-extern char *g_current_filename;
-
 /**
  * @brief Auto-imports std/mem.zc if not already imported.
  *
@@ -30,39 +28,48 @@ static void auto_import_std_mem(ParserContext *ctx)
     }
 
     // Resolve path to std/mem.zc
-    char *resolved = z_resolve_path("std/mem.zc", g_current_filename, ctx->config);
+    char *resolved = z_resolve_path("std/mem.zc", ctx->current_filename, ctx->config);
     if (!resolved)
     {
         return; // Could not find mem.zc
     }
 
-    // Check if already imported by path
+    // Check if already imported or currently being parsed
     if (is_file_imported(ctx, resolved))
     {
         zfree(resolved);
         return;
     }
-    mark_file_imported(ctx, resolved);
+    if (zmap_get(&ctx->imports.currently_parsing, resolved))
+    {
+        zfree(resolved);
+        return;
+    }
+    zmap_put(&ctx->imports.currently_parsing, resolved, resolved);
 
     // Load and parse the file
-    char *src = load_file(resolved);
+    char *src = load_file(resolved, ctx->current_filename);
     if (!src)
     {
+        zmap_remove(&ctx->imports.currently_parsing, resolved);
         zfree(resolved);
         return;
     }
 
     Lexer i;
-    lexer_init(&i, src, ctx->config);
+    lexer_init(&i, src, ctx->config, ctx->current_filename);
 
     // Save and restore filename context
-    char *saved_fn = g_current_filename;
-    g_current_filename = resolved;
+    const char *saved_fn = ctx->current_filename;
+    ctx->current_filename = resolved;
 
     // Parse the mem module contents
     parse_program_nodes(ctx, &i);
 
-    g_current_filename = saved_fn;
+    ctx->current_filename = saved_fn;
+
+    zmap_remove(&ctx->imports.currently_parsing, resolved);
+    mark_file_imported(ctx, resolved);
     zfree(resolved);
 }
 
@@ -570,11 +577,12 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
         // Regular impl Struct (impl Box or impl Box<T>)
 
         // Auto-prefix struct name if in module context
-        if (ctx->current_module_prefix && !gen_param && !is_extern_symbol(ctx, name1))
+        if (ctx->imports.current_module_prefix && !gen_param && !is_extern_symbol(ctx, name1))
         {
-            char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name1) + 3);
-            snprintf(prefixed_name, strlen(ctx->current_module_prefix) + strlen(name1) + 3,
-                     "%s__%s", ctx->current_module_prefix, name1);
+            char *prefixed_name =
+                xmalloc(strlen(ctx->imports.current_module_prefix) + strlen(name1) + 3);
+            snprintf(prefixed_name, strlen(ctx->imports.current_module_prefix) + strlen(name1) + 3,
+                     "%s__%s", ctx->imports.current_module_prefix, name1);
             zfree(name1);
             name1 = prefixed_name;
         }
@@ -1100,11 +1108,12 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
     }
 
     // Auto-prefix struct name if in module context
-    if (ctx->current_module_prefix && gp_count == 0 && !is_extern && !is_extern_symbol(ctx, name))
+    if (ctx->imports.current_module_prefix && gp_count == 0 && !is_extern &&
+        !is_extern_symbol(ctx, name))
     { // Don't prefix generic templates
-        size_t pref_len = strlen(ctx->current_module_prefix) + strlen(name) + 3;
+        size_t pref_len = strlen(ctx->imports.current_module_prefix) + strlen(name) + 3;
         char *prefixed_name = xmalloc(pref_len);
-        snprintf(prefixed_name, pref_len, "%s__%s", ctx->current_module_prefix, name);
+        snprintf(prefixed_name, pref_len, "%s__%s", ctx->imports.current_module_prefix, name);
         zfree(name);
         name = prefixed_name;
     }
@@ -1153,7 +1162,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union, int is_opaque,
     node->strct.is_export = is_export;
     node->strct.used_structs = temp_used_structs;
     node->strct.used_struct_count = temp_used_count;
-    node->strct.defined_in_file = g_current_filename ? xstrdup(g_current_filename) : NULL;
+    node->strct.defined_in_file = ctx->current_filename ? xstrdup(ctx->current_filename) : NULL;
 
     if (gp_count > 0)
     {
@@ -1381,11 +1390,11 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l, const char *link_name, int is_
     }
 
     // Auto-prefix enum name if in module context
-    if (ctx->current_module_prefix && !gp)
+    if (ctx->imports.current_module_prefix && !gp)
     { // Don't prefix generic templates
-        size_t pref_len = strlen(ctx->current_module_prefix) + strlen(ename) + 3;
+        size_t pref_len = strlen(ctx->imports.current_module_prefix) + strlen(ename) + 3;
         char *prefixed_name = xmalloc(pref_len);
-        snprintf(prefixed_name, pref_len, "%s__%s", ctx->current_module_prefix, ename);
+        snprintf(prefixed_name, pref_len, "%s__%s", ctx->imports.current_module_prefix, ename);
         zfree(ename);
         ename = prefixed_name;
     }

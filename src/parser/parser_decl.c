@@ -140,11 +140,12 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async, int is_exter
     // Auto-prefix function name if in module context
     // Don't prefix generic templates or functions inside impl blocks (already
     // mangled)
-    if (ctx->current_module_prefix && !gen_param && !ctx->current_impl_struct && !is_extern &&
-        !is_extern_symbol(ctx, name))
+    if (ctx->imports.current_module_prefix && !gen_param && !ctx->current_impl_struct &&
+        !is_extern && !is_extern_symbol(ctx, name))
     {
-        char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name) + 3);
-        sprintf(prefixed_name, "%s__%s", ctx->current_module_prefix, name);
+        char *prefixed_name =
+            xmalloc(strlen(ctx->imports.current_module_prefix) + strlen(name) + 3);
+        sprintf(prefixed_name, "%s__%s", ctx->imports.current_module_prefix, name);
         zfree(name);
         name = prefixed_name;
     }
@@ -984,7 +985,8 @@ ASTNode *parse_type_alias(ParserContext *ctx, Lexer *l, int is_opaque, int is_ex
     node->type_alias.original_type = o;
     node->type_info = t;
     node->type_alias.is_opaque = is_opaque;
-    node->type_alias.defined_in_file = g_current_filename ? xstrdup(g_current_filename) : NULL;
+    node->type_alias.defined_in_file =
+        ctx->current_filename ? xstrdup(ctx->current_filename) : NULL;
 
     register_type_alias(ctx, node->type_alias.alias, o, t, is_opaque,
                         node->type_alias.defined_in_file, n, is_export);

@@ -39,6 +39,7 @@ void lsp_project_init(const char *root_path)
     g_project->ctx = xcalloc(1, sizeof(ParserContext));
     g_project->ctx->compiler = &g_compiler;
     g_project->ctx->is_fault_tolerant = 1;
+    module_state_init(&g_project->ctx->imports);
     g_project->ctx->cg.hoist_out = tmpfile(); // Support hoisting in LSP
     if (!g_project->ctx->cg.hoist_out)
     {
@@ -115,13 +116,15 @@ static void scan_file(const char *path)
         return;
     }
 
-    char *src = load_file(path);
+    char *src = load_file(path, g_project->ctx->current_filename);
     if (!src)
     {
         return;
     }
 
     lsp_project_update_file(uri, src);
+
+    // Free source after update
     zfree(src);
 }
 
@@ -219,10 +222,10 @@ void lsp_project_update_file(const char *uri, const char *src)
         pf = add_project_file(uri);
     }
 
-    // Use the plain path for internal compiler state, not the URI.
-    // This ensures z_resolve_path can use access() correctly.
-    extern char *g_current_filename;
-    g_current_filename = pf->path;
+    // Use the plain path for internal compiler state.
+    // This allows z_resolve_path and is_file_imported to work correctly.
+    const char *saved_filename = g_project->ctx->current_filename;
+    g_project->ctx->current_filename = pf->path;
 
     if (pf->index)
     {
@@ -236,14 +239,8 @@ void lsp_project_update_file(const char *uri, const char *src)
     }
     pf->source = xstrdup(src);
 
-    // Use the plain path for internal compiler state.
-    // This allows z_resolve_path and is_file_imported to work correctly.
-    extern char *g_current_filename;
-    char *saved_filename = g_current_filename;
-    g_current_filename = pf->path;
-
     Lexer l;
-    lexer_init(&l, src, g_project->ctx->config);
+    lexer_init(&l, src, g_project->ctx->config, g_project->ctx->current_filename);
 
     // Reset parser context globals only for fresh manual updates.
     // During workspace indexing, we want to accumulate definitions.
@@ -278,7 +275,7 @@ void lsp_project_update_file(const char *uri, const char *src)
         pf->ast = NULL;
     }
 
-    g_current_filename = saved_filename;
+    g_project->ctx->current_filename = saved_filename;
 }
 
 DefinitionResult lsp_project_find_definition(const char *name)

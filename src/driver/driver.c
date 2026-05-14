@@ -20,7 +20,7 @@
 #endif
 
 // Forward declarations for functions defined in other modules
-extern char *load_file(const char *fn);
+extern char *load_file(const char *fn, const char *relative_to);
 extern void init_builtins(void);
 extern void load_all_configs(CompilerConfig *cfg);
 extern void scan_build_directives(ParserContext *ctx, const char *src);
@@ -84,6 +84,8 @@ int driver_compile(ZenCompiler *compiler)
     memset(&ctx, 0, sizeof(ctx));
     ctx.compiler = compiler;
     ctx.config = &compiler->config;
+    ctx.current_filename = compiler->config.input_file;
+    module_state_init(&ctx.imports);
     g_parser_ctx = &ctx;
 
     // Set runtime hooks based on configuration
@@ -107,7 +109,7 @@ int driver_compile(ZenCompiler *compiler)
     // Zen hooks
     ctx.hook_zen_trigger = (int (*)(int, Token, CompilerConfig *))zen_trigger_at;
 
-    char *src = load_file(compiler->config.input_file);
+    char *src = load_file(compiler->config.input_file, ctx.current_filename);
     if (!src)
     {
         fprintf(stderr, COLOR_BOLD COLOR_RED "error" COLOR_RESET ": could not read file '%s'\n",
@@ -118,7 +120,7 @@ int driver_compile(ZenCompiler *compiler)
     scan_build_directives(&ctx, src);
 
     Lexer l;
-    lexer_init(&l, src, ctx.config);
+    lexer_init(&l, src, ctx.config, ctx.current_filename);
 
     ctx.cg.hoist_out = z_tmpfile();
     if (!ctx.cg.hoist_out)
@@ -179,7 +181,7 @@ int driver_compile(ZenCompiler *compiler)
             }
             mark_file_imported(&ctx, path);
 
-            char *extra_src = load_file(path);
+            char *extra_src = load_file(path, ctx.current_filename);
             if (!extra_src)
             {
                 zerror_at((Token){0}, "could not read file '%s'", extra_path);
@@ -198,7 +200,7 @@ int driver_compile(ZenCompiler *compiler)
 
             scan_build_directives(&ctx, extra_src);
             Lexer extra_l;
-            lexer_init(&extra_l, extra_src, ctx.config);
+            lexer_init(&extra_l, extra_src, ctx.config, ctx.current_filename);
             ASTNode *extra_root = parse_program_nodes(&ctx, &extra_l);
 
             if (extra_root)

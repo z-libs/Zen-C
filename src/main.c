@@ -609,7 +609,5 @@ int main(int argc, char **argv)
     }
     zfree(input_file_copy);
 
-    g_current_filename = g_config.input_file;
-
     return driver_run(&g_compiler);
 }

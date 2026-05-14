@@ -191,12 +191,14 @@ static int cmd_show(ReplState *state, const char *args)
     }
 
     ParserContext ctx = {0};
+    module_state_init(&ctx.imports);
     ctx.cg.is_repl = 1;
     ctx.cg.skip_preamble = 1;
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
+    ctx.current_filename = "<repl>";
     Lexer l;
-    lexer_init(&l, show_code, &g_compiler.config);
+    lexer_init(&l, show_code, &g_compiler.config, ctx.current_filename);
     ASTNode *nodes = parse_program(&ctx, &l);
 
     ASTNode *search = nodes;
@@ -549,13 +551,15 @@ static int cmd_vars_funcs_structs(ReplState *state, const char *args)
     zfree(main_code);
 
     ParserContext ctx = {0};
+    module_state_init(&ctx.imports);
     ctx.cg.is_repl = 1;
     ctx.cg.skip_preamble = 1;
     ctx.is_fault_tolerant = 1;
     ctx.on_error = repl_error_callback;
+    ctx.current_filename = "<repl>";
 
     Lexer l;
-    lexer_init(&l, code, &g_compiler.config);
+    lexer_init(&l, code, &g_compiler.config, ctx.current_filename);
     ASTNode *nodes = parse_program(&ctx, &l);
 
     ASTNode *search = nodes;

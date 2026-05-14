@@ -6,7 +6,6 @@
 #include "cmd.h"
 #include "platform/os.h"
 
-char *g_current_filename = "unknown";
 ParserContext *g_parser_ctx = NULL;
 
 // ** Arena Implementation **
@@ -321,9 +320,9 @@ char *z_resolve_path(const char *fn, const char *relative_to, CompilerConfig *cf
     return NULL;
 }
 
-char *load_file(const char *fn)
+char *load_file(const char *fn, const char *relative_to)
 {
-    char *resolved = z_resolve_path(fn, g_current_filename, &g_compiler.config);
+    char *resolved = z_resolve_path(fn, relative_to, &g_compiler.config);
     if (!resolved)
     {
         return NULL;

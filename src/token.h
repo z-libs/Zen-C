@@ -99,6 +99,7 @@ typedef struct
     int col;                ///< Current column number.
     int emit_comments;      ///< 1 if comments should be emitted as tokens.
     CompilerConfig *config; ///< Compiler config (for MISRA mode checks).
+    const char *filename;   ///< Name of file being lexed (for token attribution).
 } Lexer;
 
 #ifdef __cplusplus
@@ -109,7 +110,7 @@ extern "C"
     /**
      * @brief Initialize the lexer.
      */
-    void lexer_init(Lexer *l, const char *src, CompilerConfig *cfg);
+    void lexer_init(Lexer *l, const char *src, CompilerConfig *cfg, const char *filename);
 
     /**
      * @brief Get the next token.
