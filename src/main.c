@@ -219,6 +219,13 @@ int main(int argc, char **argv)
             g_config.input_file = command;
             arg_start = 2;
         }
+        else
+        {
+            fprintf(stderr, COLOR_BOLD COLOR_RED "error" COLOR_RESET ": unknown command '%s'\n",
+                    command);
+            print_usage();
+            return 1;
+        }
     }
 
     // Parse args
